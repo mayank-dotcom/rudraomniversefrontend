@@ -22,8 +22,9 @@ const Navbar = () => {
                 
                 <div className="hidden md:flex items-center gap-12 text-[10px] font-mono uppercase tracking-[0.2em] text-white/40 absolute left-1/2 -translate-x-1/2">
                     <a href="/#features" className="hover:text-white transition-colors duration-300">01 — Features</a>
-                    <a href="/#manifesto" className="hover:text-white transition-colors duration-300">02 — Manifesto</a>
-                    <a href="/#cta" className="hover:text-white transition-colors duration-300">03 — Access</a>
+                    <Link href="/pricing" className="hover:text-white transition-colors duration-300">02 — Pricing</Link>
+                    <a href="/#manifesto" className="hover:text-white transition-colors duration-300">03 — Manifesto</a>
+                    <a href="/#cta" className="hover:text-white transition-colors duration-300">04 — Access</a>
                 </div>
 
                 <Link href="/chat" className="px-6 py-2.5 bg-white text-black text-[10px] font-mono uppercase tracking-widest font-bold hover:bg-white/90 transition-all active:scale-95">

@@ -5,7 +5,7 @@ import {
     MessageSquare, Plus, Settings, Search, ChevronLeft,
     ChevronRight, Moon, Sun, PieChart, GraduationCap,
     Code2, FileText, Calendar, UserCog, Mic, ChevronUp,
-    ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy
+    ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Zap
 } from "lucide-react";
 import Link from "next/link";
 
@@ -396,19 +396,28 @@ const Chat = () => {
                 {!isRightSidebarCollapsed && (
                     <div className="flex flex-col h-full overflow-hidden">
                         <div className={`p-8 border-b ${isDarkMode ? "border-white/5" : "border-black/15"}`}>
-                            <div className="mb-8 flex flex-col items-center">
-                                <span className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black/60"} block text-center mb-4`}>Dashboard</span>
-                                <div className={`w-8 h-[1px] ${isDarkMode ? "bg-white/10" : "bg-black/20"}`} />
+                            {/* Plan Badge */}
+                            <div className="flex justify-between items-start mb-8">
+                                <div className="flex flex-col">
+                                    <span className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black/40"} mb-1`}>Active Plan</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-1.5 w-1.5 bg-amber-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                                        <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"} tracking-widest uppercase`}>Student Pro</span>
+                                    </div>
+                                </div>
+                                <div className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border flex items-center justify-center`}>
+                                    <Zap className="h-4 w-4 text-amber-500" />
+                                </div>
                             </div>
 
                             {/* Circular Usage Chart */}
-                            <div className="relative w-32 h-32 mx-auto mb-6 flex-shrink-0">
+                            <div className="relative w-32 h-32 mx-auto mb-8 flex-shrink-0">
                                 <svg className="w-full h-full rotate-[-90deg]">
-                                    <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "#ffffff05" : "#00000005"} strokeWidth="8" />
+                                    <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "#ffffff05" : "#00000005"} strokeWidth="6" />
                                     <circle
                                         cx="64" cy="64" r="58" fill="none"
-                                        stroke={isDarkMode ? "white" : "black"}
-                                        strokeWidth="8"
+                                        stroke={isDarkMode ? "#D4AF37" : "black"}
+                                        strokeWidth="6"
                                         strokeDasharray="364"
                                         strokeDashoffset="120"
                                         strokeLinecap="round"
@@ -417,20 +426,46 @@ const Chat = () => {
                                 </svg>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                                     <span className="text-2xl font-orbitron font-bold">65%</span>
-                                    <span className="text-[8px] font-mono uppercase tracking-widest opacity-40">Tokens</span>
+                                    <span className="text-[8px] font-mono uppercase tracking-widest opacity-40">Usage</span>
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center text-[10px] font-mono">
-                                    <span className="opacity-40 uppercase">Used</span>
-                                    <span>64,200</span>
+                            {/* Detailed Metrics */}
+                            <div className="space-y-4 mb-8">
+                                <div className={`flex justify-between items-center text-[10px] font-mono ${isDarkMode ? "text-white" : "text-black"}`}>
+                                    <span className="opacity-40 uppercase tracking-widest">Tokens Used</span>
+                                    <span className="font-bold">64.2k / 100k</span>
                                 </div>
-                                <div className="flex justify-between items-center text-[10px] font-mono">
-                                    <span className="opacity-40 uppercase">Remaining</span>
-                                    <span>35,800</span>
+                                <div className={`h-[1px] w-full ${isDarkMode ? "bg-white/5" : "bg-black/10"}`} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="flex flex-col">
+                                        <span className={`text-[8px] font-mono uppercase ${isDarkMode ? "text-white/20" : "text-black/40"} tracking-widest mb-1`}>Images</span>
+                                        <span className={`text-[10px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>12 / 50</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className={`text-[8px] font-mono uppercase ${isDarkMode ? "text-white/20" : "text-black/40"} tracking-widest mb-1`}>Personas</span>
+                                        <span className={`text-[10px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>2 / 5</span>
+                                    </div>
                                 </div>
                             </div>
+
+                            <Link href="/pricing" className="block w-full">
+                                <motion.button 
+                                    whileHover={{ scale: 1.02, boxShadow: "0 0 25px rgba(212, 175, 55, 0.2)" }}
+                                    whileTap={{ scale: 0.98 }}
+                                    className="w-full bg-[#D4AF37] relative group overflow-hidden border border-black/10 py-3.5 shadow-lg"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                                    
+                                    <div className="flex items-center justify-center gap-2 relative z-10">
+                                        <Zap className="h-3 w-3 fill-black text-black" />
+                                        <span className="text-black font-mono text-[10px] font-black uppercase tracking-[0.2em]">Upgrade Now</span>
+                                    </div>
+                                    
+                                    <div className="absolute top-0 left-0 w-1 h-1 border-t border-l border-black/30" />
+                                    <div className="absolute bottom-0 right-0 w-1 h-1 border-b border-r border-black/30" />
+                                </motion.button>
+                            </Link>
                         </div>
 
                         <div className="flex-1 p-8 space-y-12 overflow-y-auto custom-scrollbar">
