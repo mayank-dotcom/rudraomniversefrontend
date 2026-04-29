@@ -1,28 +1,83 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+"use client";
+
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    Send, Bot, User, ArrowLeft, Sparkles, Command, LogOut,
-    MessageSquare, Plus, Settings, Search, ChevronLeft,
-    ChevronRight, Moon, Sun, PieChart, GraduationCap,
+    Send, Bot, User, LogOut, MessageSquare, Plus, Search,
+    ChevronLeft, ChevronRight, Moon, Sun, GraduationCap,
     Code2, FileText, Calendar, UserCog, Mic, ChevronUp,
-    ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Zap
+    ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Zap, Trash2,
+    Paperclip, X, ImageIcon, FileText as FileIcon
 } from "lucide-react";
 import Link from "next/link";
+import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserProfile } from "@/lib/auth";
+import {
+    ChatSummary,
+    createChat,
+    deleteChat,
+    getChatHistory,
+    listChats,
+    saveChatMessage,
+    sendChatCompletion,
+    sendAiRequest
+} from "@/lib/chat-api";
+import { processFile, ProcessedFile } from "@/lib/file-processor";
+import { toast } from "sonner";
+import AuthCard from "@/components/ui/AuthCard";
+import ChatLoader from "@/components/ui/ChatLoader";
+import MarkdownRenderer from "@/components/ui/MarkdownRenderer";
+import InterviewPrepModal from "@/components/InterviewPrepModal";
 
 interface Message {
     role: "user" | "assistant";
     content: string;
     timestamp: string;
+    localOnly?: boolean;
 }
 
+const WELCOME_CONTENT = "Welcome to Rudranex AI. I am your silent co-pilot. How can I assist your learning journey today?";
+const ACTIVE_CHAT_STORAGE_KEY = "rudranex_active_chat_id";
+
+const getWelcomeMessages = (): Message[] => [
+    {
+        role: "assistant",
+        content: WELCOME_CONTENT,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        localOnly: true
+    }
+];
+
+const formatTimestamp = (value?: string) =>
+    new Date(value || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+const buildChatTitle = (value: string) => {
+    const normalized = value.trim().replace(/\s+/g, " ");
+    if (!normalized) return "New Chat";
+    return normalized.length > 40 ? `${normalized.slice(0, 40)}...` : normalized;
+};
+
+const getStoredActiveChatId = () => {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(ACTIVE_CHAT_STORAGE_KEY);
+};
+
+const setStoredActiveChatId = (chatId: string | null) => {
+    if (typeof window === "undefined") return;
+
+    if (chatId) {
+        window.localStorage.setItem(ACTIVE_CHAT_STORAGE_KEY, chatId);
+        return;
+    }
+
+    window.localStorage.removeItem(ACTIVE_CHAT_STORAGE_KEY);
+};
+
 const Chat = () => {
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            role: "assistant",
-            content: "Welcome to Rudranex AI. I am your silent co-pilot. How can I assist your learning journey today?",
-            timestamp: "12:00 PM"
-        }
-    ]);
+    const [isAuthOpen, setIsAuthOpen] = useState(false);
+    const [authed, setAuthed] = useState<boolean | null>(null);
+    const [userName, setUserName] = useState<string>("");
+    const [userEmail, setUserEmail] = useState<string>("");
+    const [messages, setMessages] = useState<Message[]>(getWelcomeMessages);
     const [input, setInput] = useState("");
     const [sidebarWidth, setSidebarWidth] = useState(260);
     const [rightSidebarWidth, setRightSidebarWidth] = useState(260);
@@ -33,17 +88,47 @@ const Chat = () => {
     const [isDarkMode, setIsDarkMode] = useState(true);
     const [showEngineSelect, setShowEngineSelect] = useState(false);
     const [selectedEngine, setSelectedEngine] = useState("Student Mode");
-
+    const [isLoading, setIsLoading] = useState(false);
+    const [chats, setChats] = useState<ChatSummary[]>([]);
+    const [activeChatId, setActiveChatId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [isSessionsLoading, setIsSessionsLoading] = useState(false);
+    const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+    const [isCreatingChat, setIsCreatingChat] = useState(false);
+    const [chatError, setChatError] = useState<string | null>(null);
+    const [selectedFile, setSelectedFile] = useState<ProcessedFile | null>(null);
+    const [isProcessingFile, setIsProcessingFile] = useState(false);
+    const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const engines = [
-        { name: "Student Mode (Tutor)", version: "1.0", icon: GraduationCap },
-        { name: "Coding & GitHub", version: "2.0", icon: Code2 },
-        { name: "Mock Test Gen", version: "1.0", icon: FileText },
-        { name: "Auto Study Plan", version: "1.0", icon: Calendar },
-        { name: "Custom Persona", version: "1.0", icon: UserCog },
-        { name: "Voice Interview", version: "1.0", icon: Mic },
+        { name: "Student Mode", endpoint: "/chat", version: "1.0", icon: GraduationCap },
+        { name: "Coding & GitHub", endpoint: "/tools/coding", version: "2.0", icon: Code2 },
+        { name: "Interview Prep", endpoint: "/tools/interview", version: "1.0", icon: UserCog },
+        { name: "Resume Audit", endpoint: "/tools/resume", version: "1.0", icon: FileText },
+        { name: "PDF Research", endpoint: "/features/pdf/intel", version: "1.0", icon: Calendar },
+        { name: "Vision Solver", endpoint: "/features/vision/solve", version: "1.0", icon: Mic },
     ];
+
+    const activeChat = chats.find((chat) => chat.id === activeChatId) || null;
+    const filteredChats = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) return chats;
+        return chats.filter((chat) => chat.title.toLowerCase().includes(query));
+    }, [chats, searchQuery]);
+
+    useEffect(() => {
+        const syncAuth = () => setAuthed(isAuthenticated());
+        const timeoutId = window.setTimeout(syncAuth, 0);
+
+        window.addEventListener("storage", syncAuth);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+            window.removeEventListener("storage", syncAuth);
+        };
+    }, []);
 
     const startResizingLeft = useCallback((e: React.MouseEvent) => {
         setIsResizingLeft(true);
@@ -83,39 +168,409 @@ const Chat = () => {
         };
     }, [resize, stopResizing]);
 
-    const scrollToBottom = () => {
+    useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages, isLoading, isHistoryLoading]);
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
     };
+
+    const hydrateMessages = (items: Array<{ role: "user" | "assistant"; content: string; created_at?: string }>) => {
+        if (!items.length) {
+            setMessages(getWelcomeMessages());
+            return;
+        }
+
+        setMessages(items.map((message) => ({
+            role: message.role,
+            content: message.content,
+            timestamp: formatTimestamp(message.created_at)
+        })));
+    };
+
+    const openChat = useCallback(async (chatId: string) => {
+        setActiveChatId(chatId);
+        setStoredActiveChatId(chatId);
+        setChatError(null);
+        setIsHistoryLoading(true);
+
+        try {
+            const data = await getChatHistory(chatId);
+            hydrateMessages(data.messages);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unable to load chat history.";
+            setChatError(message);
+            setMessages(getWelcomeMessages());
+        } finally {
+            setIsHistoryLoading(false);
+        }
+    }, []);
+
+    const loadChats = useCallback(async () => {
+        if (!isAuthenticated()) return;
+
+        setIsSessionsLoading(true);
+        setChatError(null);
+
+        try {
+            const data = await listChats();
+            setChats(data.chats);
+
+            if (data.chats.length > 0) {
+                const storedChatId = getStoredActiveChatId();
+                const preferredChat = data.chats.find((chat) => chat.id === storedChatId) || data.chats[0];
+                await openChat(preferredChat.id);
+            } else {
+                setActiveChatId(null);
+                setStoredActiveChatId(null);
+                setMessages(getWelcomeMessages());
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unable to load chats.";
+            setChatError(message);
+            setChats([]);
+            setActiveChatId(null);
+            setStoredActiveChatId(null);
+            setMessages(getWelcomeMessages());
+        } finally {
+            setIsSessionsLoading(false);
+        }
+    }, [openChat]);
 
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        if (!authed) return;
 
-    const handleSend = () => {
-        if (!input.trim()) return;
+        const userInfo = getUserInfo();
+        if (userInfo) {
+            setUserName(userInfo.name);
+            setUserEmail(userInfo.email);
+        } else {
+            // Fetch user profile from backend
+            const apiKey = getApiKey();
+            if (apiKey) {
+                getUserProfile(apiKey).then(res => {
+                    if (res.success && res.name) {
+                        setUserName(res.name);
+                        setUserEmail(res.email || "");
+                    }
+                }).catch(err => {
+                    console.error("Failed to fetch user profile:", err);
+                });
+            }
+        }
 
-        const newMessage: Message = {
-            role: "user",
-            content: input,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
+        const timeoutId = window.setTimeout(() => {
+            void loadChats();
+        }, 0);
 
-        setMessages(prev => [...prev, newMessage]);
-        setInput("");
+        return () => window.clearTimeout(timeoutId);
+    }, [authed, loadChats]);
 
-        // Simulate AI response
-        setTimeout(() => {
-            const aiResponse: Message = {
-                role: "assistant",
-                content: "I'm processing your request with high precision. This is a simulation of the Rudranex cognitive engine.",
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
-            setMessages(prev => [...prev, aiResponse]);
-        }, 1000);
+    const handleAuthSuccess = () => {
+        setAuthed(true);
+        setIsAuthOpen(false);
+        void loadChats();
     };
 
+    const handleCreateChat = async () => {
+        setIsCreatingChat(true);
+        setChatError(null);
+
+        try {
+            const data = await createChat("New Chat");
+            setChats((prev) => [data.chat, ...prev]);
+            setActiveChatId(data.chat.id);
+            setStoredActiveChatId(data.chat.id);
+            setMessages(getWelcomeMessages());
+            setSearchQuery("");
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unable to create chat.";
+            setChatError(message);
+        } finally {
+            setIsCreatingChat(false);
+        }
+    };
+
+    const handleDeleteChat = async (chatId: string) => {
+        const confirmed = window.confirm("Is chat ko delete karna hai?");
+        if (!confirmed) return;
+
+        setChatError(null);
+
+        try {
+            await deleteChat(chatId);
+            const remainingChats = chats.filter((chat) => chat.id !== chatId);
+            setChats(remainingChats);
+
+            if (activeChatId === chatId) {
+                const nextChat = remainingChats[0];
+                if (nextChat) {
+                    await openChat(nextChat.id);
+                } else {
+                    setActiveChatId(null);
+                    setStoredActiveChatId(null);
+                    setMessages(getWelcomeMessages());
+                }
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unable to delete chat.";
+            setChatError(message);
+        }
+    };
+
+    const retryMessage = (index: number) => {
+        const msg = messages[index];
+        if (msg && msg.role === "assistant" && index > 0) {
+            const prevUserMsg = messages[index - 1];
+            if (prevUserMsg && prevUserMsg.role === "user") {
+                setInput(prevUserMsg.content);
+                setMessages((prev) => prev.slice(0, index));
+            }
+        }
+    };
+
+    const handleStartInterview = (topic: string, duration: number) => {
+        setIsInterviewModalOpen(false);
+        window.location.href = `/interview?topic=${encodeURIComponent(topic)}&duration=${duration}`;
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsProcessingFile(true);
+        try {
+            const processed = await processFile(file);
+            setSelectedFile(processed);
+
+            if (processed.isImage && !processed.isPdf) {
+                // Regular image → Vision Solver
+                setSelectedEngine("Vision Solver");
+                toast.success(`Image "${processed.name}" ready — Vision Solver selected`);
+            } else if (processed.isPdf) {
+                if (processed.isImage) {
+                    // Scanned / image-only PDF → PDF Research (will use OCR modality)
+                    setSelectedEngine("PDF Research");
+                    toast.success(`Scanned PDF "${processed.name}" ready — using OCR mode`);
+                } else if (file.name.toLowerCase().includes("resume") || file.name.toLowerCase().includes("cv")) {
+                    setSelectedEngine("Resume Audit");
+                    toast.success(`Resume "${processed.name}" ready — Resume Audit selected`);
+                } else {
+                    setSelectedEngine("PDF Research");
+                    toast.success(`PDF "${processed.name}" ready — PDF Research selected`);
+                }
+            } else {
+                toast.success(`File "${processed.name}" ready`);
+            }
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to process file.");
+        } finally {
+            setIsProcessingFile(false);
+            e.target.value = "";
+        }
+    };
+
+    const handleSend = async () => {
+        const trimmedInput = input.trim();
+        if ((!trimmedInput && !selectedFile) || isLoading || isProcessingFile) {
+            toast.error("Please enter a message or attach a file");
+            return;
+        }
+
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            toast.error("Please login first");
+            return;
+        }
+
+        setIsLoading(true);
+        setChatError(null);
+
+        let currentChatId = activeChatId;
+        const currentEngine = engines.find(e => e.name === selectedEngine) || engines[0];
+
+        try {
+            if (!currentChatId) {
+                const created = await createChat(buildChatTitle(trimmedInput || selectedFile?.name || "New Chat"));
+                currentChatId = created.chat.id;
+                setActiveChatId(created.chat.id);
+                setStoredActiveChatId(created.chat.id);
+                setChats((prev) => [created.chat, ...prev]);
+            }
+
+            let userContent: any = trimmedInput;
+            let displayContent = trimmedInput;
+            // Determine request modality — may be overridden for PDF/vision files
+            let requestModality: string = currentEngine.name === "Vision Solver" ? "vision" : "text";
+            // Determine endpoint — PDFs always go to /features/pdf/intel regardless of engine name
+            let requestEndpoint: string = currentEngine.endpoint;
+
+            if (selectedFile) {
+                const isPdfFile = selectedFile.isPdf === true;
+                const isScannedPdf = isPdfFile && selectedFile.isImage === true;
+                const isRegularImage = selectedFile.isImage === true && !isPdfFile;
+
+                displayContent = trimmedInput
+                    ? `${trimmedInput} [📎 ${selectedFile.name}]`
+                    : `[📎 ${selectedFile.name}]`;
+
+                if (isRegularImage) {
+                    // ── Regular image → Vision Solver ──────────────────────────────
+                    userContent = [
+                        { type: "text", text: trimmedInput || "Please analyze this image in detail." },
+                        { type: "image_url", image_url: { url: selectedFile.content } }
+                    ];
+                    requestModality = "vision";
+
+                } else if (isScannedPdf) {
+                    // ── Scanned (image-only) PDF → PDF Intel with OCR modality ─────
+                    // Convert the raw PDF file to a base64 data URL for vision
+                    const base64: string = await new Promise((res, rej) => {
+                        const reader = new FileReader();
+                        reader.onload = () => res(reader.result as string);
+                        reader.onerror = rej;
+                        reader.readAsDataURL(selectedFile.rawFile!);
+                    });
+                    userContent = [
+                        { type: "text", text: trimmedInput || "Please extract and analyze all text from this scanned PDF." },
+                        { type: "image_url", image_url: { url: base64 } }
+                    ];
+                    requestModality = "ocr";
+                    requestEndpoint = "/features/pdf/intel";
+
+                } else if (isPdfFile) {
+                    // ── Text PDF → PDF Intel endpoint ───────────────────────────────
+                    const MAX_CHARS = 14000;
+                    const truncated = selectedFile.content.length > MAX_CHARS
+                        ? selectedFile.content.slice(0, MAX_CHARS) + "\n\n[Content truncated due to length...]"
+                        : selectedFile.content;
+
+                    userContent = trimmedInput
+                        ? `PDF Document: "${selectedFile.name}"\n\nContent:\n${truncated}\n\n---\nUser question: ${trimmedInput}`
+                        : `PDF Document: "${selectedFile.name}"\n\nContent:\n${truncated}\n\n---\nPlease analyze this document, summarize the key points, and provide useful insights.`;
+
+                    requestModality = "text";
+                    requestEndpoint = "/features/pdf/intel";
+
+                } else {
+                    // ── Plain text file ─────────────────────────────────────────────
+                    const MAX_CHARS = 12000;
+                    const truncated = selectedFile.content.length > MAX_CHARS
+                        ? selectedFile.content.slice(0, MAX_CHARS) + "\n\n[Content truncated...]"
+                        : selectedFile.content;
+
+                    userContent = trimmedInput
+                        ? `File: "${selectedFile.name}"\n\n${truncated}\n\n---\nUser's request: ${trimmedInput}`
+                        : `File: "${selectedFile.name}"\n\n${truncated}\n\n---\nPlease analyze and respond to the above content.`;
+                }
+            }
+
+            const userMessage: Message = {
+                role: "user",
+                content: displayContent,
+                timestamp: formatTimestamp()
+            };
+
+            const conversationHistory = [
+                ...messages
+                    .filter((message) => !message.localOnly && message.content.trim())
+                    .map((message) => ({
+                        role: message.role,
+                        content: message.content
+                    })),
+                {
+                    role: "user" as const,
+                    content: userContent
+                }
+            ];
+
+            setMessages((prev) => [...prev.filter((message) => !message.localOnly), userMessage]);
+            setInput("");
+            setSelectedFile(null);
+
+            const data = await sendAiRequest({
+                endpoint: requestEndpoint,
+                messages: conversationHistory,
+                chat_id: currentChatId,
+                modality: requestModality
+            });
+
+            // Backend returns { success, model, data: choices_array }
+            const firstChoice = data.data?.[0];
+            const aiContent = firstChoice?.message?.content
+                || firstChoice?.text
+                || (firstChoice ? JSON.stringify(firstChoice) : null)
+                || "Response received from Rudranex AI.";
+
+            const aiResponse: Message = {
+                role: "assistant",
+                content: aiContent,
+                timestamp: formatTimestamp()
+            };
+
+            setMessages((prev) => [...prev, aiResponse]);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unable to process your request.";
+            setChatError(message);
+            toast.error(message);
+
+            if (currentChatId) {
+                try {
+                    await saveChatMessage(currentChatId, "user", trimmedInput || "File Upload");
+                    await saveChatMessage(currentChatId, "assistant", `Request failed: ${message}`);
+                } catch {
+                    // Keep the UI responsive even if manual sync also fails.
+                }
+            }
+
+            const errorMsg: Message = {
+                role: "assistant",
+                content: `Error: ${message}`,
+                timestamp: formatTimestamp()
+            };
+            setMessages((prev) => [...prev, errorMsg]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    if (authed === null) {
+        return (
+            <div className="h-screen w-full bg-[#0a0a0a] text-white flex items-center justify-center">
+                <ChatLoader isDarkMode={isDarkMode} />
+            </div>
+        );
+    }
+
+    if (!authed) {
+        return (
+            <div className="h-screen w-full bg-[#0a0a0a] text-white flex flex-col items-center justify-center selection:bg-white selection:text-black">
+                <div className="text-center mb-8">
+                    <div className="flex items-baseline gap-1.5 justify-center mb-4">
+                        <span className="font-display font-black text-5xl tracking-tighter text-white">RUDRANEX</span>
+                        <span className="font-serif text-5xl text-white/40 italic">ai</span>
+                    </div>
+                    <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/40">Authentication Required</p>
+                </div>
+                <button
+                    onClick={() => setIsAuthOpen(true)}
+                    className="px-8 py-3.5 bg-white text-black text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:bg-white/90 transition-all active:scale-95 rounded-lg"
+                >
+                    Sign In to Continue →
+                </button>
+                <AuthCard
+                    isOpen={isAuthOpen}
+                    onClose={() => setIsAuthOpen(false)}
+                    onSuccess={handleAuthSuccess}
+                    initialMode="login"
+                />
+            </div>
+        );
+    }
+
     return (
-        <div className={`h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black flex font-sans overflow-hidden transition-colors duration-500`}>
+        <div className={`h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black flex font-sans overflow-hidden transition-colors duration-500 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
             <div className={`absolute inset-0 noise opacity-[0.02] pointer-events-none ${isDarkMode ? "invert-0" : "invert"}`} />
 
             <aside
@@ -130,12 +585,16 @@ const Chat = () => {
                                     <div className={`h-1 w-1 ${isDarkMode ? "bg-black" : "bg-white"}`} />
                                 </div>
                             </Link>
-                            <button className={`p-2 hover:bg-white/5 transition-colors border ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                            <button
+                                onClick={handleCreateChat}
+                                disabled={isCreatingChat}
+                                className={`p-2 hover:bg-white/5 transition-colors border disabled:opacity-50 ${isDarkMode ? "border-white/10" : "border-black/10"}`}
+                            >
                                 <Plus className="h-4 w-4" />
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                        <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
                             {sidebarWidth > 120 && (
                                 <div className="mb-8">
                                     <div className="relative group">
@@ -143,6 +602,8 @@ const Chat = () => {
                                         <input
                                             type="text"
                                             placeholder="Search sessions..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
                                             className={`w-full ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"} border p-2 pl-9 text-[10px] font-mono uppercase tracking-widest focus:outline-none focus:border-white/20 transition-all`}
                                         />
                                     </div>
@@ -151,17 +612,42 @@ const Chat = () => {
 
                             <div className="space-y-1">
                                 {sidebarWidth > 120 && <span className={`px-2 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black/40"}`}>Recent Sessions</span>}
-                                {[
-                                    "Architecture Analysis",
-                                    "Cognitive Science Project",
-                                    "Data structures deep dive",
-                                    "Math - Linear Algebra"
-                                ].map((session, i) => (
-                                    <button key={i} className={`w-full text-left p-3 text-xs flex items-center gap-3 transition-colors ${i === 0 ? (isDarkMode ? "bg-white/5 border-l border-white" : "bg-black/5 border-l border-black") : "hover:bg-white/5"}`}>
-                                        <MessageSquare className={`h-3 w-3 ${isDarkMode ? "text-white/20" : "text-black/40"}`} />
-                                        {sidebarWidth > 120 && <span className="truncate opacity-60 font-sans">{session}</span>}
-                                    </button>
+                                {isSessionsLoading && (
+                                    <div className={`px-3 py-4 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                                        Loading sessions...
+                                    </div>
+                                )}
+                                {!isSessionsLoading && filteredChats.length === 0 && (
+                                    <div className={`px-3 py-4 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                                        {searchQuery ? "No matching sessions" : "No chats yet"}
+                                    </div>
+                                )}
+                                {!isSessionsLoading && filteredChats.map((chat) => (
+                                    <div
+                                        key={chat.id}
+                                        className={`group flex items-center gap-2 pr-2 ${activeChatId === chat.id ? (isDarkMode ? "bg-white/5 border-l border-white" : "bg-black/5 border-l border-black") : ""}`}
+                                    >
+                                        <button
+                                            onClick={() => void openChat(chat.id)}
+                                            className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${activeChatId === chat.id ? "" : "hover:bg-white/5"}`}
+                                        >
+                                            <MessageSquare className={`h-3 w-3 flex-shrink-0 ${isDarkMode ? "text-white/20" : "text-black/40"}`} />
+                                            {sidebarWidth > 120 && <span className="truncate opacity-60 font-sans">{chat.title}</span>}
+                                        </button>
+                                        {sidebarWidth > 120 && (
+                                            <button
+                                                onClick={() => void handleDeleteChat(chat.id)}
+                                                className={`opacity-0 group-hover:opacity-100 transition-opacity p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`}
+                                                aria-label={`Delete ${chat.title}`}
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
                                 ))}
+                                {chatError && sidebarWidth > 120 && (
+                                    <p className="px-2 pt-3 text-[10px] text-red-400">{chatError}</p>
+                                )}
                             </div>
                         </div>
 
@@ -175,13 +661,31 @@ const Chat = () => {
                                     </div>
                                     {sidebarWidth > 120 && (
                                         <div className="flex flex-col">
-                                            <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Mayank</span>
+                                            <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
                                             <span className="text-[9px] font-mono uppercase tracking-widest text-white/30">Pro Member</span>
                                         </div>
                                     )}
                                 </div>
+                                <button
+                                    onClick={() => setIsDarkMode(!isDarkMode)}
+                                    className={`p-2 border transition-colors ${isDarkMode ? "border-white/10 hover:bg-white/5" : "border-black/10 hover:bg-black/5"}`}
+                                    title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                                >
+                                    {isDarkMode ? <Moon className="h-4 w-4 text-white/40" /> : <Sun className="h-4 w-4 text-black/80" />}
+                                </button>
                             </div>
-                            <button className={`w-full flex items-center justify-center gap-3 p-3 border ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"} text-[10px] font-mono uppercase tracking-widest hover:bg-white/10 transition-all active:scale-95`}>
+                            <button
+                                onClick={() => {
+                                    removeApiKey();
+                                    removeUserInfo();
+                                    setStoredActiveChatId(null);
+                                    setAuthed(false);
+                                    setUserName("");
+                                    setUserEmail("");
+                                    window.location.href = "/";
+                                }}
+                                className={`w-full flex items-center justify-center gap-3 p-3 border ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"} text-[10px] font-mono uppercase tracking-widest hover:bg-white/10 transition-all active:scale-95`}
+                            >
                                 <LogOut className="h-3 w-3" /> {sidebarWidth > 120 && "Logout session"}
                             </button>
                         </div>
@@ -218,17 +722,41 @@ const Chat = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-6">
+                        <div className="hidden md:flex flex-col text-right">
+                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>Current Session</span>
+                            <span className={`text-xs ${isDarkMode ? "text-white/70" : "text-black/70"}`}>{activeChat?.title || "Unsaved chat"}</span>
+                        </div>
                         <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
                             <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
                             <span className="text-[9px] font-mono text-emerald-500 uppercase tracking-widest">Active</span>
                         </div>
+                        <button
+                            onClick={() => {
+                                removeApiKey();
+                                setStoredActiveChatId(null);
+                                setAuthed(false);
+                                window.location.href = "/";
+                            }}
+                            className="px-4 py-2 border border-white/10 text-white/60 text-[10px] font-mono uppercase tracking-widest hover:bg-white/5 transition-all flex items-center gap-2"
+                        >
+                            <LogOut className="h-3 w-3" />
+                            Logout
+                        </button>
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto pt-10 pb-44 px-6 md:px-20 relative z-10 custom-scrollbar">
+                <main className={`flex-1 overflow-y-auto pt-10 pb-44 px-6 md:px-20 relative z-10 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
                     <div className="max-w-4xl mx-auto">
+                        {/* Error Display */}
+                        {chatError && (
+                            <div className="mb-4 p-4 border border-red-500/20 bg-red-500/10 text-red-400 text-sm">
+                                {chatError}
+                            </div>
+                        )}
+                        
                         {/* Chat Area */}
                         <div className="space-y-16">
+                            {isHistoryLoading && <ChatLoader isDarkMode={isDarkMode} />}
                             <AnimatePresence initial={false}>
                                 {messages.map((msg, i) => (
                                     <motion.div
@@ -238,7 +766,7 @@ const Chat = () => {
                                         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                                         className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                                     >
-                                        <div className={`max-w-[85%] flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                                        <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[85%]" : "items-start max-w-[85%]"}`}>
                                             <div className="flex items-center gap-3 mb-4">
                                                 <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
                                                     {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
@@ -250,12 +778,13 @@ const Chat = () => {
                                                     ? (isDarkMode ? "border-white/10 bg-white/5 rounded-none" : "border-black/10 bg-black/5 rounded-none")
                                                     : (isDarkMode ? "border-white/20 bg-transparent rounded-[2.5rem]" : "border-black/20 bg-transparent rounded-[2.5rem]")
                                                 } relative group`}>
-                                                <p className={`text-base md:text-lg leading-relaxed ${msg.role === "user"
-                                                        ? (isDarkMode ? "text-white font-sans" : "text-black font-sans")
-                                                        : (isDarkMode ? "text-white/90 font-serif italic" : "text-black/90 font-serif italic")
-                                                    }`}>
-                                                    {msg.content}
-                                                </p>
+                                                {msg.role === "user" ? (
+                                                    <p className={`text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white font-sans" : "text-black font-sans"}`}>
+                                                        {msg.content}
+                                                    </p>
+                                                ) : (
+                                                    <MarkdownRenderer content={msg.content} isDarkMode={isDarkMode} />
+                                                )}
 
                                                 {msg.role === "user" && (
                                                     <>
@@ -269,13 +798,13 @@ const Chat = () => {
                                             <div className={`flex items-center gap-4 mt-3 ${msg.role === "user" ? "justify-end" : "justify-start px-8"}`}>
                                                 {msg.role === "user" ? (
                                                     <>
-                                                        <button className={`p-1.5 hover:bg-white/10 rounded transition-colors ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"}`}>
+                                                        <button onClick={() => setInput(msg.content)} className={`p-1.5 hover:bg-white/10 rounded transition-colors ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"}`}>
                                                             <div className="flex items-center gap-1.5">
                                                                 <Edit3 className="h-3 w-3" />
                                                                 <span className="text-[8px] font-mono uppercase tracking-widest">Edit</span>
                                                             </div>
                                                         </button>
-                                                        <button className={`p-1.5 hover:bg-white/10 rounded transition-colors ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"}`}>
+                                                        <button onClick={() => copyToClipboard(msg.content)} className={`p-1.5 hover:bg-white/10 rounded transition-colors ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"}`}>
                                                             <div className="flex items-center gap-1.5">
                                                                 <Copy className="h-3 w-3" />
                                                                 <span className="text-[8px] font-mono uppercase tracking-widest">Copy</span>
@@ -290,13 +819,13 @@ const Chat = () => {
                                                         <button className={`p-1.5 hover:bg-white/10 rounded transition-colors ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"}`}>
                                                             <ThumbsDown className="h-3 w-3" />
                                                         </button>
-                                                        <button className={`p-1.5 hover:bg-white/10 rounded transition-colors ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"}`}>
+                                                        <button onClick={() => copyToClipboard(msg.content)} className={`p-1.5 hover:bg-white/10 rounded transition-colors ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"}`}>
                                                             <div className="flex items-center gap-1.5">
                                                                 <Copy className="h-3 w-3" />
                                                                 <span className="text-[8px] font-mono uppercase tracking-widest">Copy</span>
                                                             </div>
                                                         </button>
-                                                        <button className={`p-1.5 hover:bg-white/10 rounded transition-colors ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"}`}>
+                                                        <button onClick={() => retryMessage(i)} className={`p-1.5 hover:bg-white/10 rounded transition-colors ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"}`}>
                                                             <div className="flex items-center gap-1.5">
                                                                 <RotateCcw className="h-3 w-3" />
                                                                 <span className="text-[8px] font-mono uppercase tracking-widest">Retry</span>
@@ -309,6 +838,7 @@ const Chat = () => {
                                     </motion.div>
                                 ))}
                             </AnimatePresence>
+                            {isLoading && <ChatLoader isDarkMode={isDarkMode} />}
                             <div ref={messagesEndRef} />
                         </div>
                     </div>
@@ -342,22 +872,27 @@ const Chat = () => {
                                                     <span className={`px-2 py-0.5 ${isDarkMode ? "bg-white/10 text-white/40" : "bg-black/10 text-black/40"} text-[8px] font-mono rounded`}>FREE</span>
                                                 </div>
                                                 <div className="space-y-1">
-                                                    {engines.map((engine) => (
-                                                        <button
-                                                            key={engine.name}
-                                                            onClick={() => {
-                                                                setSelectedEngine(engine.name);
-                                                                setShowEngineSelect(false);
-                                                            }}
-                                                            className={`w-full flex items-center justify-between p-3 transition-colors ${selectedEngine === engine.name ? (isDarkMode ? "bg-white/5" : "bg-black/10") : (isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5")}`}
-                                                        >
-                                                            <div className="flex items-center gap-4">
-                                                                <engine.icon className={`h-4 w-4 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
-                                                                <span className="text-xs font-medium">{engine.name}</span>
-                                                            </div>
-                                                            <span className="text-[10px] font-mono font-bold opacity-40">{engine.version}</span>
-                                                        </button>
-                                                    ))}
+                                                {engines.map((engine) => (
+                                                         <button
+                                                             key={engine.name}
+                                                             onClick={() => {
+                                                                 if (engine.name === "Interview Prep") {
+                                                                     setShowEngineSelect(false);
+                                                                     setIsInterviewModalOpen(true);
+                                                                 } else {
+                                                                     setSelectedEngine(engine.name);
+                                                                     setShowEngineSelect(false);
+                                                                 }
+                                                             }}
+                                                             className={`w-full flex items-center justify-between p-3 transition-colors ${selectedEngine === engine.name ? (isDarkMode ? "bg-white/5" : "bg-black/10") : (isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5")}`}
+                                                         >
+                                                             <div className="flex items-center gap-4">
+                                                                 <engine.icon className={`h-4 w-4 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
+                                                                 <span className="text-xs font-medium">{engine.name}</span>
+                                                             </div>
+                                                             <span className="text-[10px] font-mono font-bold opacity-40">{engine.version}</span>
+                                                         </button>
+                                                     ))}
                                                 </div>
                                             </motion.div>
                                         )}
@@ -366,19 +901,72 @@ const Chat = () => {
                             </div>
                         </div>
 
-                        <div className="relative">
+                         <div className="relative">
+                            {/* File Preview */}
+                            <AnimatePresence>
+                                {selectedFile && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 10 }}
+                                        className={`absolute bottom-full left-4 mb-4 p-4 border ${isDarkMode ? "bg-[#0d0d0d] border-white/10" : "bg-white border-black/10"} flex items-center gap-4 shadow-2xl z-40`}
+                                    >
+                                        <div className="h-12 w-12 flex items-center justify-center bg-white/5">
+                                            {selectedFile.previewUrl ? (
+                                                <img src={selectedFile.previewUrl} alt="Preview" className="h-full w-full object-cover" />
+                                            ) : (
+                                                <FileIcon className="h-6 w-6 opacity-40" />
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-medium truncate max-w-[200px]">{selectedFile.name}</span>
+                                            <span className="text-[10px] font-mono opacity-40 uppercase">{(selectedFile.size / 1024).toFixed(1)} KB</span>
+                                        </div>
+                                        <button
+                                            onClick={() => setSelectedFile(null)}
+                                            className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                             <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10">
+                                 <button
+                                     onClick={() => fileInputRef.current?.click()}
+                                     disabled={isLoading || isProcessingFile}
+                                     className={`p-3 ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition-all active:scale-95`}
+                                     title="Attach File"
+                                 >
+                                    {isProcessingFile ? (
+                                        <div className="h-4 w-4 border-2 border-emerald-500 border-t-transparent animate-spin rounded-full" />
+                                    ) : (
+                                        <Paperclip className="h-4 w-4" />
+                                    )}
+                                </button>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                    accept="image/*,application/pdf,text/plain,.md"
+                                />
+                            </div>
+
                             <input
                                 type="text"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                onKeyPress={(e) => e.key === "Enter" && handleSend()}
-                                placeholder="Describe your query or paste a concept..."
-                                className={`w-full bg-transparent border-b ${isDarkMode ? "border-white/10 placeholder:text-white/10" : "border-black/10 placeholder:text-black/10"} p-5 pr-32 text-base focus:outline-none focus:border-white/40 transition-all`}
+                                onKeyDown={(e) => e.key === "Enter" && !isProcessingFile && void handleSend()}
+                                placeholder={isProcessingFile ? "Processing file..." : "Describe your query or paste a concept..."}
+                                className={`w-full bg-transparent border-b ${isDarkMode ? "border-white/10 placeholder:text-white/10" : "border-black/10 placeholder:text-black/10"} p-5 pl-14 pr-32 text-base focus:outline-none focus:border-white/40 transition-all`}
                             />
                             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                                 <button
-                                    onClick={handleSend}
-                                    className={`p-3 ${isDarkMode ? "bg-white text-black" : "bg-black text-white"} hover:opacity-90 transition-all active:scale-95`}
+                                    onClick={() => void handleSend()}
+                                    disabled={isLoading || isHistoryLoading || isProcessingFile}
+                                    className={`p-3 disabled:opacity-50 ${isDarkMode ? "bg-white text-black" : "bg-black text-white"} hover:opacity-90 transition-all active:scale-95`}
                                 >
                                     <Send className="h-4 w-4" />
                                 </button>
@@ -395,7 +983,7 @@ const Chat = () => {
             >
                 {!isRightSidebarCollapsed && (
                     <div className="flex flex-col h-full overflow-hidden">
-                        <div className={`p-8 border-b ${isDarkMode ? "border-white/5" : "border-black/15"}`}>
+                        <div className={`p-8 border-b ${isDarkMode ? "border-white/5" : "border-black/15"} ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
                             {/* Plan Badge */}
                             <div className="flex justify-between items-start mb-8">
                                 <div className="flex flex-col">
@@ -410,25 +998,24 @@ const Chat = () => {
                                 </div>
                             </div>
 
-                            {/* Circular Usage Chart */}
-                            <div className="relative w-32 h-32 mx-auto mb-8 flex-shrink-0">
-                                <svg className="w-full h-full rotate-[-90deg]">
-                                    <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "#ffffff05" : "#00000005"} strokeWidth="6" />
-                                    <circle
-                                        cx="64" cy="64" r="58" fill="none"
-                                        stroke={isDarkMode ? "#D4AF37" : "black"}
-                                        strokeWidth="6"
-                                        strokeDasharray="364"
-                                        strokeDashoffset="120"
-                                        strokeLinecap="round"
-                                        className="transition-all duration-1000"
-                                    />
-                                </svg>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <span className="text-2xl font-orbitron font-bold">65%</span>
-                                    <span className="text-[8px] font-mono uppercase tracking-widest opacity-40">Usage</span>
-                                </div>
-                            </div>
+                             {/* Circular Usage Chart */}
+                             <div className="relative w-32 h-32 mx-auto mb-8 flex-shrink-0">
+                                 <svg className="w-full h-full rotate-[-90deg]">
+                                     <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "#ffffff05" : "#00000005"} strokeWidth="6" />
+                                     <circle
+                                         cx="64" cy="64" r="58" fill="none"
+                                         stroke={isDarkMode ? "#D4AF37" : "black"}
+                                         strokeWidth="6"
+                                         strokeDasharray="364"
+                                         strokeDashoffset="120"
+                                         strokeLinecap="round"
+                                         className="transition-all duration-1000"
+                                     />
+                                 </svg>
+                                 <div className="absolute inset-0 flex items-center justify-center">
+                                     <ChatLoader isDarkMode={isDarkMode} />
+                                 </div>
+                             </div>
 
                             {/* Detailed Metrics */}
                             <div className="space-y-4 mb-8">
@@ -468,35 +1055,20 @@ const Chat = () => {
                             </Link>
                         </div>
 
-                        <div className="flex-1 p-8 space-y-12 overflow-y-auto custom-scrollbar">
+                        <div className={`flex-1 p-8 space-y-12 overflow-y-auto ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
                             {/* Secondary Metrics */}
-                            <div className="space-y-6">
-                                <span className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black/60"} block`}>Performance</span>
-                                <div className="space-y-2">
-                                    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                                        <div className="h-full w-4/5 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
-                                    </div>
-                                    <div className="flex justify-between text-[8px] font-mono uppercase opacity-40">
-                                        <span>Latency</span>
-                                        <span>12ms</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className={`p-6 border-t ${isDarkMode ? "border-white/5" : "border-black/15"} flex-shrink-0`}>
-                            <button
-                                onClick={() => setIsDarkMode(!isDarkMode)}
-                                className={`w-full flex items-center justify-between p-4 border ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/20 bg-black/10"} transition-all group`}
-                            >
-                                <div className="flex items-center gap-4">
-                                    {isDarkMode ? <Moon className="h-4 w-4 text-white/40" /> : <Sun className="h-4 w-4 text-black/80" />}
-                                    <span className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "opacity-40" : "opacity-80"}`}>Interface Mode</span>
-                                </div>
-                                <div className={`w-8 h-4 rounded-full relative transition-colors ${isDarkMode ? "bg-white/20" : "bg-black/20"}`}>
-                                    <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${isDarkMode ? "left-4 bg-white" : "left-1 bg-black"}`} />
-                                </div>
-                            </button>
+                             <div className="space-y-6">
+                                  <span className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white" : "text-black"} block border-l-2 border-emerald-400 bg-emerald-400/10 pl-2 py-1`}>Performance</span>
+                                  <div className="space-y-2">
+                                      <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                          <div className="h-full w-4/5 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+                                      </div>
+                                      <div className="flex justify-between text-[8px] font-mono uppercase opacity-40">
+                                          <span>Latency</span>
+                                          <span>12ms</span>
+                                      </div>
+                                  </div>
+                              </div>
                         </div>
                     </div>
                 )}
@@ -524,11 +1096,16 @@ const Chat = () => {
                     backgroundSize: '100px 100px'
                 }} />
             </div>
+
+            {/* Interview Prep Modal */}
+            <InterviewPrepModal
+                isOpen={isInterviewModalOpen}
+                onClose={() => setIsInterviewModalOpen(false)}
+                onStart={handleStartInterview}
+                isDarkMode={isDarkMode}
+            />
         </div>
     );
 };
 
 export default Chat;
-
-
-
