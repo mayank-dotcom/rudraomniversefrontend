@@ -19,7 +19,8 @@ import {
     listChats,
     saveChatMessage,
     sendChatCompletion,
-    sendAiRequest
+    sendAiRequest,
+    getSubscriptionStatus
 } from "@/lib/chat-api";
 import { processFile, ProcessedFile } from "@/lib/file-processor";
 import { toast } from "sonner";
@@ -27,6 +28,9 @@ import AuthCard from "@/components/ui/AuthCard";
 import ChatLoader from "@/components/ui/ChatLoader";
 import MarkdownRenderer from "@/components/ui/MarkdownRenderer";
 import InterviewPrepModal from "@/components/InterviewPrepModal";
+import MockPaperModal, { MockPaperConfig } from "@/components/MockPaperModal";
+import MockPaperView from "@/components/MockPaperView";
+import { GraduationCap as MockIcon } from "lucide-react";
 
 interface Message {
     role: "user" | "assistant";
@@ -35,7 +39,7 @@ interface Message {
     localOnly?: boolean;
 }
 
-const WELCOME_CONTENT = "Welcome to Rudranex AI. I am your silent co-pilot. How can I assist your learning journey today?";
+const WELCOME_CONTENT = "Welcome to Rudranex AI. I am your study-pilot. How can I assist your learning journey today?";
 const ACTIVE_CHAT_STORAGE_KEY = "rudranex_active_chat_id";
 
 const getWelcomeMessages = (): Message[] => [
@@ -99,8 +103,15 @@ const Chat = () => {
     const [selectedFile, setSelectedFile] = useState<ProcessedFile | null>(null);
     const [isProcessingFile, setIsProcessingFile] = useState(false);
     const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
+    const [isMockPaperModalOpen, setIsMockPaperModalOpen] = useState(false);
+    const [generatedPaper, setGeneratedPaper] = useState<string | null>(null);
+    const [paperConfig, setPaperConfig] = useState<MockPaperConfig | null>(null);
+    const [isGeneratingPaper, setIsGeneratingPaper] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const [subscription, setSubscription] = useState<any>(null);
+    const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
 
     const engines = [
         { name: "Student Mode", endpoint: "/chat", version: "1.0", icon: GraduationCap },
@@ -108,6 +119,7 @@ const Chat = () => {
         { name: "Interview Prep", endpoint: "/tools/interview", version: "1.0", icon: UserCog },
         { name: "Resume Audit", endpoint: "/tools/resume", version: "1.0", icon: FileText },
         { name: "PDF Research", endpoint: "/features/pdf/intel", version: "1.0", icon: Calendar },
+        { name: "Mock Paper Generator", endpoint: "/chat", version: "1.0", icon: MockIcon },
         { name: "Vision Solver", endpoint: "/features/vision/solve", version: "1.0", icon: Mic },
     ];
 
@@ -260,6 +272,22 @@ const Chat = () => {
             }
         }
 
+        // Fetch subscription status
+        setIsSubscriptionLoading(true);
+        getSubscriptionStatus()
+            .then(data => {
+                console.log("Subscription API response:", data);
+                if (data.success) {
+                    setSubscription(data);
+                }
+            })
+            .catch(err => {
+                console.error("Failed to fetch subscription status:", err);
+            })
+            .finally(() => {
+                setIsSubscriptionLoading(false);
+            });
+
         const timeoutId = window.setTimeout(() => {
             void loadChats();
         }, 0);
@@ -293,7 +321,7 @@ const Chat = () => {
     };
 
     const handleDeleteChat = async (chatId: string) => {
-        const confirmed = window.confirm("Is chat ko delete karna hai?");
+        const confirmed = window.confirm("Do you want to delete this chat ?");
         if (!confirmed) return;
 
         setChatError(null);
@@ -333,6 +361,45 @@ const Chat = () => {
     const handleStartInterview = (topic: string, duration: number) => {
         setIsInterviewModalOpen(false);
         window.location.href = `/interview?topic=${encodeURIComponent(topic)}&duration=${duration}`;
+    };
+
+    const handleGenerateMockPaper = async (config: MockPaperConfig) => {
+        setIsMockPaperModalOpen(false);
+        setIsGeneratingPaper(true);
+        setPaperConfig(config);
+
+        const examName = config.examType === 'Other' ? config.customExamType : config.examType;
+        const prompt = `Act as an expert examiner. Generate a professional question paper for ${examName}.
+Duration: ${config.duration}.
+Total Questions: ${config.numQuestions}.
+
+STRUCTURE:
+- Section A: Multiple Choice (Conceptual)
+- Section B: Short Answer (Analytical)
+- Section C: Long Answer (Application-based)
+
+STRICT RULES:
+1. Provide ONLY the paper content. 
+2. No intro/outro or conversational text.
+3. Be concise but maintain high academic standards.
+4. Focus on core ${examName} syllabus.
+5. Generate NOW.`;
+
+        try {
+            const data = await sendAiRequest({
+                endpoint: "/chat",
+                messages: [{ role: "user", content: prompt }],
+                modality: "text"
+            });
+
+            const content = data.data?.[0]?.message?.content || data.data?.[0]?.text || "Failed to generate paper.";
+            setGeneratedPaper(content);
+            toast.success("Neural Paper Synthesized Successfully.");
+        } catch (error) {
+            toast.error("Failed to generate paper: " + (error as Error).message);
+        } finally {
+            setIsGeneratingPaper(false);
+        }
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -753,7 +820,7 @@ const Chat = () => {
                                 {chatError}
                             </div>
                         )}
-                        
+
                         {/* Chat Area */}
                         <div className="space-y-16">
                             {isHistoryLoading && <ChatLoader isDarkMode={isDarkMode} />}
@@ -775,8 +842,8 @@ const Chat = () => {
                                             </div>
 
                                             <div className={`p-8 border ${msg.role === "user"
-                                                    ? (isDarkMode ? "border-white/10 bg-white/5 rounded-none" : "border-black/10 bg-black/5 rounded-none")
-                                                    : (isDarkMode ? "border-white/20 bg-transparent rounded-[2.5rem]" : "border-black/20 bg-transparent rounded-[2.5rem]")
+                                                ? (isDarkMode ? "border-white/10 bg-white/5 rounded-none" : "border-black/10 bg-black/5 rounded-none")
+                                                : (isDarkMode ? "border-white/20 bg-transparent rounded-[2.5rem]" : "border-black/20 bg-transparent rounded-[2.5rem]")
                                                 } relative group`}>
                                                 {msg.role === "user" ? (
                                                     <p className={`text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white font-sans" : "text-black font-sans"}`}>
@@ -872,27 +939,30 @@ const Chat = () => {
                                                     <span className={`px-2 py-0.5 ${isDarkMode ? "bg-white/10 text-white/40" : "bg-black/10 text-black/40"} text-[8px] font-mono rounded`}>FREE</span>
                                                 </div>
                                                 <div className="space-y-1">
-                                                {engines.map((engine) => (
-                                                         <button
-                                                             key={engine.name}
-                                                             onClick={() => {
-                                                                 if (engine.name === "Interview Prep") {
-                                                                     setShowEngineSelect(false);
-                                                                     setIsInterviewModalOpen(true);
-                                                                 } else {
-                                                                     setSelectedEngine(engine.name);
-                                                                     setShowEngineSelect(false);
-                                                                 }
-                                                             }}
-                                                             className={`w-full flex items-center justify-between p-3 transition-colors ${selectedEngine === engine.name ? (isDarkMode ? "bg-white/5" : "bg-black/10") : (isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5")}`}
-                                                         >
-                                                             <div className="flex items-center gap-4">
-                                                                 <engine.icon className={`h-4 w-4 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
-                                                                 <span className="text-xs font-medium">{engine.name}</span>
-                                                             </div>
-                                                             <span className="text-[10px] font-mono font-bold opacity-40">{engine.version}</span>
-                                                         </button>
-                                                     ))}
+                                                    {engines.map((engine) => (
+                                                        <button
+                                                            key={engine.name}
+                                                            onClick={() => {
+                                                                if (engine.name === "Interview Prep") {
+                                                                    setShowEngineSelect(false);
+                                                                    setIsInterviewModalOpen(true);
+                                                                } else if (engine.name === "Mock Paper Generator") {
+                                                                    setShowEngineSelect(false);
+                                                                    setIsMockPaperModalOpen(true);
+                                                                } else {
+                                                                    setSelectedEngine(engine.name);
+                                                                    setShowEngineSelect(false);
+                                                                }
+                                                            }}
+                                                            className={`w-full flex items-center justify-between p-3 transition-colors ${selectedEngine === engine.name ? (isDarkMode ? "bg-white/5" : "bg-black/10") : (isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5")}`}
+                                                        >
+                                                            <div className="flex items-center gap-4">
+                                                                <engine.icon className={`h-4 w-4 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
+                                                                <span className="text-xs font-medium">{engine.name}</span>
+                                                            </div>
+                                                            <span className="text-[10px] font-mono font-bold opacity-40">{engine.version}</span>
+                                                        </button>
+                                                    ))}
                                                 </div>
                                             </motion.div>
                                         )}
@@ -901,7 +971,7 @@ const Chat = () => {
                             </div>
                         </div>
 
-                         <div className="relative">
+                        <div className="relative">
                             {/* File Preview */}
                             <AnimatePresence>
                                 {selectedFile && (
@@ -932,13 +1002,13 @@ const Chat = () => {
                                 )}
                             </AnimatePresence>
 
-                             <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10">
-                                 <button
-                                     onClick={() => fileInputRef.current?.click()}
-                                     disabled={isLoading || isProcessingFile}
-                                     className={`p-3 ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition-all active:scale-95`}
-                                     title="Attach File"
-                                 >
+                            <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10">
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isLoading || isProcessingFile}
+                                    className={`p-3 ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition-all active:scale-95`}
+                                    title="Attach File"
+                                >
                                     {isProcessingFile ? (
                                         <div className="h-4 w-4 border-2 border-emerald-500 border-t-transparent animate-spin rounded-full" />
                                     ) : (
@@ -989,66 +1059,90 @@ const Chat = () => {
                                 <div className="flex flex-col">
                                     <span className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black/40"} mb-1`}>Active Plan</span>
                                     <div className="flex items-center gap-2">
-                                        <div className="h-1.5 w-1.5 bg-amber-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-                                        <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"} tracking-widest uppercase`}>Student Pro</span>
+                                        <div className={`h-1.5 w-1.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)] ${subscription?.subscription ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                        <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"} tracking-widest uppercase`}>
+                                            {isSubscriptionLoading ? "Loading..." : (subscription?.subscription?.plan_name || "Free Trial")}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border flex items-center justify-center`}>
-                                    <Zap className="h-4 w-4 text-amber-500" />
+                                    <Zap className={`h-4 w-4 ${subscription?.subscription?.plan_name?.toLowerCase().includes('pro') ? 'text-amber-500' : 'text-white/40'}`} />
                                 </div>
                             </div>
 
-                             {/* Circular Usage Chart */}
-                             <div className="relative w-32 h-32 mx-auto mb-8 flex-shrink-0">
-                                 <svg className="w-full h-full rotate-[-90deg]">
-                                     <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "#ffffff05" : "#00000005"} strokeWidth="6" />
-                                     <circle
-                                         cx="64" cy="64" r="58" fill="none"
-                                         stroke={isDarkMode ? "#D4AF37" : "black"}
-                                         strokeWidth="6"
-                                         strokeDasharray="364"
-                                         strokeDashoffset="120"
-                                         strokeLinecap="round"
-                                         className="transition-all duration-1000"
-                                     />
-                                 </svg>
-                                 <div className="absolute inset-0 flex items-center justify-center">
-                                     <ChatLoader isDarkMode={isDarkMode} />
-                                 </div>
-                             </div>
+                            {/* Circular Usage Chart */}
+                            <div className="relative w-32 h-32 mx-auto mb-8 flex-shrink-0">
+                                <svg className="w-full h-full rotate-[-90deg]">
+                                    <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "#ffffff05" : "#00000005"} strokeWidth="6" />
+                                    <circle
+                                        cx="64" cy="64" r="58" fill="none"
+                                        stroke={isDarkMode ? "#10b981" : "black"}
+                                        strokeWidth="6"
+                                        strokeDasharray="364"
+                                        strokeDashoffset={String(
+                                            isSubscriptionLoading || !subscription?.usage || !subscription?.subscription?.details?.daily_chat_limit
+                                                ? 364
+                                                : 364 - ((subscription.usage.daily_chats / subscription.subscription.details.daily_chat_limit) * 364)
+                                        )}
+                                        strokeLinecap="round"
+                                        className="transition-all duration-1000"
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <ChatLoader isDarkMode={isDarkMode} />
+                                </div>
+                            </div>
 
                             {/* Detailed Metrics */}
                             <div className="space-y-4 mb-8">
                                 <div className={`flex justify-between items-center text-[10px] font-mono ${isDarkMode ? "text-white" : "text-black"}`}>
                                     <span className="opacity-40 uppercase tracking-widest">Tokens Used</span>
-                                    <span className="font-bold">64.2k / 100k</span>
+                                    <span className="font-bold">
+                                        {isSubscriptionLoading ? "..." : (
+                                            subscription?.usage?.daily_chats !== undefined
+                                                ? `${subscription.usage.daily_chats} / ${subscription.subscription?.details?.daily_chat_limit || 0}`
+                                                : "0 / 0"
+                                        )}
+                                    </span>
                                 </div>
                                 <div className={`h-[1px] w-full ${isDarkMode ? "bg-white/5" : "bg-black/10"}`} />
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="flex flex-col">
                                         <span className={`text-[8px] font-mono uppercase ${isDarkMode ? "text-white/20" : "text-black/40"} tracking-widest mb-1`}>Images</span>
-                                        <span className={`text-[10px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>12 / 50</span>
+                                        <span className={`text-[10px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>
+                                            {isSubscriptionLoading ? "..." : (
+                                                subscription?.usage?.monthly_images !== undefined
+                                                    ? `${subscription.usage.monthly_images} / ${subscription.subscription?.details?.monthly_image_limit || 0}`
+                                                    : "0 / 0"
+                                            )}
+                                        </span>
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className={`text-[8px] font-mono uppercase ${isDarkMode ? "text-white/20" : "text-black/40"} tracking-widest mb-1`}>Personas</span>
-                                        <span className={`text-[10px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>2 / 5</span>
+                                        <span className={`text-[8px] font-mono uppercase ${isDarkMode ? "text-white/20" : "text-black/40"} tracking-widest mb-1`}>Coding</span>
+                                        <span className={`text-[10px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>
+                                            {isSubscriptionLoading ? "..." : (
+                                                subscription?.usage?.daily_codings !== undefined
+                                                    ? `${subscription.usage.daily_codings} / ${subscription.subscription?.details?.daily_coding_limit || 0}`
+                                                    : "0 / 0"
+                                            )}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
                             <Link href="/pricing" className="block w-full">
-                                <motion.button 
+                                <motion.button
                                     whileHover={{ scale: 1.02, boxShadow: "0 0 25px rgba(212, 175, 55, 0.2)" }}
                                     whileTap={{ scale: 0.98 }}
                                     className="w-full bg-[#D4AF37] relative group overflow-hidden border border-black/10 py-3.5 shadow-lg"
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                                    
+
                                     <div className="flex items-center justify-center gap-2 relative z-10">
                                         <Zap className="h-3 w-3 fill-black text-black" />
                                         <span className="text-black font-mono text-[10px] font-black uppercase tracking-[0.2em]">Upgrade Now</span>
                                     </div>
-                                    
+
                                     <div className="absolute top-0 left-0 w-1 h-1 border-t border-l border-black/30" />
                                     <div className="absolute bottom-0 right-0 w-1 h-1 border-b border-r border-black/30" />
                                 </motion.button>
@@ -1057,18 +1151,18 @@ const Chat = () => {
 
                         <div className={`flex-1 p-8 space-y-12 overflow-y-auto ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
                             {/* Secondary Metrics */}
-                             <div className="space-y-6">
-                                  <span className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white" : "text-black"} block border-l-2 border-emerald-400 bg-emerald-400/10 pl-2 py-1`}>Performance</span>
-                                  <div className="space-y-2">
-                                      <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                                          <div className="h-full w-4/5 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
-                                      </div>
-                                      <div className="flex justify-between text-[8px] font-mono uppercase opacity-40">
-                                          <span>Latency</span>
-                                          <span>12ms</span>
-                                      </div>
-                                  </div>
-                              </div>
+                            <div className="space-y-6">
+                                <span className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white" : "text-black"} block border-l-2 border-emerald-400 bg-emerald-400/10 pl-2 py-1`}>System Status</span>
+                                <div className="space-y-2">
+                                    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                        <div className="h-full w-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+                                    </div>
+                                    <div className="flex justify-between text-[8px] font-mono uppercase opacity-40">
+                                        <span>Backend</span>
+                                        <span>Stable</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -1096,6 +1190,43 @@ const Chat = () => {
                     backgroundSize: '100px 100px'
                 }} />
             </div>
+
+            {/* Mock Paper Generation Overlay */}
+            {isGeneratingPaper && (
+                <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex items-center justify-center flex-col">
+                    <ChatLoader isDarkMode={true} />
+                    <div className="mt-12 text-center">
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: [0.4, 1, 0.4] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="text-[11px] font-mono uppercase tracking-[0.5em] text-emerald-500 font-black"
+                        >
+                            Synthesizing Your Paper
+                        </motion.p>
+
+                    </div>
+                </div>
+            )}
+
+            {/* Mock Paper View */}
+            {generatedPaper && paperConfig && (
+                <MockPaperView
+                    paper={generatedPaper}
+                    examType={paperConfig.examType === 'Other' ? (paperConfig.customExamType || 'EXAM') : paperConfig.examType}
+                    duration={paperConfig.duration}
+                    onClose={() => setGeneratedPaper(null)}
+                    isDarkMode={isDarkMode}
+                />
+            )}
+
+            {/* Mock Paper Modal */}
+            <MockPaperModal
+                isOpen={isMockPaperModalOpen}
+                onClose={() => setIsMockPaperModalOpen(false)}
+                onGenerate={handleGenerateMockPaper}
+                isDarkMode={isDarkMode}
+            />
 
             {/* Interview Prep Modal */}
             <InterviewPrepModal

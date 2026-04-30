@@ -1,6 +1,6 @@
 "use client"
 
-import { getApiKey } from "@/lib/auth"
+import { getApiKey, getAdminKey } from "@/lib/auth"
 
 const API_BASE = process.env.NEXT_PUBLIC_BASE_URL!
 
@@ -65,10 +65,167 @@ export interface TranscriptionResponse {
   error?: string
 }
 
+export interface UpdateTokensResponse {
+  success: boolean
+  tokens_used?: number
+  tokens_limit?: number
+  error?: string
+}
+
+export async function updateTokens(payload: { user_id: string, tokens: number }) {
+  const res = await fetch(`${API_BASE}/tools/tokens`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  })
+
+  const data = await parseJson<UpdateTokensResponse>(res)
+  if (!res.ok) {
+    throw new Error(data.error || "Unable to update tokens.")
+  }
+  return data
+}
+
+export interface SubscriptionStatusResponse {
+  success: boolean
+  subscription?: {
+    plan_id: number
+    plan_name: string
+    price_inr: number
+    details: {
+      daily_chat_limit: number
+      daily_coding_limit: number
+      daily_vision_limit: number
+      daily_tts_limit: number
+      daily_stt_limit: number
+      monthly_image_limit: number
+      monthly_flux_limit: number
+    }
+  }
+  usage?: {
+    daily_chats: number
+    daily_codings: number
+    daily_visions: number
+    daily_tts: number
+    daily_stt: number
+    monthly_images: number
+    monthly_flux: number
+    last_reset: string
+  }
+  error?: string
+}
+
+export async function getSubscriptionStatus() {
+  const res = await fetch(`${API_BASE}/subscription/status`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+
+  const data = await parseJson<SubscriptionStatusResponse>(res)
+  if (!res.ok) {
+    throw new Error(data.error || "Unable to fetch subscription status.")
+  }
+  return data
+}
+
+export interface AdminUser {
+  id: string
+  name: string
+  email: string
+  subscription: {
+    plan: string
+    status: string
+    tokens_used: number
+    tokens_limit: number
+    images_used: number
+    images_limit: number
+    personas_used: number
+    personas_limit: number
+    latency_ms: number
+  }
+}
+
+export interface AdminUsersResponse {
+  success: boolean
+  users?: AdminUser[]
+  error?: string
+}
+
+export async function getAdminUsers() {
+  const res = await fetch(`${API_BASE}/admin/users`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+
+  const data = await res.json()
+  if (!res.ok) {
+    throw new Error(data.error || "Unable to fetch users.")
+  }
+
+  // Map flat backend response to nested frontend interface
+  if (data.success && Array.isArray(data.users)) {
+    data.users = data.users.map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      subscription: {
+        plan: u.plan_name || "Free Trial",
+        status: "active", // Default status as backend doesn't provide it yet
+        tokens_used: u.daily_chats || 0,
+        tokens_limit: 1000, // Placeholder as backend doesn't join with limits yet
+        images_used: u.monthly_images || 0,
+        images_limit: 100, // Placeholder
+        personas_used: 0,
+        personas_limit: 10,
+        latency_ms: "24"
+      }
+    }))
+  }
+
+  return data as AdminUsersResponse
+}
+
+export async function adminLogin(adminKey: string) {
+  // First try the specific login endpoint requested by user
+  const res = await fetch(`${API_BASE}/admin/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": getApiKey() || "",
+      "x-admin-key": adminKey
+    },
+    body: JSON.stringify({ key: adminKey })
+  })
+
+  if (res.ok) return await res.json();
+
+  // Fallback: If login endpoint doesn't exist (404), validate by trying to fetch admin users
+  if (res.status === 404) {
+    const valRes = await fetch(`${API_BASE}/admin/users`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": getApiKey() || "",
+        "x-admin-key": adminKey
+      }
+    });
+    
+    if (valRes.ok) {
+      return { success: true, message: "Admin authenticated via validation" };
+    }
+    const errData = await valRes.json().catch(() => ({}));
+    throw new Error(errData.error || "Invalid Admin Key");
+  }
+
+  const data = await res.json().catch(() => ({}));
+  throw new Error(data.error || "Login failed");
+}
+
 function getHeaders() {
   return {
     "Content-Type": "application/json",
     "x-api-key": getApiKey() || "",
+    "x-admin-key": getAdminKey() || "",
   }
 }
 
@@ -149,7 +306,9 @@ export async function sendAiRequest(payload: {
   chat_id?: string
   modality?: string
 }) {
-  const res = await fetch(`${API_BASE}${payload.endpoint}`, {
+  const fullUrl = `${API_BASE}${payload.endpoint}`;
+  console.log(`[sendAiRequest] Fetching: ${fullUrl}`);
+  const res = await fetch(fullUrl, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({
@@ -178,36 +337,74 @@ export async function sendChatCompletion(payload: {
   })
 }
 
-export async function generateTTS(text: string) {
-  const res = await fetch(`${API_BASE}/tts/generate`, {
-    method: "POST",
-    headers: getHeaders(),
-    body: JSON.stringify({ text }),
-  })
+export async function generateTTSAudio(text: string, language: string = 'hi-IN') {
+  try {
+    const res = await fetch(`${API_BASE}/tts/generate`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ text, language }),
+    })
 
-  const data = await parseJson<TTSResponse>(res)
-  if (!res.ok) {
-    throw new Error(data.error || "Unable to generate speech.")
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error || "Unable to generate speech.")
+    }
+
+    const data = await res.json()
+    if (!data.success || !data.audioData) {
+      throw new Error("Invalid TTS response from server")
+    }
+
+    // Convert base64 to blob more robustly
+    const binaryString = window.atob(data.audioData)
+    const len = binaryString.length
+    const bytes = new Uint8Array(len)
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+    
+    // Detect format if possible, default to mpeg
+    return new Blob([bytes], { type: 'audio/mpeg' })
+  } catch (error) {
+    console.error("TTS API Error:", error)
+    throw error
   }
-  return data
 }
 
-export async function transcribeSpeech(audioBlob: Blob) {
-  const formData = new FormData()
-  formData.append("audio", audioBlob, "recording.webm")
+export async function transcribeSpeech(audioBlob: Blob, language: string = 'hi-IN') {
+  try {
+    // Convert to WAV for better Whisper compatibility
+    const { convertToWav } = await import('./audio-converter');
+    const wavBlob = await convertToWav(audioBlob);
+    console.log('Audio converted to WAV:', { original: audioBlob.type, wavSize: wavBlob.size, wavType: wavBlob.type });
 
-  const apiKey = getApiKey()
-  const res = await fetch(`${API_BASE}/speech/transcribe`, {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey || "",
-    },
-    body: formData,
-  })
+    const formData = new FormData()
+    formData.append("file", wavBlob, "recording.wav")
+    formData.append("language", language)
 
-  const data = await parseJson<TranscriptionResponse>(res)
-  if (!res.ok) {
-    throw new Error(data.error || "Unable to transcribe speech.")
+    const apiKey = getApiKey()
+    const res = await fetch(`${API_BASE}/speech/transcribe`, {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey || "",
+      },
+      body: formData,
+    })
+
+    const data = await parseJson<TranscriptionResponse>(res)
+    if (!res.ok) {
+      console.error("Backend Transcription Error Details:", data);
+      throw new Error(data.error || "Unable to transcribe speech.")
+    }
+
+    // Map backend 'transcript' field to 'text' for frontend compatibility
+    if (data.transcript && !data.text) {
+      data.text = data.transcript
+    }
+
+    return data
+  } catch (error) {
+    console.error("Transcription Error:", error);
+    throw error;
   }
-  return data
 }

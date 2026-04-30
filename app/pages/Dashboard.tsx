@@ -1,371 +1,756 @@
-import React, { useState } from 'react';
-import { 
-    Search, Bell, Settings, User, Mail, Calendar as CalendarIcon, 
-    MessageSquare, FileText, PieChart, Activity, Layers, 
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+    Search, Bell, Settings, User, Mail, Calendar as CalendarIcon,
+    MessageSquare, FileText, PieChart, Activity, Layers,
     MoreHorizontal, Plus, Briefcase, Users, Clock, CheckCircle2,
-    ChevronRight, ArrowUpRight, Globe, Shield, Zap, Table as TableIcon, LayoutDashboard
+    ChevronRight, ArrowUpRight, Globe, Shield, Zap, Table as TableIcon, LayoutDashboard,
+    ChevronLeft, ChevronRight as ChevronRightIcon, LogOut, Moon, Sun, RefreshCw, Database,
+    TrendingUp, ShieldCheck, Cpu
 } from 'lucide-react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, adminLogin } from '@/lib/chat-api';
+import { getApiKey, isAdminAuthenticated, setAdminKey, removeAdminKey, isAuthenticated } from '@/lib/auth';
+import { toast } from 'sonner';
+
+const ITEMS_PER_PAGE = 10;
 
 const Dashboard = () => {
     const [isDarkMode, setIsDarkMode] = useState(true);
+    const [isAuthChecked, setIsAuthChecked] = useState(false);
+    const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
     const [view, setView] = useState<'visual' | 'table'>('visual');
+    const [users, setUsers] = useState<AdminUser[]>([]);
+    const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [isUpdatingTokens, setIsUpdatingTokens] = useState(false);
+    const [adminStatus, setAdminStatus] = useState<any>(null);
+    const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+    const [loginKey, setLoginKey] = useState('');
+    const [showLoginForm, setShowLoginForm] = useState(false);
 
-    const stats = [
-        { label: "Student Mode", value: "92%", color: "white" },
-        { label: "Coding Mode", value: "88%", color: "white" },
-        { label: "Mock Test", value: "45%", color: "white" },
-        { label: "Study Plan", value: "72%", color: "white" }
-    ];
+    useEffect(() => {
+        const isAuthed = isAuthenticated();
+        setIsUserAuthenticated(isAuthed);
+        setIsAdmin(isAdminAuthenticated());
+        setIsAuthChecked(true);
+    }, []);
 
-    const quickLinks = [
-        { icon: Activity, label: "Stats" },
-        { icon: Layers, label: "Vault" },
-        { icon: Briefcase, label: "Work" },
-        { icon: Shield, label: "Secure" },
-        { icon: Globe, label: "Web" },
-        { icon: Zap, label: "Fast" },
-        { icon: Users, label: "Team" },
-        { icon: Clock, label: "Logs" },
-        { icon: Plus, label: "Add" },
-    ];
+    const filteredUsers = useMemo(() => {
+        if (!searchQuery.trim()) return users;
+        const query = searchQuery.toLowerCase();
+        return users.filter(u =>
+            u.name.toLowerCase().includes(query) ||
+            u.email.toLowerCase().includes(query) ||
+            u.id.toLowerCase().includes(query)
+        );
+    }, [users, searchQuery]);
 
-    const recentDocs = [
-        { name: "Project_Proposal.pdf", time: "2 hours ago" },
-        { name: "Q3_Financial_Report.xlsx", time: "5 hours ago" },
-        { name: "System_Architecture.drawio", time: "Yesterday" }
-    ];
+    const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+    const paginatedUsers = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredUsers.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredUsers, currentPage]);
+
+    const fetchData = async () => {
+        setIsRefreshing(true);
+        setIsLoading(true);
+        try {
+            const [usersData, statusData] = await Promise.all([
+                getAdminUsers(),
+                getSubscriptionStatus()
+            ]);
+
+            if (usersData.success && usersData.users) {
+                setUsers(usersData.users);
+                // Keep the same user selected if they still exist
+                if (selectedUser) {
+                    const updatedSelected = usersData.users.find(u => u.id === selectedUser.id);
+                    if (updatedSelected) setSelectedUser(updatedSelected);
+                } else if (usersData.users.length > 0) {
+                    setSelectedUser(usersData.users[0]);
+                }
+            }
+
+            if (statusData.success) {
+                setAdminStatus(statusData.subscription);
+            }
+        } catch (err) {
+            console.error("Dashboard Data Fetch Error:", err);
+            toast.error("Failed to sync system data.");
+        } finally {
+            setIsLoading(false);
+            setIsRefreshing(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isAdmin === true) {
+            fetchData();
+        }
+    }, [isAdmin]);
+
+    const handleUpdateTokens = async (userId: string, currentLimit: number) => {
+        const newTokens = prompt(`Enter new token limit for user:`, String(currentLimit));
+        if (newTokens === null || isNaN(Number(newTokens))) return;
+
+        setIsUpdatingTokens(true);
+        try {
+            await updateTokens({
+                user_id: userId,
+                tokens: Number(newTokens)
+            });
+            toast.success("Token limit updated successfully.");
+            await fetchData();
+        } catch (err) {
+            toast.error("Failed to update tokens: " + (err as Error).message);
+        } finally {
+            setIsUpdatingTokens(false);
+        }
+    };
+
+    // Chart Components for real data visualization
+    const ProgressCircle = ({ value, limit, label, color }: { value: number, limit: number, label: string, color: string }) => {
+        const percentage = limit > 0 ? Math.min(100, (value / limit) * 100) : 0;
+        const radius = 44;
+        const circumference = 2 * Math.PI * radius;
+        const offset = circumference - (percentage / 100) * circumference;
+
+        return (
+            <div className="flex flex-col items-center">
+                <div className="relative w-32 h-32 mb-4 group">
+                    <svg className="w-full h-full rotate-[-90deg]">
+                        <circle cx="64" cy="64" r={radius} fill="none" stroke="currentColor" strokeWidth="2" className="text-white/5" />
+                        <motion.circle
+                            cx="64" cy="64" r={radius} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round"
+                            initial={{ strokeDashoffset: circumference }}
+                            animate={{ strokeDashoffset: offset }}
+                            transition={{ duration: 1.5, ease: "easeOut" }}
+                            style={{ strokeDasharray: circumference }}
+                            className="drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
+                        />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-2xl font-display font-black leading-none">{percentage.toFixed(0)}%</span>
+                        <span className="text-[8px] font-mono opacity-40 uppercase tracking-widest mt-1">Usage</span>
+                    </div>
+                </div>
+                <span className="text-[10px] font-mono uppercase tracking-[0.2em] opacity-40">{label}</span>
+                <p className="text-[11px] font-bold mt-1 tracking-tighter">
+                    {value.toLocaleString()} / {limit.toLocaleString()}
+                </p>
+            </div>
+        );
+    };
+
+    const handleExportCSV = () => {
+        if (users.length === 0) {
+            toast.error("No data available to export.");
+            return;
+        }
+
+        const headers = ["ID", "Name", "Email", "Plan", "Status", "Tokens Used", "Tokens Limit", "Images Used", "Images Limit"];
+        const csvRows = users.map(u => [
+            u.id,
+            u.name,
+            u.email,
+            u.subscription.plan,
+            u.subscription.status,
+            u.subscription.tokens_used,
+            u.subscription.tokens_limit,
+            u.subscription.images_used,
+            u.subscription.images_limit
+        ].map(val => `"${val}"`).join(","));
+
+        const csvContent = [headers.join(","), ...csvRows].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `rudranex_users_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("Transaction logs exported successfully.");
+    };
+
+    const StatCard = ({ title, value, icon: Icon, color, subtext }: { title: string, value: string | number, icon: any, color: string, subtext?: string }) => (
+        <div className={`relative overflow-hidden group border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} p-6 rounded-[2rem] transition-all hover:bg-white/10`}>
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Icon className="h-12 w-12" />
+            </div>
+            <span className="text-[9px] font-mono uppercase tracking-[0.3em] opacity-40">{title}</span>
+            <div className="flex items-baseline gap-2 mt-2">
+                <h4 className="text-2xl font-display font-black tracking-tight">{value}</h4>
+                {subtext && <span className="text-[10px] font-mono opacity-30">{subtext}</span>}
+            </div>
+            <div className={`h-[2px] w-8 mt-4 rounded-full`} style={{ backgroundColor: color }} />
+        </div>
+    );
+
+    const handleAdminLogin = async (key: string) => {
+        const trimmedKey = key.trim();
+        if (!trimmedKey) return;
+
+        console.log("[Admin Login] Attempting authentication...");
+        setIsLoading(true);
+        try {
+            const res = await adminLogin(trimmedKey);
+            console.log("[Admin Login] Response received:", res);
+            if (res.success || res.ok) {
+                setAdminKey(trimmedKey);
+                setIsAdmin(true);
+                toast.success("Access Granted. Initializing Admin ...");
+            } else {
+                throw new Error(res.error || "Authentication failed");
+            }
+        } catch (err) {
+            console.error("[Admin Login] Error:", err);
+            toast.error("Access Denied: " + (err as Error).message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleAdminLogout = () => {
+        removeAdminKey();
+        setIsAdmin(false);
+        toast.info("Admin Session Terminated.");
+    };
+
+    if (!isAuthChecked || isAdmin === null) {
+        return <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+            <div className="h-8 w-8 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+        </div>;
+    }
+
+    if (!isUserAuthenticated) {
+        return (
+            <div className={`min-h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} flex flex-col items-center justify-center p-6 text-center`}>
+                <div className={`absolute inset-0 noise opacity-[0.03] pointer-events-none ${isDarkMode ? "" : "invert"}`} />
+                <div className="relative z-10 space-y-6">
+                    <div className="h-20 w-20 bg-white/5 border border-white/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
+                        <Shield className="h-10 w-10 opacity-20" />
+                    </div>
+                    <h2 className="text-4xl font-display font-black tracking-tighter uppercase">Authentication Required</h2>
+                    <p className="text-xs font-mono opacity-40 uppercase tracking-[0.3em] max-w-sm mx-auto">Please sign in to your Rudranex account to access administrative features.</p>
+                    <Link href="/">
+                        <button className="mt-8 px-10 py-4 bg-white text-black text-[10px] font-mono uppercase tracking-[0.3em] font-black rounded-2xl hover:scale-105 active:scale-95 transition-all">
+                            Back to Core
+                        </button>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    if (isAdmin === false) {
+        return (
+            <div className={`min-h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} flex items-center justify-center p-6`}>
+                <div className={`absolute inset-0 noise opacity-[0.03] pointer-events-none ${isDarkMode ? "" : "invert"}`} />
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className={`max-w-md w-full border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} p-12 rounded-[3rem] backdrop-blur-3xl relative overflow-hidden`}
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[60px] rounded-full" />
+
+                    <div className="flex flex-col items-center text-center mb-10">
+                        <div className="h-16 w-16 bg-emerald-500 rounded-3xl flex items-center justify-center text-black mb-6 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+                            <ShieldCheck className="h-8 w-8" />
+                        </div>
+                        <h2 className="text-3xl font-display font-black tracking-tighter uppercase mb-2">Admin Access</h2>
+                        <p className="text-[10px] font-mono opacity-40 uppercase tracking-[0.3em]">Authorized Personnel Only</p>
+                    </div>
+
+                    <form onSubmit={(e) => {
+                        e.preventDefault();
+                        handleAdminLogin(loginKey);
+                    }} className="space-y-6">
+                        <div className="relative group">
+                            <Shield className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-all ${isDarkMode ? "text-white/20 group-focus-within:text-emerald-500" : "text-black/20 group-focus-within:text-emerald-500"}`} />
+                            <input
+                                value={loginKey}
+                                onChange={(e) => setLoginKey(e.target.value)}
+                                type="password"
+                                placeholder="ENTER X-ADMIN-KEY"
+                                required
+                                className={`w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"} border rounded-2xl focus:outline-none focus:border-emerald-500/50 transition-all placeholder:opacity-20`}
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full py-4 bg-white text-black text-[10px] font-mono uppercase tracking-[0.3em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50"
+                        >
+                            {isLoading ? "AUTHENTICATING..." : "ESTABLISHING"}
+                        </button>
+                    </form>
+
+                    <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-center gap-2 opacity-20">
+                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[8px] font-mono uppercase tracking-widest">Secure Handshake Protocol</span>
+                    </div>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
-        <div className={`min-h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} font-sans selection:bg-white selection:text-black overflow-x-hidden`}>
+        <div className={`h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} font-sans selection:bg-white selection:text-black overflow-hidden flex flex-col transition-colors duration-500`}>
+            <div className={`absolute inset-0 noise opacity-[0.03] pointer-events-none ${isDarkMode ? "" : "invert"}`} />
+
             {/* Top Navigation */}
-            <nav className={`h-16 flex items-center justify-between px-8 border-b ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-[#f9f9f9]"} sticky top-0 z-50`}>
-                <div className="flex items-center gap-8">
-                    <Link href="/" className="flex items-center gap-3 group">
-                        <div className={`h-6 w-6 ${isDarkMode ? "bg-white" : "bg-black"} flex items-center justify-center`}>
+            <nav className={`h-20 flex items-center justify-between px-10 border-b ${isDarkMode ? "border-white/5 bg-[#0a0a0a]/80" : "border-black/5 bg-white/80"} backdrop-blur-2xl sticky top-0 z-[100]`}>
+                <div className="flex items-center gap-12">
+                    <Link href="/" className="flex items-center gap-4 group">
+                        <div className={`h-6 w-6 ${isDarkMode ? "bg-white" : "bg-black"} flex items-center justify-center transition-transform group-hover:rotate-45`}>
                             <div className={`h-1.5 w-1.5 ${isDarkMode ? "bg-black" : "bg-white"}`} />
                         </div>
-                        <span className="font-display font-black tracking-tighter text-lg">RUDRANEX</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="font-display font-black tracking-tighter text-xl">RUDRANEX</span>
+                            <span className="font-serif italic opacity-40 text-xl tracking-tighter">admin</span>
+                        </div>
                     </Link>
-                    <div className="hidden md:flex items-center gap-6">
-                        {[Briefcase, Users, Layers, Shield, Settings].map((Icon, i) => (
-                            <Icon key={i} className="h-4 w-4 opacity-40 hover:opacity-100 cursor-pointer transition-opacity" />
-                        ))}
+
+                    <div className="hidden lg:flex items-center gap-8">
+                        <button
+                            onClick={() => setView('visual')}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'visual' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
+                        >
+                            <LayoutDashboard className="h-3.5 w-3.5" /> Dashboard
+                        </button>
+                        <button
+                            onClick={() => setView('table')}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'table' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
+                        >
+                            <TableIcon className="h-3.5 w-3.5" /> Table Logs
+                        </button>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2 p-1 bg-white/5 border border-white/10 rounded-full mr-4">
-                        <button 
-                            onClick={() => setView('visual')}
-                            className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-widest flex items-center gap-2 transition-all ${view === 'visual' ? "bg-white text-black font-bold" : "text-white/40 hover:text-white"}`}
+                    {!isAdmin && (
+                        <button
+                            onClick={() => setShowLoginForm(true)}
+                            className="px-4 py-2 border border-amber-500/30 text-amber-500 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-amber-500/10 transition-all rounded-full flex items-center gap-2"
                         >
-                            <LayoutDashboard className="h-3 w-3" /> Visual
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Authenticate
                         </button>
-                        <button 
-                            onClick={() => setView('table')}
-                            className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-widest flex items-center gap-2 transition-all ${view === 'table' ? "bg-white text-black font-bold" : "text-white/40 hover:text-white"}`}
-                        >
-                            <TableIcon className="h-3 w-3" /> Table
-                        </button>
-                    </div>
-                    <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-20" />
-                        <input 
-                            type="text" 
-                            placeholder="SEARCH..." 
-                            className={`w-64 pl-10 pr-4 py-2 text-[10px] font-mono tracking-widest ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border focus:outline-none focus:border-white/40 transition-all rounded-full`}
-                        />
-                    </div>
-                    <div className="flex items-center gap-4 border-l border-white/10 pl-6">
-                        <Mail className="h-4 w-4 opacity-40 hover:opacity-100 cursor-pointer" />
-                        <Bell className="h-4 w-4 opacity-40 hover:opacity-100 cursor-pointer" />
-                        <div 
+                    )}
+
+                    <button
+                        onClick={fetchData}
+                        disabled={isRefreshing}
+                        className={`p-2 rounded-full border border-white/10 hover:bg-white/5 transition-all ${isRefreshing ? "animate-spin" : ""}`}
+                    >
+                        <RefreshCw className="h-4 w-4 opacity-40" />
+                    </button>
+
+                    <div className="h-8 w-[1px] bg-white/10 mx-2" />
+
+                    <div className="flex items-center gap-4">
+                        <div
                             onClick={() => setIsDarkMode(!isDarkMode)}
-                            className="h-8 w-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center cursor-pointer hover:bg-white/10"
+                            className={`h-10 w-10 rounded-2xl border flex items-center justify-center cursor-pointer transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5" : "border-black/10 hover:bg-black/5"}`}
                         >
-                            <div className={`h-2 w-2 rounded-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
+                            {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                        </div>
+                        <div
+                            onClick={handleAdminLogout}
+                            className="h-10 w-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center group cursor-pointer overflow-hidden hover:bg-amber-500 transition-all"
+                        >
+                            <LogOut className="h-4 w-4 text-amber-500 group-hover:text-black transition-colors" />
                         </div>
                     </div>
                 </div>
             </nav>
 
-            {view === 'visual' ? (
-                <div className="p-8 grid grid-cols-12 gap-6">
-                    {/* Left Column - Profile & Quick Links */}
-                    <div className="col-span-12 lg:col-span-2 space-y-6">
-                        <div className={`${isDarkMode ? "bg-white/5 border-white/10 backdrop-blur-xl" : "bg-black/5 border-black/10 backdrop-blur-xl"} border p-8 text-center relative group overflow-hidden rounded-[2rem]`}>
-                            <div className="absolute top-0 left-0 w-1 h-full bg-white scale-y-0 group-hover:scale-y-100 transition-transform origin-top" />
-                            <div className="relative mx-auto w-24 h-24 mb-6">
-                                <div className={`absolute inset-0 rounded-full border border-dashed ${isDarkMode ? "border-white/20 animate-spin-slow" : "border-black/20 animate-spin-slow"}`} />
-                                <div className={`absolute inset-2 rounded-full border ${isDarkMode ? "border-white/10" : "border-black/10"} flex items-center justify-center overflow-hidden bg-white/5`}>
-                                    <User className="h-10 w-10 opacity-40" />
-                                </div>
-                            </div>
-                            <h2 className="font-display font-bold text-lg mb-1 tracking-tight">JOHN SMITH</h2>
-                            <p className="text-[10px] font-mono tracking-[0.2em] opacity-40 uppercase mb-8">System Admin</p>
-                            <div className="space-y-3">
-                                {["Profile", "Settings", "Billing", "Logout"].map((item) => (
-                                    <button key={item} className={`w-full text-left px-4 py-2 text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"} transition-colors flex items-center justify-between group rounded-xl`}>
-                                        {item}
-                                        <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className={`${isDarkMode ? "bg-white/5 border-white/10 backdrop-blur-xl" : "bg-black/5 border-black/10 backdrop-blur-xl"} border p-6 rounded-[2rem]`}>
-                            <h3 className="text-[10px] font-mono tracking-[0.3em] opacity-20 uppercase mb-6">Quick Links</h3>
-                            <div className="grid grid-cols-3 gap-2">
-                                {quickLinks.map((link, i) => (
-                                    <button key={i} className={`aspect-square flex items-center justify-center border rounded-2xl ${isDarkMode ? "border-white/5 hover:bg-white text-white hover:text-black" : "border-black/5 hover:bg-black text-black hover:text-white"} transition-all group`}>
-                                        <link.icon className="h-4 w-4 opacity-40 group-hover:opacity-100" />
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className={`${isDarkMode ? "bg-white text-black" : "bg-black text-white"} p-6 flex items-center justify-between rounded-[2rem]`}>
-                            <div className="flex items-center gap-3">
-                                <MessageSquare className="h-4 w-4" />
-                                <span className="text-[10px] font-mono tracking-widest uppercase font-bold">Chat Support</span>
-                            </div>
-                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        </div>
-                    </div>
-
-                    {/* Center Column - Main Dashboard */}
-                    <div className="col-span-12 lg:col-span-7 space-y-6">
-                        {/* Top Stats Cards */}
-                        <div className={`${isDarkMode ? "bg-white/5 border-white/10 backdrop-blur-xl" : "bg-black/5 border-black/10 backdrop-blur-xl"} border p-8 grid grid-cols-4 gap-8 rounded-[2.5rem]`}>
-                            {stats.map((stat, i) => (
-                                <div key={i} className="text-center group">
-                                    <div className="relative w-24 h-24 mx-auto mb-4">
-                                        <svg className="w-full h-full rotate-[-90deg]">
-                                            <circle cx="48" cy="48" r="44" fill="none" stroke={isDarkMode ? "white" : "black"} strokeWidth="1" strokeDasharray="276" strokeDashoffset={276 - (parseInt(stat.value) * 2.76)} className="opacity-10 group-hover:opacity-40 transition-opacity" />
-                                            <circle cx="48" cy="48" r="44" fill="none" stroke={isDarkMode ? "white" : "black"} strokeWidth="4" strokeDasharray="276" strokeDashoffset={276 - (parseInt(stat.value) * 2.76)} className="transition-all duration-1000" />
-                                        </svg>
-                                        <div className="absolute inset-0 flex items-center justify-center flex-col">
-                                            <span className="text-xl font-display font-bold">{stat.value}</span>
-                                        </div>
+            <main className="flex-1 overflow-y-auto p-10 relative z-10 w-full max-w-[1800px] mx-auto custom-scrollbar">
+                <AnimatePresence mode="wait">
+                    {view === 'visual' ? (
+                        <motion.div
+                            key="visual"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="grid grid-cols-12 gap-8"
+                        >
+                            {/* Left Panel: User Selection */}
+                            <div className="col-span-12 lg:col-span-3 space-y-8">
+                                <div className={`border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} p-8 rounded-[2.5rem] backdrop-blur-xl`}>
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className="text-xs font-display font-black uppercase tracking-[0.2em]">System Users</h3>
+                                        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                                     </div>
-                                    <span className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-40">{stat.label}</span>
-                                </div>
-                            ))}
-                        </div>
 
-                        {/* Middle Row */}
-                        <div className="grid grid-cols-2 gap-6">
-                            <div className={`${isDarkMode ? "bg-white/5 border-white/10 backdrop-blur-xl" : "bg-black/5 border-black/10 backdrop-blur-xl"} border p-8 h-[320px] flex flex-col rounded-[2.5rem]`}>
-                                <div className="flex items-center justify-between mb-8">
-                                    <h3 className="text-xs font-display font-bold uppercase tracking-widest">Recent Activity</h3>
-                                    <MoreHorizontal className="h-4 w-4 opacity-20" />
-                                </div>
-                                <div className="space-y-4 flex-1">
-                                    {[
-                                        { u: "User_892", m: "Student Mode", t: "2m ago" },
-                                        { u: "Dev_Alpha", m: "Coding Mode", t: "5m ago" },
-                                        { u: "User_441", m: "Mock Test", t: "12m ago" },
-                                        { u: "Study_Bot", m: "Custom Persona", t: "15m ago" }
-                                    ].map((act, i) => (
-                                        <div key={i} className="flex items-center gap-4 group cursor-pointer">
-                                            <div className={`h-10 w-10 border rounded-xl ${isDarkMode ? "border-white/10 group-hover:bg-white group-hover:text-black" : "border-black/10 group-hover:bg-black group-hover:text-white"} transition-all flex items-center justify-center`}>
-                                                <Users className="h-4 w-4" />
-                                            </div>
-                                            <div className="flex-1 border-b border-white/5 pb-2">
-                                                <p className="text-[10px] font-bold uppercase mb-1">{act.u} accessed {act.m}</p>
-                                                <p className="text-[9px] font-mono opacity-40 uppercase">{act.t}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                                    <div className="relative mb-6">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-20" />
+                                        <input
+                                            type="text"
+                                            placeholder="SEARCH ID / NAME..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className={`w-full pl-11 pr-4 py-3 text-[10px] font-mono tracking-widest ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"} border rounded-2xl focus:outline-none focus:border-emerald-500/50 transition-all`}
+                                        />
+                                    </div>
 
-                            <div className={`${isDarkMode ? "bg-white/5 border-white/10 backdrop-blur-xl" : "bg-black/5 border-black/10 backdrop-blur-xl"} border p-8 h-[320px] flex flex-col items-center justify-center text-center group rounded-[2.5rem]`}>
-                                <div className="w-20 h-20 mb-6 bg-white/5 border border-white/10 flex items-center justify-center rounded-[2rem] group-hover:scale-110 transition-transform">
-                                    <Zap className="h-8 w-8 opacity-40" />
-                                </div>
-                                <h3 className="text-sm font-display font-bold mb-3 uppercase tracking-tighter">Usage Pulse</h3>
-                                <p className="text-[10px] font-sans opacity-40 leading-relaxed mb-8 max-w-[200px]">Real-time tracking of AI cognitive engines across global sessions.</p>
-                                <div className="flex gap-4">
-                                    <button className={`px-6 py-2 text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "bg-white text-black" : "bg-black text-white"} hover:opacity-80 transition-opacity rounded-full`}>View Live</button>
-                                    <button className={`px-6 py-2 text-[9px] font-mono uppercase tracking-widest border rounded-full ${isDarkMode ? "border-white/10 hover:bg-white/5" : "border-black/10 hover:bg-black/5"} transition-all`}>Logs</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Bottom Row Stat Bars */}
-                        <div className="grid grid-cols-2 gap-6">
-                            <div className={`${isDarkMode ? "bg-white/5 border-white/10 backdrop-blur-xl" : "bg-black/5 border-black/10 backdrop-blur-xl"} border p-8 rounded-[2.5rem]`}>
-                                <h3 className="text-[10px] font-mono tracking-[0.3em] opacity-20 uppercase mb-8">Popularity Index</h3>
-                                <div className="space-y-8">
-                                    {[
-                                        { label: "Student Tutor", val: 85 },
-                                        { label: "Coding Engine", val: 62 },
-                                        { label: "Voice Interview", val: 28 }
-                                    ].map((bar, i) => (
-                                        <div key={i} className="space-y-3">
-                                            <div className="flex justify-between items-end">
-                                                <span className="text-[10px] font-bold uppercase">{bar.label}</span>
-                                                <span className="text-[10px] font-mono opacity-40">{bar.val}%</span>
-                                            </div>
-                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/5" : "bg-black/5"} relative rounded-full overflow-hidden`}>
-                                                <div 
-                                                    className={`absolute top-0 left-0 h-full ${isDarkMode ? "bg-white" : "bg-black"} transition-all duration-1000 rounded-full`} 
-                                                    style={{ width: `${bar.val}%` }} 
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className={`${isDarkMode ? "bg-white/5 border-white/10 backdrop-blur-xl" : "bg-black/5 border-black/10 backdrop-blur-xl"} border p-8 flex items-center justify-center rounded-[2.5rem]`}>
-                                <div className="relative w-40 h-40">
-                                    <svg className="w-full h-full rotate-[-90deg]">
-                                        <circle cx="80" cy="80" r="70" fill="none" stroke={isDarkMode ? "white" : "black"} strokeWidth="20" strokeDasharray="440" strokeDashoffset="120" className="opacity-10" />
-                                        <circle cx="80" cy="80" r="70" fill="none" stroke={isDarkMode ? "white" : "black"} strokeWidth="20" strokeDasharray="440" strokeDashoffset="300" />
-                                    </svg>
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <span className="text-3xl font-display font-black">82%</span>
-                                        <span className="text-[8px] font-mono uppercase tracking-[0.2em] opacity-40">Global Engagement</span>
+                                    <div className="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
+                                        {isLoading ? (
+                                            Array.from({ length: 5 }).map((_, i) => (
+                                                <div key={i} className="h-12 w-full animate-pulse bg-white/5 rounded-xl" />
+                                            ))
+                                        ) : (
+                                            filteredUsers.map((user) => (
+                                                <button
+                                                    key={user.id}
+                                                    onClick={() => setSelectedUser(user)}
+                                                    className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group ${selectedUser?.id === user.id
+                                                        ? "bg-emerald-500 text-black font-bold shadow-[0_10px_30px_rgba(16,185,129,0.2)]"
+                                                        : (isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5")
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center gap-4 text-left">
+                                                        <div className={`h-8 w-8 rounded-full border flex items-center justify-center ${selectedUser?.id === user.id ? "border-black/20" : "border-white/10"}`}>
+                                                            <User className="h-3.5 w-3.5" />
+                                                        </div>
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="text-[11px] font-bold truncate tracking-tight">{user.name}</span>
+                                                            <span className={`text-[9px] font-mono uppercase opacity-40 truncate ${selectedUser?.id === user.id ? "text-black" : ""}`}>{user.subscription.plan}</span>
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight className={`h-3.5 w-3.5 transition-transform ${selectedUser?.id === user.id ? "translate-x-1" : "opacity-0 group-hover:opacity-100"}`} />
+                                                </button>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* Right Column - Tasks & Calendar */}
-                    <div className="col-span-12 lg:col-span-3 space-y-6">
-                        <div className={`${isDarkMode ? "bg-white/5 border-white/10 backdrop-blur-xl" : "bg-black/5 border-black/10 backdrop-blur-xl"} border p-8 rounded-[2rem]`}>
-                            <h3 className="text-xs font-display font-bold uppercase tracking-widest mb-8">User Logs</h3>
-                            <div className="space-y-6">
-                                {recentDocs.map((doc, i) => (
-                                    <div key={i} className="flex gap-4 group cursor-pointer">
-                                        <div className={`h-10 w-10 flex-shrink-0 rounded-xl ${isDarkMode ? "bg-white/5 text-white/40" : "bg-black/5 text-black/40"} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                            <FileText className="h-5 w-5" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase mb-1 line-clamp-1">{doc.name}</p>
-                                            <p className="text-[9px] font-mono opacity-20 uppercase">{doc.time}</p>
-                                        </div>
-                                    </div>
-                                ))}
+                                <div className={`border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} p-8 rounded-[2.5rem] backdrop-blur-xl text-center`}>
+                                    <Database className="h-8 w-8 mx-auto mb-4 opacity-20" />
+                                    <h4 className="text-[10px] font-mono uppercase tracking-[0.3em] opacity-40">System Core</h4>
+                                    <p className="text-xs font-bold mt-2">Active Node: IND-01</p>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className={`${isDarkMode ? "bg-white/5 border-white/10 backdrop-blur-xl" : "bg-black/5 border-black/10 backdrop-blur-xl"} border p-8 rounded-[2rem]`}>
-                            <h3 className="text-xs font-display font-bold uppercase tracking-widest mb-8">System Tasks</h3>
-                            <div className="space-y-4">
-                                {[
-                                    { t: "Sync User Database", d: "Today", c: true },
-                                    { t: "Update AI Weights", d: "Tomorrow", c: false },
-                                    { t: "Review Latency Logs", d: "May 04", c: false }
-                                ].map((task, i) => (
-                                    <div key={i} className="flex items-center gap-4 group cursor-pointer">
-                                        <div className={`h-4 w-4 border rounded ${task.c ? "bg-white border-white" : "border-white/20"} flex items-center justify-center`}>
-                                            {task.c && <CheckCircle2 className="h-3 w-3 text-black" />}
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className={`text-[10px] font-medium uppercase ${task.c ? "line-through opacity-20" : ""}`}>{task.t}</p>
-                                            <p className="text-[8px] font-mono opacity-20 uppercase">{task.d}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className={`${isDarkMode ? "bg-white/5 border-white/10 backdrop-blur-xl" : "bg-black/5 border-black/10 backdrop-blur-xl"} border p-8 rounded-[2.5rem]`}>
-                            <h3 className="text-xs font-display font-bold uppercase tracking-widest mb-8">Deployment Map</h3>
-                            <div className="grid grid-cols-7 gap-2 text-center mb-4">
-                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-                                    <span key={d} className="text-[8px] font-mono opacity-20 font-bold">{d}</span>
-                                ))}
-                            </div>
-                            <div className="grid grid-cols-7 gap-1">
-                                {Array.from({ length: 31 }, (_, i) => (
-                                    <div 
-                                        key={i} 
-                                        className={`aspect-square flex items-center justify-center text-[9px] font-mono rounded-lg ${
-                                            i + 1 === 24 
-                                            ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold") 
-                                            : "hover:bg-white/5 opacity-40"
-                                        } transition-colors cursor-pointer`}
-                                    >
-                                        {i + 1}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            ) : (
-                /* Table View */
-                <div className="p-8">
-                    <div className={`${isDarkMode ? "bg-white/5 border-white/10 backdrop-blur-2xl" : "bg-black/5 border-black/10 backdrop-blur-2xl"} border rounded-[2.5rem] overflow-hidden`}>
-                        <div className="p-8 border-b border-white/10 flex items-center justify-between">
-                            <div>
-                                <h2 className="text-lg font-display font-bold uppercase tracking-tight">User Interaction Logs</h2>
-                                <p className="text-[10px] font-mono opacity-40 uppercase mt-1 tracking-widest">Complete system data in tabular format</p>
-                            </div>
-                            <button className={`px-6 py-2 bg-white text-black text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:opacity-90 transition-all rounded-full`}>
-                                Export Data (.CSV)
-                            </button>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className={`${isDarkMode ? "bg-white/5" : "bg-black/5"} text-[10px] font-mono uppercase tracking-[0.3em]`}>
-                                        <th className="p-6 font-bold border-r border-white/5">Session ID</th>
-                                        <th className="p-6 font-bold border-r border-white/5">User Identity</th>
-                                        <th className="p-6 font-bold border-r border-white/5">Cognitive Mode</th>
-                                        <th className="p-6 font-bold border-r border-white/5">Tokens Used</th>
-                                        <th className="p-6 font-bold border-r border-white/5">Status</th>
-                                        <th className="p-6 font-bold">Timestamp</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="text-[11px] font-mono uppercase">
-                                    {[
-                                        { id: "RX-9912", u: "Mayank_Dev", m: "Student Tutor", t: "1,240", s: "Active", time: "12:44:21" },
-                                        { id: "RX-9913", u: "User_Alpha", m: "Coding Engine", t: "4,200", s: "Success", time: "12:45:02" },
-                                        { id: "RX-9914", u: "Student_98", m: "Mock Test", t: "890", s: "Success", time: "12:46:15" },
-                                        { id: "RX-9915", u: "Edu_Admin", m: "Study Plan", t: "2,100", s: "Processing", time: "12:48:30" },
-                                        { id: "RX-9916", u: "User_Beta", m: "Voice Interview", t: "3,400", s: "Success", time: "12:50:11" },
-                                        { id: "RX-9917", u: "Dev_Kishore", m: "Coding Engine", t: "5,600", s: "Active", time: "12:52:00" },
-                                        { id: "RX-9918", u: "Learning_AI", m: "Student Tutor", t: "1,100", s: "Success", time: "12:55:44" },
-                                    ].map((row, i) => (
-                                        <tr key={i} className={`border-b border-white/5 hover:bg-white/5 transition-colors group`}>
-                                            <td className="p-6 border-r border-white/5 font-bold tracking-widest">{row.id}</td>
-                                            <td className="p-6 border-r border-white/5 opacity-60">{row.u}</td>
-                                            <td className="p-6 border-r border-white/5">
-                                                <span className={`px-3 py-1 rounded-full border ${isDarkMode ? "border-white/20 bg-white/5" : "border-black/20 bg-black/5"} text-[9px]`}>
-                                                    {row.m}
-                                                </span>
-                                            </td>
-                                            <td className="p-6 border-r border-white/5 font-bold">{row.t}</td>
-                                            <td className="p-6 border-r border-white/5">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`h-1.5 w-1.5 rounded-full ${row.s === 'Active' ? 'bg-emerald-500 animate-pulse' : row.s === 'Processing' ? 'bg-amber-500 animate-pulse' : 'bg-white/40'}`} />
-                                                    {row.s}
+                            {/* Center Panel: Analytics */}
+                            <div className="col-span-12 lg:col-span-9 space-y-8">
+                                {selectedUser ? (
+                                    <>
+                                        {/* User Identity Header */}
+                                        <div className={`border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} p-10 rounded-[3rem] relative overflow-hidden`}>
+                                            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full" />
+                                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative z-10">
+                                                <div className="flex items-center gap-8">
+                                                    <div className="h-24 w-24 rounded-[2rem] bg-emerald-500 flex items-center justify-center text-black">
+                                                        <User className="h-10 w-10" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <h2 className="text-4xl font-display font-black tracking-tighter">{selectedUser.name}</h2>
+                                                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-widest ${selectedUser.subscription.status === 'active' ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"}`}>
+                                                                {selectedUser.subscription.status}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm font-mono opacity-40 flex items-center gap-2 uppercase tracking-widest">
+                                                            <Mail className="h-3.5 w-3.5" /> {selectedUser.email}
+                                                        </p>
+                                                        <p className="text-[10px] font-mono opacity-20 mt-1 uppercase tracking-widest">UUID: {selectedUser.id}</p>
+                                                    </div>
                                                 </div>
-                                            </td>
-                                            <td className="p-6 opacity-40">{row.time}</td>
+                                                <div className="flex flex-wrap items-center gap-4">
+                                                    <button
+                                                        onClick={() => handleUpdateTokens(selectedUser.id, selectedUser.subscription.tokens_limit)}
+                                                        disabled={isUpdatingTokens}
+                                                        className="px-8 py-4 bg-white text-black text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3"
+                                                    >
+                                                        <Zap className="h-4 w-4" /> {isUpdatingTokens ? 'UPDATING...' : 'MANAGE TOKENS'}
+                                                    </button>
+                                                    <button className="px-8 py-4 border border-white/10 text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:bg-white/5 transition-all rounded-2xl">
+                                                        RESET ACCOUNT
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Core Metrics Grid */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                            <StatCard
+                                                title="Subscription Plan"
+                                                value={selectedUser.subscription.plan.toUpperCase()}
+                                                icon={Briefcase}
+                                                color="#10b981"
+                                                subtext="Active"
+                                            />
+                                            <StatCard
+                                                title="System Latency"
+                                                value={selectedUser.subscription.latency_ms}
+                                                icon={Activity}
+                                                color="#3b82f6"
+                                                subtext="ms"
+                                            />
+                                            <StatCard
+                                                title="Total Personas"
+                                                value={selectedUser.subscription.personas_used}
+                                                icon={Users}
+                                                color="#f59e0b"
+                                                subtext={`/ ${selectedUser.subscription.personas_limit}`}
+                                            />
+                                            <StatCard
+                                                title="Image Generation"
+                                                value={selectedUser.subscription.images_used}
+                                                icon={PieChart}
+                                                color="#8b5cf6"
+                                                subtext={`/ ${selectedUser.subscription.images_limit}`}
+                                            />
+                                        </div>
+
+                                        {/* Visualization Section */}
+                                        <div className="grid grid-cols-12 gap-8">
+                                            <div className={`col-span-12 lg:col-span-8 border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} p-10 rounded-[3rem]`}>
+                                                <div className="flex items-center justify-between mb-12">
+                                                    <div>
+                                                        <h3 className="text-lg font-display font-black tracking-tight uppercase">Resource Utilization</h3>
+                                                        <p className="text-[10px] font-mono opacity-40 uppercase tracking-[0.3em] mt-1">Live spectral analysis of user assets</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                                            <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Healthy</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-wrap justify-center gap-16 lg:justify-between px-6">
+                                                    <ProgressCircle
+                                                        value={selectedUser.subscription.tokens_used}
+                                                        limit={selectedUser.subscription.tokens_limit}
+                                                        label="Token Delta"
+                                                        color="#10b981"
+                                                    />
+                                                    <ProgressCircle
+                                                        value={selectedUser.subscription.images_used}
+                                                        limit={selectedUser.subscription.images_limit}
+                                                        label="Image Buffer"
+                                                        color="#8b5cf6"
+                                                    />
+                                                    <ProgressCircle
+                                                        value={selectedUser.subscription.personas_used}
+                                                        limit={selectedUser.subscription.personas_limit}
+                                                        label="Persona Load"
+                                                        color="#f59e0b"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className={`col-span-12 lg:col-span-4 border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} p-10 rounded-[3rem] flex flex-col justify-between`}>
+                                                <div>
+                                                    <div className="flex items-center gap-3 mb-6">
+                                                        <TrendingUp className="h-5 w-5 text-emerald-400" />
+                                                        <h3 className="text-xs font-display font-black uppercase tracking-[0.2em]">User Efficiency</h3>
+                                                    </div>
+                                                    <p className="text-[10px] font-mono opacity-40 uppercase leading-relaxed tracking-widest">
+                                                        Current user is operating at <b>{(100 - (selectedUser.subscription.tokens_used / selectedUser.subscription.tokens_limit * 100)).toFixed(1)}%</b> headroom. Latency is optimal for region.
+                                                    </p>
+                                                </div>
+
+                                                <div className="space-y-4 mt-8">
+                                                    <div className="flex justify-between items-center text-[10px] font-mono opacity-40 tracking-widest">
+                                                        <span>SECURITY</span>
+                                                        <span>ENCRYPTED</span>
+                                                    </div>
+                                                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                        <motion.div
+                                                            className="h-full bg-emerald-500"
+                                                            initial={{ width: 0 }}
+                                                            animate={{ width: "100%" }}
+                                                            transition={{ duration: 2 }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="h-[600px] flex items-center justify-center flex-col text-center opacity-20">
+                                        <Cpu className="h-24 w-24 mb-6" />
+                                        <h2 className="text-2xl font-display font-black uppercase tracking-[0.5em]">Syncing Neural Net...</h2>
+                                        <p className="text-xs font-mono uppercase tracking-[0.3em] mt-4">Select a user node to initialize data </p>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="table"
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            className={`border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} rounded-[3rem] overflow-hidden backdrop-blur-3xl`}
+                        >
+                            <div className="p-10 border-b border-white/5 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                                <div>
+                                    <h2 className="text-3xl font-display font-black tracking-tight uppercase">User Transaction Logs</h2>
+                                    <p className="text-[10px] font-mono opacity-40 uppercase mt-2 tracking-[0.4em]">Full system registry • {users.length} active nodes</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="relative">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-20" />
+                                        <input
+                                            type="text"
+                                            placeholder="FILTER LOGS..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className={`pl-11 pr-8 py-3 text-[10px] font-mono tracking-widest ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-2xl focus:outline-none focus:border-emerald-500/50 min-w-[300px]`}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleExportCSV}
+                                        className="px-6 py-3.5 bg-white text-black text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:opacity-90 transition-all rounded-2xl"
+                                    >
+                                        Export CSV
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className={`${isDarkMode ? "bg-white/5" : "bg-black/5"} text-[9px] font-mono uppercase tracking-[0.3em] opacity-40`}>
+                                            <th className="p-8 font-bold border-b border-white/5">Identity</th>
+                                            <th className="p-8 font-bold border-b border-white/5">Subscription</th>
+                                            <th className="p-8 font-bold border-b border-white/5 text-center">Resources</th>
+                                            <th className="p-8 font-bold border-b border-white/5">Uptime / Latency</th>
+                                            <th className="p-8 font-bold border-b border-white/5 text-right">Administrative</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div className="p-6 bg-white/5 flex items-center justify-center gap-4">
-                            <span className="text-[9px] font-mono opacity-20 uppercase tracking-[0.5em]">End of Audit Trail — Rudranex Ledger v1.0</span>
-                        </div>
-                    </div>
-                </div>
-            )}
+                                    </thead>
+                                    <tbody className="text-[11px] font-mono uppercase tracking-tight">
+                                        {isLoading ? (
+                                            Array.from({ length: 5 }).map((_, i) => (
+                                                <tr key={i} className="animate-pulse opacity-20">
+                                                    <td colSpan={5} className="p-8 border-b border-white/5 h-16 bg-white/5" />
+                                                </tr>
+                                            ))
+                                        ) : paginatedUsers.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="p-20 text-center opacity-20 font-display font-black text-2xl uppercase tracking-[1em]">Void Found</td>
+                                            </tr>
+                                        ) : (
+                                            paginatedUsers.map((user) => (
+                                                <tr key={user.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                                                    <td className="p-8">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                                                                <User className="h-4 w-4 opacity-40" />
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[13px] font-bold tracking-tight">{user.name}</span>
+                                                                <span className="text-[9px] opacity-30 lowercase font-sans">{user.email}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-8">
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <span className={`text-[10px] font-black w-fit px-2 py-0.5 rounded border ${user.subscription.plan === 'pro' ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" : "border-white/10 opacity-60"}`}>
+                                                                {user.subscription.plan}
+                                                            </span>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={`h-1 w-1 rounded-full ${user.subscription.status === 'active' ? "bg-emerald-500" : "bg-amber-500"}`} />
+                                                                <span className="text-[9px] opacity-40">{user.subscription.status}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-8">
+                                                        <div className="flex flex-col gap-3 max-w-[200px] mx-auto">
+                                                            <div className="flex justify-between text-[9px] opacity-40">
+                                                                <span>TOKENS</span>
+                                                                <span>{((user.subscription.tokens_used / user.subscription.tokens_limit) * 100).toFixed(0)}%</span>
+                                                            </div>
+                                                            <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                                                <div className="h-full bg-white/20" style={{ width: `${(user.subscription.tokens_used / user.subscription.tokens_limit) * 100}%` }} />
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-8">
+                                                        <div className="flex items-center gap-2">
+                                                            <Activity className="h-3 w-3 text-emerald-500/50" />
+                                                            <span className="font-bold">{user.subscription.latency_ms}</span>
+                                                            <span className="text-[9px] opacity-30">MS</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-8 text-right">
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedUser(user);
+                                                                setView('visual');
+                                                            }}
+                                                            className="px-5 py-2.5 border border-white/5 hover:border-white/20 hover:bg-white/5 transition-all text-[9px] font-bold tracking-widest rounded-xl"
+                                                        >
+                                                            Visualize
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Pagination Controls */}
+                            <div className={`p-8 ${isDarkMode ? "bg-white/5" : "bg-black/5"} flex items-center justify-between`}>
+                                <div className="flex items-center gap-4 text-[9px] font-mono opacity-40 tracking-[0.3em] uppercase">
+                                    <Database className="h-4 w-4" />
+                                    <span>Page {currentPage} // {totalPages || 1}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-3 border border-white/10 rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </button>
+                                    <div className="flex gap-2">
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                            .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                                            .map((pageNum, i, arr) => (
+                                                <React.Fragment key={pageNum}>
+                                                    {i > 0 && arr[i - 1] !== pageNum - 1 && <span className="opacity-20 px-2">...</span>}
+                                                    <button
+                                                        onClick={() => setCurrentPage(pageNum)}
+                                                        className={`h-10 w-10 text-[10px] font-mono rounded-xl transition-all ${currentPage === pageNum
+                                                            ? 'bg-white text-black font-black'
+                                                            : 'hover:bg-white/5 opacity-40'
+                                                            }`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                </React.Fragment>
+                                            ))
+                                        }
+                                    </div>
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages || totalPages === 0}
+                                        className="p-3 border border-white/10 rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all"
+                                    >
+                                        <ChevronRightIcon className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </main>
 
             {/* Footer Style Decoration */}
-            <div className="fixed bottom-8 right-8 flex items-center gap-4 pointer-events-none opacity-20">
-                <span className="text-[10px] font-mono tracking-[0.5em] uppercase">Rudranex Terminal v2.0</span>
-                <div className="h-[1px] w-12 bg-white" />
+            <div className="fixed bottom-10 left-10 flex items-center gap-4 pointer-events-none opacity-10">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-mono tracking-[0.5em] uppercase">R_CORE_STABLE // NO_VULN</span>
             </div>
         </div>
     );

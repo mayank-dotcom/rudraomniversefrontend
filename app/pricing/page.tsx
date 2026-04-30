@@ -6,7 +6,7 @@ import { Check, Zap, Shield, Cpu, Code, Brain, Target, Image as ImageIcon, Rocke
 
 const plans = [
     {
-        name: "Student Pro",
+        name: "Basic Student",
         price: "99",
         period: "/mo",
         description: "The best AI study buddy for school and college students.",
@@ -43,7 +43,7 @@ const plans = [
         highlightColor: "gold"
     },
     {
-        name: "Junior Dev",
+        name: "Developer pro",
         price: "499",
         period: "/mo",
         description: "Advanced AI for full-stack developers and heavy coding sessions.",
@@ -183,8 +183,8 @@ const Pricing = () => {
 
                             {/* CTA */}
                             <button className={`w-full py-5 text-[10px] font-mono font-bold uppercase tracking-[0.3em] transition-all active:scale-[0.98] mb-12 ${plan.highlight || plan.cta === "Contact Sales"
-                                    ? (plan.highlightColor === 'gold' ? 'bg-[#D4AF37] text-black hover:bg-[#C5A028]' : 'bg-white text-black hover:bg-white/90')
-                                    : 'bg-transparent border border-white/20 text-white hover:bg-white/5'
+                                ? (plan.highlightColor === 'gold' ? 'bg-[#D4AF37] text-black hover:bg-[#C5A028]' : 'bg-white text-black hover:bg-white/90')
+                                : 'bg-transparent border border-white/20 text-white hover:bg-white/5'
                                 }`}>
                                 {plan.cta || "Select Plan"} →
                             </button>
