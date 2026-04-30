@@ -85,6 +85,15 @@ export interface Plan {
   is_active?: boolean
   description?: string
   status?: string
+  plan_name?: string
+  price_inr?: number
+  daily_chat_limit?: number
+  daily_coding_limit?: number
+  daily_vision_limit?: number
+  monthly_image_limit?: number
+  monthly_flux_limit?: number
+  daily_tts_limit?: number
+  daily_stt_limit?: number
 }
 
 export interface PlansListResponse {
