@@ -27,10 +27,30 @@ const AuthCard = ({ isOpen, onClose, onSuccess, initialMode = "login" }: AuthCar
     e.preventDefault()
     setError("")
     setSuccess("")
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address")
+      return
+    }
+    
+    // Password validation (min 6 chars, at least 1 letter and 1 number)
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{6,}$/
+    if (!passwordRegex.test(password)) {
+      setError("Password must be at least 6 characters with at least 1 letter and 1 number")
+      return
+    }
+    
     setLoading(true)
 
     try {
       if (mode === "signup") {
+        if (!name.trim()) {
+          setError("Name is required")
+          setLoading(false)
+          return
+        }
         const res = await register(name, email, password)
         if (res.success) {
           setApiKey(res.api_key)

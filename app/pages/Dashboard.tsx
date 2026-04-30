@@ -9,17 +9,12 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, Plan, adminLogin } from '@/lib/chat-api';
+import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, Plan, adminLogin } from '@/lib/chat-api';
 import { getApiKey, isAdminAuthenticated, setAdminKey, removeAdminKey, isAuthenticated } from '@/lib/auth';
 import { toast } from 'sonner';
 
-const PlanCard = ({ plan, isDarkMode }: { plan: any, isDarkMode: boolean }) => {
+const PlanCard = ({ plan, isDarkMode, onEdit }: { plan: any, isDarkMode: boolean, onEdit: (plan: any) => void }) => {
     console.log("Rendering plan:", plan);
-    const tokensLimit = plan.tokens_limit || 0;
-    const imagesLimit = plan.images_limit || 0;
-    const personasLimit = plan.personas_limit || 0;
-    const price = plan.price || 0;
-    const currency = plan.currency || 'INR';
 
     return (
         <div
@@ -38,13 +33,22 @@ const PlanCard = ({ plan, isDarkMode }: { plan: any, isDarkMode: boolean }) => {
                 </div>
             )}
             
-            <div className="mb-8">
+            <div className="absolute top-6 left-6">
+                <button
+                    onClick={() => onEdit(plan)}
+                    className="px-3 py-1 border border-white/10 text-[8px] font-mono uppercase tracking-widest hover:bg-white/5 transition-all rounded-full"
+                >
+                    Edit
+                </button>
+            </div>
+            
+            <div className="mb-8 mt-8">
                 <h3 className="text-xl font-display font-black uppercase tracking-tight mb-2">
-                    {plan.name || 'Unnamed Plan'}
+                    {plan.name || plan.plan_name || 'Unnamed Plan'}
                 </h3>
                 <div className="flex items-baseline gap-1">
                     <span className="text-4xl font-display font-black">
-                        {currency === 'INR' ? '₹' : '$'}{price}
+                        {plan.currency === 'INR' ? '₹' : '$'}{plan.price || plan.price_inr || 0}
                     </span>
                     <span className="text-[10px] font-mono opacity-40 uppercase tracking-widest">
                         /lifetime
@@ -52,36 +56,36 @@ const PlanCard = ({ plan, isDarkMode }: { plan: any, isDarkMode: boolean }) => {
                 </div>
             </div>
             
-            <div className="space-y-6 mb-8">
+            <div className="space-y-4 mb-8 text-[11px]">
                 <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Tokens</span>
-                    <span className="text-xs font-bold">
-                        {tokensLimit > 0 ? (tokensLimit / 1000).toFixed(0) + 'k' : '0'}
-                    </span>
+                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Daily Chat</span>
+                    <span className="font-bold">{plan.tokens_limit || plan.daily_chat_limit || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Images</span>
-                    <span className="text-xs font-bold">{imagesLimit}</span>
+                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Daily Coding</span>
+                    <span className="font-bold">{plan.personas_limit || plan.daily_coding_limit || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Personas</span>
-                    <span className="text-xs font-bold">{personasLimit}</span>
+                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Daily Vision</span>
+                    <span className="font-bold">{plan.daily_vision_limit || 0}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Monthly Images</span>
+                    <span className="font-bold">{plan.images_limit || plan.monthly_image_limit || 0}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Monthly Flux</span>
+                    <span className="font-bold">{plan.monthly_flux_limit || 0}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Daily TTS</span>
+                    <span className="font-bold">{plan.daily_tts_limit || 0}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Daily STT</span>
+                    <span className="font-bold">{plan.daily_stt_limit || 0}</span>
                 </div>
             </div>
-            
-            {plan.features && plan.features.length > 0 && (
-                <div className="border-t border-white/10 pt-6">
-                    <p className="text-[8px] font-mono uppercase tracking-[0.3em] opacity-30 mb-4">Features</p>
-                    <ul className="space-y-2">
-                        {plan.features.map((feature: string, i: number) => (
-                            <li key={i} className="flex items-center gap-2 text-[10px] opacity-60">
-                                <div className="h-1 w-1 rounded-full bg-emerald-500" />
-                                {feature}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
         </div>
     );
 };
@@ -103,6 +107,8 @@ const Dashboard = () => {
     const [plans, setPlans] = useState<Plan[]>([]);
     const [showPlans, setShowPlans] = useState(false);
     const [isPlansLoading, setIsPlansLoading] = useState(false);
+    const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+    const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
     const [adminStatus, setAdminStatus] = useState<any>(null);
     const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
     const [loginKey, setLoginKey] = useState('');
@@ -159,20 +165,20 @@ const Dashboard = () => {
 
             if (plansData.success && plansData.plans) {
                 console.log("Plans API Response:", plansData);
-                // Map API response to expected format based on actual API structure
+                // Preserve ALL fields from API, just add missing computed fields
                 const mappedPlans = plansData.plans.map((plan: any) => ({
-                    id: plan.id || '',
+                    ...plan, // Keep all original fields (daily_tts_limit, daily_stt_limit, etc.)
                     name: plan.plan_name || 'Unnamed',
                     price: parseFloat(plan.price_inr) || 0,
                     currency: 'INR',
                     tokens_limit: plan.daily_chat_limit || 0,
                     images_limit: plan.monthly_image_limit || 0,
-                    personas_limit: plan.daily_coding_limit || 0, // Using coding limit as persona proxy
+                    personas_limit: plan.daily_coding_limit || 0,
                     features: [],
-                    is_active: true, // API doesn't specify, assuming all active
+                    is_active: true,
                     description: ''
                 }));
-                console.log("Mapped Plans:", mappedPlans);
+                console.log("Mapped Plans (complete):", mappedPlans);
                 setPlans(mappedPlans);
             }
         } catch (err) {
@@ -207,6 +213,23 @@ const Dashboard = () => {
             toast.error("Failed to update tokens: " + (err as Error).message);
         } finally {
             setIsUpdatingTokens(false);
+        }
+    };
+
+    const handleUpdatePlan = async (planId: string, updates: any) => {
+        setIsUpdatingPlan(true);
+        try {
+            await updatePlan({
+                plan_id: planId,
+                ...updates
+            });
+            toast.success("Plan updated successfully.");
+            await fetchData();
+            setEditingPlan(null);
+        } catch (err) {
+            toast.error("Failed to update plan: " + (err as Error).message);
+        } finally {
+            setIsUpdatingPlan(false);
         }
     };
 
@@ -886,7 +909,7 @@ const Dashboard = () => {
                                     ) : (
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                             {plans.map((plan, index) => (
-                                                <PlanCard key={plan.id || index} plan={plan} isDarkMode={isDarkMode} />
+                                                <PlanCard key={plan.id || index} plan={plan} isDarkMode={isDarkMode} onEdit={setEditingPlan} />
                                             ))}
                                         </div>
                                     )}
@@ -896,6 +919,145 @@ const Dashboard = () => {
                     )}
                 </AnimatePresence>
             </main>
+
+            {/* Edit Plan Modal */}
+            {editingPlan && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className={`relative w-full max-w-xl max-h-[80vh] overflow-y-auto border ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-white border-black/10"} p-6 rounded-[2rem]`}
+                    >
+                        <button
+                            onClick={() => setEditingPlan(null)}
+                            className="absolute top-4 right-4 text-[10px] font-mono uppercase tracking-widest opacity-40 hover:opacity-100"
+                        >
+                            Close
+                        </button>
+                        
+                        <h2 className="text-xl font-display font-black uppercase tracking-tight mb-6">Edit Plan</h2>
+                        
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            const formData = new FormData(e.target as HTMLFormElement);
+                            handleUpdatePlan(editingPlan.id?.toString() || '', {
+                                plan_name: formData.get('plan_name') as string,
+                                price_inr: Number(formData.get('price_inr')),
+                                daily_chat_limit: Number(formData.get('daily_chat_limit')),
+                                daily_coding_limit: Number(formData.get('daily_coding_limit')),
+                                daily_vision_limit: Number(formData.get('daily_vision_limit')),
+                                monthly_image_limit: Number(formData.get('monthly_image_limit')),
+                                monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
+                                daily_tts_limit: Number(formData.get('daily_tts_limit')),
+                                daily_stt_limit: Number(formData.get('daily_stt_limit'))
+                            });
+                        }} className="space-y-4">
+                            <div>
+                                <label className="text-[9px] font-mono uppercase tracking-widest opacity-40">Plan Name</label>
+                                <input
+                                    name="plan_name"
+                                    defaultValue={editingPlan.plan_name || editingPlan.name || ''}
+                                    required
+                                    className={`w-full mt-1 p-3 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-xl focus:outline-none focus:border-emerald-500/50`}
+                                />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[9px] font-mono uppercase tracking-widest opacity-40">Price (INR)</label>
+                                    <input
+                                        name="price_inr"
+                                        type="number"
+                                        defaultValue={editingPlan.price_inr || editingPlan.price || 0}
+                                        required
+                                        className={`w-full mt-1 p-3 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-xl focus:outline-none focus:border-emerald-500/50`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-mono uppercase tracking-widest opacity-40">Daily Chat</label>
+                                    <input
+                                        name="daily_chat_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.daily_chat_limit || editingPlan.tokens_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-xl focus:outline-none focus:border-emerald-500/50`}
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[9px] font-mono uppercase tracking-widest opacity-40">Daily Coding</label>
+                                    <input
+                                        name="daily_coding_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.daily_coding_limit || editingPlan.personas_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-xl focus:outline-none focus:border-emerald-500/50`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-mono uppercase tracking-widest opacity-40">Daily Vision</label>
+                                    <input
+                                        name="daily_vision_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.daily_vision_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-xl focus:outline-none focus:border-emerald-500/50`}
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[9px] font-mono uppercase tracking-widest opacity-40">Monthly Images</label>
+                                    <input
+                                        name="monthly_image_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.monthly_image_limit || editingPlan.images_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-xl focus:outline-none focus:border-emerald-500/50`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-mono uppercase tracking-widest opacity-40">Monthly Flux</label>
+                                    <input
+                                        name="monthly_flux_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.monthly_flux_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-xl focus:outline-none focus:border-emerald-500/50`}
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[9px] font-mono uppercase tracking-widest opacity-40">Daily TTS</label>
+                                    <input
+                                        name="daily_tts_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.daily_tts_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-xl focus:outline-none focus:border-emerald-500/50`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-mono uppercase tracking-widest opacity-40">Daily STT</label>
+                                    <input
+                                        name="daily_stt_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.daily_stt_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-xl focus:outline-none focus:border-emerald-500/50`}
+                                    />
+                                </div>
+                            </div>
+                            
+                            <button
+                                type="submit"
+                                disabled={isUpdatingPlan}
+                                className="w-full py-3 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl disabled:opacity-50"
+                            >
+                                {isUpdatingPlan ? "UPDATING..." : "UPDATE PLAN"}
+                            </button>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
 
             {/* Footer Style Decoration */}
             <div className="fixed bottom-10 left-10 flex items-center gap-4 pointer-events-none opacity-10">
