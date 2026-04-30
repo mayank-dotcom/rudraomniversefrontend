@@ -186,7 +186,7 @@ function InterviewRoomContent() {
         try {
             setIsBotSpeaking(true);
 
-            let messages: Array<{role: "user" | "assistant", content: string}> = [];
+            let messages: Array<{role: "user" | "assistant" | "system", content: string}> = [];
 
             const systemPrompt = `You are an expert technical interviewer for: ${topic}. 
             RULES:

@@ -33,7 +33,7 @@ import MockPaperView from "@/components/MockPaperView";
 import { GraduationCap as MockIcon } from "lucide-react";
 
 interface Message {
-    role: "user" | "assistant";
+    role: "user" | "assistant" | "system";
     content: string;
     timestamp: string;
     localOnly?: boolean;
@@ -188,7 +188,7 @@ const Chat = () => {
         navigator.clipboard.writeText(text);
     };
 
-    const hydrateMessages = (items: Array<{ role: "user" | "assistant"; content: string; created_at?: string }>) => {
+    const hydrateMessages = (items: Array<{ role: "user" | "assistant" | "system"; content: string; created_at?: string }>) => {
         if (!items.length) {
             setMessages(getWelcomeMessages());
             return;

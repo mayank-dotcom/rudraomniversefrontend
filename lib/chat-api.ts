@@ -11,7 +11,7 @@ export interface ChatSummary {
 }
 
 export interface ChatMessageRecord {
-  role: "user" | "assistant"
+  role: "user" | "assistant" | "system"
   content: string | any // Allow complex content for vision/structured data
   created_at?: string
 }
@@ -62,6 +62,7 @@ export interface TTSResponse {
 export interface TranscriptionResponse {
   success: boolean
   text?: string
+  transcript?: string
   error?: string
 }
 
@@ -273,7 +274,7 @@ export async function getChatHistory(chatId: string) {
   return data
 }
 
-export async function saveChatMessage(chatId: string, role: "user" | "assistant", content: string) {
+export async function saveChatMessage(chatId: string, role: "user" | "assistant" | "system", content: string) {
   const res = await fetch(`${API_BASE}/chats/${chatId}/messages`, {
     method: "POST",
     headers: getHeaders(),
@@ -302,7 +303,7 @@ export async function deleteChat(chatId: string) {
 
 export async function sendAiRequest(payload: {
   endpoint: string
-  messages: Array<{ role: "user" | "assistant"; content: any }>
+  messages: Array<{ role: "user" | "assistant" | "system"; content: any }>
   chat_id?: string
   modality?: string
 }) {
@@ -326,7 +327,7 @@ export async function sendAiRequest(payload: {
 }
 
 export async function sendChatCompletion(payload: {
-  messages: Array<{ role: "user" | "assistant"; content: string }>
+  messages: Array<{ role: "user" | "assistant" | "system"; content: string }>
   chat_id?: string
 }) {
   return sendAiRequest({
