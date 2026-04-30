@@ -73,6 +73,40 @@ export interface UpdateTokensResponse {
   error?: string
 }
 
+export interface Plan {
+  id: string
+  name: string
+  price: number
+  currency?: string
+  tokens_limit: number
+  images_limit: number
+  personas_limit: number
+  features?: string[]
+  is_active?: boolean
+  description?: string
+  status?: string
+}
+
+export interface PlansListResponse {
+  success: boolean
+  plans?: Plan[]
+  error?: string
+}
+
+export async function getPlansList() {
+  const res = await fetch(`${API_BASE}/plans/list`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+
+  const data = await parseJson<PlansListResponse>(res)
+  console.log("getPlansList API Response:", data);
+  if (!res.ok) {
+    throw new Error(data.error || "Unable to fetch plans.")
+  }
+  return data
+}
+
 export async function updateTokens(payload: { user_id: string, tokens: number }) {
   const res = await fetch(`${API_BASE}/tools/tokens`, {
     method: "POST",
@@ -83,6 +117,28 @@ export async function updateTokens(payload: { user_id: string, tokens: number })
   const data = await parseJson<UpdateTokensResponse>(res)
   if (!res.ok) {
     throw new Error(data.error || "Unable to update tokens.")
+  }
+  return data
+}
+
+
+export interface UpdatePlanResponse {
+  success: boolean
+  plan?: Plan
+  error?: string
+}
+
+
+export async function updatePlan(payload: Partial<Plan> & { plan_id: string }) {
+  const res = await fetch(`${API_BASE}/dev/plans/update`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  })
+
+  const data = await parseJson<UpdatePlanResponse>(res)
+  if (!res.ok) {
+    throw new Error(data.error || "Unable to update plan.")
   }
   return data
 }
@@ -187,22 +243,32 @@ export async function getAdminUsers() {
 }
 
 export async function adminLogin(adminKey: string) {
-  // First try the specific login endpoint requested by user
-  const res = await fetch(`${API_BASE}/admin/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": getApiKey() || "",
-      "x-admin-key": adminKey
-    },
-    body: JSON.stringify({ key: adminKey })
-  })
-
-  if (res.ok) return await res.json();
-
-  // Fallback: If login endpoint doesn't exist (404), validate by trying to fetch admin users
-  if (res.status === 404) {
-    const valRes = await fetch(`${API_BASE}/admin/users`, {
+  console.log("[adminLogin] API_BASE:", process.env.NEXT_PUBLIC_BASE_URL);
+  console.log("[adminLogin] Key length:", adminKey.length);
+  
+  // Backend expects 'admin_key' in body (see backend/src/admin.js:7)
+  try {
+    const loginRes = await fetch(`${API_BASE}/admin/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": getApiKey() || "",
+        "x-admin-key": adminKey
+      },
+      body: JSON.stringify({ admin_key: adminKey })
+    });
+    
+    console.log("[adminLogin] Login status:", loginRes.status);
+    const loginText = await loginRes.text();
+    console.log("[adminLogin] Login response:", loginText);
+    
+    if (loginRes.ok) {
+      const loginData = JSON.parse(loginText);
+      return loginData;
+    }
+    
+    // If login fails, try validation endpoint
+    const validateRes = await fetch(`${API_BASE}/admin/users`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -211,15 +277,31 @@ export async function adminLogin(adminKey: string) {
       }
     });
     
-    if (valRes.ok) {
+    console.log("[adminLogin] Validation status:", validateRes.status);
+    const validateText = await validateRes.text();
+    console.log("[adminLogin] Validation response:", validateText);
+    
+    if (validateRes.ok) {
       return { success: true, message: "Admin authenticated via validation" };
     }
-    const errData = await valRes.json().catch(() => ({}));
-    throw new Error(errData.error || "Invalid Admin Key");
+    
+    // Parse error
+    let errorMsg = "Invalid Admin Key";
+    try {
+      const errData = JSON.parse(loginText);
+      errorMsg = errData.error || errData.message || errorMsg;
+    } catch (e) {
+      errorMsg = `Server error (${loginRes.status}): ${loginText.substring(0, 100)}`;
+    }
+    throw new Error(errorMsg);
+    
+  } catch (error: any) {
+    console.error("[adminLogin] Error:", error);
+    if (error.message.includes('fetch')) {
+      throw new Error("Cannot connect to backend. Verify NEXT_PUBLIC_BASE_URL is set correctly.");
+    }
+    throw error;
   }
-
-  const data = await res.json().catch(() => ({}));
-  throw new Error(data.error || "Login failed");
 }
 
 function getHeaders() {
@@ -363,7 +445,7 @@ export async function generateTTSAudio(text: string, language: string = 'hi-IN')
     for (let i = 0; i < len; i++) {
       bytes[i] = binaryString.charCodeAt(i)
     }
-    
+
     // Detect format if possible, default to mpeg
     return new Blob([bytes], { type: 'audio/mpeg' })
   } catch (error) {

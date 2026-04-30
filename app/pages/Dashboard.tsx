@@ -9,9 +9,82 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, adminLogin } from '@/lib/chat-api';
+import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, Plan, adminLogin } from '@/lib/chat-api';
 import { getApiKey, isAdminAuthenticated, setAdminKey, removeAdminKey, isAuthenticated } from '@/lib/auth';
 import { toast } from 'sonner';
+
+const PlanCard = ({ plan, isDarkMode }: { plan: any, isDarkMode: boolean }) => {
+    console.log("Rendering plan:", plan);
+    const tokensLimit = plan.tokens_limit || 0;
+    const imagesLimit = plan.images_limit || 0;
+    const personasLimit = plan.personas_limit || 0;
+    const price = plan.price || 0;
+    const currency = plan.currency || 'INR';
+
+    return (
+        <div
+            key={plan.id}
+            className={`relative border rounded-[2.5rem] p-8 transition-all hover:scale-105 ${
+                plan.is_active
+                    ? (isDarkMode ? "border-emerald-500/30 bg-emerald-500/5" : "border-emerald-500/30 bg-emerald-500/5")
+                    : (isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5")
+            }`}
+        >
+            {plan.is_active && (
+                <div className="absolute top-6 right-6">
+                    <span className="px-3 py-1 bg-emerald-500 text-black text-[8px] font-mono uppercase tracking-widest font-bold rounded-full">
+                        Active
+                    </span>
+                </div>
+            )}
+            
+            <div className="mb-8">
+                <h3 className="text-xl font-display font-black uppercase tracking-tight mb-2">
+                    {plan.name || 'Unnamed Plan'}
+                </h3>
+                <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-display font-black">
+                        {currency === 'INR' ? '₹' : '$'}{price}
+                    </span>
+                    <span className="text-[10px] font-mono opacity-40 uppercase tracking-widest">
+                        /lifetime
+                    </span>
+                </div>
+            </div>
+            
+            <div className="space-y-6 mb-8">
+                <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Tokens</span>
+                    <span className="text-xs font-bold">
+                        {tokensLimit > 0 ? (tokensLimit / 1000).toFixed(0) + 'k' : '0'}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Images</span>
+                    <span className="text-xs font-bold">{imagesLimit}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">Personas</span>
+                    <span className="text-xs font-bold">{personasLimit}</span>
+                </div>
+            </div>
+            
+            {plan.features && plan.features.length > 0 && (
+                <div className="border-t border-white/10 pt-6">
+                    <p className="text-[8px] font-mono uppercase tracking-[0.3em] opacity-30 mb-4">Features</p>
+                    <ul className="space-y-2">
+                        {plan.features.map((feature: string, i: number) => (
+                            <li key={i} className="flex items-center gap-2 text-[10px] opacity-60">
+                                <div className="h-1 w-1 rounded-full bg-emerald-500" />
+                                {feature}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const ITEMS_PER_PAGE = 10;
 
@@ -19,7 +92,7 @@ const Dashboard = () => {
     const [isDarkMode, setIsDarkMode] = useState(true);
     const [isAuthChecked, setIsAuthChecked] = useState(false);
     const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
-    const [view, setView] = useState<'visual' | 'table'>('visual');
+    const [view, setView] = useState<'visual' | 'table' | 'plans'>('visual');
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -27,6 +100,9 @@ const Dashboard = () => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [isUpdatingTokens, setIsUpdatingTokens] = useState(false);
+    const [plans, setPlans] = useState<Plan[]>([]);
+    const [showPlans, setShowPlans] = useState(false);
+    const [isPlansLoading, setIsPlansLoading] = useState(false);
     const [adminStatus, setAdminStatus] = useState<any>(null);
     const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
     const [loginKey, setLoginKey] = useState('');
@@ -58,10 +134,12 @@ const Dashboard = () => {
     const fetchData = async () => {
         setIsRefreshing(true);
         setIsLoading(true);
+        setIsPlansLoading(true);
         try {
-            const [usersData, statusData] = await Promise.all([
+            const [usersData, statusData, plansData] = await Promise.all([
                 getAdminUsers(),
-                getSubscriptionStatus()
+                getSubscriptionStatus(),
+                getPlansList()
             ]);
 
             if (usersData.success && usersData.users) {
@@ -78,12 +156,32 @@ const Dashboard = () => {
             if (statusData.success) {
                 setAdminStatus(statusData.subscription);
             }
+
+            if (plansData.success && plansData.plans) {
+                console.log("Plans API Response:", plansData);
+                // Map API response to expected format based on actual API structure
+                const mappedPlans = plansData.plans.map((plan: any) => ({
+                    id: plan.id || '',
+                    name: plan.plan_name || 'Unnamed',
+                    price: parseFloat(plan.price_inr) || 0,
+                    currency: 'INR',
+                    tokens_limit: plan.daily_chat_limit || 0,
+                    images_limit: plan.monthly_image_limit || 0,
+                    personas_limit: plan.daily_coding_limit || 0, // Using coding limit as persona proxy
+                    features: [],
+                    is_active: true, // API doesn't specify, assuming all active
+                    description: ''
+                }));
+                console.log("Mapped Plans:", mappedPlans);
+                setPlans(mappedPlans);
+            }
         } catch (err) {
             console.error("Dashboard Data Fetch Error:", err);
             toast.error("Failed to sync system data.");
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
+            setIsPlansLoading(false);
         }
     };
 
@@ -329,6 +427,12 @@ const Dashboard = () => {
                         >
                             <TableIcon className="h-3.5 w-3.5" /> Table Logs
                         </button>
+                        <button
+                            onClick={() => setView('plans')}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'plans' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
+                        >
+                            <Zap className="h-3.5 w-3.5" /> Plans
+                        </button>
                     </div>
                 </div>
 
@@ -372,7 +476,7 @@ const Dashboard = () => {
 
             <main className="flex-1 overflow-y-auto p-10 relative z-10 w-full max-w-[1800px] mx-auto custom-scrollbar">
                 <AnimatePresence mode="wait">
-                    {view === 'visual' ? (
+                    {view === 'visual' && (
                         <motion.div
                             key="visual"
                             initial={{ opacity: 0, y: 20 }}
@@ -380,7 +484,7 @@ const Dashboard = () => {
                             exit={{ opacity: 0, y: -20 }}
                             className="grid grid-cols-12 gap-8"
                         >
-                            {/* Left Panel: User Selection */}
+                            {/* Left Panel: Users List */}
                             <div className="col-span-12 lg:col-span-3 space-y-8">
                                 <div className={`border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} p-8 rounded-[2.5rem] backdrop-blur-xl`}>
                                     <div className="flex items-center justify-between mb-8">
@@ -584,7 +688,9 @@ const Dashboard = () => {
                                 )}
                             </div>
                         </motion.div>
-                    ) : (
+                    )}
+                    
+                    {view === 'table' && (
                         <motion.div
                             key="table"
                             initial={{ opacity: 0, scale: 0.98 }}
@@ -740,6 +846,50 @@ const Dashboard = () => {
                                     >
                                         <ChevronRightIcon className="h-4 w-4" />
                                     </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                    
+                    {/* Plans View */}
+                    {view === 'plans' && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="p-10"
+                        >
+                            <div className={`border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} rounded-[3rem] overflow-hidden backdrop-blur-3xl`}>
+                                <div className="p-10 border-b border-white/10 flex items-center justify-between">
+                                    <div>
+                                        <h2 className="text-3xl font-display font-black tracking-tight uppercase">Plans & Pricing</h2>
+                                        <p className="text-[10px] font-mono opacity-40 uppercase mt-2 tracking-[0.4em]">System-wide subscription tiers</p>
+                                    </div>
+                                    <button
+                                        onClick={fetchData}
+                                        disabled={isPlansLoading}
+                                        className={`p-3 rounded-full border border-white/10 hover:bg-white/5 transition-all ${isPlansLoading ? "animate-spin" : ""}`}
+                                    >
+                                        <RefreshCw className="h-4 w-4 opacity-40" />
+                                    </button>
+                                </div>
+                                
+                                <div className="p-10">
+                                    {isPlansLoading ? (
+                                        <div className="text-center py-20 text-[10px] font-mono uppercase tracking-widest opacity-40">
+                                            Loading plans...
+                                        </div>
+                                    ) : plans.length === 0 ? (
+                                        <div className="text-center py-20 text-[10px] font-mono uppercase tracking-widest opacity-40">
+                                            No plans found
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                            {plans.map((plan, index) => (
+                                                <PlanCard key={plan.id || index} plan={plan} isDarkMode={isDarkMode} />
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </motion.div>
