@@ -224,7 +224,7 @@ const Pricing = () => {
 
                                 {/* CTA */}
                                 <button className={`w-full py-5 text-[10px] font-mono font-bold uppercase tracking-[0.3em] transition-all active:scale-[0.98] mb-12 ${isHighlight ? 'bg-[#D4AF37] text-black hover:bg-[#C5A028]' : 'bg-transparent border border-white/20 text-white hover:bg-white/5'}`}>
-                                    {plan.price_inr === '0' || plan.price === 0 ? 'Current Plan' : 'Select Plan'} →
+                                    {plan.price_inr === 0 || plan.price === 0 ? 'Current Plan' : 'Select Plan'} →
                                 </button>
                             </motion.div>
                         );
