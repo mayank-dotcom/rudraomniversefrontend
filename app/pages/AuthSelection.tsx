@@ -62,12 +62,6 @@ export default function AuthSelection() {
             icon: ShieldCheck,
             path: "/admin"
         },
-        {
-            title: "School Faculty",
-            description: "Faculty login via admin code and password to manage students and classes.",
-            icon: Users,
-            path: "/auth/school-faculty"
-        }
     ]
 
     return (
