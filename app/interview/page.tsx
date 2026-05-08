@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ChatLoader from "@/components/ui/ChatLoader";
-import { createChat, saveChatMessage, sendAiRequest, generateTTSAudio, transcribeSpeech } from "@/lib/chat-api";
+import { createChat, saveChatMessage, sendAiRequest, generateTTSAudio, transcribeSpeech, transcribeSpeechFallback, stopSpeechRecognition } from "@/lib/chat-api";
 
 function InterviewRoomContent() {
     const router = useRouter();
@@ -20,7 +20,7 @@ function InterviewRoomContent() {
         }
         return 'hi-IN';
     };
-    
+
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isMicOn, setIsMicOn] = useState(true);
     const [isCameraOn, setIsCameraOn] = useState(true);
@@ -29,11 +29,11 @@ function InterviewRoomContent() {
     const [isInterviewActive, setIsInterviewActive] = useState(false);
     const [isBotSpeaking, setIsBotSpeaking] = useState(false);
     const [isUserSpeaking, setIsUserSpeaking] = useState(false);
-    const [conversation, setConversation] = useState<Array<{role: "bot" | "user", text: string}>>([]);
+    const [conversation, setConversation] = useState<Array<{ role: "bot" | "user", text: string }>>([]);
     const [chatId, setChatId] = useState<string | null>(null);
     const [interviewEnded, setInterviewEnded] = useState(false);
     const [feedback, setFeedback] = useState<string | null>(null);
-    
+
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const currentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -48,7 +48,7 @@ function InterviewRoomContent() {
     const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
     const micAudioContextRef = useRef<AudioContext | null>(null);
     const micAnalyserRef = useRef<AnalyserNode | null>(null);
-    const speechRecognitionRef = useRef<any>(null);
+    const recordingStartTimeRef = useRef<number>(0);
     const liveTranscriptionIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
@@ -67,9 +67,6 @@ function InterviewRoomContent() {
             }
             if (micAudioContextRef.current && micAudioContextRef.current.state !== 'closed') {
                 micAudioContextRef.current.close();
-            }
-            if (speechRecognitionRef.current) {
-                speechRecognitionRef.current.stop();
             }
             if (silenceTimerRef.current) {
                 clearTimeout(silenceTimerRef.current);
@@ -125,7 +122,7 @@ function InterviewRoomContent() {
         setIsBotSpeaking(false);
         setAudioLevel(0);
         setLiveTranscription("");
-        
+
         // Stop all audio playback
         window.speechSynthesis.cancel();
         if (currentAudioRef.current) {
@@ -186,7 +183,7 @@ function InterviewRoomContent() {
         try {
             setIsBotSpeaking(true);
 
-            let messages: Array<{role: "user" | "assistant" | "system", content: string}> = [];
+            let messages: Array<{ role: "user" | "assistant" | "system", content: string }> = [];
 
             const systemPrompt = `You are an expert technical interviewer for: ${topic}. 
             RULES:
@@ -217,7 +214,7 @@ function InterviewRoomContent() {
             });
 
             const botText = response.data?.[0]?.message?.content || response.data?.[0]?.text || "Please tell me about yourself.";
-            
+
             if (chatId) {
                 await saveChatMessage(chatId, "assistant", botText);
             }
@@ -238,12 +235,12 @@ function InterviewRoomContent() {
             }, 30);
 
             await playTTSAudio(botText);
-            
+
             setIsBotSpeaking(false);
             setTimeout(() => setBotLiveTranscription(""), 2000); // Wait a bit after speaking before clearing
-            
+
             await listenForAnswer();
-            
+
         } catch (error) {
             console.error("Error in interview:", error);
             setIsBotSpeaking(false);
@@ -261,7 +258,7 @@ function InterviewRoomContent() {
             // Setup audio analysis for visualization
             const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
             const audioContext = new AudioContext();
-            
+
             // Resume context if suspended (browser policy)
             if (audioContext.state === 'suspended') {
                 await audioContext.resume();
@@ -314,7 +311,7 @@ function InterviewRoomContent() {
                 resolve(null);
                 return;
             }
-            
+
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.rate = 0.9;
             utterance.pitch = 1;
@@ -334,7 +331,7 @@ function InterviewRoomContent() {
         // Setup mic audio analysis for circumference animation
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         const micAudioContext = new AudioContext();
-        
+
         if (micAudioContext.state === 'suspended') {
             await micAudioContext.resume();
         }
@@ -360,7 +357,7 @@ function InterviewRoomContent() {
         const audioStream = new MediaStream(stream.getAudioTracks());
         // Try to use MP4/M4A format which is well-supported by Whisper
         let mimeType = 'audio/webm;codecs=opus'; // fallback
-        
+
         if (MediaRecorder.isTypeSupported('audio/mp4')) {
             mimeType = 'audio/mp4';
         } else if (MediaRecorder.isTypeSupported('audio/mpeg')) {
@@ -368,28 +365,34 @@ function InterviewRoomContent() {
         } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
             mimeType = 'audio/webm;codecs=opus';
         }
-        
+
         console.log('MediaRecorder using MIME type:', mimeType);
         const mediaRecorder = new MediaRecorder(audioStream, { mimeType });
         mediaRecorderRef.current = mediaRecorder;
         audioChunksRef.current = [];
+        let mediaRecorderStartTimeRef = { current: 0 };
+        mediaRecorderStartTimeRef.current = Date.now();
 
         mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
                 audioChunksRef.current.push(event.data);
+                console.log('[Audio] Chunk received:', { size: event.data.size, totalChunks: audioChunksRef.current.length });
             }
         };
 
         mediaRecorder.onstop = async () => {
-            // Cleanup intervals and recognizers
+            // Cleanup intervals
             if (liveTranscriptionIntervalRef.current) {
                 clearInterval(liveTranscriptionIntervalRef.current);
                 liveTranscriptionIntervalRef.current = null;
             }
-            if (speechRecognitionRef.current) {
-                speechRecognitionRef.current.stop();
-                speechRecognitionRef.current = null;
+
+            // Cleanup silence timer
+            if (silenceTimerRef.current) {
+                clearTimeout(silenceTimerRef.current);
+                silenceTimerRef.current = null;
             }
+
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
                 animationFrameRef.current = null;
@@ -400,16 +403,18 @@ function InterviewRoomContent() {
                 setIsUserSpeaking(false);
                 return;
             }
-            
+
             // Use the actual MIME type from MediaRecorder
             const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
-            console.log('Audio blob created:', { size: audioBlob.size, type: audioBlob.type });
-            
-            if (audioBlob.size < 100) {
+            console.log('Audio blob created:', { size: audioBlob.size, type: audioBlob.type, chunks: audioChunksRef.current.length });
+
+            if (audioBlob.size < 1000) {
                 console.warn("Audio blob too small:", audioBlob.size);
                 setIsUserSpeaking(false);
                 return;
             }
+
+            // Send audio to backend for Whisper transcription
             await processAnswer(audioBlob);
 
             // Cleanup audio context
@@ -428,57 +433,45 @@ function InterviewRoomContent() {
             }
         }
 
-        // Backend-powered Live Transcription
-        setLiveTranscription("Listening...");
-        let isTranscribing = false;
-        
-        liveTranscriptionIntervalRef.current = setInterval(async () => {
-            if (audioChunksRef.current.length > 0 && mediaRecorder.state === "recording" && !isTranscribing) {
-                isTranscribing = true;
-                try {
-                    const tempBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                    
-                    if (tempBlob.size > 5000) { // Increased threshold to ensure enough audio data
-                        const data = await transcribeSpeech(tempBlob, getLanguage());
-                        if (data.text && data.text.trim()) {
-                            setLiveTranscription(data.text);
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Live transcription chunk error:", e);
-                } finally {
-                    isTranscribing = false;
-                }
-            }
-        }, 3500); // Every 3.5 seconds for a balance between "live" and server load
-
-        // Silence detection
+        // Silence detection - listen until silence is detected
         const checkSilence = () => {
             if (!micAnalyserRef.current || mediaRecorder.state !== "recording") return;
 
-            const dataArray = new Uint8Array(micAnalyserRef.current.frequencyBinCount);
-            micAnalyserRef.current.getByteFrequencyData(dataArray);
-            const avg = dataArray.reduce((a, b) => a + b) / dataArray.length;
+            const bufferLength = micAnalyserRef.current.fftSize;
+            const dataArray = new Uint8Array(bufferLength);
+            micAnalyserRef.current.getByteTimeDomainData(dataArray);
 
-            if (avg < 5) { // Lowered threshold for better sensitivity
+            // Calculate RMS (Root Mean Square) for better voice activity detection
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                const val = dataArray[i] - 128; // Convert 0-255 to -128 to 127 (silence = 128)
+                sum += val * val;
+            }
+            const rms = Math.sqrt(sum / bufferLength);
+            console.log('[Silence Check] RMS Level:', rms);
+
+            const SILENCE_THRESHOLD = 5; // Tune this if needed (higher = more sensitive to sound)
+            if (rms < SILENCE_THRESHOLD) {
                 if (!silenceTimerRef.current) {
                     silenceTimerRef.current = setTimeout(() => {
-                        console.log('Stopping recording due to silence...');
-                        if (mediaRecorder.state === "recording") {
+                        console.log('[Recording] Stopping due to silence...', { rms });
+                        const recordingDuration = Date.now() - (mediaRecorderStartTimeRef.current || 0);
+                        if (recordingDuration > 1000 && mediaRecorder.state === "recording") {
                             mediaRecorder.stop();
                         }
                         silenceTimerRef.current = null;
-                    }, 4000); // Increased to 4 seconds for natural pauses
+                    }, 5000); // 5 seconds of continuous silence before stopping
                 }
             } else {
                 if (silenceTimerRef.current) {
+                    console.log('[Silence Check] Sound detected, clearing silence timer');
                     clearTimeout(silenceTimerRef.current);
                     silenceTimerRef.current = null;
                 }
             }
 
             if (mediaRecorder.state === "recording") {
-                setTimeout(checkSilence, 200);
+                setTimeout(checkSilence, 300);
             }
         };
 
@@ -487,37 +480,46 @@ function InterviewRoomContent() {
 
     const processAnswer = async (audioBlob: Blob) => {
         try {
-            setIsUserSpeaking(false);
-            
-            let userText = "";
-            try {
-                const data = await transcribeSpeech(audioBlob, getLanguage());
-                userText = data.text || liveTranscription || "No answer detected.";
-            } catch (err) {
-                console.error("Final transcription failed, falling back to live feed:", err);
-                userText = liveTranscription || "No answer detected.";
+            setLiveTranscription("Transcribing...");
+
+            // Use backend Whisper API for transcription
+            const userText = await transcribeSpeech(audioBlob);
+            console.log("[processAnswer] Whisper transcription:", userText);
+
+            if (!userText || userText.trim() === "") {
+                throw new Error("Empty transcription");
             }
 
+            // Show transcribed text in UI (keep isUserSpeaking true so UI shows)
+            setLiveTranscription(userText);
+
             setConversation(prev => [...prev, { role: "user", text: userText }]);
-            
+
             if (chatId) {
                 await saveChatMessage(chatId, "user", userText);
             }
+
+            // Wait so user can see their transcribed text
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Now stop user speaking and start bot
+            setIsUserSpeaking(false);
 
             if (timeLeft > 10) {
                 await askQuestion(userText);
             } else {
                 endInterview();
             }
-            
+
         } catch (error: any) {
             console.error("Transcription Error:", error);
-            setIsUserSpeaking(false);
-            setLiveTranscription("⚠️ Transcription failed. Please try again.");
-            
-            // Allow user to try again
+            // Show error to user (keep isUserSpeaking true so UI shows)
+            setLiveTranscription("⚠️ Transcription failed: " + error.message);
+
+            // Allow user to try again after showing error
             setTimeout(() => {
                 setLiveTranscription("");
+                setIsUserSpeaking(false);
                 listenForAnswer();
             }, 3000);
         }
@@ -527,7 +529,7 @@ function InterviewRoomContent() {
 
     const generateFeedback = async () => {
         try {
-            const conversationText = conversation.map(c => 
+            const conversationText = conversation.map(c =>
                 `${c.role === "bot" ? "Interviewer" : "Candidate"}: ${c.text}`
             ).join("\n\n");
 
@@ -553,7 +555,7 @@ function InterviewRoomContent() {
 
             const feedbackText = response.data?.[0]?.message?.content || response.data?.[0]?.text || "Interview completed.";
             setFeedback(feedbackText);
-            
+
             if (chatId) {
                 await saveChatMessage(chatId, "assistant", `## Interview Analysis Report\n\n${feedbackText}`);
             }
@@ -610,61 +612,60 @@ function InterviewRoomContent() {
 
             {/* AI Interviewer (Large - Center) */}
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
-                    <div className="relative group">
-                        {/* Resonance Rings - Layered Ripple Effect */}
-                        <AnimatePresence>
-                            {(isBotSpeaking || isUserSpeaking) && (
-                                <>
-                                    {/* Outer Ripple */}
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 1 }}
-                                        animate={{
-                                            scale: 1 + audioLevel * 2.5,
-                                            opacity: [0, 0.3, 0],
-                                            borderRadius: ["50% 50% 50% 50%", "40% 60% 45% 55%", "55% 45% 60% 40%", "50% 50% 50% 50%"],
-                                        }}
-                                        transition={{ duration: 0.8, repeat: Infinity, ease: "easeOut" }}
-                                        className="absolute inset-0 border-4 border-[#39FF14] blur-xl"
-                                    />
-                                    {/* Middle Vibration */}
-                                    <motion.div
-                                        animate={{
-                                            scale: 1 + audioLevel * 1.2,
-                                            rotate: [0, 5, -5, 0],
-                                            borderRadius: ["50% 50% 50% 50%", "48% 52% 45% 55%", "52% 48% 55% 45%", "50% 50% 50% 50%"],
-                                        }}
-                                        transition={{ duration: 0.15, repeat: Infinity, ease: "linear" }}
-                                        className="absolute inset-0 border-2 border-[#39FF14] opacity-40 blur-md"
-                                    />
-                                </>
-                            )}
-                        </AnimatePresence>
+                <div className="relative group">
+                    {/* Resonance Rings - Layered Ripple Effect */}
+                    <AnimatePresence>
+                        {(isBotSpeaking || isUserSpeaking) && (
+                            <>
+                                {/* Outer Ripple */}
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 1 }}
+                                    animate={{
+                                        scale: 1 + audioLevel * 2.5,
+                                        opacity: [0, 0.3, 0],
+                                        borderRadius: ["50% 50% 50% 50%", "40% 60% 45% 55%", "55% 45% 60% 40%", "50% 50% 50% 50%"],
+                                    }}
+                                    transition={{ duration: 0.8, repeat: Infinity, ease: "easeOut" }}
+                                    className="absolute inset-0 border-4 border-[#39FF14] blur-xl"
+                                />
+                                {/* Middle Vibration */}
+                                <motion.div
+                                    animate={{
+                                        scale: 1 + audioLevel * 1.2,
+                                        rotate: [0, 5, -5, 0],
+                                        borderRadius: ["50% 50% 50% 50%", "48% 52% 45% 55%", "52% 48% 55% 45%", "50% 50% 50% 50%"],
+                                    }}
+                                    transition={{ duration: 0.15, repeat: Infinity, ease: "linear" }}
+                                    className="absolute inset-0 border-2 border-[#39FF14] opacity-40 blur-md"
+                                />
+                            </>
+                        )}
+                    </AnimatePresence>
 
-                        {/* Primary Vibrating Ring */}
-                        <motion.div
-                            animate={{
-                                scale: 1 + audioLevel * 0.45,
-                                x: (isBotSpeaking || isUserSpeaking) ? [0, audioLevel * 8, -audioLevel * 8, 0] : 0,
-                                y: (isBotSpeaking || isUserSpeaking) ? [0, -audioLevel * 8, audioLevel * 8, 0] : 0,
-                                borderRadius: (isBotSpeaking || isUserSpeaking) ? ["50% 50% 50% 50%", "45% 55% 48% 52%", "52% 48% 55% 45%", "50% 50% 50% 50%"] : "50%",
-                            }}
-                            transition={{
-                                duration: 0.1,
-                                repeat: (isBotSpeaking || isUserSpeaking) ? Infinity : 0,
-                                repeatType: "mirror",
-                                ease: "linear"
-                            }}
-                            className={`relative rounded-full bg-black flex items-center justify-center transition-all duration-100 z-10 ${
-                                isUserSpeaking ? 'h-80 w-80' : 'h-64 w-64'
+                    {/* Primary Vibrating Ring */}
+                    <motion.div
+                        animate={{
+                            scale: 1 + audioLevel * 0.45,
+                            x: (isBotSpeaking || isUserSpeaking) ? [0, audioLevel * 8, -audioLevel * 8, 0] : 0,
+                            y: (isBotSpeaking || isUserSpeaking) ? [0, -audioLevel * 8, audioLevel * 8, 0] : 0,
+                            borderRadius: (isBotSpeaking || isUserSpeaking) ? ["50% 50% 50% 50%", "45% 55% 48% 52%", "52% 48% 55% 45%", "50% 50% 50% 50%"] : "50%",
+                        }}
+                        transition={{
+                            duration: 0.1,
+                            repeat: (isBotSpeaking || isUserSpeaking) ? Infinity : 0,
+                            repeatType: "mirror",
+                            ease: "linear"
+                        }}
+                        className={`relative rounded-full bg-black flex items-center justify-center transition-all duration-100 z-10 ${isUserSpeaking ? 'h-80 w-80' : 'h-64 w-64'
                             }`}
-                            style={{
-                                border: `2px solid #39FF14`,
-                                boxShadow: `0 0 ${20 + audioLevel * 120}px rgba(57, 255, 20, 0.9), 0 0 ${40 + audioLevel * 200}px rgba(57, 255, 20, 0.5), inset 0 0 ${15 + audioLevel * 60}px rgba(57, 255, 20, 0.7)`,
-                                filter: `drop-shadow(0 0 ${15 + audioLevel * 40}px rgba(57, 255, 20, 0.6))`,
-                            }}
-                        >
-                            <ChatLoader isDarkMode={true} />
-                        </motion.div>
+                        style={{
+                            border: `2px solid #39FF14`,
+                            boxShadow: `0 0 ${20 + audioLevel * 120}px rgba(57, 255, 20, 0.9), 0 0 ${40 + audioLevel * 200}px rgba(57, 255, 20, 0.5), inset 0 0 ${15 + audioLevel * 60}px rgba(57, 255, 20, 0.7)`,
+                            filter: `drop-shadow(0 0 ${15 + audioLevel * 40}px rgba(57, 255, 20, 0.6))`,
+                        }}
+                    >
+                        <ChatLoader isDarkMode={true} />
+                    </motion.div>
                     {isBotSpeaking && (
                         <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex gap-1">
                             <div className="h-1 w-1 bg-[#39FF14] rounded-full animate-bounce" />
@@ -737,11 +738,10 @@ function InterviewRoomContent() {
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3">
                 <button
                     onClick={toggleMic}
-                    className={`p-4 rounded-full transition-all ${
-                        isMicOn
+                    className={`p-4 rounded-full transition-all ${isMicOn
                             ? "bg-[#2a2a2a] border border-white/10 text-white hover:bg-[#3a3a3a]"
                             : "bg-red-500/20 border border-red-500/30 text-red-400"
-                    }`}
+                        }`}
                     title={isMicOn ? "Turn off microphone" : "Turn on microphone"}
                 >
                     {isMicOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
@@ -749,11 +749,10 @@ function InterviewRoomContent() {
 
                 <button
                     onClick={toggleCamera}
-                    className={`p-4 rounded-full transition-all ${
-                        isCameraOn
+                    className={`p-4 rounded-full transition-all ${isCameraOn
                             ? "bg-[#2a2a2a] border border-white/10 text-white hover:bg-[#3a3a3a]"
                             : "bg-red-500/20 border border-red-500/30 text-red-400"
-                    }`}
+                        }`}
                     title={isCameraOn ? "Turn off camera" : "Turn on camera"}
                 >
                     {isCameraOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}

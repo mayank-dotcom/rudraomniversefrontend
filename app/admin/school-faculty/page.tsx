@@ -1,0 +1,781 @@
+"use client"
+
+import React, { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { motion, AnimatePresence } from "framer-motion"
+import { Users, LogOut, GraduationCap, RefreshCw, Plus, X, Search, BarChart3, Sun, Moon, User, Activity, TrendingUp, LayoutDashboard, ChevronLeft, ChevronRight as ChevronRightIcon, Database, Phone, MessageSquare, Clock, BookOpen } from "lucide-react"
+import { removeApiKey } from "@/lib/auth"
+import { getSchoolStats, getSchoolStudents, studentSignup, SchoolStudent } from "@/lib/chat-api"
+import { toast } from "sonner"
+
+const CircularProgress = ({ value, max, size = 100, strokeWidth = 8, color = "#8b5cf6", label }: { value: number; max: number; size?: number; strokeWidth?: number; color?: string; label: string }) => {
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const progress = Math.min(value / max, 1)
+  const offset = circumference - progress * circumference
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={strokeWidth} className="opacity-10" />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-1000" />
+      </svg>
+      <div className="absolute flex flex-col items-center justify-center" style={{ width: size, height: size }}>
+        <span className="text-lg font-black">{value}</span>
+        <span className="text-[8px] font-mono uppercase tracking-widest opacity-40">{max > 0 ? `${Math.round(progress * 100)}%` : ""}</span>
+      </div>
+      <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">{label}</span>
+    </div>
+  )
+}
+
+const StatCard = ({ title, value, icon: Icon, color, isDarkMode }: { title: string; value: any; icon: any; color: string; isDarkMode: boolean }) => (
+  <div className={`relative border rounded-[2.5rem] p-8 overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-zinc-800/50" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"}`}>
+    <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+    <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+    <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{title}</span>
+    <div className="flex items-baseline gap-2 mt-2">
+      <h4 className={`text-2xl font-display font-black tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{value}</h4>
+    </div>
+    <div className="h-[2px] w-8 mt-4 rounded-full" style={{ backgroundColor: color }} />
+  </div>
+)
+
+export default function SchoolFacultyAdminPage() {
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(true)
+  const [students, setStudents] = useState<SchoolStudent[]>([])
+  const [stats, setStats] = useState<{ total_students: number; total_faculty: number; leaderboard: Array<{ name: string; daily_chats: number }> }>({
+    total_students: 0,
+    total_faculty: 0,
+    leaderboard: [],
+  })
+  const [view, setView] = useState<"overview" | "students" | "performance">("overview")
+  const [query, setQuery] = useState("")
+  const [showAddStudent, setShowAddStudent] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [creatingStudent, setCreatingStudent] = useState(false)
+  const [studentForm, setStudentForm] = useState({
+    name: "",
+    mobile_number: "",
+    school_code: "",
+    password: "",
+    assigned_class: "",
+  })
+
+  const ITEMS_PER_PAGE = 8
+
+  const loadDashboard = async () => {
+    setRefreshing(true)
+    try {
+      const [statsRes, studentsRes] = await Promise.all([
+        getSchoolStats(),
+        getSchoolStudents(),
+      ])
+      setStats({
+        total_students: Number(statsRes.total_students || 0),
+        total_faculty: Number(statsRes.total_faculty || 0),
+        leaderboard: statsRes.leaderboard || [],
+      })
+      setStudents(studentsRes.students || [])
+    } catch (err) {
+      toast.error("Failed to load dashboard: " + (err as Error).message)
+    } finally {
+      setRefreshing(false)
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadDashboard()
+  }, [])
+
+  const filteredStudents = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return students
+    return students.filter((s) => [s.name, s.mobile_number, s.assigned_class].some((v) => (v || "").toLowerCase().includes(q)))
+  }, [students, query])
+
+  const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE)
+  const paginatedStudents = filteredStudents.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+
+  const handleAddStudent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const payload = {
+      name: studentForm.name.trim(),
+      mobile_number: studentForm.mobile_number.trim(),
+      school_code: studentForm.school_code.trim().toUpperCase(),
+      password: studentForm.password,
+    }
+    if (!payload.name || !payload.mobile_number || !payload.school_code || !payload.password) {
+      toast.error("All fields are required")
+      return
+    }
+    if (payload.password.length < 6) {
+      toast.error("Password minimum 6 chars")
+      return
+    }
+    setCreatingStudent(true)
+    try {
+      await studentSignup(payload)
+      toast.success("Student added successfully")
+      setShowAddStudent(false)
+      setStudentForm({ name: "", mobile_number: "", school_code: "", password: "", assigned_class: "" })
+      await loadDashboard()
+    } catch (err) {
+      toast.error("Failed to add student: " + (err as Error).message)
+    } finally {
+      setCreatingStudent(false)
+    }
+  }
+
+  const handleLogout = () => {
+    removeApiKey()
+    window.location.href = "/admin"
+  }
+
+  if (loading) {
+    return (
+      <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a]" : "bg-white"} flex items-center justify-center`}>
+        <div className="h-8 w-8 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <div className={`h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} font-sans selection:bg-white selection:text-black overflow-hidden flex flex-col transition-colors duration-500`}>
+      <div className={`absolute inset-0 noise opacity-[0.03] pointer-events-none ${isDarkMode ? "" : "invert"}`} />
+
+      {/* Top Navigation */}
+      <nav className={`h-20 flex items-center justify-between px-10 border-b ${isDarkMode ? "border-white/5 bg-black/80" : "border-black/5 bg-white/80"} backdrop-blur-2xl sticky top-0 z-[100]`}>
+        <div className="flex items-center gap-12">
+          <Link href="/" className="flex items-center gap-4 group">
+            <div className={`h-6 w-6 ${isDarkMode ? "bg-white" : "bg-black"} flex items-center justify-center transition-transform group-hover:rotate-45`}>
+              <div className={`h-1.5 w-1.5 ${isDarkMode ? "bg-black" : "bg-white"}`} />
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="font-display font-black tracking-tighter text-xl">RUDRANEX</span>
+              <span className="font-serif italic opacity-40 text-xl tracking-tighter">faculty</span>
+            </div>
+          </Link>
+
+          <div className={`flex items-center gap-1 p-1 rounded-2xl border ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}>
+            <button
+              onClick={() => { setView('overview'); setCurrentPage(1) }}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'overview' ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold") : "opacity-40 hover:opacity-100"}`}
+            >
+              <LayoutDashboard className="h-3.5 w-3.5 inline-block mr-1.5 -mt-0.5" /> Dashboard
+            </button>
+            <button
+              onClick={() => { setView('students'); setCurrentPage(1) }}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'students' ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold") : "opacity-40 hover:opacity-100"}`}
+            >
+              <GraduationCap className="h-3.5 w-3.5 inline-block mr-1.5 -mt-0.5" /> Students
+            </button>
+            <button
+              onClick={() => { setView('performance'); setCurrentPage(1) }}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'performance' ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold") : "opacity-40 hover:opacity-100"}`}
+            >
+              <BarChart3 className="h-3.5 w-3.5 inline-block mr-1.5 -mt-0.5" /> Performance
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6">
+          <button
+            onClick={() => setShowAddStudent(true)}
+            className="px-4 py-2 border border-blue-500/30 text-blue-400 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-blue-500/10 transition-all rounded-full flex items-center gap-2"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Student
+          </button>
+          <button
+            onClick={loadDashboard}
+            disabled={refreshing}
+            className={`p-2 rounded-full border border-white/10 hover:bg-white/5 transition-all ${refreshing ? "animate-spin" : ""}`}
+          >
+            <RefreshCw className="h-4 w-4 opacity-40" />
+          </button>
+
+          <div className="h-8 w-[1px] bg-white/10 mx-2" />
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => { setView('overview'); setCurrentPage(1); setQuery("") }}
+              className={`h-10 w-10 rounded-2xl border flex items-center justify-center transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5" : "border-black/10 hover:bg-black/5"}`}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={`h-10 w-10 rounded-2xl border flex items-center justify-center cursor-pointer transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5" : "border-black/10 hover:bg-black/5"}`}
+            >
+              {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+            </div>
+            <div
+              onClick={handleLogout}
+              className="h-10 w-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center group cursor-pointer overflow-hidden hover:bg-blue-500 transition-all"
+            >
+              <LogOut className="h-4 w-4 text-blue-500 group-hover:text-black transition-colors" />
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className={`flex-1 overflow-y-auto p-10 relative z-10 w-full max-w-[1800px] mx-auto custom-scrollbar ${isDarkMode ? "text-white" : "text-black"}`}>
+        <AnimatePresence mode="wait">
+          {view === "overview" && (
+            <motion.div
+              key="overview"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="grid grid-cols-12 gap-8"
+            >
+              {/* Left Panel: Stats Summary */}
+              <div className="col-span-12 lg:col-span-3 space-y-8">
+                <div className={`relative border border-zinc-800/50 p-8 rounded-[2.5rem] backdrop-blur-xl overflow-hidden group ${
+                  isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                }`}>
+                  <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                  <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>Class Summary</h3>
+                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className={`flex items-center justify-between p-4 rounded-2xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                      <div className="flex items-center gap-3">
+                        <GraduationCap className="h-4 w-4 text-blue-400" />
+                        <span className="text-[10px] font-mono uppercase tracking-widest opacity-60">Students</span>
+                      </div>
+                      <span className="text-lg font-display font-black">{stats.total_students}</span>
+                    </div>
+                    <div className={`flex items-center justify-between p-4 rounded-2xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                      <div className="flex items-center gap-3">
+                        <MessageSquare className="h-4 w-4 text-emerald-400" />
+                        <span className="text-[10px] font-mono uppercase tracking-widest opacity-60">Total Chats</span>
+                      </div>
+                      <span className="text-lg font-display font-black">{stats.leaderboard.reduce((sum, l) => sum + (l.daily_chats || 0), 0)}</span>
+                    </div>
+                    <div className={`flex items-center justify-between p-4 rounded-2xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                      <div className="flex items-center gap-3">
+                        <TrendingUp className="h-4 w-4 text-amber-400" />
+                        <span className="text-[10px] font-mono uppercase tracking-widest opacity-60">Top Student</span>
+                      </div>
+                      <span className="text-xs font-mono text-right leading-tight">
+                        {stats.leaderboard[0] ? `${stats.leaderboard[0].name} (${stats.leaderboard[0].daily_chats || 0})` : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={`relative border border-zinc-800/50 p-8 rounded-[2.5rem] backdrop-blur-xl text-center overflow-hidden group ${
+                  isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                }`}>
+                  <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                  <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                  <Users className={`h-8 w-8 mx-auto mb-4 ${isDarkMode ? "opacity-20 text-white" : "opacity-30 text-black"}`} />
+                  <h4 className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Faculty Portal</h4>
+                  <p className={`text-xs font-bold mt-2 ${isDarkMode ? "text-white" : "text-black"}`}>Active Session: FACULTY-ACCESS</p>
+                </div>
+              </div>
+
+              {/* Right Panel */}
+              <div className="col-span-12 lg:col-span-9 space-y-8">
+                {/* Analytics */}
+                <div className={`relative border border-zinc-800/50 p-10 rounded-[3rem] overflow-hidden group ${
+                  isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                }`}>
+                  <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                  <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <h3 className={`text-lg font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Faculty Analytics</h3>
+                      <p className={`text-[10px] font-mono uppercase tracking-[0.3em] mt-1 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Live classroom metrics & student engagement</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <StatCard title="Total Students" value={stats.total_students} icon={GraduationCap} color="#3b82f6" isDarkMode={isDarkMode} />
+                    <StatCard title="Active Chats" value={stats.leaderboard.reduce((sum, l) => sum + (l.daily_chats || 0), 0)} icon={MessageSquare} color="#10b981" isDarkMode={isDarkMode} />
+                    <StatCard title="Top Performer" value={stats.leaderboard[0]?.name || "N/A"} icon={TrendingUp} color="#f59e0b" isDarkMode={isDarkMode} />
+                    <StatCard title="Faculty Count" value={stats.total_faculty} icon={Users} color="#8b5cf6" isDarkMode={isDarkMode} />
+                  </div>
+                </div>
+
+                {/* Classroom Dashboard */}
+                <div className={`relative border border-zinc-800/50 p-10 rounded-[3rem] overflow-hidden group ${
+                  isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                }`}>
+                  <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                  <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[100px] rounded-full" />
+
+                  <div className="flex items-center justify-between mb-10 relative z-10">
+                    <div>
+                      <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Classroom Dashboard</h2>
+                      <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Faculty control center &bull; {stats.total_students} students enrolled</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
+                    {/* Leaderboard */}
+                    <div className={`relative border rounded-[2.5rem] p-8 overflow-hidden group ${
+                      isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"
+                    }`}>
+                      <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                      <div className="flex items-center gap-3 mb-6">
+                        <TrendingUp className={`h-5 w-5 ${isDarkMode ? "text-blue-400" : "text-blue-600"}`} />
+                        <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>Top Student Activity</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {stats.leaderboard.length === 0 && (
+                          <p className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>No leaderboard data yet</p>
+                        )}
+                        {stats.leaderboard.slice(0, 10).map((item, idx) => (
+                          <div key={`${item.name}-${idx}`} className={`flex items-center justify-between p-3 rounded-xl transition-all ${isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"}`}>
+                            <div className="flex items-center gap-3">
+                              <span className={`h-6 w-6 rounded-lg flex items-center justify-center text-[9px] font-mono font-bold ${idx === 0 ? "bg-blue-500/20 text-blue-400" : idx === 1 ? "bg-zinc-500/20 text-zinc-400" : idx === 2 ? "bg-amber-700/20 text-amber-600" : isDarkMode ? "bg-white/5 text-white/40" : "bg-black/5 text-black/40"}`}>
+                                {idx + 1}
+                              </span>
+                              <span className={`text-xs font-mono ${isDarkMode ? "text-white/80" : "text-black/80"}`}>{item.name}</span>
+                            </div>
+                            <span className={`text-[10px] font-mono ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{item.daily_chats || 0} chats</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className={`relative border rounded-[2.5rem] p-8 overflow-hidden group ${
+                      isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"
+                    }`}>
+                      <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                      <div className="flex items-center gap-3 mb-6">
+                        <Activity className={`h-5 w-5 ${isDarkMode ? "text-blue-400" : "text-blue-600"}`} />
+                        <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>Quick Actions</h3>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4">
+                        <button
+                          onClick={() => setShowAddStudent(true)}
+                          className={`w-full p-5 border rounded-[2rem] text-left transition-all hover:scale-[1.02] active:scale-[0.98] group ${
+                            isDarkMode ? "border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10" : "border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10"
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                              <Plus className="h-5 w-5 text-blue-400" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-display font-black text-blue-400">Add Student</h4>
+                              <p className={`text-[9px] font-mono uppercase tracking-widest mt-1 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Enroll a new student in the class</p>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => setView("performance")}
+                          className={`w-full p-5 border rounded-[2rem] text-left transition-all hover:scale-[1.02] active:scale-[0.98] group ${
+                            isDarkMode ? "border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10" : "border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10"
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center">
+                              <BarChart3 className="h-5 w-5 text-purple-400" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-display font-black text-purple-400">Student Performance</h4>
+                              <p className={`text-[9px] font-mono uppercase tracking-widest mt-1 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>View circular analytics & usage metrics</p>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => setView("students")}
+                          className={`w-full p-5 border rounded-[2rem] text-left transition-all hover:scale-[1.02] active:scale-[0.98] group ${
+                            isDarkMode ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10" : "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10"
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                              <GraduationCap className="h-5 w-5 text-emerald-400" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-display font-black text-emerald-400">Student Directory</h4>
+                              <p className={`text-[9px] font-mono uppercase tracking-widest mt-1 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>View all registered students & their details</p>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={loadDashboard}
+                          className={`w-full p-5 border rounded-[2rem] text-left transition-all hover:scale-[1.02] active:scale-[0.98] group ${
+                            isDarkMode ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10" : "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10"
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+                              <RefreshCw className="h-5 w-5 text-amber-400" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-display font-black text-amber-400">Refresh Data</h4>
+                              <p className={`text-[9px] font-mono uppercase tracking-widest mt-1 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Sync latest classroom metrics</p>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Student Usage Summary */}
+                  <div className={`relative border rounded-[2.5rem] p-8 overflow-hidden group mt-8 ${
+                    isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"
+                  }`}>
+                    <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                    <div className="flex items-center gap-3 mb-6">
+                      <BarChart3 className={`h-5 w-5 ${isDarkMode ? "text-purple-400" : "text-purple-600"}`} />
+                      <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>Student AI Usage</h3>
+                      <span className={`ml-auto text-[9px] font-mono tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{students.length} students active today</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/40" : "text-black/60"}`}>
+                            <th className="pb-4 font-bold">Student</th>
+                            <th className="pb-4 font-bold text-center">Class</th>
+                            <th className="pb-4 font-bold text-center">Chats</th>
+                            <th className="pb-4 font-bold text-right">Usage</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {students.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className={`py-12 text-center text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>No student data available</td>
+                            </tr>
+                          ) : (
+                            students.slice(0, 10).map((s) => (
+                              <tr key={s.id} className={`border-t transition-colors ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
+                                <td className="py-3 pr-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                                      <User className={`h-3.5 w-3.5 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
+                                    </div>
+                                    <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{s.name}</span>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className={`text-[10px] px-2 py-0.5 rounded ${isDarkMode ? "bg-blue-500/10 text-blue-400" : "bg-blue-500/10 text-blue-600"}`}>
+                                    {s.assigned_class || "—"}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{s.daily_chats || 0}</span>
+                                </td>
+                                <td className="py-3 pl-4 text-right">
+                                  <div className="flex items-center justify-end gap-3">
+                                    <div className="w-24 h-1.5 rounded-full bg-white/10">
+                                      <div className="h-full rounded-full bg-purple-500" style={{ width: `${Math.min(((s.daily_chats || 0) / 100) * 100, 100)}%` }} />
+                                    </div>
+                                    <span className={`text-[10px] font-mono ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                      {Math.min(((s.daily_chats || 0) / 100) * 100, 100).toFixed(0)}%
+                                    </span>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {view === "students" && (
+            <motion.div
+              key="students"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
+                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+              }`}
+            >
+              <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+              <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+              <div className={`p-10 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
+                <div>
+                  <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Student Directory</h2>
+                  <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Enrolled learners &bull; {filteredStudents.length} records</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Search className={`absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`} />
+                    <input
+                      type="text"
+                      placeholder="FILTER STUDENTS..."
+                      value={query}
+                      onChange={(e) => { setQuery(e.target.value); setCurrentPage(1) }}
+                      className={`pl-11 pr-8 py-3 text-[10px] font-mono tracking-widest border rounded-2xl focus:outline-none focus:border-blue-500/50 min-w-[250px] ${
+                        isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black placeholder:text-black/40"
+                      }`}
+                    />
+                  </div>
+                  <button
+                    onClick={() => setShowAddStudent(true)}
+                    className={`px-6 py-3.5 text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:opacity-90 transition-all rounded-2xl bg-blue-500 text-black flex items-center gap-2`}
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add Student
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto relative overflow-hidden group">
+                <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Identity</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Mobile</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Class</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>Daily Chats</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
+                    {paginatedStudents.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>Void Found</td>
+                      </tr>
+                    ) : (
+                      paginatedStudents.map((s) => (
+                        <tr key={s.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
+                          <td className="p-8">
+                            <div className="flex items-center gap-4">
+                              <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                                <User className={`h-4 w-4 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className={`text-[13px] font-bold tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{s.name}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-8">
+                            <div className="flex items-center gap-2">
+                              <Phone className={`h-3 w-3 ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`} />
+                              <span className={`text-[10px] ${isDarkMode ? "opacity-60 text-white" : "opacity-80 text-black"}`}>{s.mobile_number || "—"}</span>
+                            </div>
+                          </td>
+                          <td className="p-8 text-center">
+                            <span className={`px-3 py-1 rounded-lg text-[10px] ${isDarkMode ? "bg-blue-500/10 text-blue-400" : "bg-blue-500/10 text-blue-600"}`}>
+                              {s.assigned_class || "—"}
+                            </span>
+                          </td>
+                          <td className="p-8 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{s.daily_chats || 0}</span>
+                              <span className={`text-[9px] ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>CHATS</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className={`p-8 flex items-center justify-between border-t ${isDarkMode ? "bg-black border-white/10" : "bg-white border-black/10"}`}>
+                <div className={`flex items-center gap-4 text-[9px] font-mono tracking-[0.3em] uppercase ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                  <Database className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
+                  <span>Page {currentPage} // {totalPages || 1}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <div className="flex gap-2">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                      .map((pageNum, i, arr) => (
+                        <React.Fragment key={pageNum}>
+                          {i > 0 && arr[i - 1] !== pageNum - 1 && <span className={`opacity-20 px-2 ${isDarkMode ? "text-white" : "text-black"}`}>...</span>}
+                          <button
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`h-10 w-10 text-[10px] font-mono rounded-xl transition-all ${currentPage === pageNum
+                              ? (isDarkMode ? 'bg-white text-black font-black' : 'bg-black text-white font-black')
+                              : (isDarkMode ? 'hover:bg-white/5 opacity-40 text-white' : 'hover:bg-black/5 opacity-60 text-black')
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        </React.Fragment>
+                      ))
+                    }
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                  >
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {view === "performance" && (
+            <motion.div
+              key="performance"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
+                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+              }`}
+            >
+              <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+              <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+              <div className={`p-10 border-b ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
+                <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Student Performance</h2>
+                <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Circular analytics &bull; per-student AI usage breakdown</p>
+              </div>
+
+              <div className="p-10">
+                {students.length === 0 ? (
+                  <div className={`text-center py-20 text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>No student data available</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    {students.map((s) => (
+                      <div
+                        key={s.id}
+                        className={`relative border rounded-[2.5rem] p-8 transition-all hover:scale-105 overflow-hidden group flex flex-col items-center ${
+                          isDarkMode
+                            ? "border-zinc-800/50 bg-gradient-to-br from-zinc-900 via-black to-zinc-900"
+                            : "border-zinc-800/50 bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                        }`}
+                      >
+                        <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                        <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+
+                        <div className={`h-14 w-14 rounded-2xl flex items-center justify-center border mb-4 ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                          <User className={`h-6 w-6 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
+                        </div>
+                        <h3 className={`text-sm font-display font-black text-center mb-1 ${isDarkMode ? "text-white" : "text-black"}`}>{s.name}</h3>
+                        <span className={`text-[9px] font-mono uppercase tracking-widest mb-6 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{s.assigned_class || "Unassigned"}</span>
+
+                        <div className="relative flex items-center justify-center mb-4">
+                          <CircularProgress value={s.daily_chats || 0} max={100} size={110} strokeWidth={10} color="#3b82f6" label="Daily Chats" />
+                        </div>
+
+                        <div className="w-full mt-2 space-y-2">
+                          <div className="flex items-center justify-between text-[9px] font-mono">
+                            <span className="opacity-40">Mobile</span>
+                            <span className="font-bold">{s.mobile_number || "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+
+      {/* Add Student Modal */}
+      {showAddStudent && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`relative w-full max-w-lg max-h-[80vh] overflow-y-auto border border-zinc-800/50 p-6 rounded-[2rem] overflow-hidden group ${
+              isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
+            }`}
+          >
+            <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+            <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+            <button
+              onClick={() => setShowAddStudent(false)}
+              className={`absolute top-4 right-4 p-2 rounded-xl transition-all ${isDarkMode ? "opacity-40 text-white hover:opacity-100 hover:bg-white/5" : "opacity-60 text-black hover:opacity-100 hover:bg-black/5"}`}
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <h2 className={`text-xl font-display font-black uppercase tracking-tight mb-6 ${isDarkMode ? "text-white" : "text-black"}`}>
+              Add Student
+            </h2>
+
+            <form onSubmit={handleAddStudent} className="space-y-4">
+              <div>
+                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Student Name</label>
+                <input
+                  value={studentForm.name}
+                  onChange={(e) => setStudentForm((prev) => ({ ...prev, name: e.target.value }))}
+                  required
+                  className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
+                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                  }`}
+                />
+              </div>
+              <div>
+                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Mobile Number</label>
+                <input
+                  value={studentForm.mobile_number}
+                  onChange={(e) => setStudentForm((prev) => ({ ...prev, mobile_number: e.target.value }))}
+                  required
+                  className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
+                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                  }`}
+                />
+              </div>
+              <div>
+                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>School Code</label>
+                <input
+                  value={studentForm.school_code}
+                  onChange={(e) => setStudentForm((prev) => ({ ...prev, school_code: e.target.value.toUpperCase() }))}
+                  required
+                  className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
+                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                  }`}
+                />
+              </div>
+              <div>
+                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Password</label>
+                <input
+                  type="password"
+                  value={studentForm.password}
+                  onChange={(e) => setStudentForm((prev) => ({ ...prev, password: e.target.value }))}
+                  required
+                  className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
+                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                  }`}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={creatingStudent}
+                className="w-full py-3 bg-blue-500 text-black text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl disabled:opacity-50"
+              >
+                {creatingStudent ? "ADDING..." : "ADD STUDENT"}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="fixed bottom-10 left-10 flex items-center gap-4 pointer-events-none opacity-10">
+        <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+        <span className={`text-[10px] font-mono tracking-[0.5em] uppercase ${isDarkMode ? "text-white" : "text-black"}`}>FACULTY_PORTAL // ACTIVE</span>
+      </div>
+    </div>
+  )
+}

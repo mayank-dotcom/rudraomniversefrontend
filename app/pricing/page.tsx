@@ -103,22 +103,25 @@ const Pricing = () => {
                     </div>
                 </div>
 
-                {/* Pricing Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-white/10 border border-white/10 overflow-hidden">
-                    {plans.filter(plan => (plan.price_inr || plan.price) > 0).map((plan, i) => {
-                        const Icon = getPlanIcon(plan.plan_name || '');
-                        const tag = getPlanTag(plan.plan_name || '');
-                        const color = getPlanColor(plan.plan_name || '');
-                        const isHighlight = plan.plan_name?.toLowerCase().includes('pro');
-                        
-                        return (
-                            <motion.div
-                                key={plan.id || i}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.8, delay: i * 0.1 }}
-                                className={`group relative bg-[#0d0d0d] hover:bg-[#111] transition-all duration-500 flex flex-col p-8 md:p-12 overflow-hidden ${isHighlight ? `ring-2 ring-[#D4AF37] shadow-[0_0_60px_-15px_rgba(212,175,55,0.3)] z-10 bg-[#0f0f0f]` : 'border-r border-white/5'}`}
-                            >
+                 {/* Pricing Grid */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-white/10 border border-white/10 overflow-hidden">
+                     {plans.map((plan, i) => {
+                         const Icon = getPlanIcon(plan.plan_name || '');
+                         const tag = getPlanTag(plan.plan_name || '');
+                         const color = getPlanColor(plan.plan_name || '');
+                         const isHighlight = plan.plan_name?.toLowerCase().includes('pro');
+                         const isFifthOrSixth = i === 4 || i === 5;
+                         const isSixthPlan = i === 5;
+                         const isFreePlan = (plan.price_inr || plan.price || 0) === 0;
+
+                         return (
+                             <motion.div
+                                 key={plan.id || i}
+                                 initial={{ opacity: 0, y: 20 }}
+                                 animate={{ opacity: 1, y: 0 }}
+                                 transition={{ duration: 0.8, delay: i * 0.1 }}
+                                 className={`group relative bg-[#0d0d0d] hover:bg-[#111] transition-all duration-500 flex flex-col p-8 md:p-12 overflow-hidden ${isHighlight ? `ring-2 ring-[#D4AF37] shadow-[0_0_60px_-15px_rgba(212,175,55,0.3)] z-10 bg-[#0f0f0f]` : 'border-r border-white/5'} ${isFifthOrSixth ? 'lg:col-span-2' : ''}`}
+                             >
                                 {/* Shine Effect */}
                                 {color === 'gold' && (
                                     <motion.div
@@ -143,16 +146,16 @@ const Pricing = () => {
                                     )}
                                 </div>
 
-                                {/* Plan Name & Price */}
-                                <div className="mb-12">
-                                    <h2 className="font-orbitron text-2xl font-bold text-white mb-4 tracking-tight">
-                                        {plan.plan_name}
-                                    </h2>
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-5xl font-display font-bold tracking-tighter">₹{plan.price_inr || plan.price}</span>
-                                        <span className="text-white/40 font-mono text-xs uppercase tracking-widest">/mo</span>
-                                    </div>
-                                </div>
+                                 {/* Plan Name & Price */}
+                                 <div className="mb-12">
+                                     <h2 className="font-orbitron text-2xl font-bold text-white mb-4 tracking-tight">
+                                         {plan.plan_name}
+                                     </h2>
+                                     <div className="flex items-baseline gap-1">
+                                         <span className="text-5xl font-display font-bold tracking-tighter">₹{isSixthPlan ? '∞' : (plan.price_inr || plan.price)}</span>
+                                         {!isSixthPlan && <span className="text-white/40 font-mono text-xs uppercase tracking-widest">/mo</span>}
+                                     </div>
+                                 </div>
 
                                 {/* Features - Show all fields */}
                                 <div className="flex-1 space-y-4 mb-16">
@@ -223,8 +226,10 @@ const Pricing = () => {
                                 </div>
 
                                 {/* CTA */}
-                                <button className={`w-full py-5 text-[10px] font-mono font-bold uppercase tracking-[0.3em] transition-all active:scale-[0.98] mb-12 ${isHighlight ? 'bg-[#D4AF37] text-black hover:bg-[#C5A028]' : 'bg-transparent border border-white/20 text-white hover:bg-white/5'}`}>
-                                    {plan.price_inr === 0 || plan.price === 0 ? 'Current Plan' : 'Select Plan'} →
+                                <button className={`relative w-full py-5 text-[10px] font-mono font-bold uppercase tracking-[0.3em] transition-all active:scale-[0.98] mb-12 overflow-hidden group ${isHighlight ? 'bg-[#D4AF37] text-black hover:bg-[#C5A028] shadow-[0_0_20px_rgba(212,175,55,0.3)]' : 'bg-transparent border border-white/20 text-white hover:bg-white/5'}`}>
+                                    <span className="relative z-10">{plan.price_inr === 0 || plan.price === 0 ? 'Current Plan' : 'Select Plan'} →</span>
+                                    <div className={`absolute inset-0 opacity-50 bg-gradient-to-b from-white/20 to-transparent ${isHighlight ? 'opacity-40' : 'opacity-0 group-hover:opacity-20'} transition-opacity`} />
+                                    <div className={`absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent ${isHighlight ? 'via-white/40' : 'via-white/30'} to-transparent`} />
                                 </button>
                             </motion.div>
                         );
