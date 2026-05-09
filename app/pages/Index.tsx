@@ -48,7 +48,7 @@ const Index = () => {
                         >
                             <h1 className="flex flex-col leading-[0.8] tracking-[-0.06em]">
                                 <span className="flex items-baseline">
-                                    <span className={`text-[12rem] md:text-[16rem] font-black font-display ${isDarkMode ? "text-white" : "text-black"}`}>RUDRA</span>
+                                    <span className={`text-[12rem] md:text-[16rem] font-black font-display ${isDarkMode ? "text-white" : "text-black"}`}>RU<span className={`${isDarkMode ? "text-white" : "text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]"}`}>D</span>RA</span>
                                     <span className={`text-[6rem] md:text-[8rem] font-serif italic ${isDarkMode ? "text-white/80" : "text-black/80"} -ml-4`}>nex</span>
                                 </span>
                                 <span className={`text-[12rem] md:text-[16rem] font-black font-display ${isDarkMode ? "text-white/10" : "text-black/10"} -mt-8`}>AI.</span>
