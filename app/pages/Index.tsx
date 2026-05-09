@@ -2,9 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import dynamic from "next/dynamic";
-
-const HeroScene = dynamic(() => import("@/components/ui/HeroScene"), { ssr: false });
+import HeroScene from "@/components/ui/HeroScene";
 
 import Navbar from "@/components/ui/Navbar";
 import FeatureCard from "@/components/ui/FeatureCard";
@@ -20,6 +18,10 @@ const Index = () => {
 
             {/* Hero Section */}
             <section className="relative h-screen flex flex-col overflow-hidden">
+                <div className="absolute inset-0 z-0">
+                    <HeroScene isDarkMode={isDarkMode} />
+                </div>
+
                 {/* Top Metadata Bar */}
                 <div className={`relative z-20 pt-32 px-10 flex justify-between items-start text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/40" : "text-black/60"}`}>
                     <div className="flex gap-10">
@@ -44,12 +46,9 @@ const Index = () => {
                             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
                             className="col-span-12 lg:col-span-8 select-none"
                         >
-                            <h1 className="flex flex-col leading-[0.8] tracking-[-0.06em] relative">
-                                <div className="absolute inset-0 z-0 flex items-center justify-center scale-150 md:scale-[2] lg:scale-[2.5]">
-                                    <HeroScene isDarkMode={isDarkMode} />
-                                </div>
-                                <span className="flex items-baseline relative z-10">
-                                    <span className={`text-[12rem] md:text-[16rem] font-black font-display ${isDarkMode ? "text-white" : "text-black"}`}>RU<span className={`${isDarkMode ? "text-white" : "text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]"}`}>D</span>RA</span>
+                            <h1 className="flex flex-col leading-[0.8] tracking-[-0.06em]">
+                                <span className="flex items-baseline">
+                                    <span className={`text-[12rem] md:text-[16rem] font-black font-display ${isDarkMode ? "text-white" : "text-black"}`}>RU<span className={isDarkMode ? "text-white" : "text-white [-webkit-text-stroke:2px_black] drop-shadow-[0_0_15px_rgba(255,255,255,0.9)]"}>DRA</span></span>
                                     <span className={`text-[6rem] md:text-[8rem] font-serif italic ${isDarkMode ? "text-white/80" : "text-black/80"} -ml-4`}>nex</span>
                                 </span>
                                 <span className={`text-[12rem] md:text-[16rem] font-black font-display ${isDarkMode ? "text-white/10" : "text-black/10"} -mt-8`}>AI.</span>
