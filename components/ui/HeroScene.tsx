@@ -3,7 +3,7 @@ import { Float, MeshDistortMaterial, Environment, Stars } from "@react-three/dre
 import { useRef, Suspense } from "react";
 import * as THREE from "three";
 
-const ChromeCore = () => {
+const ChromeCore = ({ isDarkMode }: { isDarkMode: boolean }) => {
     const ref = useRef<THREE.Mesh>(null);
     useFrame((state) => {
         if (!ref.current) return;
@@ -15,7 +15,7 @@ const ChromeCore = () => {
             <mesh ref={ref}>
                 <icosahedronGeometry args={[1.7, 4]} />
                 <MeshDistortMaterial
-                    color="#ffffff"
+                    color={isDarkMode ? "#ffffff" : "#000000"}
                     roughness={0.05}
                     metalness={1}
                     distort={0.35}
@@ -24,7 +24,7 @@ const ChromeCore = () => {
             </mesh>
             <mesh>
                 <icosahedronGeometry args={[2.05, 1]} />
-                <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.12} />
+                <meshBasicMaterial color={isDarkMode ? "#ffffff" : "#000000"} wireframe transparent opacity={0.12} />
             </mesh>
         </Float>
     );
@@ -35,11 +35,13 @@ const SmallShape = ({
     geometry,
     scale = 1,
     speed = 1,
+    isDarkMode,
 }: {
     position: [number, number, number];
     geometry: "torus" | "ico" | "sphere" | "box";
     scale?: number;
     speed?: number;
+    isDarkMode: boolean;
 }) => {
     const ref = useRef<THREE.Mesh>(null);
     useFrame((s) => {
@@ -54,18 +56,18 @@ const SmallShape = ({
                 {geometry === "ico" && <icosahedronGeometry args={[1, 1]} />}
                 {geometry === "sphere" && <sphereGeometry args={[1, 64, 64]} />}
                 {geometry === "box" && <boxGeometry args={[1.2, 1.2, 1.2]} />}
-                <meshStandardMaterial color="#ffffff" metalness={1} roughness={0.15} />
+                <meshStandardMaterial color={isDarkMode ? "#ffffff" : "#000000"} metalness={1} roughness={0.15} />
             </mesh>
         </Float>
     );
 };
 
-const HeroScene = () => {
+const HeroScene = ({ isDarkMode = true }: { isDarkMode?: boolean }) => {
     return (
         <Canvas camera={{ position: [0, 0, 7], fov: 50 }} dpr={[1, 2]} gl={{ antialias: true }}>
             <Suspense fallback={null}>
-                <color attach="background" args={["#0a0a0a"]} />
-                <fog attach="fog" args={["#0a0a0a", 5, 20]} />
+                <color attach="background" args={[isDarkMode ? "#0a0a0a" : "#fef9f3"]} />
+                <fog attach="fog" args={[isDarkMode ? "#0a0a0a" : "#fef9f3", 5, 20]} />
                 
                 <ambientLight intensity={0.4} />
                 <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={2} />
@@ -73,14 +75,14 @@ const HeroScene = () => {
                 <directionalLight position={[-5, 5, -5]} intensity={1} color="#ffffff" />
                 <pointLight position={[0, -5, 5]} intensity={1} color="#ffffff" />
 
-                <Environment preset="night" />
-                <Stars radius={100} depth={50} count={1000} factor={4} saturation={0} fade speed={1} />
+                <Environment preset={isDarkMode ? "night" : "city"} />
+                {isDarkMode && <Stars radius={100} depth={50} count={1000} factor={4} saturation={0} fade speed={1} />}
 
-                <ChromeCore />
-                <SmallShape position={[-4, 2, -1]} geometry="torus" scale={0.6} speed={0.8} />
-                <SmallShape position={[4, -1.5, -1]} geometry="ico" scale={0.55} speed={1.1} />
-                <SmallShape position={[3.5, 2.5, -2]} geometry="sphere" scale={0.45} speed={0.6} />
-                <SmallShape position={[-3.5, -2.5, -2]} geometry="box" scale={0.5} speed={0.9} />
+                <ChromeCore isDarkMode={isDarkMode} />
+                <SmallShape position={[-4, 2, -1]} geometry="torus" scale={0.6} speed={0.8} isDarkMode={isDarkMode} />
+                <SmallShape position={[4, -1.5, -1]} geometry="ico" scale={0.55} speed={1.1} isDarkMode={isDarkMode} />
+                <SmallShape position={[3.5, 2.5, -2]} geometry="sphere" scale={0.45} speed={0.6} isDarkMode={isDarkMode} />
+                <SmallShape position={[-3.5, -2.5, -2]} geometry="box" scale={0.5} speed={0.9} isDarkMode={isDarkMode} />
             </Suspense>
         </Canvas>
     );

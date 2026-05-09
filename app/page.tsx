@@ -5,6 +5,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/lib/theme-context";
 import Index from "./pages/Index";
 import Chat from "./pages/Chat";
 import Dashboard from "./pages/Dashboard";
@@ -13,6 +14,10 @@ import StudentLogin from "./pages/StudentLogin";
 import SchoolAdminLogin from "./pages/SchoolAdminLogin";
 import SchoolFacultyLogin from "./pages/SchoolFacultyLogin";
 import EnterpriseLogin from "./pages/EnterpriseLogin";
+import About from "./pages/About";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
@@ -20,22 +25,28 @@ import { useEffect, useState } from "react";
 const queryClient = new QueryClient();
 
 const AppContent = () => (
-    <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-                <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/chat" element={<Chat />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+    <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                    <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/chat" element={<Chat />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/about" element={<About />} />
+                        <Route path="/privacy" element={<Privacy />} />
+                        <Route path="/terms" element={<Terms />} />
+                        <Route path="/contact" element={<Contact />} />
+                        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
 
-                    <Route path="*" element={<NotFound />} />
-                </Routes>
-            </BrowserRouter>
-        </TooltipProvider>
-    </QueryClientProvider>
+                        <Route path="*" element={<NotFound />} />
+                    </Routes>
+                </BrowserRouter>
+            </TooltipProvider>
+        </QueryClientProvider>
+    </ThemeProvider>
 );
 
 export default function App() {
@@ -46,7 +57,7 @@ export default function App() {
     }, []);
 
     if (!mounted) {
-        return null; // Or a loading skeleton
+        return null;
     }
 
     return <AppContent />;

@@ -238,3 +238,25 @@ body {
   75% { transform: translate(-50%, -50%); }
   100% { transform: translate(0, 0); }
 }
+
+.shine-animate {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-animate::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  transform: skewX(-20deg);
+  animation: shine-sweep 4s cubic-bezier(0.33, 1, 0.68, 1) infinite;
+}
+
+@keyframes shine-sweep {
+  0% { left: -100%; }
+  100% { left: 150%; }
+}

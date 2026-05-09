@@ -375,36 +375,38 @@ const Dashboard = () => {
             <div className={`absolute inset-0 noise opacity-[0.03] pointer-events-none ${isDarkMode ? "" : "invert"}`} />
 
              {/* Top Navigation */}
-             <nav className={`h-20 flex items-center justify-between px-10 border-b ${isDarkMode ? "border-white/5 bg-black/80" : "border-black/5 bg-white/80"} backdrop-blur-2xl sticky top-0 z-[100]`}>
+             <nav className={`h-20 flex items-center justify-between px-10 border-b ${isDarkMode ? "border-white bg-black/80" : "border-black bg-white/80"} backdrop-blur-2xl sticky top-0 z-[100]`}>
                 <div className="flex items-center gap-12">
                     <Link href="/" className="flex items-center gap-4 group">
-                        <div className={`h-6 w-6 ${isDarkMode ? "bg-white" : "bg-black"} flex items-center justify-center transition-transform group-hover:rotate-45`}>
-                            <div className={`h-1.5 w-1.5 ${isDarkMode ? "bg-black" : "bg-white"}`} />
+                        <div className={`h-[30px] w-[30px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center transition-transform group-hover:rotate-45`}>
+                            <svg width="28" height="28" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
+                                <polygon points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108" fill="currentColor" />
+                            </svg>
                         </div>
                         <div className="flex items-baseline gap-1">
-                            <span className="font-display font-black tracking-tighter text-xl">RUDRANEX</span>
-                            <span className="font-serif italic opacity-40 text-xl tracking-tighter">admin</span>
+                            <span className={`font-display font-black tracking-tighter text-xl ${isDarkMode ? "text-white" : "text-black"}`}>RUDRANEX</span>
+                            <span className={`font-serif italic text-xl tracking-tighter ${isDarkMode ? "text-white/40" : "text-black/40"}`}>admin</span>
                         </div>
                     </Link>
 
                      <div className="hidden lg:flex items-center gap-8">
                          <button
                              onClick={() => setView('visual')}
-                             className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'visual' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
+                             className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'visual' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
                          >
-                             <LayoutDashboard className="h-3.5 w-3.5 text-white" /> Dashboard
+                             <LayoutDashboard className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Dashboard
                          </button>
                          <button
                              onClick={() => setView('table')}
-                             className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'table' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
+                             className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'table' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
                          >
-                             <TableIcon className="h-3.5 w-3.5 text-white" /> Table Logs
+                             <TableIcon className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Table Logs
                          </button>
                          <button
                              onClick={() => setView('plans')}
-                             className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'plans' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
+                             className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'plans' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
                          >
-                             <Zap className="h-3.5 w-3.5 text-white" /> Plans
+                             <Zap className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Plans
                          </button>
                      </div>
                 </div>
@@ -412,7 +414,7 @@ const Dashboard = () => {
                 <div className="flex items-center gap-6">
                     <button
                         onClick={() => setShowCreateSchoolAdminModal(true)}
-                        className="px-4 py-2 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-emerald-500/10 transition-all rounded-full flex items-center gap-2"
+                        className="px-4 py-2 bg-emerald-600 text-white border border-emerald-500 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-emerald-500 transition-all rounded-full flex items-center gap-2"
                     >
                         <Plus className="h-3.5 w-3.5" />
                         Add School Admin
@@ -420,12 +422,12 @@ const Dashboard = () => {
                     <button
                         onClick={fetchData}
                         disabled={isRefreshing}
-                        className={`p-2 rounded-full border border-white/10 hover:bg-white/5 transition-all ${isRefreshing ? "animate-spin" : ""}`}
+                        className={`p-2 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5" : "border-black/10 hover:bg-black/5"} ${isRefreshing ? "animate-spin" : ""}`}
                     >
-                        <RefreshCw className="h-4 w-4 opacity-40" />
+                        <RefreshCw className={`h-4 w-4 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
                     </button>
 
-                    <div className="h-8 w-[1px] bg-white/10 mx-2" />
+                    <div className={`h-8 w-[1px] mx-2 ${isDarkMode ? "bg-white/20" : "bg-black/20"}`} />
 
                     <div className="flex items-center gap-4">
                         <div

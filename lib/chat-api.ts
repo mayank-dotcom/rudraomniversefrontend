@@ -407,17 +407,39 @@ export interface CreateSchoolAdminResponse {
 }
 
 export async function createSchoolAdmin(payload: CreateSchoolAdminPayload) {
-  const res = await fetch(`${API_BASE}/admin/onboard-school`, {
+  // Step 1: Create school
+  const schoolRes = await fetch(`${API_BASE}/admin/schools`, {
     method: "POST",
     headers: getHeaders(),
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      school_name: payload.school_name,
+      school_code: payload.school_code,
+    }),
   })
 
-  const data = await parseJson<CreateSchoolAdminResponse>(res)
-  if (!res.ok || !data.success) {
-    throw new Error(data.error || "Unable to create school admin")
+  const schoolData = await parseJson<{ success: boolean; school?: { id: number }; error?: string }>(schoolRes)
+  if (!schoolRes.ok || !schoolData.success) {
+    throw new Error(schoolData.error || "Failed to create school")
   }
-  return data
+
+  // Step 2: Create admin under the school (sends credentials email via nodemailer)
+  const adminRes = await fetch(`${API_BASE}/admin/school-admin`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({
+      name: payload.admin_name,
+      school_id: schoolData.school!.id,
+      email: payload.admin_email,
+      password: payload.admin_password,
+    }),
+  })
+
+  const adminData = await parseJson<CreateSchoolAdminResponse>(adminRes)
+  if (!adminRes.ok || !adminData.success) {
+    throw new Error(adminData.error || "Failed to create school admin")
+  }
+
+  return { ...adminData, school: schoolData.school }
 }
 
 export interface SchoolStatsResponse {
@@ -740,6 +762,26 @@ export async function saveChatMessage(chatId: string, role: "user" | "assistant"
   return data
 }
 
+export interface UpdateChatResponse {
+  success: boolean
+  message?: string
+  error?: string
+}
+
+export async function updateChat(chatId: string, title: string) {
+  const res = await fetch(`${API_BASE}/chats/${chatId}`, {
+    method: "PUT",
+    headers: getHeaders(),
+    body: JSON.stringify({ title }),
+  })
+
+  const data = await parseJson<UpdateChatResponse>(res)
+  if (!res.ok) {
+    throw new Error(data.error || "Unable to update chat.")
+  }
+  return data
+}
+
 export async function deleteChat(chatId: string) {
   const res = await fetch(`${API_BASE}/chats/${chatId}`, {
     method: "DELETE",
@@ -749,6 +791,26 @@ export async function deleteChat(chatId: string) {
   const data = await parseJson<DeleteChatResponse>(res)
   if (!res.ok) {
     throw new Error(data.error || "Unable to delete chat.")
+  }
+  return data
+}
+
+export interface MessageFeedbackResponse {
+  success: boolean
+  message?: string
+  error?: string
+}
+
+export async function sendMessageFeedback(messageId: string, feedback: number) {
+  const res = await fetch(`${API_BASE}/messages/${messageId}/feedback`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ feedback }),
+  })
+
+  const data = await parseJson<MessageFeedbackResponse>(res)
+  if (!res.ok) {
+    throw new Error(data.error || "Unable to save feedback.")
   }
   return data
 }

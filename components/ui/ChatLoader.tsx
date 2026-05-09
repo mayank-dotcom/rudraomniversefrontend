@@ -28,7 +28,7 @@ export default function ChatLoader({ isDarkMode = true }: ChatLoaderProps) {
         });
 
         const anim2 = animate(polygon, {
-            points: '64 68.64 8.574 100 63.446 67.68 64 4 64.554 67.68 119.426 100',
+            points: '18,22 90,18 82,58 60,52 54,38 38,44 44,58 38,72 108,104 76,112 48,70 44,76 38,104 18,112',
             alternate: true,
             loop: true,
         });
@@ -64,7 +64,7 @@ export default function ChatLoader({ isDarkMode = true }: ChatLoaderProps) {
                     />
                 </filter>
                 <polygon
-                    points="64 128 8.574 96 8.574 32 64 0 119.426 32 119.426 96"
+                    points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108"
                     fill="currentColor"
                     filter={`url(#${filterId})`}
                 />

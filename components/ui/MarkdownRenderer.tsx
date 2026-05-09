@@ -4,6 +4,8 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "katex/dist/katex.min.css";
 
 interface MarkdownRendererProps {
@@ -25,11 +27,29 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
     }, [content]);
 
     return (
-        <div className={`prose max-w-none
-            ${isDarkMode ? "prose-invert prose-white" : "prose-black"}
-            prose-p:font-serif prose-p:italic prose-p:text-base prose-p:leading-relaxed
-            md:prose-p:text-lg
-        `}>
+        <div
+            className={`prose max-w-none
+                ${isDarkMode ? "prose-invert" : ""}
+                prose-p:font-serif prose-p:italic prose-p:text-base prose-p:leading-relaxed
+                md:prose-p:text-lg
+            `}
+            style={{
+                '--tw-prose-body': isDarkMode ? '#fff' : '#000',
+                '--tw-prose-headings': isDarkMode ? '#fff' : '#000',
+                '--tw-prose-links': isDarkMode ? '#fff' : '#000',
+                '--tw-prose-bold': isDarkMode ? '#fff' : '#000',
+                '--tw-prose-counters': isDarkMode ? '#fff' : '#000',
+                '--tw-prose-bullets': isDarkMode ? '#fff' : '#000',
+                '--tw-prose-hr': isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                '--tw-prose-quotes': isDarkMode ? '#fff' : '#000',
+                '--tw-prose-quote-borders': isDarkMode ? '#fff' : '#000',
+                '--tw-prose-code': isDarkMode ? '#fff' : '#000',
+                '--tw-prose-pre-code': isDarkMode ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.8)',
+                '--tw-prose-pre-bg': isDarkMode ? '#0d0d0d' : '#f9fafb',
+                '--tw-prose-th-borders': isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                '--tw-prose-td-borders': isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+            } as React.CSSProperties}
+        >
             <ReactMarkdown
                 remarkPlugins={[[remarkMath, { singleDollar: true, doubleDollar: true }]]}
                 rehypePlugins={[[rehypeKatex, { trust: true, strict: false }]]}
@@ -51,31 +71,37 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                         }
 
                         return (
-                             <pre className={`${isDarkMode ? "bg-[#0d0d0d] border-white/10" : "bg-gray-50 border-black/10"} border p-4 rounded-lg my-4 relative max-w-full whitespace-pre-wrap break-words`}>
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="w-2 h-2 rounded-full bg-[#FF5F56]" />
-                                        <div className="w-2 h-2 rounded-full bg-[#FFBD2E]" />
-                                        <div className="w-2 h-2 rounded-full bg-[#27C93F]" />
-                                        <span className={`text-[9px] font-mono uppercase tracking-widest ml-2 ${isDarkMode ? "text-white/30" : "text-black/90"}`}>
-                                            {match ? match[1] : "code"}
-                                        </span>
-                                    </div>
-                                    <button
-                                        onClick={() => navigator.clipboard.writeText(String(children))}
-                                        className={`p-1 hover:bg-white/10 rounded transition-colors ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"}`}
-                                        title="Copy code"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                                        </svg>
-                                    </button>
+                            <div className="my-4 rounded-lg overflow-hidden" style={{
+                                border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+                            }}>
+                                <div className="flex items-center gap-1.5 px-4 py-2" style={{
+                                    background: isDarkMode ? "#1a1a1a" : "#f3f4f6",
+                                    borderBottom: `1px solid ${isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
+                                }}>
+                                    <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
+                                    <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
+                                    <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
+                                    <span className={`text-[9px] font-mono uppercase tracking-widest ml-2 ${isDarkMode ? "text-white/30" : "text-black/50"}`}>
+                                        {match?.[1] || "code"}
+                                    </span>
                                 </div>
-                                <code className={`language-${match?.[1] || ""} text-sm font-mono ${isDarkMode ? "text-white/80" : "text-black/80"} whitespace-pre-wrap break-words block`}>
-                                    {children}
-                                </code>
-                            </pre>
+                                <SyntaxHighlighter
+                                    language={match?.[1] || "text"}
+                                    style={isDarkMode ? oneDark : oneLight}
+                                    customStyle={{
+                                        background: isDarkMode ? "#0d0d0d" : "#f9fafb",
+                                        padding: "1rem",
+                                        margin: 0,
+                                        fontSize: "0.875rem",
+                                        fontFamily: "var(--font-mono)",
+                                        borderTopLeftRadius: 0,
+                                        borderTopRightRadius: 0,
+                                    }}
+                                    showLineNumbers
+                                >
+                                    {String(children)}
+                                </SyntaxHighlighter>
+                            </div>
                         );
                     },
                     p(props) {

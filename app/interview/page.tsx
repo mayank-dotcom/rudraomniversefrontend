@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ChatLoader from "@/components/ui/ChatLoader";
+import PageLoader from "@/components/ui/PageLoader";
 import { createChat, saveChatMessage, sendAiRequest, generateTTSAudio, transcribeSpeech, transcribeSpeechFallback, stopSpeechRecognition } from "@/lib/chat-api";
+import { ThemeProvider } from "@/lib/theme-context";
 
 function InterviewRoomContent() {
     const router = useRouter();
@@ -664,7 +666,9 @@ function InterviewRoomContent() {
                             filter: `drop-shadow(0 0 ${15 + audioLevel * 40}px rgba(57, 255, 20, 0.6))`,
                         }}
                     >
-                        <ChatLoader isDarkMode={true} />
+                        <div className="scale-[2.5]">
+                            <ChatLoader isDarkMode={true} />
+                        </div>
                     </motion.div>
                     {isBotSpeaking && (
                         <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex gap-1">
@@ -772,10 +776,10 @@ function InterviewRoomContent() {
 
 export default function InterviewRoom() {
     return (
-        <Suspense fallback={<div className="h-screen w-full bg-black flex items-center justify-center">
-            <div className="h-16 w-16 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-        </div>}>
-            <InterviewRoomContent />
-        </Suspense>
+        <ThemeProvider>
+            <Suspense fallback={<PageLoader />}>
+                <InterviewRoomContent />
+            </Suspense>
+        </ThemeProvider>
     );
 }

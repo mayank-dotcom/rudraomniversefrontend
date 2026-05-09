@@ -11,16 +11,19 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo } from "@/lib/auth";
+import { useTheme } from "@/lib/theme-context";
 import {
     ChatSummary,
     createChat,
     deleteChat,
+    updateChat,
     getChatHistory,
     listChats,
     saveChatMessage,
     sendChatCompletion,
     sendAiRequest,
     sendAiRequestStream,
+    sendMessageFeedback,
     getSubscriptionStatus
 } from "@/lib/chat-api";
 import { processFile, ProcessedFile } from "@/lib/file-processor";
@@ -39,6 +42,8 @@ interface Message {
     content: string;
     timestamp: string;
     localOnly?: boolean;
+    messageId?: string;
+    feedback?: number;
 }
 
 const WELCOME_CONTENT = "Welcome to Rudranex AI. I am your study-pilot. How can I assist your learning journey today?";
@@ -90,7 +95,7 @@ const Chat = () => {
     const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(false);
     const [isResizingLeft, setIsResizingLeft] = useState(false);
     const [isResizingRight, setIsResizingRight] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(true);
+    const { isDarkMode, toggleTheme } = useTheme();
     const [showEngineSelect, setShowEngineSelect] = useState(false);
     const [selectedEngine, setSelectedEngine] = useState("Student Mode");
     const [isLoading, setIsLoading] = useState(false);
@@ -109,6 +114,9 @@ const Chat = () => {
     const [paperConfig, setPaperConfig] = useState<MockPaperConfig | null>(null);
     const [isGeneratingPaper, setIsGeneratingPaper] = useState(false);
     const [responseTime, setResponseTime] = useState<number | null>(null);
+    const [editingChatId, setEditingChatId] = useState<string | null>(null);
+    const [editingTitle, setEditingTitle] = useState("");
+    const editingInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const requestStartTime = useRef<number>(0);
@@ -195,7 +203,7 @@ const Chat = () => {
         navigator.clipboard.writeText(text);
     };
 
-    const hydrateMessages = (items: Array<{ role: "user" | "assistant" | "system"; content: string; created_at?: string }>) => {
+    const hydrateMessages = (items: Array<{ role: "user" | "assistant" | "system"; content: string; created_at?: string; id?: string; feedback?: number }>) => {
         if (!items.length) {
             setMessages(getWelcomeMessages());
             return;
@@ -204,7 +212,9 @@ const Chat = () => {
         setMessages(items.map((message) => ({
             role: message.role,
             content: message.content,
-            timestamp: formatTimestamp(message.created_at)
+            timestamp: formatTimestamp(message.created_at),
+            messageId: message.id,
+            feedback: message.feedback
         })));
     };
 
@@ -308,6 +318,43 @@ const Chat = () => {
         }
     };
 
+    const handleStartEditing = (chat: ChatSummary) => {
+        setEditingChatId(chat.id);
+        setEditingTitle(chat.title);
+        setTimeout(() => editingInputRef.current?.select(), 0);
+    };
+
+    const handleCancelEditing = () => {
+        setEditingChatId(null);
+        setEditingTitle("");
+    };
+
+    const handleRenameChat = async () => {
+        const chatId = editingChatId;
+        const newTitle = editingTitle.trim();
+        if (!chatId || !newTitle) {
+            handleCancelEditing();
+            return;
+        }
+
+        setChatError(null);
+
+        try {
+            await updateChat(chatId, newTitle);
+            setChats((prev) =>
+                prev.map((chat) =>
+                    chat.id === chatId ? { ...chat, title: newTitle } : chat
+                )
+            );
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unable to rename chat.";
+            setChatError(message);
+            toast.error(message);
+        } finally {
+            handleCancelEditing();
+        }
+    };
+
     const handleDeleteChat = async (chatId: string) => {
         const confirmed = window.confirm("Do you want to delete this chat ?");
         if (!confirmed) return;
@@ -332,6 +379,27 @@ const Chat = () => {
         } catch (error) {
             const message = error instanceof Error ? error.message : "Unable to delete chat.";
             setChatError(message);
+        }
+    };
+
+    const handleToggleFeedback = async (messageId: string | undefined, currentFeedback: number | undefined, value: number) => {
+        if (!messageId) {
+            toast.error("Cannot save feedback for this message");
+            return;
+        }
+
+        const newFeedback = currentFeedback === value ? 0 : value;
+
+        try {
+            await sendMessageFeedback(messageId, newFeedback);
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    msg.messageId === messageId ? { ...msg, feedback: newFeedback } : msg
+                )
+            );
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unable to save feedback.";
+            toast.error(message);
         }
     };
 
@@ -549,7 +617,7 @@ STRICT RULES:
             const data = await sendAiRequest({
                 endpoint: requestEndpoint,
                 messages: conversationHistory,
-                chat_id: currentChatId,
+                chat_id: undefined,
                 modality: requestModality
             });
 
@@ -583,6 +651,37 @@ STRICT RULES:
                     return newMessages;
                 });
             }
+            if (currentChatId) {
+                try {
+                    const [savedUser, savedAssistant] = await Promise.all([
+                        saveChatMessage(currentChatId, "user", displayContent),
+                        saveChatMessage(currentChatId, "assistant", aiContent)
+                    ]);
+                    const userMsgId = savedUser?.message?.id as string | undefined;
+                    const assistantMsgId = savedAssistant?.message?.id as string | undefined;
+                    if (userMsgId || assistantMsgId) {
+                        setMessages((prev) => {
+                            const updated = [...prev];
+                            for (let i = updated.length - 1; i >= 0; i--) {
+                                if (updated[i].role === "user" && !updated[i].messageId && userMsgId) {
+                                    updated[i] = { ...updated[i], messageId: userMsgId };
+                                    break;
+                                }
+                            }
+                            for (let i = updated.length - 1; i >= 0; i--) {
+                                if (updated[i].role === "assistant" && !updated[i].messageId && assistantMsgId) {
+                                    updated[i] = { ...updated[i], messageId: assistantMsgId };
+                                    break;
+                                }
+                            }
+                            return updated;
+                        });
+                    }
+                } catch {
+                    // Best effort - feedback won't persist for this exchange
+                }
+            }
+
             setResponseTime((Date.now() - requestStart) / 1000);
         } catch (error) {
             const message = error instanceof Error ? error.message : "Unable to process your request.";
@@ -630,20 +729,25 @@ STRICT RULES:
 
             <aside
                 style={{ width: isSidebarCollapsed ? "0px" : `${sidebarWidth}px` }}
-                className={`h-full border-r ${isDarkMode ? "border-white/20 bg-[#0a0a0a]" : "border-black/15 bg-[#fcfcfc]"} flex flex-col relative z-20 transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
+                className={`h-full border-r-2 ${isDarkMode ? "border-white bg-[#0a0a0a]" : "border-black bg-[#fcfcfc]"} flex flex-col relative z-20 transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
             >
                 {!isSidebarCollapsed && (
                     <div className="flex flex-col h-full overflow-hidden">
-                        <div className={`p-6 border-b ${isDarkMode ? "border-white/20" : "border-black/15"} flex items-center justify-between`}>
+                        <div className={`p-6 border-b-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-between`}>
                             <Link href="/" className="flex items-center gap-3">
-                                <div className={`h-[30px] w-[30px] ${isDarkMode ? "bg-white text-black" : "bg-black text-white"} flex items-center justify-center`}>
-                                    <div className={`h-[6px] w-[6px] ${isDarkMode ? "bg-black" : "bg-white"}`} />
+                                <div className={`h-[38px] w-[38px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
+                                    <svg width="36" height="36" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
+                                        <polygon
+                                            points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108"
+                                            fill="currentColor"
+                                        />
+                                    </svg>
                                 </div>
                             </Link>
                             <button
                                 onClick={handleCreateChat}
                                 disabled={isCreatingChat}
-                                className={`p-2 transition-all duration-300 border disabled:opacity-50 ${isDarkMode ? "bg-white border-white hover:bg-gray-200 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "bg-white border-black hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"} group`}
+                                className={`p-2 transition-all duration-300 border-2 disabled:opacity-50 ${isDarkMode ? "bg-white border-white hover:bg-gray-200 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "bg-white border-black hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"} group`}
                             >
                                 <Plus className={`h-4 w-4 ${isDarkMode ? "text-black group-hover:text-black" : "text-black group-hover:text-black"} transition-transform group-hover:rotate-90`} />
                             </button>
@@ -680,23 +784,51 @@ STRICT RULES:
                                 {!isSessionsLoading && filteredChats.map((chat) => (
                                     <div
                                         key={chat.id}
-                                        className={`group flex items-center gap-2 pr-2 ${activeChatId === chat.id ? (isDarkMode ? "bg-white/5 border-l border-white" : "bg-black/5 border-l border-black") : ""}`}
+                                        className={`group flex items-center gap-1 pr-2 ${activeChatId === chat.id ? (isDarkMode ? "bg-white/5 border-l border-white" : "bg-black/5 border-l border-black") : ""}`}
                                     >
-                                        <button
-                                            onClick={() => void openChat(chat.id)}
-                                            className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${activeChatId === chat.id ? "" : "hover:bg-white/5"}`}
-                                        >
-                                            <MessageSquare className={`h-3 w-3 flex-shrink-0 ${isDarkMode ? "text-white/20" : "text-black/40"}`} />
-                                            {sidebarWidth > 120 && <span className="truncate opacity-60 font-sans">{chat.title}</span>}
-                                        </button>
-                                        {sidebarWidth > 120 && (
+                                        {editingChatId === chat.id ? (
+                                            <div className="flex-1 flex items-center gap-1 p-1.5">
+                                                <input
+                                                    ref={editingChatId === chat.id ? editingInputRef : null}
+                                                    type="text"
+                                                    value={editingTitle}
+                                                    onChange={(e) => setEditingTitle(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter") void handleRenameChat();
+                                                        if (e.key === "Escape") handleCancelEditing();
+                                                    }}
+                                                    onBlur={() => void handleRenameChat()}
+                                                    className={`w-full p-2 text-xs border bg-transparent focus:outline-none ${isDarkMode ? "border-white/40 text-white" : "border-black/40 text-black"}`}
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        ) : (
                                             <button
-                                                onClick={() => void handleDeleteChat(chat.id)}
-                                                className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-red-400 hover:scale-110" : "text-black/40 hover:text-red-600 hover:scale-110"}`}
-                                                aria-label={`Delete ${chat.title}`}
+                                                onClick={() => void openChat(chat.id)}
+                                                onDoubleClick={() => handleStartEditing(chat)}
+                                                className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${activeChatId === chat.id ? "" : "hover:bg-white/5"}`}
                                             >
-                                                <Trash2 className="h-3.5 w-3.5" />
+                                                <MessageSquare className={`h-3 w-3 flex-shrink-0 ${isDarkMode ? "text-white/20" : "text-black/40"}`} />
+                                                {sidebarWidth > 120 && <span className="truncate opacity-60 font-sans">{chat.title}</span>}
                                             </button>
+                                        )}
+                                        {sidebarWidth > 120 && editingChatId !== chat.id && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleStartEditing(chat)}
+                                                    className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-white hover:scale-110" : "text-black/40 hover:text-black hover:scale-110"}`}
+                                                    aria-label={`Rename ${chat.title}`}
+                                                >
+                                                    <Edit3 className="h-3 w-3" />
+                                                </button>
+                                                <button
+                                                    onClick={() => void handleDeleteChat(chat.id)}
+                                                    className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-red-400 hover:scale-110" : "text-black/40 hover:text-red-600 hover:scale-110"}`}
+                                                    aria-label={`Delete ${chat.title}`}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </button>
+                                            </>
                                         )}
                                     </div>
                                 ))}
@@ -707,7 +839,7 @@ STRICT RULES:
                         </div>
 
                         {/* User Profile */}
-                        <div className={`p-6 border-t ${isDarkMode ? "border-white/20 bg-black/40" : "border-black/15 bg-white"}`}>
+                        <div className={`p-6 border-t-2 ${isDarkMode ? "border-white bg-black/40" : "border-black bg-white"}`}>
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <div className={`h-10 w-10 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative group`}>
@@ -722,7 +854,7 @@ STRICT RULES:
                                     )}
                                 </div>
                                 <button
-                                    onClick={() => setIsDarkMode(!isDarkMode)}
+                                    onClick={toggleTheme}
                                     className={`p-2 border transition-all duration-300 ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black bg-white hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
                                     title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
                                 >
@@ -739,7 +871,7 @@ STRICT RULES:
                                     setUserEmail("");
                                     window.location.href = "/";
                                 }}
-                                className={`w-full flex items-center justify-center gap-3 p-3 border ${isDarkMode ? "border-white bg-white/5 text-[10px] font-mono uppercase tracking-widest hover:bg-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all active:scale-95 text-white" : "border-black bg-white text-[10px] font-mono uppercase tracking-widest hover:bg-gray-50 hover:shadow-[0_0_20px_rgba(0,0,0,0.2)] transition-all active:scale-95 text-black"}`}
+                                className={`w-full flex items-center justify-center gap-3 p-3 border-2 ${isDarkMode ? "border-white bg-white/5 text-[10px] font-mono uppercase tracking-widest hover:bg-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all active:scale-95 text-white" : "border-black bg-white text-[10px] font-mono uppercase tracking-widest hover:bg-gray-50 hover:shadow-[0_0_20px_rgba(0,0,0,0.2)] transition-all active:scale-95 text-black"}`}
                             >
                                 <LogOut className={`h-3 w-3 ${isDarkMode ? "text-white" : "text-black"}`} /> {sidebarWidth > 120 && "Logout session"}
                             </button>
@@ -756,7 +888,7 @@ STRICT RULES:
                 {/* Left Toggle Button */}
                 <button
                     onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    className={`absolute top-1/2 -translate-y-1/2 z-50 p-1 bg-[#0a0a0a] border border-white/20 text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20`}
+                    className={`absolute top-1/2 -translate-y-1/2 z-50 p-1 bg-[#0a0a0a] border-2 border-white/30 text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20`}
                     style={{ right: isSidebarCollapsed ? "-2rem" : "-0.75rem" }}
                 >
                     {isSidebarCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
@@ -766,10 +898,12 @@ STRICT RULES:
             {/* Main Chat Area */}
             <div className="flex-1 flex flex-col relative h-full overflow-hidden">
                 {/* Fixed Header / Navbar */}
-                <header className={`h-20 flex-shrink-0 border-b ${isDarkMode ? "border-white/20 bg-[#0a0a0a]/80" : "border-black/15 bg-white/80"} backdrop-blur-xl flex items-center justify-between px-10 relative z-30`}>
+                <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-10 relative z-30`}>
                     <div className="flex items-center gap-4">
-                        <div className={`h-6 w-6 ${isDarkMode ? "bg-white" : "bg-black"} flex items-center justify-center`}>
-                            <div className={`h-1.5 w-1.5 ${isDarkMode ? "bg-black" : "bg-white"}`} />
+                        <div className={`h-[30px] w-[30px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
+                            <svg width="28" height="28" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
+                                <polygon points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108" fill="currentColor" />
+                            </svg>
                         </div>
                         <div className="flex items-baseline gap-1.5">
                             <span className={`font-display font-black text-lg tracking-tighter ${isDarkMode ? "text-white" : "text-black"}`}>RUDRANEX</span>
@@ -793,7 +927,7 @@ STRICT RULES:
                                 setAuthed(false);
                                 window.location.href = "/";
                             }}
-                            className={`px-4 py-2 border text-[10px] font-mono uppercase tracking-widest transition-all flex items-center gap-2 ${isDarkMode ? "border-white text-white hover:bg-white/5 hover:scale-105 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black/30 text-black/70 hover:bg-black/5 hover:scale-105 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
+                            className={`px-4 py-2 border-2 text-[10px] font-mono uppercase tracking-widest transition-all flex items-center gap-2 ${isDarkMode ? "border-white text-white hover:bg-white/5 hover:scale-105 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black text-black/70 hover:bg-black/5 hover:scale-105 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
                         >
                             <LogOut className={`h-3 w-3 ${isDarkMode ? "text-white" : "text-black"}`} />
                             Logout
@@ -833,7 +967,7 @@ STRICT RULES:
                                             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                                             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                                         >
-                                            <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[85%]" : "items-start max-w-[85%]"}`}>
+                                            <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[85%]" : "items-start max-w-[68%]"}`}>
                                                 <div className="flex items-center gap-3 mb-4">
                                                     <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/60"}`}>
                                                         {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
@@ -841,9 +975,9 @@ STRICT RULES:
                                                     <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/20" : "text-black/60"}`}>{msg.timestamp}</span>
                                                 </div>
 
-                                                <div className={`p-8 border ${msg.role === "user"
-                                                    ? (isDarkMode ? "border-white/30 bg-transparent rounded-2xl" : "border-black/30 bg-transparent rounded-2xl")
-                                                    : (isDarkMode ? "border-white/20 bg-transparent rounded-[2.5rem]" : "border-black/20 bg-transparent rounded-[2.5rem]")
+                                                <div className={`p-8 ${msg.role === "user"
+                                                    ? (isDarkMode ? "bg-black border border-white/20 rounded-[18px_4px_18px_4px]" : "bg-transparent border-2 border-black rounded-[18px_4px_18px_4px]")
+                                                    : (isDarkMode ? "bg-transparent rounded-[2.5rem]" : "bg-transparent rounded-[2.5rem]")
                                                     } relative group`}>
                                                     {msg.role === "user" ? (
                                                         <p className={`text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white font-sans" : "text-black font-sans"}`}>
@@ -871,38 +1005,38 @@ STRICT RULES:
                                                 <div className={`flex items-center gap-3 mt-3 ${msg.role === "user" ? "justify-end" : "justify-start px-8"}`}>
                                                     {msg.role === "user" ? (
                                                         <>
-                                                            <button onClick={() => setInput(msg.content)} className={`p-2 hover:bg-white/10 rounded border ${isDarkMode ? "border-white/20 hover:border-white/40 text-white/60 hover:text-white hover:scale-105" : "border-black/20 hover:border-black/40 text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <Edit3 className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                                                    <span className="text-[8px] font-mono uppercase tracking-widest">Edit</span>
-                                                                </div>
+                                                            <button onClick={() => setInput(msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
+                                                                <Edit3 className="h-3 w-3 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => copyToClipboard(msg.content)} className={`p-2 hover:bg-white/10 rounded border ${isDarkMode ? "border-white/20 hover:border-white/40 text-white/60 hover:text-white hover:scale-105" : "border-black/20 hover:border-black/40 text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <Copy className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                                                    <span className="text-[8px] font-mono uppercase tracking-widest">Copy</span>
-                                                                </div>
+                                                            <button onClick={() => copyToClipboard(msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
+                                                                <Copy className="h-3 w-3 group-hover:scale-110 transition-transform" />
                                                             </button>
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <button className={`p-2 hover:bg-white/10 rounded border ${isDarkMode ? "border-white/20 hover:border-white/40 text-white/60 hover:text-white hover:scale-105" : "border-black/20 hover:border-black/40 text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
+                                                            <button
+                                                                onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, 1)}
+                                                                className={`p-2 rounded border-2 transition-all duration-300 group ${msg.feedback === 1
+                                                                    ? (isDarkMode ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-emerald-500/20 border-emerald-500 text-emerald-600")
+                                                                    : (isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105")
+                                                                    }`}
+                                                            >
                                                                 <ThumbsUp className="h-3 w-3 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button className={`p-2 hover:bg-white/10 rounded border ${isDarkMode ? "border-white/20 hover:border-white/40 text-white/60 hover:text-white hover:scale-105" : "border-black/20 hover:border-black/40 text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
+                                                            <button
+                                                                onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, -1)}
+                                                                className={`p-2 rounded border-2 transition-all duration-300 group ${msg.feedback === -1
+                                                                    ? (isDarkMode ? "bg-red-500/20 border-red-500 text-red-400" : "bg-red-500/20 border-red-500 text-red-600")
+                                                                    : (isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105")
+                                                                    }`}
+                                                            >
                                                                 <ThumbsDown className="h-3 w-3 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => copyToClipboard(msg.content)} className={`p-2 hover:bg-white/10 rounded border ${isDarkMode ? "border-white/20 hover:border-white/40 text-white/60 hover:text-white hover:scale-105" : "border-black/20 hover:border-black/40 text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <Copy className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                                                    <span className="text-[8px] font-mono uppercase tracking-widest">Copy</span>
-                                                                </div>
+                                                            <button onClick={() => copyToClipboard(msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
+                                                                <Copy className="h-3 w-3 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => retryMessage(i)} className={`p-2 hover:bg-white/10 rounded border ${isDarkMode ? "border-white/20 hover:border-white/40 text-white/60 hover:text-white hover:scale-105" : "border-black/20 hover:border-black/40 text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <RotateCcw className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                                                    <span className="text-[8px] font-mono uppercase tracking-widest">Retry</span>
-                                                                </div>
+                                                            <button onClick={() => retryMessage(i)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
+                                                                <RotateCcw className="h-3 w-3 group-hover:scale-110 transition-transform" />
                                                             </button>
                                                         </>
                                                     )}
@@ -929,7 +1063,7 @@ STRICT RULES:
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 10 }}
-                                        className={`absolute bottom-full left-4 mb-4 p-4 border ${isDarkMode ? "bg-[#0d0d0d] border-white/10" : "bg-white border-black/10"} flex items-center gap-4 shadow-2xl z-40`}
+                                        className={`absolute bottom-full left-4 mb-4 p-4 border-2 ${isDarkMode ? "bg-[#0d0d0d] border-white/20" : "bg-white border-black/20"} flex items-center gap-4 shadow-2xl z-40`}
                                     >
                                         <div className="h-12 w-12 flex items-center justify-center bg-white/5">
                                             {selectedFile.previewUrl ? (
@@ -952,97 +1086,98 @@ STRICT RULES:
                                 )}
                             </AnimatePresence>
 
-                            <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10">
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={isLoading || isProcessingFile}
-                                    className={`p-3 ${isDarkMode ? "text-white/40 hover:text-[#D4AF37] border border-transparent hover:border-[#D4AF37]/30 rounded transition-all active:scale-95 hover:bg-[#D4AF37]/5" : "text-black/40 hover:text-[#B8962E] border border-transparent hover:border-[#D4AF37]/40 rounded transition-all active:scale-95 hover:bg-[#D4AF37]/5"}`}
-                                    title="Attach File"
-                                >
-                                    {isProcessingFile ? (
-                                        <div className="h-4 w-4 border-2 border-[#D4AF37] border-t-transparent animate-spin rounded-full" />
-                                    ) : (
-                                        <Paperclip className="h-4 w-4" />
-                                    )}
-                                </button>
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleFileChange}
-                                    className="hidden"
-                                    accept="image/*,application/pdf,text/plain,.md"
-                                />
-                            </div>
-
-                            <input
-                                type="text"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && !isProcessingFile && void handleSend()}
-                                placeholder={isProcessingFile ? "Processing file..." : "Describe your query or paste a concept..."}
-                                className={`w-full bg-transparent border-b ${isDarkMode ? "border-white/10 placeholder:text-white/10 focus:border-[#D4AF37]/50" : "border-black/10 placeholder:text-black/10 focus:border-[#D4AF37]/50"} p-5 pl-14 pr-32 text-base focus:outline-none transition-all duration-300`}
-                            />
-                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                <div className="relative">
+                            <div className={`relative flex items-center border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
+                                <div className="flex items-center gap-2 pl-3">
                                     <button
-                                        onClick={() => setShowEngineSelect(!showEngineSelect)}
-                                        className={`flex items-center gap-2 px-3 py-3 border ${isDarkMode ? "bg-white/5 border-white text-white hover:bg-white/10 hover:scale-105 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "bg-white border-black text-black hover:bg-gray-50 hover:scale-105 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"} text-[10px] font-mono uppercase tracking-widest transition-all duration-300`}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isLoading || isProcessingFile}
+                                        className={`p-2 ${isDarkMode ? "text-white/30 hover:text-[#D4AF37]" : "text-black/30 hover:text-[#B8962E]"} transition-all active:scale-95`}
+                                        title="Attach File"
                                     >
-                                        <Bot className={`h-3 w-3 ${isDarkMode ? "text-white" : "text-black"} group-hover:rotate-12 transition-transform`} />
-                                        {selectedEngine}
-                                        <ChevronUp className={`h-3 w-3 transition-transform ${showEngineSelect ? "rotate-180" : ""} ${isDarkMode ? "text-white" : "text-black"}`} />
-                                    </button>
-
-                                    <AnimatePresence>
-                                        {showEngineSelect && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                className={`absolute bottom-full right-0 mb-4 w-72 ${isDarkMode ? "bg-[#0d0d0d] border-white" : "bg-white border-black"} border p-2 shadow-2xl z-50`}
-                                            >
-                                                <div className="px-4 py-3 border-b border-black/10 flex justify-between items-center mb-2">
-                                                    <span className="text-[10px] font-mono font-bold text-emerald-500 tracking-[0.2em]">SELECT AI ENGINE</span>
-                                                    <span className={`px-2 py-0.5 ${isDarkMode ? "bg-white/10 text-white" : "bg-black/5 text-black/60"} text-[8px] font-mono rounded`}>FREE</span>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    {engines.map((engine) => (
-                                                        <button
-                                                            key={engine.name}
-                                                            onClick={() => {
-                                                                if (engine.name === "Interview Prep") {
-                                                                    setShowEngineSelect(false);
-                                                                    setIsInterviewModalOpen(true);
-                                                                } else if (engine.name === "Mock Paper Generator") {
-                                                                    setShowEngineSelect(false);
-                                                                    setIsMockPaperModalOpen(true);
-                                                                } else {
-                                                                    setSelectedEngine(engine.name);
-                                                                    setShowEngineSelect(false);
-                                                                }
-                                                            }}
-                                                            className={`w-full flex items-center justify-between p-3 transition-all duration-300 ${selectedEngine === engine.name ? (isDarkMode ? "bg-white/5 text-white scale-102" : "bg-black/5 text-black scale-102") : (isDarkMode ? "hover:bg-white/5 text-white hover:scale-105" : "hover:bg-black/5 text-black hover:scale-105")}`}
-                                                        >
-                                                            <div className="flex items-center gap-4">
-                                                                <engine.icon className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black/60"} group-hover:rotate-12 transition-transform`} />
-                                                                <span className={`text-xs font-medium ${isDarkMode ? "text-white" : "text-black"}`}>{engine.name}</span>
-                                                            </div>
-                                                            <span className={`text-[10px] font-mono font-bold ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{engine.version}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </motion.div>
+                                        {isProcessingFile ? (
+                                            <div className="h-4 w-4 border-2 border-[#D4AF37] border-t-transparent animate-spin rounded-full" />
+                                        ) : (
+                                            <Paperclip className="h-4 w-4" />
                                         )}
-                                    </AnimatePresence>
+                                    </button>
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileChange}
+                                        className="hidden"
+                                        accept="image/*,application/pdf,text/plain,.md"
+                                    />
                                 </div>
-                                <button
-                                    onClick={() => void handleSend()}
-                                    disabled={isLoading || isHistoryLoading || isProcessingFile}
-                                    className={`p-3.5 disabled:opacity-50 ${isDarkMode ? "bg-white text-black hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] hover:scale-110" : "bg-black text-white hover:shadow-[0_0_30px_rgba(0,0,0,0.4)] hover:scale-110"} transition-all active:scale-95 relative overflow-hidden group border ${isDarkMode ? "border-white" : "border-black"}`}
-                                >
-                                    <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${isDarkMode ? "via-black/10" : "via-white/20"} to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000`} />
-                                    <Send className="h-4 w-4 relative z-10" />
-                                </button>
+
+                                <input
+                                    type="text"
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && !isProcessingFile && void handleSend()}
+                                    placeholder={isProcessingFile ? "Processing file..." : "Describe your query or paste a concept..."}
+                                    className={`flex-1 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/10" : "text-black placeholder:text-black/10"} p-4 pl-2 text-base focus:outline-none`}
+                                />
+                                <div className="flex items-center gap-1 pr-2">
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setShowEngineSelect(!showEngineSelect)}
+                                            className={`flex items-center gap-2 px-3 py-2 border-2 ${isDarkMode ? "border-white text-white/60 hover:bg-white/5 hover:border-white" : "border-black text-black/60 hover:bg-black/5 hover:border-black"} text-[9px] font-mono uppercase tracking-widest transition-all duration-300 rounded`}
+                                        >
+                                            <Bot className="h-3 w-3" />
+                                            {selectedEngine}
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {showEngineSelect && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    className={`absolute bottom-full right-0 mb-4 w-72 ${isDarkMode ? "bg-[#0d0d0d] border-white" : "bg-white border-black"} border p-2 shadow-2xl z-50`}
+                                                >
+                                                    <div className="px-4 py-3 border-b border-black/10 flex justify-between items-center mb-2">
+                                                        <span className="text-[10px] font-mono font-bold text-emerald-500 tracking-[0.2em]">SELECT AI ENGINE</span>
+                                                        <span className={`px-2 py-0.5 ${isDarkMode ? "bg-white/10 text-white" : "bg-black/5 text-black/60"} text-[8px] font-mono rounded`}>FREE</span>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        {engines.map((engine) => (
+                                                            <button
+                                                                key={engine.name}
+                                                                onClick={() => {
+                                                                    if (engine.name === "Interview Prep") {
+                                                                        setShowEngineSelect(false);
+                                                                        setIsInterviewModalOpen(true);
+                                                                    } else if (engine.name === "Mock Paper Generator") {
+                                                                        setShowEngineSelect(false);
+                                                                        setIsMockPaperModalOpen(true);
+                                                                    } else {
+                                                                        setSelectedEngine(engine.name);
+                                                                        setShowEngineSelect(false);
+                                                                    }
+                                                                }}
+                                                                className={`w-full flex items-center justify-between p-3 transition-all duration-300 ${selectedEngine === engine.name ? (isDarkMode ? "bg-white/5 text-white scale-102" : "bg-black/5 text-black scale-102") : (isDarkMode ? "hover:bg-white/5 text-white hover:scale-105" : "hover:bg-black/5 text-black hover:scale-105")}`}
+                                                            >
+                                                                <div className="flex items-center gap-4">
+                                                                    <engine.icon className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black/60"} group-hover:rotate-12 transition-transform`} />
+                                                                    <span className={`text-xs font-medium ${isDarkMode ? "text-white" : "text-black"}`}>{engine.name}</span>
+                                                                </div>
+                                                                <span className={`text-[10px] font-mono font-bold ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{engine.version}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                    <button
+                                        onClick={() => void handleSend()}
+                                        disabled={isLoading || isHistoryLoading || isProcessingFile}
+                                        className={`p-2.5 disabled:opacity-50 ${isDarkMode ? "bg-white text-black hover:shadow-[0_0_25px_rgba(255,255,255,0.3)]" : "bg-black text-white hover:shadow-[0_0_25px_rgba(0,0,0,0.3)]"} transition-all hover:scale-105 active:scale-95 relative overflow-hidden group`}
+                                    >
+                                        <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${isDarkMode ? "via-black/10" : "via-white/20"} to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000`} />
+                                        <Send className="h-4 w-4 relative z-10" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1052,11 +1187,11 @@ STRICT RULES:
             {/* Right Sidebar */}
             <aside
                 style={{ width: isRightSidebarCollapsed ? "0px" : `${rightSidebarWidth}px` }}
-                className={`h-full border-l ${isDarkMode ? "border-white/20 bg-[#0a0a0a]" : "border-black/15 bg-[#fcfcfc]"} flex flex-col relative z-20 transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
+                className={`h-full border-l-2 ${isDarkMode ? "border-white bg-[#0a0a0a]" : "border-black bg-[#fcfcfc]"} flex flex-col relative z-20 transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
             >
                 {!isRightSidebarCollapsed && (
                     <div className="flex flex-col h-full overflow-hidden">
-                        <div className={`p-8 ${isDarkMode ? "border-white/20" : "border-black/15"} ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+                        <div className={`p-8 border-b-2 ${isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
                             {/* Plan Badge */}
                             <div className="flex items-start mb-8">
                                 <div className="flex flex-col">

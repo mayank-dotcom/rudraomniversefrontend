@@ -7,25 +7,26 @@ import HeroScene from "@/components/ui/HeroScene";
 import Navbar from "@/components/ui/Navbar";
 import FeatureCard from "@/components/ui/FeatureCard";
 import { ArrowRight, Bot, Cpu, Globe, Zap } from "lucide-react";
+import { useTheme } from "@/lib/theme-context";
 
 const Index = () => {
-
+    const { isDarkMode } = useTheme();
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-white selection:text-black">
+        <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black`}>
             <Navbar />
 
             {/* Hero Section */}
             <section className="relative h-screen flex flex-col overflow-hidden">
-                <div className="absolute inset-0 z-0 opacity-80">
-                    <HeroScene />
+                <div className="absolute inset-0 z-0">
+                    <HeroScene isDarkMode={isDarkMode} />
                 </div>
 
                 {/* Top Metadata Bar */}
-                <div className="relative z-20 pt-32 px-10 flex justify-between items-start text-[9px] font-mono uppercase tracking-[0.3em] text-white/40">
+                <div className={`relative z-20 pt-32 px-10 flex justify-between items-start text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/40" : "text-black/60"}`}>
                     <div className="flex gap-10">
                         <div className="flex items-center gap-3">
-                            <div className="h-1.5 w-1.5 bg-white/40 rotate-45" />
+                            <div className={`h-1.5 w-1.5 ${isDarkMode ? "bg-white/40" : "bg-black/60"} rotate-45`} />
                             <span>N° 001 / Rudranex AI</span>
                         </div>
                         <span>AI - Co-pilot for student life</span>
@@ -47,10 +48,10 @@ const Index = () => {
                         >
                             <h1 className="flex flex-col leading-[0.8] tracking-[-0.06em]">
                                 <span className="flex items-baseline">
-                                    <span className="text-[12rem] md:text-[16rem] font-black font-display text-white">RUDRA</span>
-                                    <span className="text-[6rem] md:text-[8rem] font-serif italic text-white/80 -ml-4">nex</span>
+                                    <span className={`text-[12rem] md:text-[16rem] font-black font-display ${isDarkMode ? "text-white" : "text-black"}`}>RUDRA</span>
+                                    <span className={`text-[6rem] md:text-[8rem] font-serif italic ${isDarkMode ? "text-white/80" : "text-black/80"} -ml-4`}>nex</span>
                                 </span>
-                                <span className="text-[12rem] md:text-[16rem] font-black font-display text-white/10 -mt-8">AI.</span>
+                                <span className={`text-[12rem] md:text-[16rem] font-black font-display ${isDarkMode ? "text-white/10" : "text-black/10"} -mt-8`}>AI.</span>
                             </h1>
                         </motion.div>
 
@@ -61,14 +62,14 @@ const Index = () => {
                             transition={{ duration: 0.8, delay: 0.4 }}
                             className="col-span-12 lg:col-span-4 lg:pl-12 mt-12 lg:mt-0"
                         >
-                            <p className="text-lg md:text-xl text-white/70 leading-snug mb-10 font-medium">
-                                One quiet, precise <span className="italic font-serif text-white">intelligence</span> for your entire student life — from cracking tech interviews to mastering 100-page textbooks.
+                            <p className={`text-lg md:text-xl ${isDarkMode ? "text-white/70" : "text-black/70"} leading-snug mb-10 font-medium`}>
+                                One quiet, precise <span className={`italic font-serif ${isDarkMode ? "text-white" : "text-black"}`}>intelligence</span> for your entire student life — from cracking tech interviews to mastering 100-page textbooks.
                             </p>
                             <div className="flex items-center gap-4">
-                                <Link to="/chat" className="whitespace-nowrap px-8 py-4 bg-white text-black text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/90 transition-all active:scale-95 text-center">
+                                <Link to="/chat" className={`whitespace-nowrap px-8 py-4 bg-white text-black border-2 ${isDarkMode ? "border-white" : "border-black"} text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/90 transition-all active:scale-95 text-center`}>
                                     Start Free →
                                 </Link>
-                                <button className="whitespace-nowrap px-8 py-4 border border-white/20 bg-transparent text-white text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/5 transition-all active:scale-95">
+                                <button className={`whitespace-nowrap px-8 py-4 border ${isDarkMode ? "border-white/20 text-white hover:bg-white/5" : "border-black/20 text-black hover:bg-black/5"} bg-transparent text-[10px] font-mono font-bold uppercase tracking-widest transition-all active:scale-95`}>
                                     Watch Demo
                                 </button>
 
@@ -80,13 +81,13 @@ const Index = () => {
                 </div>
 
                 {/* Bottom Scrolling Bar */}
-                <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-white/10 bg-black/40 backdrop-blur-md overflow-hidden">
+                <div className={`absolute bottom-0 left-0 right-0 z-20 border-t ${isDarkMode ? "border-white/10 bg-black/40" : "border-black/10 bg-white/40"} backdrop-blur-md overflow-hidden`}>
                     <div className="flex py-4 animate-infinite-scroll whitespace-nowrap">
                         {[
                             "Students", "Privacy First", "Adaptive Practice", "PDF Intelligence", "Code Co-pilot", "Vision AI", "Career Path"
                         ].map((tag, i) => (
-                            <div key={i} className="flex items-center mx-10 text-[9px] font-mono uppercase tracking-[0.3em] text-white/60">
-                                <div className="h-1.5 w-1.5 bg-white/30 rotate-45 mr-4" />
+                            <div key={i} className={`flex items-center mx-10 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                                <div className={`h-1.5 w-1.5 ${isDarkMode ? "bg-white/30" : "bg-black/30"} rotate-45 mr-4`} />
                                 {tag}
                             </div>
                         ))}
@@ -94,8 +95,8 @@ const Index = () => {
                         {[
                             "Students", "Privacy First", "Adaptive Practice", "PDF Intelligence", "Code Co-pilot", "Vision AI", "Career Path"
                         ].map((tag, i) => (
-                            <div key={i} className="flex items-center mx-10 text-[9px] font-mono uppercase tracking-[0.3em] text-white/60">
-                                <div className="h-1.5 w-1.5 bg-white/30 rotate-45 mr-4" />
+                            <div key={i} className={`flex items-center mx-10 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                                <div className={`h-1.5 w-1.5 ${isDarkMode ? "bg-white/30" : "bg-black/30"} rotate-45 mr-4`} />
                                 {tag}
                             </div>
                         ))}
@@ -119,10 +120,10 @@ const Index = () => {
                             </h3>
                         </div>
                         <div className="md:w-2/3">
-                            <h2 className="text-5xl md:text-7xl font-display font-bold tracking-tight leading-[0.9] mb-10">
+                            <h2 className="text-5xl md:text-7xl font-display font-bold tracking-tight leading-[0.9] mb-10 text-white">
                                 Eight quiet tools. <br />
                                 <span className="font-serif italic font-normal text-white/80">One</span>
-                                <span className="font-black"> obvious advantage.</span>
+                                <span className="font-black text-white"> obvious advantage.</span>
                             </h2>
                             <p className="text-white/50 text-lg md:text-xl max-w-2xl leading-relaxed">
                                 A complete, monochrome toolkit — engineered to make you study smarter, prepare faster, and ship better projects.
@@ -299,26 +300,51 @@ const Index = () => {
 
 
             {/* Footer */}
-            <footer className="py-6 border-t border-white/5">
+            <footer className={`py-12 border-t ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
+                <div className="container mx-auto px-6">
+                    <div className="flex flex-col md:flex-row justify-between gap-12 mb-10">
+                        {/* Brand */}
+                        <div className="flex flex-col gap-4">
+                            <div className="flex items-baseline gap-2">
+                                <span className={`font-display font-black text-2xl tracking-tighter ${isDarkMode ? "text-white" : "text-black"}`}>RUDRANEX</span>
+                                <span className={`font-serif text-2xl ${isDarkMode ? "text-muted-foreground" : "text-black/40"}`}>ai</span>
+                            </div>
+                            <p className={`text-[10px] font-mono uppercase tracking-widest max-w-xs ${isDarkMode ? "text-muted-foreground/60" : "text-black/40"}`}>
+                                AI co-pilot
+                            </p>
+                        </div>
 
+                        {/* Company Links */}
+                        <div className="flex flex-col gap-3">
+                            <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Company</span>
+                            <Link to="/about" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>About Us</Link>
+                            <Link to="/privacy" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Privacy Policy</Link>
+                            <Link to="/terms" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Terms of Service</Link>
+                            <Link to="/contact" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Contact Us</Link>
+                        </div>
 
+                        {/* Platforms */}
+                        <div className="flex flex-col gap-3">
+                            <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Platforms</span>
+                            <a href="#" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>For Schools</a>
+                            <a href="#" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>For B2B</a>
+                            <Link to="/pricing" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Pricing</Link>
+                        </div>
 
-
-                <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-12">
-                    <div className="flex items-baseline gap-2">
-                        <span className="font-display font-black text-2xl tracking-tighter text-white">RUDRANEX</span>
-                        <span className="font-serif text-2xl text-muted-foreground">ai</span>
+                        {/* Social */}
+                        <div className="flex flex-col gap-3">
+                            <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Social</span>
+                            <a href="#" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>X / Twitter</a>
+                            <a href="#" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>LinkedIn</a>
+                            <a href="#" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>GitHub</a>
+                        </div>
                     </div>
 
-                    <div className="flex gap-12 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                        <a href="#" className="hover:text-white transition">X / Twitter</a>
-                        <a href="#" className="hover:text-white transition">LinkedIn</a>
-                        <a href="#" className="hover:text-white transition">Github</a>
+                    <div className={`border-t pt-6 text-center ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
+                        <p className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-muted-foreground/40" : "text-black/30"}`}>
+                            © 2026 Rudranex AI Systems. All rights reserved.
+                        </p>
                     </div>
-
-                    <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40">
-                        © 2026 Rudranex AI Systems
-                    </p>
                 </div>
             </footer>
         </div>
