@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
-import { ArrowLeft, GraduationCap, Lock, User, Phone, KeyRound, ChevronRight, Check, Eye, EyeOff, LogIn } from "lucide-react"
+import { ArrowLeft, GraduationCap, User, Phone, KeyRound, ChevronRight, Check, LogIn } from "lucide-react"
 import { sendFirebaseOTP, cleanupRecaptcha } from "@/lib/firebase"
 import { setApiKey, setUserInfo } from "@/lib/auth"
 
@@ -101,37 +101,69 @@ export default function RegularUserAuth() {
 }
 
 function LoginForm() {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
+  const [step, setStep] = useState<"phone" | "otp">("phone")
+  const [phone, setPhone] = useState("")
+  const [otp, setOtp] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [confirmation, setConfirmation] = useState<any>(null)
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!username) return setError("Enter username or email")
-    if (!password) return setError("Enter password")
+  useEffect(() => {
+    return () => {
+      cleanupRecaptcha("recaptcha-container")
+    }
+  }, [])
 
+  const handleSendOTP = async () => {
+    const cleaned = phone.replace(/\s/g, "")
+    if (!cleaned) return setError("Enter mobile number")
+    if (cleaned.length < 10) return setError("Enter a valid mobile number")
     setLoading(true)
     setError("")
-
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/auth/login`, {
+      const formattedPhone = cleaned.startsWith("+") ? cleaned : `+91${cleaned}`
+      const confirmationResult = await sendFirebaseOTP(formattedPhone, "recaptcha-container")
+      setConfirmation(confirmationResult)
+      setStep("otp")
+    } catch (e: any) {
+      if (e.code === "auth/invalid-phone-number") setError("Invalid phone number format")
+      else if (e.code === "auth/too-many-requests") setError("Too many attempts. Please try again later.")
+      else setError(e.message || "Failed to send OTP")
+    }
+    setLoading(false)
+  }
+
+  const handleVerifyOTP = async () => {
+    if (!otp) return setError("Enter OTP")
+    setLoading(true)
+    setError("")
+    try {
+      const result = await confirmation.confirm(otp)
+      const user = result.user
+      const idToken = await user.getIdToken()
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/auth/otp/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ firebase_token: idToken }),
       })
       const data = await res.json()
 
       if (res.ok && data.api_key) {
         setApiKey(data.api_key)
-        setUserInfo(data.name || username, data.email || "")
-        window.location.href = "/chat"
+        if (data.is_signup_complete) {
+          setUserInfo(data.name || user.displayName || "User", data.email || "")
+          window.location.href = "/chat"
+        } else {
+          setError("No account found. Please sign up first.")
+        }
       } else {
-        setError(data.error || "Login failed")
+        setError(data.message || "Verification failed")
       }
     } catch (e: any) {
-      setError(e.message || "Login failed")
+      if (e.code === "auth/invalid-verification-code") setError("Invalid OTP")
+      else if (e.code === "auth/code-expired") setError("OTP expired. Request a new one.")
+      else setError(e.message || "Failed to verify OTP")
     }
     setLoading(false)
   }
@@ -153,46 +185,69 @@ function LoginForm() {
         </motion.div>
       )}
 
-      <form onSubmit={handleLogin} className="space-y-5">
-        <div className="relative group">
-          <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-          <input
-            type="text"
-            placeholder="Username or Email"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
-            autoFocus
-          />
-        </div>
+      {step === "phone" && (
+        <div className="space-y-6">
+          <div className="relative group">
+            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
+            <input
+              type="tel"
+              placeholder="+91XXXXXXXXXX"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSendOTP()}
+              className="w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
+              autoFocus
+            />
+          </div>
 
-        <div className="relative group">
-          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full pl-12 pr-12 py-4 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
-          />
           <button
             type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/60 transition-colors"
+            onClick={handleSendOTP}
+            disabled={loading}
+            className="w-full py-4 bg-white text-black text-[10px] font-mono uppercase tracking-[0.3em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {loading ? "Sending OTP..." : "Send OTP"}
+            <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
+      )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-4 bg-white text-black text-[10px] font-mono uppercase tracking-[0.3em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {loading ? "Logging in..." : "Login"}
-          <ChevronRight className="h-3.5 w-3.5" />
-        </button>
-      </form>
+      {step === "otp" && (
+        <div className="space-y-6">
+          <div className="relative group">
+            <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onKeyDown={(e) => e.key === "Enter" && handleVerifyOTP()}
+              className="w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20 text-center text-2xl tracking-[0.5em]"
+              maxLength={6}
+              autoFocus
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleVerifyOTP}
+            disabled={loading || otp.length < 6}
+            className="w-full py-4 bg-white text-black text-[10px] font-mono uppercase tracking-[0.3em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? "Verifying..." : "Verify OTP"}
+            <Check className="h-3.5 w-3.5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setStep("phone"); setOtp(""); setError("") }}
+            className="w-full text-center text-[10px] font-mono uppercase tracking-[0.3em] text-white/40 hover:text-white transition-colors"
+          >
+            Change phone number
+          </button>
+        </div>
+      )}
     </motion.div>
   )
 }

@@ -21,7 +21,7 @@ export default function AuthSelection() {
     },
     {
       title: "Login",
-      description: "Sign in with your username and password to continue learning.",
+      description: "Sign in with your phone number via OTP to continue learning.",
       icon: LogIn,
       path: "/auth/login",
       color: "blue",
