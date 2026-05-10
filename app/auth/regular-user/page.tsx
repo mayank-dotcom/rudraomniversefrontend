@@ -1,7 +1,7 @@
 "use client"
 
-import StudentLogin from "../../pages/StudentLogin"
+import RegularUserAuth from "../../pages/RegularUserAuth"
 
 export default function RegularUserAuthPage() {
-  return <StudentLogin />
+  return <RegularUserAuth />
 }

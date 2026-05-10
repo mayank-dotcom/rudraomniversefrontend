@@ -30,6 +30,7 @@ import { processFile, ProcessedFile } from "@/lib/file-processor";
 import { toast } from "sonner";
 
 import ChatLoader from "@/components/ui/ChatLoader";
+import DotsLoader from "@/components/ui/DotsLoader";
 import MarkdownRenderer from "@/components/ui/MarkdownRenderer";
 import InterviewPrepModal from "@/components/InterviewPrepModal";
 import MockPaperModal, { MockPaperConfig } from "@/components/MockPaperModal";
@@ -113,6 +114,7 @@ const Chat = () => {
     const [generatedPaper, setGeneratedPaper] = useState<string | null>(null);
     const [paperConfig, setPaperConfig] = useState<MockPaperConfig | null>(null);
     const [isGeneratingPaper, setIsGeneratingPaper] = useState(false);
+    const [showDots, setShowDots] = useState(false);
     const [responseTime, setResponseTime] = useState<number | null>(null);
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState("");
@@ -508,6 +510,7 @@ STRICT RULES:
         }
 
         setIsLoading(true);
+        setShowDots(true);
         setChatError(null);
         setResponseTime(null);
         const requestStart = Date.now();
@@ -631,6 +634,8 @@ STRICT RULES:
                 || "Response received from Rudranex AI.";
             console.log("AI Content:", aiContent);
 
+            setShowDots(false);
+
             // Stream simulation - render text character by character
             const assistantMessage: Message = {
                 role: "assistant",
@@ -684,6 +689,7 @@ STRICT RULES:
 
             setResponseTime((Date.now() - requestStart) / 1000);
         } catch (error) {
+            setShowDots(false);
             const message = error instanceof Error ? error.message : "Unable to process your request.";
             setChatError(message);
             toast.error(message);
@@ -704,6 +710,7 @@ STRICT RULES:
             };
             setMessages((prev) => [...prev, errorMsg]);
         } finally {
+            setShowDots(false);
             setIsLoading(false);
         }
     };
@@ -1046,7 +1053,7 @@ STRICT RULES:
                                     ))
                                 )}
                             </AnimatePresence>
-                            {isLoading && <ChatLoader isDarkMode={isDarkMode} />}
+                            {showDots && <DotsLoader isDarkMode={isDarkMode} />}
                             <div ref={messagesEndRef} />
                         </div>
                     </div>

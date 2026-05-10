@@ -2,6 +2,8 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/ui/Navbar";
+import Footer from "@/components/ui/Footer";
+import { ThemeProvider } from "@/lib/theme-context";
 import { Check, Zap, Shield, Cpu, Code, Brain, Target, Image as ImageIcon, Rocket, BookOpen, GraduationCap, FileText, Bug, Battery, Terminal, Building2, Users, Loader2 } from "lucide-react";
 import { getPlansList, Plan } from "@/lib/chat-api";
 import { useState, useEffect } from "react";
@@ -72,6 +74,7 @@ const Pricing = () => {
     }
 
     return (
+        <ThemeProvider>
         <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-white selection:text-black">
             <Navbar />
 
@@ -245,18 +248,9 @@ const Pricing = () => {
             </div>
 
             {/* Footer */}
-            <footer className="py-20 border-t border-white/5 mt-20">
-                <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-12 text-muted-foreground">
-                    <div className="flex items-baseline gap-2">
-                        <span className="font-display font-black text-2xl tracking-tighter text-white">RUDRANEX</span>
-                        <span className="font-serif text-2xl">ai</span>
-                    </div>
-                    <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40">
-                        © 2026 Rudranex AI Systems
-                    </p>
-                </div>
-            </footer>
+            <Footer />
         </div>
+        </ThemeProvider>
     );
 };
 

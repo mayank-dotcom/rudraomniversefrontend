@@ -5,7 +5,7 @@ import {
     MoreHorizontal, Plus, Briefcase, Users, Clock, CheckCircle2,
     ChevronRight, ArrowUpRight, Globe, Shield, Zap, Table as TableIcon, LayoutDashboard,
     ChevronLeft, ChevronRight as ChevronRightIcon, LogOut, Moon, Sun, RefreshCw, Database,
-    TrendingUp, ShieldCheck, Cpu, X
+    TrendingUp, ShieldCheck, Cpu, X, Copy, Check
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -123,6 +123,15 @@ const Dashboard = () => {
     const [newSchoolAdminEmail, setNewSchoolAdminEmail] = useState("");
     const [newSchoolAdminPassword, setNewSchoolAdminPassword] = useState("");
     const [isCreatingSchoolAdmin, setIsCreatingSchoolAdmin] = useState(false);
+    const [createdAdminInfo, setCreatedAdminInfo] = useState<{
+        schoolName: string;
+        schoolCode: string;
+        adminName: string;
+        adminEmail: string;
+        adminPassword: string;
+        adminCode: string;
+    } | null>(null);
+    const [copied, setCopied] = useState(false);
     const USERS_PER_PAGE = 10;
 
     const filteredUsers = useMemo(() => {
@@ -238,7 +247,15 @@ const Dashboard = () => {
                 admin_email: email,
                 admin_password: adminPassword,
             });
-            toast.success(`School + Admin created. Code: ${res.admin?.admin_code || schoolCode}`);
+            const adminCode = res.admin?.admin_code || schoolCode;
+            setCreatedAdminInfo({
+                schoolName,
+                schoolCode,
+                adminName: name,
+                adminEmail: email,
+                adminPassword,
+                adminCode,
+            });
             setShowCreateSchoolAdminModal(false);
             setNewSchoolName("");
             setNewSchoolCode("");
@@ -1181,6 +1198,89 @@ const Dashboard = () => {
                                 {isCreatingSchoolAdmin ? "CREATING..." : "CREATE SCHOOL ADMIN"}
                             </button>
                         </form>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Admin Created Success Dialog */}
+            {createdAdminInfo && (
+                <div className="fixed inset-0 z-[220] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className={`relative w-full max-w-lg border border-zinc-800/50 p-6 rounded-[2rem] ${
+                            isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
+                        }`}
+                    >
+                        <button
+                            onClick={() => setCreatedAdminInfo(null)}
+                            className={`absolute top-4 right-4 p-2 rounded-xl transition-all ${isDarkMode ? "opacity-40 text-white hover:opacity-100 hover:bg-white/5" : "opacity-60 text-black hover:opacity-100 hover:bg-black/5"}`}
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+
+                        <div className="text-center mb-6">
+                            <div className="h-14 w-14 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4">
+                                <CheckCircle2 className="h-7 w-7 text-emerald-400" />
+                            </div>
+                            <h2 className={`text-xl font-display font-black uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
+                                School Admin Created
+                            </h2>
+                            <p className={`text-[10px] font-mono mt-2 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                Share these credentials with the admin. Email may not have been delivered — save this now.
+                            </p>
+                        </div>
+
+                        <div className={`space-y-3 p-4 rounded-xl text-xs font-mono ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                            <div className="flex justify-between">
+                                <span className="opacity-40">School</span>
+                                <span className="font-bold">{createdAdminInfo.schoolName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="opacity-40">School Code</span>
+                                <span className="font-bold">{createdAdminInfo.schoolCode}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="opacity-40">Admin Name</span>
+                                <span className="font-bold">{createdAdminInfo.adminName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="opacity-40">Email</span>
+                                <span className="font-bold">{createdAdminInfo.adminEmail}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="opacity-40">Admin Code</span>
+                                <span className="font-bold font-mono">{createdAdminInfo.adminCode}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="opacity-40">Password</span>
+                                <span className="font-bold font-mono">{createdAdminInfo.adminPassword}</span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                const text = `School: ${createdAdminInfo.schoolName}
+School Code: ${createdAdminInfo.schoolCode}
+Admin Name: ${createdAdminInfo.adminName}
+Email: ${createdAdminInfo.adminEmail}
+Admin Code: ${createdAdminInfo.adminCode}
+Password: ${createdAdminInfo.adminPassword}
+
+Login at: ${window.location.origin}/auth/school-admin`;
+                                navigator.clipboard.writeText(text).then(() => {
+                                    setCopied(true);
+                                    setTimeout(() => setCopied(false), 2000);
+                                });
+                            }}
+                            className="w-full mt-4 py-3 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl flex items-center justify-center gap-2"
+                        >
+                            {copied ? (
+                                <><Check className="h-3.5 w-3.5" />Copied</>
+                            ) : (
+                                <><Copy className="h-3.5 w-3.5" />Copy Credentials</>
+                            )}
+                        </button>
                     </motion.div>
                 </div>
             )}

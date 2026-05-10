@@ -1,34 +1,35 @@
 "use client"
 
 import { motion } from "framer-motion"
+import Link from "next/link"
 import Navbar from "@/components/ui/Navbar"
-import { GraduationCap, ShieldCheck, ArrowRight, Sparkles } from "lucide-react"
+import { UserPlus, LogIn, ArrowRight, Sparkles, ShieldCheck } from "lucide-react"
 
 export default function AuthSelection() {
   const roles = [
     {
-      title: "Regular User",
-      description: "Access AI tutoring, learning tools, and manage your account.",
-      icon: GraduationCap,
+      title: "Sign Up",
+      description: "Create a new account with phone OTP verification and get started.",
+      icon: UserPlus,
       path: "/regular-user",
       color: "emerald",
       gradient: "from-emerald-500/20 via-emerald-500/5 to-transparent",
       borderColor: "border-emerald-500/20",
       iconBg: "bg-emerald-500/10",
       iconColor: "text-emerald-400",
-      tag: "student",
+      tag: "new user",
     },
     {
-      title: "Admin Portal",
-      description: "Common access for School Admin, Enterprise Admin, and Global Admin.",
-      icon: ShieldCheck,
-      path: "/admin",
-      color: "amber",
-      gradient: "from-amber-500/20 via-amber-500/5 to-transparent",
-      borderColor: "border-amber-500/20",
-      iconBg: "bg-amber-500/10",
-      iconColor: "text-amber-400",
-      tag: "admin",
+      title: "Login",
+      description: "Sign in with your username and password to continue learning.",
+      icon: LogIn,
+      path: "/auth/login",
+      color: "blue",
+      gradient: "from-blue-500/20 via-blue-500/5 to-transparent",
+      borderColor: "border-blue-500/20",
+      iconBg: "bg-blue-500/10",
+      iconColor: "text-blue-400",
+      tag: "returning",
     },
   ]
 
@@ -57,11 +58,11 @@ export default function AuthSelection() {
             <Sparkles className="h-4 w-4 text-white/30" />
           </div>
           <div className="flex items-baseline gap-2 justify-center">
-            <span className="font-display font-black text-6xl md:text-7xl tracking-tighter text-white">Choose Your</span>
-            <span className="font-serif text-6xl md:text-7xl text-white/40 italic">Role</span>
+            <span className="font-display font-black text-6xl md:text-7xl tracking-tighter text-white">Get Started</span>
+            <span className="font-serif text-6xl md:text-7xl text-white/40 italic">Today</span>
           </div>
           <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/40 max-w-md mx-auto mt-4">
-            Select how you want to access rudranex ai
+            Sign up new or log in to your rudranex ai account
           </p>
         </motion.div>
 
@@ -129,7 +130,10 @@ export default function AuthSelection() {
         <div className="border-t border-white/5 py-4 flex items-center justify-between text-[9px] font-mono uppercase tracking-[0.3em] text-white/20">
           <div className="flex items-center gap-4">
             <div className="h-1.5 w-1.5 bg-white/20 rotate-45" />
-            <span>Secure Access</span>
+            <Link href="/admin" className="hover:text-white/40 transition-colors flex items-center gap-2">
+              <ShieldCheck className="h-3 w-3" />
+              Admin Portal
+            </Link>
           </div>
           <span>Rudranex AI &copy; 2026</span>
         </div>
