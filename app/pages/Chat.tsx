@@ -116,6 +116,7 @@ const Chat = () => {
     const [isGeneratingPaper, setIsGeneratingPaper] = useState(false);
     const [showDots, setShowDots] = useState(false);
     const [responseTime, setResponseTime] = useState<number | null>(null);
+    const [sidebarTab, setSidebarTab] = useState<"history" | "modes">("history");
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState("");
     const editingInputRef = useRef<HTMLInputElement>(null);
@@ -813,89 +814,152 @@ STRICT RULES:
                             </button>
                         </div>
 
-                        <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
-                            {sidebarWidth > 120 && (
-                                <div className="mb-8">
-                                    <div className="relative group">
-                                        <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 ${isDarkMode ? "text-white group-focus-within:text-white" : "text-black group-focus-within:text-black"} transition-colors`} />
-                                        <input
-                                            type="text"
-                                            placeholder="Search sessions..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className={`w-full ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border p-2 pl-9 text-[10px] font-mono uppercase tracking-widest focus:outline-none focus:border-white transition-all ${isDarkMode ? "text-white" : "text-black"}`}
-                                        />
-                                    </div>
-                                </div>
-                            )}
+                        {/* Sidebar Tab Switcher */}
+                        <div className={`flex ${isDarkMode ? "border-white" : "border-black"} border-b-2`}>
+                            <button
+                                onClick={() => setSidebarTab("history")}
+                                className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${
+                                    sidebarTab === "history"
+                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                                }`}
+                            >
+                                <Clock className="h-3 w-3 inline mr-1.5 -mt-0.5" />
+                                History
+                            </button>
+                            <button
+                                onClick={() => setSidebarTab("modes")}
+                                className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${
+                                    sidebarTab === "modes"
+                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                                }`}
+                            >
+                                <Bot className="h-3 w-3 inline mr-1.5 -mt-0.5" />
+                                Modes
+                            </button>
+                        </div>
 
-                            <div className="space-y-1">
-                                {sidebarWidth > 120 && <span className={`px-2 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black/40"}`}>Recent Sessions</span>}
-                                {isSessionsLoading && (
-                                    <div className={`px-3 py-4 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
-                                        Loading sessions...
-                                    </div>
-                                )}
-                                {!isSessionsLoading && filteredChats.length === 0 && (
-                                    <div className={`px-3 py-4 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
-                                        {searchQuery ? "No matching sessions" : "No chats yet"}
-                                    </div>
-                                )}
-                                {!isSessionsLoading && filteredChats.map((chat) => (
-                                    <div
-                                        key={chat.id}
-                                        className={`group flex items-center gap-1 pr-2 ${activeChatId === chat.id ? (isDarkMode ? "bg-white/5 border-l border-white" : "bg-black/5 border-l border-black") : ""}`}
-                                    >
-                                        {editingChatId === chat.id ? (
-                                            <div className="flex-1 flex items-center gap-1 p-1.5">
+                        <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+                            {sidebarTab === "history" && (
+                                <>
+                                    {sidebarWidth > 120 && (
+                                        <div className="mb-8">
+                                            <div className="relative group">
+                                                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 ${isDarkMode ? "text-white group-focus-within:text-white" : "text-black group-focus-within:text-black"} transition-colors`} />
                                                 <input
-                                                    ref={editingChatId === chat.id ? editingInputRef : null}
                                                     type="text"
-                                                    value={editingTitle}
-                                                    onChange={(e) => setEditingTitle(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === "Enter") void handleRenameChat();
-                                                        if (e.key === "Escape") handleCancelEditing();
-                                                    }}
-                                                    onBlur={() => void handleRenameChat()}
-                                                    className={`w-full p-2 text-xs border bg-transparent focus:outline-none ${isDarkMode ? "border-white/40 text-white" : "border-black/40 text-black"}`}
-                                                    autoFocus
+                                                    placeholder="Search sessions..."
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    className={`w-full ${isDarkMode ? "bg-white/5 border-white placeholder:text-white/30" : "bg-white border-black placeholder:text-black/50"} border p-2 pl-9 text-[10px] font-mono uppercase tracking-widest focus:outline-none focus:border-white transition-all ${isDarkMode ? "text-white" : "text-black"}`}
                                                 />
                                             </div>
-                                        ) : (
-                                            <button
-                                                onClick={() => void openChat(chat.id)}
-                                                onDoubleClick={() => handleStartEditing(chat)}
-                                                className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${activeChatId === chat.id ? "" : "hover:bg-white/5"}`}
-                                            >
-                                                <MessageSquare className={`h-3 w-3 flex-shrink-0 ${isDarkMode ? "text-white/20" : "text-black/40"}`} />
-                                                {sidebarWidth > 120 && <span className="truncate opacity-60 font-sans">{chat.title}</span>}
-                                            </button>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-1">
+                                        {sidebarWidth > 120 && <span className={`px-2 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black/40"}`}>Recent Sessions</span>}
+                                        {isSessionsLoading && (
+                                            <div className={`px-3 py-4 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                                                Loading sessions...
+                                            </div>
                                         )}
-                                        {sidebarWidth > 120 && editingChatId !== chat.id && (
-                                            <>
-                                                <button
-                                                    onClick={() => handleStartEditing(chat)}
-                                                    className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-white hover:scale-110" : "text-black/40 hover:text-black hover:scale-110"}`}
-                                                    aria-label={`Rename ${chat.title}`}
-                                                >
-                                                    <Edit3 className="h-3 w-3" />
-                                                </button>
-                                                <button
-                                                    onClick={() => void handleDeleteChat(chat.id)}
-                                                    className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-red-400 hover:scale-110" : "text-black/40 hover:text-red-600 hover:scale-110"}`}
-                                                    aria-label={`Delete ${chat.title}`}
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </button>
-                                            </>
+                                        {!isSessionsLoading && filteredChats.length === 0 && (
+                                            <div className={`px-3 py-4 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                                                {searchQuery ? "No matching sessions" : "No chats yet"}
+                                            </div>
+                                        )}
+                                        {!isSessionsLoading && filteredChats.map((chat) => (
+                                            <div
+                                                key={chat.id}
+                                                className={`group flex items-center gap-1 pr-2 ${activeChatId === chat.id ? (isDarkMode ? "bg-white/5 border-l border-white" : "bg-black/5 border-l border-black") : ""}`}
+                                            >
+                                                {editingChatId === chat.id ? (
+                                                    <div className="flex-1 flex items-center gap-1 p-1.5">
+                                                        <input
+                                                            ref={editingChatId === chat.id ? editingInputRef : null}
+                                                            type="text"
+                                                            value={editingTitle}
+                                                            onChange={(e) => setEditingTitle(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") void handleRenameChat();
+                                                                if (e.key === "Escape") handleCancelEditing();
+                                                            }}
+                                                            onBlur={() => void handleRenameChat()}
+                                                            className={`w-full p-2 text-xs border bg-transparent focus:outline-none ${isDarkMode ? "border-white/40 text-white" : "border-black/40 text-black"}`}
+                                                            autoFocus
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => void openChat(chat.id)}
+                                                        onDoubleClick={() => handleStartEditing(chat)}
+                                                        className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${activeChatId === chat.id ? "" : "hover:bg-white/5"}`}
+                                                    >
+                                                        <MessageSquare className={`h-3 w-3 flex-shrink-0 ${isDarkMode ? "text-white/20" : "text-black/40"}`} />
+                                                        {sidebarWidth > 120 && <span className="truncate opacity-60 font-sans">{chat.title}</span>}
+                                                    </button>
+                                                )}
+                                                {sidebarWidth > 120 && editingChatId !== chat.id && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleStartEditing(chat)}
+                                                            className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-white hover:scale-110" : "text-black/40 hover:text-black hover:scale-110"}`}
+                                                            aria-label={`Rename ${chat.title}`}
+                                                        >
+                                                            <Edit3 className="h-3 w-3" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => void handleDeleteChat(chat.id)}
+                                                            className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-red-400 hover:scale-110" : "text-black/40 hover:text-red-600 hover:scale-110"}`}
+                                                            aria-label={`Delete ${chat.id}`}
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {chatError && sidebarWidth > 120 && (
+                                            <p className="px-2 pt-3 text-[10px] text-red-400">{chatError}</p>
                                         )}
                                     </div>
-                                ))}
-                                {chatError && sidebarWidth > 120 && (
-                                    <p className="px-2 pt-3 text-[10px] text-red-400">{chatError}</p>
-                                )}
-                            </div>
+                                </>
+                            )}
+
+                            {sidebarTab === "modes" && (
+                                <div className="space-y-1 px-1">
+                                    {sidebarWidth > 120 && <span className={`px-2 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black/40"}`}>AI Engines</span>}
+                                    {engines.map((engine) => (
+                                        <button
+                                            key={engine.name}
+                                            onClick={() => {
+                                                if (engine.name === "Interview Prep") {
+                                                    setIsInterviewModalOpen(true);
+                                                } else if (engine.name === "Mock Paper Generator") {
+                                                    setIsMockPaperModalOpen(true);
+                                                } else {
+                                                    setSelectedEngine(engine.name);
+                                                }
+                                            }}
+                                            className={`w-full flex items-center gap-3 p-3 text-xs transition-all ${
+                                                selectedEngine === engine.name
+                                                    ? (isDarkMode ? "bg-white/5 text-white border-l border-white" : "bg-black/5 text-black border-l border-black")
+                                                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                                            }`}
+                                        >
+                                            <engine.icon className="h-4 w-4 flex-shrink-0" />
+                                            {sidebarWidth > 120 && (
+                                                <div className="flex items-center justify-between w-full min-w-0">
+                                                    <span className="truncate">{engine.name}</span>
+                                                    <span className={`text-[8px] font-mono ml-2 flex-shrink-0 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>{engine.version}</span>
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* User Profile */}
@@ -1178,7 +1242,7 @@ STRICT RULES:
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyDown={(e) => e.key === "Enter" && !isProcessingFile && void handleSend()}
                                     placeholder={isProcessingFile ? "Processing file..." : "Describe your query or paste a concept..."}
-                                    className={`flex-1 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/10" : "text-black placeholder:text-black/10"} p-4 pl-2 text-base focus:outline-none`}
+                                    className={`flex-1 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} p-4 pl-2 text-base focus:outline-none`}
                                 />
                                 <div className="flex items-center gap-1 pr-2">
                                     <div className="relative">
