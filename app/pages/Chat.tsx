@@ -206,12 +206,17 @@ const Chat = () => {
     }, [resize, stopResizing]);
 
     useEffect(() => {
-        // Only auto-scroll when user sends a message (new user message added)
         const lastMessage = messages[messages.length - 1];
         if (lastMessage?.role === "user" && !lastMessage.localOnly) {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
     }, [messages]);
+
+    useEffect(() => {
+        if (mcqSession) {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [messages, mcqSession]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -609,13 +614,18 @@ STRICT RULES:
             ]);
             setMcqSession({ ...mcqSession, currentIndex: currentIndex + 1, answers: newAnswers });
         } else {
+            const score = newAnswers.reduce<number>((acc, ans, i) => acc + (ans === questions[i].correctAnswer ? 1 : 0), 0);
+            const percentage = Math.round((score / questions.length) * 100);
+            const resultsText = questions.map((q, i) => {
+                const isCorrect = newAnswers[i] === q.correctAnswer;
+                return `**Q${i + 1}.** ${isCorrect ? "[Correct]" : "[Wrong]"} ${q.question}\n  > Your answer: ${q.options[newAnswers[i]!]}\n  > Correct answer: ${q.options[q.correctAnswer]}\n  > *${q.explanation}*`;
+            }).join("\n\n");
             setMessages(prev => [
                 ...prev,
-                { role: "user", content: optText, timestamp: formatTimestamp(), localOnly: true }
+                { role: "user", content: optText, timestamp: formatTimestamp(), localOnly: true },
+                { role: "assistant", content: `## 🎯 Quiz Complete!\n\n**Score: ${score}/${questions.length} (${percentage}%)**\n\n${resultsText}`, timestamp: formatTimestamp(), localOnly: true }
             ]);
             setMcqSession(null);
-            setMcqQuestions(questions);
-            setMcqExamType(examType);
         }
     };
 
@@ -1280,15 +1290,6 @@ STRICT RULES:
                             </AnimatePresence>
                             {showDots && <DotsLoader isDarkMode={isDarkMode} />}
                             <div ref={messagesEndRef} />
-                            {mcqQuestions && !mcqSession && (
-                                <MCQQuizView
-                                    questions={mcqQuestions}
-                                    examType={mcqExamType}
-                                    onClose={() => setMcqQuestions(null)}
-                                    isDarkMode={isDarkMode}
-                                    inline={true}
-                                />
-                            )}
                         </div>
                     </div>
                 </main>
