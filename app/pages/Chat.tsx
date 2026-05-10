@@ -127,6 +127,7 @@ const Chat = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const requestStartTime = useRef<number>(0);
+    const engineSelectRef = useRef<HTMLDivElement>(null);
 
     const [subscription, setSubscription] = useState<any>(null);
     const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
@@ -205,6 +206,18 @@ const Chat = () => {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
     }, [messages]);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (engineSelectRef.current && !engineSelectRef.current.contains(e.target as Node)) {
+                setShowEngineSelect(false);
+            }
+        };
+        if (showEngineSelect) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [showEngineSelect]);
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
@@ -1119,111 +1132,123 @@ STRICT RULES:
 
                         {/* Chat Area */}
                         <div className="space-y-16">
-                            {isHistoryLoading && <ChatLoader isDarkMode={isDarkMode} />}
-                            <AnimatePresence initial={false}>
-                                {messages.length === 0 || messages.every((msg) => msg.localOnly) ? (
-                                    <WelcomeBox
-                                        isDarkMode={isDarkMode}
-                                        onSelectEngine={(engine) => {
-                                            setSelectedEngine(engine);
-                                            setShowEngineSelect(false);
-                                        }}
-                                        onOpenMockPaper={() => setIsMockPaperModalOpen(true)}
-                                        onOpenInterview={() => setIsInterviewModalOpen(true)}
-                                    />
-                                ) : (
-                                    messages.map((msg, i) => (
-                                        <motion.div
-                                            key={i}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                                            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                                        >
-                                            <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[85%]" : "items-start max-w-[68%]"}`}>
-                                                <div className="flex items-center gap-3 mb-4">
-                                                    <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/60"}`}>
-                                                        {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
-                                                    </span>
-                                                    <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/20" : "text-black/60"}`}>{msg.timestamp}</span>
-                                                </div>
-
-                                                <div className={`p-8 ${msg.role === "user"
-                                                    ? (isDarkMode ? "bg-black border border-white/20 rounded-[18px_4px_18px_4px]" : "bg-transparent border-2 border-black rounded-[18px_4px_18px_4px]")
-                                                    : (isDarkMode ? "bg-transparent rounded-[2.5rem]" : "bg-transparent rounded-[2.5rem]")
-                                                    } relative group`}>
-                                                    {msg.role === "user" ? (
-                                                        <p className={`text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white font-sans" : "text-black font-sans"}`}>
-                                                            {msg.content}
-                                                        </p>
-                                                    ) : (
-                                                        <MarkdownRenderer content={msg.content} isDarkMode={isDarkMode} />
-                                                    )}
-
-                                                    {msg.role === "assistant" && responseTime !== null && i === messages.length - 1 && (
-                                                        <div className={`text-[8px] font-mono mt-4 text-right ${isDarkMode ? "text-white" : "text-black"}`}>
-                                                            Done in {responseTime.toFixed(1)}s
+                            {mcqQuestions ? (
+                                <MCQQuizView
+                                    questions={mcqQuestions}
+                                    examType={mcqExamType}
+                                    onClose={() => setMcqQuestions(null)}
+                                    isDarkMode={isDarkMode}
+                                    inline={true}
+                                />
+                            ) : (
+                                <>
+                                    {isHistoryLoading && <ChatLoader isDarkMode={isDarkMode} />}
+                                    <AnimatePresence initial={false}>
+                                        {messages.length === 0 || messages.every((msg) => msg.localOnly) ? (
+                                            <WelcomeBox
+                                                isDarkMode={isDarkMode}
+                                                onSelectEngine={(engine) => {
+                                                    setSelectedEngine(engine);
+                                                    setShowEngineSelect(false);
+                                                }}
+                                                onOpenMockPaper={() => setIsMockPaperModalOpen(true)}
+                                                onOpenInterview={() => setIsInterviewModalOpen(true)}
+                                            />
+                                        ) : (
+                                            messages.map((msg, i) => (
+                                                <motion.div
+                                                    key={i}
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                                                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                                                >
+                                                    <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[85%]" : "items-start max-w-[68%]"}`}>
+                                                        <div className="flex items-center gap-3 mb-4">
+                                                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/60"}`}>
+                                                                {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
+                                                            </span>
+                                                            <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/20" : "text-black/60"}`}>{msg.timestamp}</span>
                                                         </div>
-                                                    )}
 
-                                                    {msg.role === "user" && (
-                                                        <>
-                                                            <div className={`absolute top-0 left-0 w-1.5 h-1.5 border-t border-l ${isDarkMode ? "border-white/40" : "border-black/40"}`} />
-                                                            <div className={`absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r ${isDarkMode ? "border-white/40" : "border-black/40"}`} />
-                                                        </>
-                                                    )}
-                                                </div>
+                                                        <div className={`p-8 ${msg.role === "user"
+                                                            ? (isDarkMode ? "bg-black border border-white/20 rounded-[18px_4px_18px_4px]" : "bg-transparent border-2 border-black rounded-[18px_4px_18px_4px]")
+                                                            : (isDarkMode ? "bg-transparent rounded-[2.5rem]" : "bg-transparent rounded-[2.5rem]")
+                                                            } relative group`}>
+                                                            {msg.role === "user" ? (
+                                                                <p className={`text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white font-sans" : "text-black font-sans"}`}>
+                                                                    {msg.content}
+                                                                </p>
+                                                            ) : (
+                                                                <MarkdownRenderer content={msg.content} isDarkMode={isDarkMode} />
+                                                            )}
 
-                                                {/* Action Buttons */}
-                                                <div className={`flex items-center gap-3 mt-3 ${msg.role === "user" ? "justify-end" : "justify-start px-8"}`}>
-                                                    {msg.role === "user" ? (
-                                                        <>
-                                                            <button onClick={() => setInput(msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <Edit3 className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                                            </button>
-                                                            <button onClick={() => copyToClipboard(msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <Copy className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <button
-                                                                onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, 1)}
-                                                                className={`p-2 rounded border-2 transition-all duration-300 group ${msg.feedback === 1
-                                                                    ? (isDarkMode ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-emerald-500/20 border-emerald-500 text-emerald-600")
-                                                                    : (isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105")
-                                                                    }`}
-                                                            >
-                                                                <ThumbsUp className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, -1)}
-                                                                className={`p-2 rounded border-2 transition-all duration-300 group ${msg.feedback === -1
-                                                                    ? (isDarkMode ? "bg-red-500/20 border-red-500 text-red-400" : "bg-red-500/20 border-red-500 text-red-600")
-                                                                    : (isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105")
-                                                                    }`}
-                                                            >
-                                                                <ThumbsDown className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                                            </button>
-                                                            <button onClick={() => copyToClipboard(msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <Copy className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                                            </button>
-                                                            <button onClick={() => retryMessage(i)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <RotateCcw className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                                            </button>
-                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <FileDown className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    ))
-                                )}
-                            </AnimatePresence>
-                            {showDots && <DotsLoader isDarkMode={isDarkMode} />}
-                            <div ref={messagesEndRef} />
+                                                            {msg.role === "assistant" && responseTime !== null && i === messages.length - 1 && (
+                                                                <div className={`text-[8px] font-mono mt-4 text-right ${isDarkMode ? "text-white" : "text-black"}`}>
+                                                                    Done in {responseTime.toFixed(1)}s
+                                                                </div>
+                                                            )}
+
+                                                            {msg.role === "user" && (
+                                                                <>
+                                                                    <div className={`absolute top-0 left-0 w-1.5 h-1.5 border-t border-l ${isDarkMode ? "border-white/40" : "border-black/40"}`} />
+                                                                    <div className={`absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r ${isDarkMode ? "border-white/40" : "border-black/40"}`} />
+                                                                </>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Action Buttons */}
+                                                        <div className={`flex items-center gap-3 mt-3 ${msg.role === "user" ? "justify-end" : "justify-start px-8"}`}>
+                                                            {msg.role === "user" ? (
+                                                                <>
+                                                                    <button onClick={() => setInput(msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
+                                                                        <Edit3 className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                                    </button>
+                                                                    <button onClick={() => copyToClipboard(msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
+                                                                        <Copy className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, 1)}
+                                                                        className={`p-2 rounded border-2 transition-all duration-300 group ${msg.feedback === 1
+                                                                            ? (isDarkMode ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-emerald-500/20 border-emerald-500 text-emerald-600")
+                                                                            : (isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105")
+                                                                            }`}
+                                                                    >
+                                                                        <ThumbsUp className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, -1)}
+                                                                        className={`p-2 rounded border-2 transition-all duration-300 group ${msg.feedback === -1
+                                                                            ? (isDarkMode ? "bg-red-500/20 border-red-500 text-red-400" : "bg-red-500/20 border-red-500 text-red-600")
+                                                                            : (isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105")
+                                                                            }`}
+                                                                    >
+                                                                        <ThumbsDown className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                                    </button>
+                                                                    <button onClick={() => copyToClipboard(msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
+                                                                        <Copy className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                                    </button>
+                                                                    <button onClick={() => retryMessage(i)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
+                                                                        <RotateCcw className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                                    </button>
+                                                                    <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
+                                                                        <FileDown className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            ))
+                                        )}
+                                    </AnimatePresence>
+                                    {showDots && <DotsLoader isDarkMode={isDarkMode} />}
+                                    <div ref={messagesEndRef} />
+                                </>
+                            )}
                         </div>
                     </div>
                 </main>
@@ -1294,7 +1319,7 @@ STRICT RULES:
                                     className={`flex-1 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} p-4 pl-2 text-base focus:outline-none`}
                                 />
                                 <div className="flex items-center gap-1 pr-2">
-                                    <div className="relative">
+                                    <div className="relative" ref={engineSelectRef}>
                                         <button
                                             onClick={() => setShowEngineSelect(!showEngineSelect)}
                                             className={`flex items-center gap-2 px-3 py-2 border-2 ${isDarkMode ? "border-white text-white/60 hover:bg-white/5 hover:border-white" : "border-black text-black/60 hover:bg-black/5 hover:border-black"} text-[9px] font-mono uppercase tracking-widest transition-all duration-300 rounded`}
@@ -1535,16 +1560,6 @@ STRICT RULES:
                     examType={paperConfig.examType === 'Other' ? (paperConfig.customExamType || 'EXAM') : paperConfig.examType}
                     duration={paperConfig.duration}
                     onClose={() => setGeneratedPaper(null)}
-                    isDarkMode={isDarkMode}
-                />
-            )}
-
-            {/* MCQ Quiz View */}
-            {mcqQuestions && (
-                <MCQQuizView
-                    questions={mcqQuestions}
-                    examType={mcqExamType}
-                    onClose={() => setMcqQuestions(null)}
                     isDarkMode={isDarkMode}
                 />
             )}

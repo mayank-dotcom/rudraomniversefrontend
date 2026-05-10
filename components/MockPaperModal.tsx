@@ -49,13 +49,13 @@ const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGene
                     className={`relative w-full max-w-xl border ${isDarkMode ? "bg-[#0d0d0d] border-white/10" : "bg-white border-black/10"} p-10 rounded-[2.5rem] shadow-2xl overflow-hidden`}
                 >
                     {/* Background Accents */}
-                    <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] rounded-full ${isDarkMode ? "bg-emerald-500/10" : "bg-emerald-500/5"}`} />
-                    <div className={`absolute bottom-0 left-0 w-32 h-32 blur-[60px] rounded-full ${isDarkMode ? "bg-blue-500/10" : "bg-blue-500/5"}`} />
+                    <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] rounded-full ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+                    <div className={`absolute bottom-0 left-0 w-32 h-32 blur-[60px] rounded-full ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
 
                     <div className="relative z-10">
                         <div className="flex justify-between items-center mb-10">
                             <div className="flex items-center gap-4">
-                                <div className="h-12 w-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-black shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                                <div className={`h-12 w-12 ${isDarkMode ? "bg-white text-black" : "bg-black text-white"} rounded-2xl flex items-center justify-center`}>
                                     <GraduationCap className="h-6 w-6" />
                                 </div>
                                 <div className="flex flex-col text-left">
@@ -80,7 +80,7 @@ const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGene
                                         onClick={() => setConfig({ ...config, mode: "paper" })}
                                         className={`p-4 text-xs font-mono border rounded-2xl transition-all flex items-center justify-between group ${
                                             config.mode === "paper"
-                                                ? "bg-emerald-500 text-black border-emerald-500 font-bold"
+                                                ? `${isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"} font-bold`
                                                 : (isDarkMode ? "bg-white/5 border-white/10 text-white/60 hover:border-white/30" : "bg-black/5 border-black/10 text-black/60 hover:border-black/30")
                                         }`}
                                     >
@@ -91,7 +91,7 @@ const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGene
                                         onClick={() => setConfig({ ...config, mode: "mcq" })}
                                         className={`p-4 text-xs font-mono border rounded-2xl transition-all flex items-center justify-between group ${
                                             config.mode === "mcq"
-                                                ? "bg-emerald-500 text-black border-emerald-500 font-bold"
+                                                ? `${isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"} font-bold`
                                                 : (isDarkMode ? "bg-white/5 border-white/10 text-white/60 hover:border-white/30" : "bg-black/5 border-black/10 text-black/60 hover:border-black/30")
                                         }`}
                                     >
@@ -117,7 +117,7 @@ const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGene
                                             }}
                                             className={`p-4 text-xs font-mono border rounded-2xl transition-all text-left flex items-center justify-between group ${
                                                 config.examType === type 
-                                                    ? "bg-emerald-500 text-black border-emerald-500 font-bold" 
+                                                    ? `${isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"} font-bold`
                                                     : (isDarkMode ? "bg-white/5 border-white/10 text-white/60 hover:border-white/30" : "bg-black/5 border-black/10 text-black/60 hover:border-black/30")
                                             }`}
                                         >
@@ -133,7 +133,7 @@ const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGene
                                         type="text"
                                         placeholder="TYPE CUSTOM EXAM NAME..."
                                         onChange={(e) => setConfig({ ...config, customExamType: e.target.value })}
-                                        className={`w-full p-4 text-[10px] font-mono tracking-widest ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-2xl focus:outline-none focus:border-emerald-500/50 transition-all`}
+                                        className={`w-full p-4 text-[10px] font-mono tracking-widest ${isDarkMode ? "bg-white/5 border-white/10 focus:border-white/50" : "bg-black/5 border-black/10 focus:border-black/50"} border rounded-2xl focus:outline-none transition-all`}
                                     />
                                 )}
                             </div>
@@ -175,7 +175,7 @@ const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGene
 
                             <button
                                 onClick={() => onGenerate(config)}
-                                className="w-full py-5 bg-white text-black text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-emerald-500/10 mt-6"
+                                className={`w-full py-5 ${isDarkMode ? "bg-white text-black shadow-xl shadow-white/10" : "bg-black text-white shadow-xl shadow-black/10"} text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all mt-6`}
                             >
                                 {config.mode === "paper" ? "Generate Neural Paper" : "Start MCQ Quiz"}
                             </button>
