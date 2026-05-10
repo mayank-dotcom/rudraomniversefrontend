@@ -135,6 +135,8 @@ const Chat = () => {
         "Paste a topic and I'll explain it..."
     ], []);
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
+    const [typedPlaceholder, setTypedPlaceholder] = useState(PLACEHOLDER_TEXTS[0]);
+    const [placeholderCharPos, setPlaceholderCharPos] = useState(PLACEHOLDER_TEXTS[0].length);
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState("");
     const editingInputRef = useRef<HTMLInputElement>(null);
@@ -230,9 +232,23 @@ const Chat = () => {
         if (isProcessingFile) return;
         const interval = setInterval(() => {
             setPlaceholderIndex(prev => (prev + 1) % PLACEHOLDER_TEXTS.length);
+            setPlaceholderCharPos(0);
         }, 4000);
         return () => clearInterval(interval);
     }, [PLACEHOLDER_TEXTS.length, isProcessingFile]);
+
+    useEffect(() => {
+        if (isProcessingFile) return;
+        const currentText = PLACEHOLDER_TEXTS[placeholderIndex];
+        if (placeholderCharPos < currentText.length) {
+            const timeout = setTimeout(() => {
+                const nextPos = Math.min(placeholderCharPos + 1, currentText.length);
+                setTypedPlaceholder(currentText.slice(0, nextPos));
+                setPlaceholderCharPos(nextPos);
+            }, 30);
+            return () => clearTimeout(timeout);
+        }
+    }, [placeholderCharPos, placeholderIndex, PLACEHOLDER_TEXTS, isProcessingFile]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -1403,7 +1419,7 @@ STRICT RULES:
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyDown={(e) => e.key === "Enter" && !isProcessingFile && void handleSend()}
-                                    placeholder={isProcessingFile ? "Processing file..." : PLACEHOLDER_TEXTS[placeholderIndex]}
+                                    placeholder={isProcessingFile ? "Processing file..." : typedPlaceholder}
                                     className={`flex-1 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} p-4 pl-2 text-base focus:outline-none`}
                                 />
                                 <div className="flex items-center gap-1 pr-2">

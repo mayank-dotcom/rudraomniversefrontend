@@ -62,9 +62,9 @@ const Index = () => {
                             transition={{ duration: 0.8, delay: 0.4 }}
                             className="col-span-12 lg:col-span-4 lg:pl-12 mt-12 lg:mt-0"
                         >
-                            <p className={`text-lg md:text-xl ${isDarkMode ? "text-white/70" : "text-black/70"} leading-snug mb-10 font-medium`}>
+                            {/* <p className={`text-lg md:text-xl ${isDarkMode ? "text-white/70" : "text-black/70"} leading-snug mb-10 font-medium`}>
                                 One quiet, precise <span className={`italic font-serif ${isDarkMode ? "text-white" : "text-black"}`}>intelligence</span> for your entire student life — from cracking tech interviews to mastering 100-page textbooks.
-                            </p>
+                            </p> */}
                             <div className="flex items-center gap-4">
                                 <Link to="/chat" className={`whitespace-nowrap px-8 py-4 bg-white text-black border-2 ${isDarkMode ? "border-white" : "border-black"} text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/90 transition-all active:scale-95 text-center`}>
                                     Start Free →

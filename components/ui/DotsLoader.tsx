@@ -17,6 +17,7 @@ interface DotsLoaderProps {
 
 export default function DotsLoader({ isDarkMode = true }: DotsLoaderProps) {
     const [textIndex, setTextIndex] = useState(0);
+    const [typedChars, setTypedChars] = useState(0);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -25,15 +26,35 @@ export default function DotsLoader({ isDarkMode = true }: DotsLoaderProps) {
         return () => clearInterval(interval);
     }, []);
 
+    useEffect(() => {
+        setTypedChars(0);
+    }, [textIndex]);
+
+    useEffect(() => {
+        const text = STATUS_TEXTS[textIndex];
+        if (typedChars < text.length) {
+            const timeout = setTimeout(() => {
+                setTypedChars(prev => Math.min(prev + 1, text.length));
+            }, 35);
+            return () => clearTimeout(timeout);
+        }
+    }, [typedChars, textIndex]);
+
     return (
-        <div className="flex flex-col items-center gap-3 py-6">
-            <div className="flex items-center justify-center gap-1.5">
+        <div className="flex items-center justify-start gap-4 py-6">
+            <span className={`text-[10px] font-mono uppercase tracking-[0.3em] min-w-[120px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                {STATUS_TEXTS[textIndex].slice(0, typedChars)}
+                {typedChars < STATUS_TEXTS[textIndex].length && (
+                    <span className="animate-pulse">|</span>
+                )}
+            </span>
+            <div className="flex items-center gap-1.5">
                 {[0, 1, 2].map((i) => (
                     <motion.span
                         key={i}
-                        className={`h-2.5 w-2.5 rounded-full ${isDarkMode ? "bg-white" : "bg-black"}`}
+                        className={`h-2 w-2 rounded-full ${isDarkMode ? "bg-white" : "bg-black"}`}
                         animate={{
-                            y: [0, -10, 0],
+                            y: [0, -8, 0],
                         }}
                         transition={{
                             duration: 0.6,
@@ -44,9 +65,6 @@ export default function DotsLoader({ isDarkMode = true }: DotsLoaderProps) {
                     />
                 ))}
             </div>
-            <span className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/50" : "text-black/50"} animate-pulse`}>
-                {STATUS_TEXTS[textIndex]}
-            </span>
         </div>
     );
 }
