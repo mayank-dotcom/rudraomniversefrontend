@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
-import { ArrowLeft, GraduationCap, Lock, User, Phone, KeyRound, ChevronRight, Check, Eye, EyeOff, UserPlus, LogIn } from "lucide-react"
-import { sendFirebaseOTP, cleanupRecaptcha, getFirebaseAuth } from "@/lib/firebase"
+import { ArrowLeft, GraduationCap, Lock, User, Phone, KeyRound, ChevronRight, Check, Eye, EyeOff, LogIn } from "lucide-react"
+import { sendFirebaseOTP, cleanupRecaptcha } from "@/lib/firebase"
 import { setApiKey, setUserInfo } from "@/lib/auth"
 
 type AuthMode = "login" | "signup"
@@ -202,9 +202,6 @@ function SignupForm() {
   const [phone, setPhone] = useState("")
   const [otp, setOtp] = useState("")
   const [name, setName] = useState("")
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [confirmation, setConfirmation] = useState<any>(null)
@@ -278,52 +275,24 @@ function SignupForm() {
   const handleCompleteSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name) return setError("Enter your name")
-    if (!username) return setError("Choose a username")
-    if (!password) return setError("Set a password")
-    if (password.length < 8) return setError("Password must be at least 8 characters")
 
     setLoading(true)
     setError("")
 
-    const cleanedPhone = phone.replace(/\s/g, "")
-    const formattedPhone = cleanedPhone.startsWith("+") ? cleanedPhone : `+91${cleanedPhone}`
-
     try {
-      const firebaseAuth = getFirebaseAuth()
-      const user = firebaseAuth.currentUser
-      if (!user) throw new Error("Session expired. Please verify phone again.")
-
-      const idToken = await user.getIdToken(true)
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/auth/register`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/auth/register/complete`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": apiKey },
-        body: JSON.stringify({
-          name,
-          mobile_number: formattedPhone,
-          username,
-          password,
-          OTPverified: true,
-          firebase_token: idToken,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ api_key: apiKey, name }),
       })
       const data = await res.json()
 
-      if (res.ok && data.api_key) {
-        setApiKey(data.api_key)
-        setApiKeyState(data.api_key)
-        setUserInfo(name, data.email || "")
+      if (res.ok && data.success) {
+        setUserInfo(name, "")
         setStep("success")
         setTimeout(() => { window.location.href = "/chat" }, 1000)
       } else {
-        if (res.status === 409) {
-          setApiKey(apiKey)
-          setUserInfo(name, "")
-          setStep("success")
-          setTimeout(() => { window.location.href = "/chat" }, 1000)
-        } else {
-          setError(data.error || data.message || "Signup failed")
-        }
+        setError(data.error || "Signup failed")
       }
     } catch (e: any) {
       console.error("[Signup Error]", e)
@@ -428,41 +397,12 @@ function SignupForm() {
                 />
               </div>
 
-              <div className="relative group">
-                <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-                <input
-                  type="text"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value.replace(/\s/g, ""))}
-                  className="w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
-                />
-              </div>
-
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password (min 8 chars)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-4 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/60 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-
               <button
                 type="submit"
                 disabled={loading}
                 className="w-full py-4 bg-white text-black text-[10px] font-mono uppercase tracking-[0.3em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {loading ? "Creating Account..." : "Create Account"}
+                {loading ? "Setting up..." : "Create Account"}
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </form>
