@@ -1196,13 +1196,13 @@ STRICT RULES:
                         </div>
 
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${isDarkMode ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-500/10 border border-emerald-500/20"}`}>
-                            <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                            <span className="text-[9px] font-mono text-emerald-500 uppercase tracking-widest">Active</span>
-                        </div>
-                        <div className="hidden md:flex flex-col">
-                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>Current Session</span>
+                    <div className="hidden md:flex flex-col items-end gap-0.5">
+                        <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>Current Session</span>
+                        <div className="flex items-center gap-2">
+                            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${isDarkMode ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-500/10 border border-emerald-500/20"}`}>
+                                <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                <span className="text-[8px] font-mono text-emerald-500 uppercase tracking-widest">Active</span>
+                            </div>
                             <span className={`text-xs ${isDarkMode ? "text-white/70" : "text-black/70"}`}>{activeChat?.title || "Unsaved chat"}</span>
                         </div>
                     </div>
