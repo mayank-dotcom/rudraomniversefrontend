@@ -7,7 +7,7 @@ import {
     ChevronLeft, ChevronRight, Moon, Sun, GraduationCap,
     Code2, FileText, Calendar, UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2,
-    Paperclip, X, ImageIcon, FileDown, FileText as FileIcon
+    Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles
 } from "lucide-react";
 import Link from "next/link";
 import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo } from "@/lib/auth";
@@ -37,6 +37,7 @@ import MockPaperModal, { MockPaperConfig } from "@/components/MockPaperModal";
 import MockPaperView from "@/components/MockPaperView";
 import MCQQuizView from "@/components/MCQQuizView";
 import type { MCQQuestion } from "@/components/MCQQuizView";
+import PersonaModal, { type Persona } from "@/components/PersonaModal";
 import { GraduationCap as MockIcon } from "lucide-react";
 import WelcomeBox from "@/components/ui/WelcomeBox";
 
@@ -113,6 +114,8 @@ const Chat = () => {
     const [isProcessingFile, setIsProcessingFile] = useState(false);
     const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
     const [isMockPaperModalOpen, setIsMockPaperModalOpen] = useState(false);
+    const [isPersonaModalOpen, setIsPersonaModalOpen] = useState(false);
+    const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
     const [generatedPaper, setGeneratedPaper] = useState<string | null>(null);
     const [paperConfig, setPaperConfig] = useState<MockPaperConfig | null>(null);
     const [isGeneratingPaper, setIsGeneratingPaper] = useState(false);
@@ -155,6 +158,7 @@ const Chat = () => {
         { name: "Resume Audit", endpoint: "/tools/resume", version: "1.0", icon: FileText },
         { name: "PDF Research", endpoint: "/features/pdf/intel", version: "1.0", icon: Calendar },
         { name: "Mock Paper Generator", endpoint: "/chat", version: "1.0", icon: MockIcon },
+        { name: "Persona Mode", endpoint: "/chat", version: "1.0", icon: Sparkles },
         { name: "Vision Solver", endpoint: "/features/vision/solve", version: "1.0", icon: Mic },
     ];
 
@@ -535,6 +539,11 @@ const Chat = () => {
         window.location.href = `/interview?topic=${encodeURIComponent(topic)}&duration=${duration}`;
     };
 
+    const handlePersonaSelect = (persona: Persona) => {
+        setSelectedPersona(persona);
+        setSelectedEngine("Persona Mode");
+    };
+
     const handleGenerateMockPaper = async (config: MockPaperConfig) => {
         setIsMockPaperModalOpen(false);
         setIsGeneratingPaper(true);
@@ -802,10 +811,13 @@ STRICT RULES:
             };
 
             const conversationHistory = [
+                ...(selectedPersona && selectedEngine === "Persona Mode"
+                    ? [{ role: "system" as const, content: selectedPersona.systemPrompt }]
+                    : []),
                 ...messages
                     .filter((message) => !message.localOnly && message.content.trim())
                     .map((message) => ({
-                        role: message.role,
+                        role: message.role as "user" | "assistant" | "system",
                         content: message.content
                     })),
                 {
@@ -1086,6 +1098,8 @@ STRICT RULES:
                                                     setIsInterviewModalOpen(true);
                                                 } else if (engine.name === "Mock Paper Generator") {
                                                     setIsMockPaperModalOpen(true);
+                                                } else if (engine.name === "Persona Mode") {
+                                                    setIsPersonaModalOpen(true);
                                                 } else {
                                                     setSelectedEngine(engine.name);
                                                 }
@@ -1455,6 +1469,9 @@ STRICT RULES:
                                                                     } else if (engine.name === "Mock Paper Generator") {
                                                                         setShowEngineSelect(false);
                                                                         setIsMockPaperModalOpen(true);
+                                                                    } else if (engine.name === "Persona Mode") {
+                                                                        setShowEngineSelect(false);
+                                                                        setIsPersonaModalOpen(true);
                                                                     } else {
                                                                         setSelectedEngine(engine.name);
                                                                         setShowEngineSelect(false);
@@ -1682,6 +1699,15 @@ STRICT RULES:
                 onClose={() => setIsInterviewModalOpen(false)}
                 onStart={handleStartInterview}
                 isDarkMode={isDarkMode}
+            />
+
+            {/* Persona Modal */}
+            <PersonaModal
+                isOpen={isPersonaModalOpen}
+                onClose={() => setIsPersonaModalOpen(false)}
+                onSelect={handlePersonaSelect}
+                isDarkMode={isDarkMode}
+                currentPersona={selectedPersona}
             />
         </div>
     );
