@@ -22,7 +22,7 @@ function ScoreCircle({ score, total, isDarkMode }: { score: number; total: numbe
   const percentage = total > 0 ? Math.round((score / total) * 100) : 0
   const circumference = 2 * Math.PI * 45
   const offset = circumference - (percentage / 100) * circumference
-  const color = percentage >= 80 ? "#10b981" : percentage >= 50 ? "#f59e0b" : "#ef4444"
+  const color = percentage >= 80 ? (isDarkMode ? "#ffffff" : "#000000") : percentage >= 50 ? "#666666" : "#ef4444"
   const trackColor = isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"
 
   return (
@@ -66,7 +66,7 @@ export default function MCQQuizView({ questions, examType, onClose, isDarkMode, 
   const score = answers.reduce<number>((acc, ans, i) => acc + (ans === questions[i].correctAnswer ? 1 : 0), 0)
   const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0
   const bg = isDarkMode ? "bg-[#0d0d0d]" : "bg-white"
-  const border = isDarkMode ? "border-white/10" : "border-black/10"
+  const border = isDarkMode ? "border-white/10" : "border-black/30"
   const text = isDarkMode ? "text-white" : "text-black"
   const textMuted = isDarkMode ? "text-white/40" : "text-black/40"
   const textDim = isDarkMode ? "text-white/60" : "text-black/60"
@@ -77,7 +77,7 @@ export default function MCQQuizView({ questions, examType, onClose, isDarkMode, 
         <div className={`sticky top-0 ${bg} z-10 flex items-center justify-between p-8 border-b ${border}`}>
           <div>
             <h2 className={`text-xl font-display font-black uppercase tracking-tighter ${text}`}>Quiz Results</h2>
-            <p className="text-[10px] font-mono text-emerald-500 uppercase tracking-[0.3em]">{examType} • {questions.length} QUESTIONS</p>
+            <p className={`text-[10px] font-mono ${isDarkMode ? "text-white" : "text-black"} uppercase tracking-[0.3em]`}>{examType} • {questions.length} QUESTIONS</p>
           </div>
           <button onClick={onClose} className={`p-3 border ${border} ${textMuted} hover:${isDarkMode ? "text-white" : "text-black"} rounded-xl transition-all`}>
             <X className="h-5 w-5" />
@@ -98,9 +98,9 @@ export default function MCQQuizView({ questions, examType, onClose, isDarkMode, 
               const isCorrect = answers[i] === q.correctAnswer
               const userAns = answers[i]
               return (
-                <div key={i} className={`p-6 rounded-2xl border ${isCorrect ? "border-emerald-500/30 bg-emerald-500/5" : "border-red-500/30 bg-red-500/5"}`}>
+                  <div key={i} className={`p-6 rounded-2xl border ${isCorrect ? `${border} ${isDarkMode ? "bg-white/5" : "bg-black/5"}` : "border-red-500/30 bg-red-500/5"}`}>
                   <div className="flex items-start gap-4">
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${isCorrect ? "bg-emerald-500 text-black" : "bg-red-500 text-white"}`}>
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${isCorrect ? (isDarkMode ? "bg-white text-black" : "bg-black text-white") : "bg-red-500 text-white"}`}>
                       {isCorrect ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -109,9 +109,9 @@ export default function MCQQuizView({ questions, examType, onClose, isDarkMode, 
                         {q.options.map((opt, oi) => {
                           const isUserAns = userAns === oi
                           const isCorrectAns = q.correctAnswer === oi
-                          let optClass = textMuted
-                          if (isCorrectAns) optClass = "text-emerald-500"
-                          if (isUserAns && !isCorrectAns) optClass = "text-red-500"
+                            let optClass = textMuted
+                            if (isCorrectAns) optClass = text
+                            if (isUserAns && !isCorrectAns) optClass = "text-red-500"
                           return (
                             <p key={oi} className={`text-xs font-mono ${optClass}`}>
                               {isCorrectAns && <Check className="h-3 w-3 inline mr-1.5 -mt-0.5" />}
@@ -155,12 +155,12 @@ export default function MCQQuizView({ questions, examType, onClose, isDarkMode, 
     >
       <div className={`flex items-center justify-between p-8 border-b ${border}`}>
         <div className="flex items-center gap-4">
-          <div className="h-10 w-10 bg-emerald-500 rounded-xl flex items-center justify-center text-black">
+          <div className={`h-10 w-10 ${isDarkMode ? "bg-white text-black" : "bg-black text-white"} rounded-xl flex items-center justify-center`}>
             <HelpCircle className="h-5 w-5" />
           </div>
           <div>
             <h2 className={`text-lg font-display font-black uppercase tracking-tight ${text}`}>MCQ Quiz</h2>
-            <p className="text-[9px] font-mono text-emerald-500 uppercase tracking-[0.3em]">{examType}</p>
+            <p className={`text-[9px] font-mono ${isDarkMode ? "text-white" : "text-black"} uppercase tracking-[0.3em]`}>{examType}</p>
           </div>
         </div>
         <div className="flex items-center gap-6">
@@ -183,13 +183,13 @@ export default function MCQQuizView({ questions, examType, onClose, isDarkMode, 
                   key={oi}
                   onClick={() => handleSelect(oi)}
                   disabled={answers[currentIndex] !== null}
-                  className={`w-full text-left p-5 rounded-2xl border text-sm font-mono transition-all ${
-                    isSelected
-                      ? "bg-emerald-500 text-black border-emerald-500 font-bold scale-[1.02]"
-                      : answers[currentIndex] !== null
-                        ? `${border} ${isDarkMode ? "text-white/30" : "text-black/30"}`
-                        : `${border} ${isDarkMode ? "text-white/70 hover:border-white/30 hover:bg-white/5" : "text-black/70 hover:border-black/30 hover:bg-black/5"}`
-                  }`}
+                    className={`w-full text-left p-5 rounded-2xl border text-sm font-mono transition-all ${
+                      isSelected
+                        ? `${isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"} font-bold scale-[1.02]`
+                        : answers[currentIndex] !== null
+                          ? `${border} ${isDarkMode ? "text-white/30" : "text-black/30"}`
+                          : `${border} ${isDarkMode ? "text-white/70 hover:border-white/30 hover:bg-white/5" : "text-black/70 hover:border-black/30 hover:bg-black/5"}`
+                    }`}
                 >
                   {opt}
                 </button>
