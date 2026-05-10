@@ -7,7 +7,7 @@ import {
     ChevronLeft, ChevronRight, Moon, Sun, GraduationCap,
     Code2, FileText, Calendar, UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2,
-    Paperclip, X, ImageIcon, FileText as FileIcon
+    Paperclip, X, ImageIcon, FileDown, FileText as FileIcon
 } from "lucide-react";
 import Link from "next/link";
 import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo } from "@/lib/auth";
@@ -203,6 +203,59 @@ const Chat = () => {
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
+    };
+
+    const downloadAsPdf = (title: string, content: string) => {
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) return;
+        const isDark = isDarkMode;
+
+        const mdToHtml = (text: string) => {
+            let html = text
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;margin:12px 0;border-radius:8px;">')
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#3b82f6;">$1</a>')
+                .replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, '<pre style="background:'+(isDark?'#1a1a1a':'#f5f5f5')+';padding:16px;border-radius:8px;overflow-x:auto;white-space:pre-wrap;font-size:13px;margin:12px 0;"><code>$2</code></pre>')
+                .replace(/`([^`]+)`/g, '<code style="background:'+(isDark?'#1a1a1a':'#f5f5f5')+';padding:2px 6px;border-radius:4px;font-size:13px;">$1</code>')
+                .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/^### (.+)$/gm, '<h3 style="margin:20px 0 8px;font-size:17px;">$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2 style="margin:24px 0 8px;font-size:19px;">$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1 style="margin:28px 0 8px;font-size:22px;">$1</h1>')
+                .replace(/^- (.+)$/gm, '<li style="margin:4px 0 4px 20px;">$1</li>')
+                .replace(/^\* (.+)$/gm, '<li style="margin:4px 0 4px 20px;">$1</li>')
+                .replace(/\n{2,}/g, '</p><p style="margin:12px 0;">')
+                .replace(/\n/g, '<br>');
+            return '<p style="margin:12px 0;">' + html + '</p>';
+        };
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>${title}</title>
+                <style>
+                    body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; line-height: 1.8; font-size: 15px; color: ${isDark ? "#e5e5e5" : "#171717"}; background: ${isDark ? "#0a0a0a" : "#fff"}; }
+                    img { max-width: 100%; }
+                    blockquote { border-left: 3px solid #888; margin: 12px 0; padding: 8px 16px; color: #666; background: ${isDark ? "#111" : "#fafafa"}; border-radius: 4px; }
+                    table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+                    th, td { border: 1px solid ${isDark ? "#333" : "#ddd"}; padding: 8px; text-align: left; }
+                    @media print { body { color: #000; background: #fff; } pre { background: #f5f5f5 !important; -webkit-print-color-adjust: exact; } img { -webkit-print-color-adjust: exact; } }
+                </style>
+            </head>
+            <body>
+                <div style="margin-bottom: 32px; border-bottom: 1px solid ${isDark ? "#333" : "#ddd"}; padding-bottom: 16px;">
+                    <h1 style="font-size: 20px; margin: 0;">Rudranex AI</h1>
+                    <p style="color: #888; font-size: 12px; margin: 4px 0 0;">${new Date().toLocaleString()}</p>
+                </div>
+                <div id="content">${mdToHtml(content)}</div>
+                <script>window.onload=function(){setTimeout(function(){window.print()},500)}<\/script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
     };
 
     const hydrateMessages = (items: Array<{ role: "user" | "assistant" | "system"; content: string; created_at?: string; id?: string; feedback?: number }>) => {
@@ -1044,6 +1097,9 @@ STRICT RULES:
                                                             </button>
                                                             <button onClick={() => retryMessage(i)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
                                                                 <RotateCcw className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                            </button>
+                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
+                                                                <FileDown className="h-3 w-3 group-hover:scale-110 transition-transform" />
                                                             </button>
                                                         </>
                                                     )}

@@ -262,6 +262,12 @@ const Dashboard = () => {
             setNewSchoolAdminName("");
             setNewSchoolAdminEmail("");
             setNewSchoolAdminPassword("");
+
+            if (res.email_sent) {
+                toast.success("School admin created. Credentials sent to " + email);
+            } else {
+                toast.warning("Admin created but email could not be sent. SMTP not configured on server.");
+            }
         } catch (err) {
             toast.error("Failed to create school admin: " + (err as Error).message);
         } finally {

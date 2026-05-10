@@ -403,6 +403,7 @@ export interface CreateSchoolAdminResponse {
   success: boolean
   school?: { id: number }
   admin?: { id: string; name: string; admin_code: string }
+  email_sent?: boolean
   error?: string
 }
 
