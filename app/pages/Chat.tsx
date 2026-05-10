@@ -35,6 +35,8 @@ import MarkdownRenderer from "@/components/ui/MarkdownRenderer";
 import InterviewPrepModal from "@/components/InterviewPrepModal";
 import MockPaperModal, { MockPaperConfig } from "@/components/MockPaperModal";
 import MockPaperView from "@/components/MockPaperView";
+import MCQQuizView from "@/components/MCQQuizView";
+import type { MCQQuestion } from "@/components/MCQQuizView";
 import { GraduationCap as MockIcon } from "lucide-react";
 import WelcomeBox from "@/components/ui/WelcomeBox";
 
@@ -114,6 +116,8 @@ const Chat = () => {
     const [generatedPaper, setGeneratedPaper] = useState<string | null>(null);
     const [paperConfig, setPaperConfig] = useState<MockPaperConfig | null>(null);
     const [isGeneratingPaper, setIsGeneratingPaper] = useState(false);
+    const [mcqQuestions, setMcqQuestions] = useState<MCQQuestion[] | null>(null);
+    const [mcqExamType, setMcqExamType] = useState("");
     const [showDots, setShowDots] = useState(false);
     const [responseTime, setResponseTime] = useState<number | null>(null);
     const [sidebarTab, setSidebarTab] = useState<"history" | "modes">("history");
@@ -480,7 +484,52 @@ const Chat = () => {
         setIsGeneratingPaper(true);
         setPaperConfig(config);
 
-        const examName = config.examType === 'Other' ? config.customExamType : config.examType;
+        const examName = (config.examType === 'Other' ? config.customExamType : config.examType) || "General";
+
+        if (config.mode === "mcq") {
+            const prompt = `You are an expert quiz generator. Generate exactly ${config.numQuestions} multiple choice questions for "${examName}".
+
+Return ONLY valid JSON array (no markdown, no code fences) in this exact structure:
+[
+  {
+    "question": "question text here",
+    "options": ["A) option1", "B) option2", "C) option3", "D) option4"],
+    "correctAnswer": 0,
+    "explanation": "one line explanation for the correct answer"
+  }
+]
+
+Rules:
+- correctAnswer is the 0-based index of the right option
+- questions must test core ${examName} knowledge
+- each question has exactly 4 options
+- keep explanation brief (max 15 words)
+- generate NOW`;
+
+            try {
+                const data = await sendAiRequest({
+                    endpoint: "/chat",
+                    messages: [{ role: "user", content: prompt }],
+                    modality: "text"
+                });
+
+                const raw = data.data?.[0]?.message?.content || data.data?.[0]?.text || "";
+                const jsonMatch = raw.match(/\[[\s\S]*\]/);
+                if (!jsonMatch) throw new Error("Could not parse MCQ data from AI response");
+                const questions: MCQQuestion[] = JSON.parse(jsonMatch[0]);
+                if (!questions.length) throw new Error("No questions generated");
+                setMcqQuestions(questions);
+                setMcqExamType(examName);
+                toast.success("MCQ Quiz Generated Successfully!");
+            } catch (error) {
+                toast.error("Failed to generate MCQ: " + (error as Error).message);
+            } finally {
+                setIsGeneratingPaper(false);
+            }
+            return;
+        }
+
+        // Paper mode
         const prompt = `Act as an expert examiner. Generate a professional question paper for ${examName}.
 Duration: ${config.duration}.
 Total Questions: ${config.numQuestions}.
@@ -1486,6 +1535,16 @@ STRICT RULES:
                     examType={paperConfig.examType === 'Other' ? (paperConfig.customExamType || 'EXAM') : paperConfig.examType}
                     duration={paperConfig.duration}
                     onClose={() => setGeneratedPaper(null)}
+                    isDarkMode={isDarkMode}
+                />
+            )}
+
+            {/* MCQ Quiz View */}
+            {mcqQuestions && (
+                <MCQQuizView
+                    questions={mcqQuestions}
+                    examType={mcqExamType}
+                    onClose={() => setMcqQuestions(null)}
                     isDarkMode={isDarkMode}
                 />
             )}

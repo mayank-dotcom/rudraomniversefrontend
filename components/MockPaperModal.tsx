@@ -14,13 +14,15 @@ export interface MockPaperConfig {
     customExamType?: string;
     duration: string;
     numQuestions: number;
+    mode: "paper" | "mcq";
 }
 
 const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGenerate, isDarkMode }) => {
     const [config, setConfig] = useState<MockPaperConfig>({
         examType: 'IIT JEE',
         duration: '3 HR',
-        numQuestions: 10
+        numQuestions: 10,
+        mode: "paper"
     });
     const [showCustom, setShowCustom] = useState(false);
 
@@ -37,7 +39,7 @@ const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGene
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={onClose}
-                    className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                    className={`absolute inset-0 backdrop-blur-sm ${isDarkMode ? "bg-black/80" : "bg-white/80"}`}
                 />
                 
                 <motion.div
@@ -47,8 +49,8 @@ const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGene
                     className={`relative w-full max-w-xl border ${isDarkMode ? "bg-[#0d0d0d] border-white/10" : "bg-white border-black/10"} p-10 rounded-[2.5rem] shadow-2xl overflow-hidden`}
                 >
                     {/* Background Accents */}
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[60px] rounded-full" />
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/10 blur-[60px] rounded-full" />
+                    <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] rounded-full ${isDarkMode ? "bg-emerald-500/10" : "bg-emerald-500/5"}`} />
+                    <div className={`absolute bottom-0 left-0 w-32 h-32 blur-[60px] rounded-full ${isDarkMode ? "bg-blue-500/10" : "bg-blue-500/5"}`} />
 
                     <div className="relative z-10">
                         <div className="flex justify-between items-center mb-10">
@@ -58,18 +60,50 @@ const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGene
                                 </div>
                                 <div className="flex flex-col text-left">
                                     <h2 className={`text-2xl font-display font-black tracking-tight ${isDarkMode ? "text-white" : "text-black"} uppercase`}>Mock Paper Generator</h2>
-                                    <p className="text-[10px] font-mono opacity-40 uppercase tracking-[0.2em]">Synthesize professional assessment modules</p>
+                                    <p className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"} uppercase tracking-[0.2em]`}>Synthesize professional assessment modules</p>
                                 </div>
                             </div>
-                            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors opacity-40 hover:opacity-100">
+                            <button onClick={onClose} className={`p-2 rounded-full transition-colors ${isDarkMode ? "hover:bg-white/10 text-white/40 hover:text-white" : "hover:bg-black/10 text-black/40 hover:text-black"}`}>
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
 
                         <div className="space-y-8">
+                            {/* Mode Selector */}
+                            <div className="space-y-4">
+                                <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                    <ListOrdered className="h-3 w-3" />
+                                    <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Assessment Mode</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => setConfig({ ...config, mode: "paper" })}
+                                        className={`p-4 text-xs font-mono border rounded-2xl transition-all flex items-center justify-between group ${
+                                            config.mode === "paper"
+                                                ? "bg-emerald-500 text-black border-emerald-500 font-bold"
+                                                : (isDarkMode ? "bg-white/5 border-white/10 text-white/60 hover:border-white/30" : "bg-black/5 border-black/10 text-black/60 hover:border-black/30")
+                                        }`}
+                                    >
+                                        Paper Mode
+                                        {config.mode === "paper" && <ChevronRight className="h-3 w-3" />}
+                                    </button>
+                                    <button
+                                        onClick={() => setConfig({ ...config, mode: "mcq" })}
+                                        className={`p-4 text-xs font-mono border rounded-2xl transition-all flex items-center justify-between group ${
+                                            config.mode === "mcq"
+                                                ? "bg-emerald-500 text-black border-emerald-500 font-bold"
+                                                : (isDarkMode ? "bg-white/5 border-white/10 text-white/60 hover:border-white/30" : "bg-black/5 border-black/10 text-black/60 hover:border-black/30")
+                                        }`}
+                                    >
+                                        MCQ Mode
+                                        {config.mode === "mcq" && <ChevronRight className="h-3 w-3" />}
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Exam Type */}
                             <div className="space-y-4">
-                                <div className="flex items-center gap-3 opacity-40">
+                                <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                     <FileText className="h-3 w-3" />
                                     <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Select Examination Domain</span>
                                 </div>
@@ -105,24 +139,26 @@ const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGene
                             </div>
 
                             <div className="grid grid-cols-2 gap-8">
-                                {/* Time Allocation */}
-                                <div className="space-y-4 text-left">
-                                    <div className="flex items-center gap-3 opacity-40">
+                                {/* Time Allocation — only for Paper Mode */}
+                                {config.mode === "paper" && (
+                                    <div className="space-y-4 text-left">
+                                    <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                         <Clock className="h-3 w-3" />
-                                        <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Duration</span>
+                                            <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Duration</span>
+                                        </div>
+                                        <select
+                                            value={config.duration}
+                                            onChange={(e) => setConfig({ ...config, duration: e.target.value })}
+                                            className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"} border rounded-2xl focus:outline-none`}
+                                        >
+                                            {durations.map(d => <option key={d} value={d} className={isDarkMode ? "bg-[#0d0d0d]" : "bg-white"}>{d}</option>)}
+                                        </select>
                                     </div>
-                                    <select
-                                        value={config.duration}
-                                        onChange={(e) => setConfig({ ...config, duration: e.target.value })}
-                                        className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"} border rounded-2xl focus:outline-none`}
-                                    >
-                                        {durations.map(d => <option key={d} value={d} className={isDarkMode ? "bg-[#0d0d0d]" : "bg-white"}>{d}</option>)}
-                                    </select>
-                                </div>
+                                )}
 
                                 {/* Questions Qty */}
                                 <div className="space-y-4 text-left">
-                                    <div className="flex items-center gap-3 opacity-40">
+                                    <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                         <ListOrdered className="h-3 w-3" />
                                         <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Quantity</span>
                                     </div>
@@ -141,7 +177,7 @@ const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGene
                                 onClick={() => onGenerate(config)}
                                 className="w-full py-5 bg-white text-black text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-emerald-500/10 mt-6"
                             >
-                                Generate Neural Paper
+                                {config.mode === "paper" ? "Generate Neural Paper" : "Start MCQ Quiz"}
                             </button>
                         </div>
                     </div>
