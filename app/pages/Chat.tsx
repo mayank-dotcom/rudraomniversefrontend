@@ -1196,27 +1196,15 @@ STRICT RULES:
                         </div>
 
                     </div>
-                    <div className="flex items-center gap-6">
-                        <div className="hidden md:flex flex-col text-right">
-                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>Current Session</span>
-                            <span className={`text-xs ${isDarkMode ? "text-white/70" : "text-black/70"}`}>{activeChat?.title || "Unsaved chat"}</span>
-                        </div>
-                        <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                    <div className="flex items-center gap-3">
+                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${isDarkMode ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-500/10 border border-emerald-500/20"}`}>
                             <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
                             <span className="text-[9px] font-mono text-emerald-500 uppercase tracking-widest">Active</span>
                         </div>
-                        <button
-                            onClick={() => {
-                                removeApiKey();
-                                setStoredActiveChatId(null);
-                                setAuthed(false);
-                                window.location.href = "/";
-                            }}
-                            className={`px-4 py-2 border-2 text-[10px] font-mono uppercase tracking-widest transition-all flex items-center gap-2 ${isDarkMode ? "border-white text-white hover:bg-white/5 hover:scale-105 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black text-black/70 hover:bg-black/5 hover:scale-105 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
-                        >
-                            <LogOut className={`h-3 w-3 ${isDarkMode ? "text-white" : "text-black"}`} />
-                            Logout
-                        </button>
+                        <div className="hidden md:flex flex-col">
+                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>Current Session</span>
+                            <span className={`text-xs ${isDarkMode ? "text-white/70" : "text-black/70"}`}>{activeChat?.title || "Unsaved chat"}</span>
+                        </div>
                     </div>
                 </header>
 
