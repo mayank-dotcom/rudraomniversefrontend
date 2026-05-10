@@ -7,7 +7,8 @@ import {
     ChevronLeft, ChevronRight, Moon, Sun, GraduationCap,
     Code2, FileText, Calendar, UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2,
-    Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles
+    Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
+    Swords
 } from "lucide-react";
 import Link from "next/link";
 import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo } from "@/lib/auth";
@@ -38,6 +39,7 @@ import MockPaperView from "@/components/MockPaperView";
 import MCQQuizView from "@/components/MCQQuizView";
 import type { MCQQuestion } from "@/components/MCQQuizView";
 import PersonaModal, { type Persona } from "@/components/PersonaModal";
+import BattleArenaModal from "@/components/BattleArenaModal";
 import { GraduationCap as MockIcon } from "lucide-react";
 import WelcomeBox from "@/components/ui/WelcomeBox";
 
@@ -115,6 +117,7 @@ const Chat = () => {
     const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
     const [isMockPaperModalOpen, setIsMockPaperModalOpen] = useState(false);
     const [isPersonaModalOpen, setIsPersonaModalOpen] = useState(false);
+    const [isBattleArenaModalOpen, setIsBattleArenaModalOpen] = useState(false);
     const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
     const [generatedPaper, setGeneratedPaper] = useState<string | null>(null);
     const [paperConfig, setPaperConfig] = useState<MockPaperConfig | null>(null);
@@ -160,6 +163,7 @@ const Chat = () => {
         { name: "Mock Paper Generator", endpoint: "/chat", version: "1.0", icon: MockIcon },
         { name: "Persona Mode", endpoint: "/chat", version: "1.0", icon: Sparkles },
         { name: "Vision Solver", endpoint: "/features/vision/solve", version: "1.0", icon: Mic },
+        { name: "Battle Arena", endpoint: "/battle-arena", version: "1.0", icon: Swords },
     ];
 
     const activeChat = chats.find((chat) => chat.id === activeChatId) || null;
@@ -542,6 +546,16 @@ const Chat = () => {
     const handlePersonaSelect = (persona: Persona) => {
         setSelectedPersona(persona);
         setSelectedEngine("Persona Mode");
+    };
+
+    const handleBattleArenaHost = (config: { adminName: string; topic: string; difficulty: string; questionCount: number }) => {
+        setIsBattleArenaModalOpen(false);
+        window.location.href = `/battle-arena?host=true&name=${encodeURIComponent(config.adminName)}&topic=${encodeURIComponent(config.topic)}&difficulty=${config.difficulty}&count=${config.questionCount}`;
+    };
+
+    const handleBattleArenaJoin = (config: { lobbyCode: string; participantName: string }) => {
+        setIsBattleArenaModalOpen(false);
+        window.location.href = `/battle-arena?code=${encodeURIComponent(config.lobbyCode)}&name=${encodeURIComponent(config.participantName)}`;
     };
 
     const handleGenerateMockPaper = async (config: MockPaperConfig) => {
@@ -1100,6 +1114,8 @@ STRICT RULES:
                                                     setIsMockPaperModalOpen(true);
                                                 } else if (engine.name === "Persona Mode") {
                                                     setIsPersonaModalOpen(true);
+                                                } else if (engine.name === "Battle Arena") {
+                                                    setIsBattleArenaModalOpen(true);
                                                 } else {
                                                     setSelectedEngine(engine.name);
                                                 }
@@ -1460,6 +1476,9 @@ STRICT RULES:
                                                                     } else if (engine.name === "Persona Mode") {
                                                                         setShowEngineSelect(false);
                                                                         setIsPersonaModalOpen(true);
+                                                                    } else if (engine.name === "Battle Arena") {
+                                                                        setShowEngineSelect(false);
+                                                                        setIsBattleArenaModalOpen(true);
                                                                     } else {
                                                                         setSelectedEngine(engine.name);
                                                                         setShowEngineSelect(false);
@@ -1696,6 +1715,15 @@ STRICT RULES:
                 onSelect={handlePersonaSelect}
                 isDarkMode={isDarkMode}
                 currentPersona={selectedPersona}
+            />
+
+            {/* Battle Arena Modal */}
+            <BattleArenaModal
+                isOpen={isBattleArenaModalOpen}
+                onClose={() => setIsBattleArenaModalOpen(false)}
+                onHost={handleBattleArenaHost}
+                onJoin={handleBattleArenaJoin}
+                isDarkMode={isDarkMode}
             />
         </div>
     );
