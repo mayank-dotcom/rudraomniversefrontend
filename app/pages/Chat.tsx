@@ -127,6 +127,14 @@ const Chat = () => {
     const [showDots, setShowDots] = useState(false);
     const [responseTime, setResponseTime] = useState<number | null>(null);
     const [sidebarTab, setSidebarTab] = useState<"history" | "modes">("history");
+    const PLACEHOLDER_TEXTS = useMemo(() => [
+        "Describe your query or paste a concept...",
+        "Ask me anything about your studies...",
+        "Upload a file or type your question...",
+        "How can I assist your learning today?",
+        "Paste a topic and I'll explain it..."
+    ], []);
+    const [placeholderIndex, setPlaceholderIndex] = useState(0);
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState("");
     const editingInputRef = useRef<HTMLInputElement>(null);
@@ -217,6 +225,14 @@ const Chat = () => {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
     }, [messages, mcqSession]);
+
+    useEffect(() => {
+        if (isProcessingFile) return;
+        const interval = setInterval(() => {
+            setPlaceholderIndex(prev => (prev + 1) % PLACEHOLDER_TEXTS.length);
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [PLACEHOLDER_TEXTS.length, isProcessingFile]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -1387,7 +1403,7 @@ STRICT RULES:
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyDown={(e) => e.key === "Enter" && !isProcessingFile && void handleSend()}
-                                    placeholder={isProcessingFile ? "Processing file..." : "Describe your query or paste a concept..."}
+                                    placeholder={isProcessingFile ? "Processing file..." : PLACEHOLDER_TEXTS[placeholderIndex]}
                                     className={`flex-1 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} p-4 pl-2 text-base focus:outline-none`}
                                 />
                                 <div className="flex items-center gap-1 pr-2">
