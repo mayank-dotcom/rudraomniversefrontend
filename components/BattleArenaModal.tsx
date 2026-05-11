@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Swords, Key, User, BookOpen, ListOrdered, Signal } from "lucide-react";
 
@@ -25,8 +25,23 @@ export interface JoinConfig {
 
 const difficulties = ["easy", "medium", "hard"];
 
+const playSwordSound = () => {
+    try {
+        const audio = new Audio("/sword_sound.mp3");
+        audio.volume = 0.5;
+        audio.play();
+    } catch (e) {
+        console.warn("Sword sound play failed:", e);
+    }
+};
+
 const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, onHost, onJoin, isDarkMode }) => {
     const [tab, setTab] = useState<"host" | "join">("host");
+
+    useEffect(() => {
+        if (isOpen) playSwordSound();
+    }, [isOpen]);
+
     const [hostConfig, setHostConfig] = useState<HostConfig>({
         adminName: "",
         topic: "",
@@ -160,7 +175,10 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                             min={3}
                                             max={20}
                                             value={hostConfig.questionCount}
-                                            onChange={(e) => setHostConfig({ ...hostConfig, questionCount: parseInt(e.target.value) || 5 })}
+                                            onChange={(e) => {
+                                                setHostConfig({ ...hostConfig, questionCount: parseInt(e.target.value) || 5 });
+                                                playSwordSound();
+                                            }}
                                             className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"} border rounded-2xl focus:outline-none`}
                                         />
                                     </div>
@@ -169,6 +187,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                 <button
                                     onClick={() => {
                                         if (hostConfig.adminName.trim() && hostConfig.topic.trim()) {
+                                            playSwordSound();
                                             onHost(hostConfig);
                                         }
                                     }}
@@ -215,6 +234,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                 <button
                                     onClick={() => {
                                         if (joinConfig.lobbyCode.trim() && joinConfig.participantName.trim()) {
+                                            playSwordSound();
                                             onJoin(joinConfig);
                                         }
                                     }}

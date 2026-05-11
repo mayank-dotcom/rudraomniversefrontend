@@ -61,11 +61,11 @@ function ArenaContent() {
     useEffect(() => {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         audioCtxRef.current = ctx;
-        fetch("/sword_sound.aiff")
+        fetch("/sword_sound.mp3")
             .then((res) => res.arrayBuffer())
             .then((data) => ctx.decodeAudioData(data))
             .then((buffer) => { audioBufferRef.current = buffer; })
-            .catch(() => {});
+            .catch(() => { });
         return () => { ctx.close(); };
     }, []);
 
@@ -409,11 +409,10 @@ function ArenaContent() {
                                                     initial={{ opacity: 0, x: -20 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ delay: i * 0.1 }}
-                                                    className={`flex items-center justify-between p-4 border rounded-2xl ${
-                                                        (isHost && p.name === adminName) || (!isHost && p.name === participantName)
+                                                    className={`flex items-center justify-between p-4 border rounded-2xl ${(isHost && p.name === adminName) || (!isHost && p.name === participantName)
                                                             ? "bg-white/10 border-white/30"
                                                             : "bg-white/5 border-white/10"
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <div className="h-8 w-8 bg-white/10 rounded-full flex items-center justify-center">
@@ -449,25 +448,25 @@ function ArenaContent() {
                                         >
                                             {isStarting ? (
                                                 <>
-                                    <span className="relative flex items-center justify-center" style={{width: 20, height: 20}}>
-                                        <motion.span
-                                            className="absolute"
-                                            animate={{ rotate: [0, -20, 0], x: [0, -4, 0] }}
-                                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
-                                            style={{ display: 'flex' }}
-                                        >
-                                            <Swords className="h-4 w-4" style={{ transform: 'scaleX(-1)' }} />
-                                        </motion.span>
-                                        <motion.span
-                                            className="absolute"
-                                            animate={{ rotate: [0, 20, 0], x: [0, 4, 0] }}
-                                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
-                                            style={{ display: 'flex' }}
-                                        >
-                                            <Swords className="h-4 w-4" />
-                                        </motion.span>
-                                    </span>
-                                    Generating Questions...
+                                                    <span className="relative flex items-center justify-center" style={{ width: 20, height: 20 }}>
+                                                        <motion.span
+                                                            className="absolute"
+                                                            animate={{ rotate: [0, -20, 0], x: [0, -4, 0] }}
+                                                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
+                                                            style={{ display: 'flex' }}
+                                                        >
+                                                            <Swords className="h-4 w-4" style={{ transform: 'scaleX(-1)' }} />
+                                                        </motion.span>
+                                                        <motion.span
+                                                            className="absolute"
+                                                            animate={{ rotate: [0, 20, 0], x: [0, 4, 0] }}
+                                                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
+                                                            style={{ display: 'flex' }}
+                                                        >
+                                                            <Swords className="h-4 w-4" />
+                                                        </motion.span>
+                                                    </span>
+                                                    Generating Questions...
                                                 </>
                                             ) : (
                                                 <>
@@ -708,7 +707,7 @@ function ArenaContent() {
                                 className="border border-white/10 bg-[#0d0d0d] p-10 rounded-[2.5rem]"
                             >
                                 <div className="h-16 w-16 bg-amber-500/20 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-6 overflow-hidden">
-                                    <div className="relative flex items-center justify-center" style={{width: 40, height: 40}}>
+                                    <div className="relative flex items-center justify-center" style={{ width: 40, height: 40 }}>
                                         <motion.div
                                             className="absolute"
                                             animate={{ rotate: [0, -25, 0], x: [0, -6, 0] }}
@@ -770,22 +769,20 @@ function ArenaContent() {
                             <div className="flex mb-6 border-b border-white/10">
                                 <button
                                     onClick={() => setTab("leaderboard")}
-                                    className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${
-                                        tab === "leaderboard"
+                                    className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "leaderboard"
                                             ? "bg-white text-black font-bold"
                                             : "text-white/40 hover:text-white"
-                                    }`}
+                                        }`}
                                 >
                                     <Trophy className="h-3 w-3 inline mr-1.5 -mt-0.5" />
                                     Leaderboard
                                 </button>
                                 <button
                                     onClick={() => setTab("analysis")}
-                                    className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${
-                                        tab === "analysis"
+                                    className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "analysis"
                                             ? "bg-white text-black font-bold"
                                             : "text-white/40 hover:text-white"
-                                    }`}
+                                        }`}
                                 >
                                     <BarChart3 className="h-3 w-3 inline mr-1.5 -mt-0.5" />
                                     Analysis
@@ -818,11 +815,10 @@ function ArenaContent() {
                                                     initial={{ opacity: 0, x: -20 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ delay: i * 0.1 }}
-                                                    className={`flex items-center p-5 rounded-2xl border transition-all ${
-                                                        isMe
+                                                    className={`flex items-center p-5 rounded-2xl border transition-all ${isMe
                                                             ? "bg-white/10 border-white/30 scale-[1.02]"
                                                             : "bg-white/5 border-white/10"
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <div className={`w-10 h-10 flex items-center justify-center text-lg font-black font-mono ${i < 3 ? medals[i] : "text-white/30"}`}>
                                                         {i === 0 ? <Trophy className="h-6 w-6" /> : `#${i + 1}`}
@@ -937,13 +933,12 @@ function ArenaContent() {
                                                     return (
                                                         <div key={i} className="p-5 border border-white/10 rounded-2xl bg-white/5">
                                                             <div className="flex items-start gap-3">
-                                                                <div className={`h-7 w-7 flex items-center justify-center rounded-full text-xs font-mono border flex-shrink-0 mt-0.5 ${
-                                                                    userAnswer === -1
+                                                                <div className={`h-7 w-7 flex items-center justify-center rounded-full text-xs font-mono border flex-shrink-0 mt-0.5 ${userAnswer === -1
                                                                         ? "border-white/10 text-white/30"
                                                                         : isUserCorrect
                                                                             ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
                                                                             : "border-red-500 bg-red-500/20 text-red-400"
-                                                                }`}>
+                                                                    }`}>
                                                                     {userAnswer === -1 ? "—" : isUserCorrect ? "✓" : "✗"}
                                                                 </div>
                                                                 <div className="flex-1">
@@ -956,13 +951,12 @@ function ArenaContent() {
                                                                             const isCorrectOpt = q.correctOptionIndex === oi;
                                                                             const isUserOpt = userAnswer === oi;
                                                                             return (
-                                                                                <div key={oi} className={`p-3 rounded-xl text-xs border ${
-                                                                                    isCorrectOpt
+                                                                                <div key={oi} className={`p-3 rounded-xl text-xs border ${isCorrectOpt
                                                                                         ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
                                                                                         : isUserOpt && !isCorrectOpt
                                                                                             ? "border-red-500/50 bg-red-500/10 text-red-400"
                                                                                             : "border-white/5 text-white/50"
-                                                                                }`}>
+                                                                                    }`}>
                                                                                     <span className="font-mono text-[9px] opacity-60 mr-2">{String.fromCharCode(65 + oi)}</span>
                                                                                     {opt}
                                                                                     {isCorrectOpt && <Check className="h-3 w-3 inline ml-1" />}
@@ -1053,7 +1047,7 @@ export default function BattleArenaPage() {
         <Suspense fallback={
             <div className="min-h-screen w-full bg-[#0a0a0a] text-white flex items-center justify-center">
                 <div className="text-center">
-                    <div className="relative flex items-center justify-center mx-auto mb-4" style={{width: 48, height: 48}}>
+                    <div className="relative flex items-center justify-center mx-auto mb-4" style={{ width: 48, height: 48 }}>
                         <motion.div
                             className="absolute"
                             animate={{ rotate: [0, -25, 0], x: [0, -8, 0] }}
