@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { motion } from "framer-motion";
-import { Swords, Users, Clock, Trophy, ArrowLeft, Copy, Check, Play, Loader2, RefreshCw, BarChart3, LineChart, User, Star, Target, X } from "lucide-react";
+import { Swords, Users, Clock, Trophy, ArrowLeft, Copy, Check, Play, Loader2, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, LogOut, AlertTriangle, Eye } from "lucide-react";
 import { getApiKey } from "@/lib/auth";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart as ReLineChart, Line } from "recharts";
 
@@ -51,6 +51,8 @@ function ArenaContent() {
     const [leaderboard, setLeaderboard] = useState<Participant[]>([]);
     const [showAnalysis, setShowAnalysis] = useState(false);
     const [tab, setTab] = useState<"leaderboard" | "analysis">("leaderboard");
+    const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+    const [hasSubmitted, setHasSubmitted] = useState(false);
 
     const QUESTION_TIME = 30;
 
@@ -113,6 +115,7 @@ function ArenaContent() {
             setSelectedAnswer(null);
             setAnswers(new Array(data.questions.length).fill(-1));
             setTimeLeft(QUESTION_TIME);
+            setHasSubmitted(false);
         });
 
         socket.on("participant_progress", (updatedParticipants) => {
@@ -182,6 +185,7 @@ function ArenaContent() {
         } else {
             const totalTime = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
             const finalScore = correctCount + (selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
+            setHasSubmitted(true);
             setTimeout(() => {
                 socket.emit("submit_answer", {
                     lobbyCode,
@@ -243,10 +247,11 @@ function ArenaContent() {
                 <header className="h-16 flex-shrink-0 border-b-2 border-white bg-[#0a0a0a]/80 backdrop-blur-xl flex items-center justify-between px-6 relative z-30">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={handleLeave}
-                            className="p-2 border border-white/20 hover:border-white/50 text-white/60 hover:text-white transition-all"
+                            onClick={() => setShowQuitConfirm(true)}
+                            className="p-2 border border-white/20 hover:border-red-500/50 text-white/60 hover:text-red-400 transition-all"
+                            title="Quit Battle"
                         >
-                            <ArrowLeft className="h-4 w-4" />
+                            <LogOut className="h-4 w-4" />
                         </button>
                         <div className="flex items-center gap-3">
                             <div className="h-8 w-8 bg-white text-black flex items-center justify-center">
@@ -268,15 +273,19 @@ function ArenaContent() {
                         </div>
                     )}
                     {phase === "active" && (
-                        <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-white/60" />
-                                <span className={`text-lg font-black font-mono ${timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-white"}`}>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                                <Zap className="h-3.5 w-3.5 text-emerald-400" />
+                                <span className="text-sm font-black text-emerald-400">{correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0)}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5 text-white/60" />
+                                <span className={`text-sm font-black font-mono ${timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-white"}`}>
                                     {timeLeft}s
                                 </span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Target className="h-4 w-4 text-white/60" />
+                            <div className="flex items-center gap-1.5">
+                                <Target className="h-3.5 w-3.5 text-white/60" />
                                 <span className="text-sm font-mono">{currentQuestionIndex + 1}/{questions.length}</span>
                             </div>
                         </div>
@@ -415,22 +424,29 @@ function ArenaContent() {
                         </div>
                     )}
 
-                    {!error && phase === "active" && questions.length > 0 && (
-                        <div className="max-w-5xl mx-auto mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <div className="lg:col-span-2">
+                    {!error && phase === "active" && questions.length > 0 && !hasSubmitted && (
+                        <div className="max-w-6xl mx-auto mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="lg:col-span-2 space-y-4">
                                 <motion.div
                                     key={currentQuestionIndex}
                                     initial={{ opacity: 0, x: 20 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    className="border border-white/10 bg-[#0d0d0d] p-8 rounded-[2.5rem]"
+                                    className="border border-white/10 bg-[#0d0d0d] p-6 sm:p-8 rounded-[2.5rem]"
                                 >
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-[9px] font-mono text-white/30 uppercase tracking-[0.2em]">
-                                            Question {currentQuestionIndex + 1} of {questions.length}
-                                        </span>
-                                        <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-white/60">
-                                            {topic}
-                                        </span>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[9px] font-mono text-white/30 uppercase tracking-[0.2em]">
+                                                Q{currentQuestionIndex + 1}/{questions.length}
+                                            </span>
+                                            <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-white/60">
+                                                {topic}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                                            <Zap className="h-3 w-3 text-emerald-400" />
+                                            <span className="text-xs font-black text-emerald-400">{correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0)}</span>
+                                            <span className="text-[8px] font-mono text-emerald-400/60">pts</span>
+                                        </div>
                                     </div>
 
                                     <div className="h-1 w-full bg-white/10 rounded-full mb-6 overflow-hidden">
@@ -440,11 +456,11 @@ function ArenaContent() {
                                         />
                                     </div>
 
-                                    <h3 className="text-xl font-bold mb-8 leading-relaxed">
+                                    <h3 className="text-lg sm:text-xl font-bold mb-6 leading-relaxed">
                                         {questions[currentQuestionIndex].question}
                                     </h3>
 
-                                    <div className="space-y-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {questions[currentQuestionIndex].options.map((opt, i) => {
                                             const isSelected = selectedAnswer === i;
                                             const isCorrect = questions[currentQuestionIndex].correctOptionIndex === i;
@@ -463,19 +479,21 @@ function ArenaContent() {
                                                 optionClass = "bg-white/10 border-white";
                                             }
 
+                                            const optionLabels = ["A", "B", "C", "D", "E", "F"];
+
                                             return (
                                                 <button
                                                     key={i}
                                                     onClick={() => handleSelectAnswer(i)}
                                                     disabled={selectedAnswer !== null}
-                                                    className={`w-full text-left p-5 border rounded-2xl text-sm transition-all flex items-center gap-4 ${optionClass}`}
+                                                    className={`w-full text-left p-4 border rounded-2xl text-sm transition-all flex items-center gap-3 ${optionClass}`}
                                                 >
-                                                    <span className={`h-7 w-7 flex items-center justify-center rounded-full text-xs font-mono border ${isSelected ? "border-white bg-white text-black" : "border-white/20"}`}>
-                                                        {String.fromCharCode(65 + i)}
+                                                    <span className={`h-7 w-7 flex items-center justify-center rounded-full text-xs font-mono border flex-shrink-0 ${isSelected ? "border-white bg-white text-black" : "border-white/20"}`}>
+                                                        {optionLabels[i]}
                                                     </span>
-                                                    <span className="flex-1">{opt}</span>
-                                                    {showResult && isCorrect && <Check className="h-4 w-4 text-emerald-400" />}
-                                                    {showResult && isSelected && !isCorrect && <X className="h-4 w-4 text-red-400" />}
+                                                    <span className="flex-1 leading-tight">{opt}</span>
+                                                    {showResult && isCorrect && <Check className="h-4 w-4 text-emerald-400 flex-shrink-0" />}
+                                                    {showResult && isSelected && !isCorrect && <X className="h-4 w-4 text-red-400 flex-shrink-0" />}
                                                 </button>
                                             );
                                         })}
@@ -485,24 +503,48 @@ function ArenaContent() {
                                         <motion.div
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="mt-6 p-4 border border-white/10 bg-white/5 rounded-2xl"
+                                            className="mt-5 p-4 border border-white/10 bg-white/5 rounded-2xl"
                                         >
                                             <span className="text-[9px] font-mono text-white/40 uppercase tracking-[0.2em] block mb-2">Explanation</span>
                                             <p className="text-sm text-white/80">{questions[currentQuestionIndex].explanation}</p>
                                         </motion.div>
                                     )}
                                 </motion.div>
+
+                                {(() => {
+                                    const answered = answers.filter(a => a !== -1).length + (selectedAnswer !== null ? 1 : 0);
+                                    const correct = correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
+                                    const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+                                    const elapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+                                    return (
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <div className="border border-white/10 bg-[#0d0d0d] p-3 sm:p-4 rounded-2xl">
+                                                <span className="text-[8px] font-mono text-white/30 uppercase tracking-[0.2em] block mb-1">Accuracy</span>
+                                                <span className="text-base sm:text-lg font-black">{accuracy}%</span>
+                                            </div>
+                                            <div className="border border-white/10 bg-[#0d0d0d] p-3 sm:p-4 rounded-2xl">
+                                                <span className="text-[8px] font-mono text-white/30 uppercase tracking-[0.2em] block mb-1">Correct</span>
+                                                <span className="text-base sm:text-lg font-black">{correct}/{answered}</span>
+                                            </div>
+                                            <div className="border border-white/10 bg-[#0d0d0d] p-3 sm:p-4 rounded-2xl">
+                                                <span className="text-[8px] font-mono text-white/30 uppercase tracking-[0.2em] block mb-1">Time</span>
+                                                <span className="text-base sm:text-lg font-black">{elapsed}s</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
-                            <div className="lg:col-span-1">
-                                <div className="border border-white/10 bg-[#0d0d0d] p-6 rounded-[2.5rem] sticky top-6">
+                            <div className="lg:col-span-1 space-y-4">
+                                <div className="border border-white/10 bg-[#0d0d0d] p-5 rounded-[2.5rem]">
                                     <div className="flex items-center gap-2 mb-4">
                                         <Users className="h-4 w-4 text-white/40" />
-                                        <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Live Progress</span>
+                                        <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Players</span>
                                     </div>
                                     <div className="space-y-3">
-                                        {participants.map((p, i) => {
+                                        {participants.map((p) => {
                                             const isMe = (isHost && p.name === adminName) || (!isHost && p.name === participantName);
+                                            const myCurrentScore = correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
                                             return (
                                                 <div
                                                     key={p.id}
@@ -513,20 +555,139 @@ function ArenaContent() {
                                                             <div className={`h-2 w-2 rounded-full ${p.finished ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
                                                             <span className={isMe ? "font-bold" : ""}>{p.name}</span>
                                                         </div>
-                                                        <span className="text-[10px] font-mono text-white/40">{p.score} pts</span>
+                                                        <span className="text-[10px] font-mono text-white/40">{isMe ? myCurrentScore : p.score} pts</span>
                                                     </div>
                                                     <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
                                                         <div
                                                             className={`h-full transition-all duration-500 ${p.finished ? "bg-emerald-500" : "bg-white"}`}
-                                                            style={{ width: `${p.finished ? 100 : Math.min((currentQuestionIndex / questions.length) * 100, 100)}%` }}
+                                                            style={{ width: `${p.finished ? 100 : Math.min(((currentQuestionIndex + (selectedAnswer !== null ? 1 : 0)) / questions.length) * 100, 100)}%` }}
                                                         />
+                                                    </div>
+                                                    <div className="mt-1 text-[8px] font-mono text-white/30 text-right">
+                                                        {p.finished ? "All done!" : isMe ? `Q${Math.min(currentQuestionIndex + 1, questions.length)}/${questions.length}` : "Playing..."}
                                                     </div>
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 </div>
+
+                                {(() => {
+                                    const answered = answers.filter(a => a !== -1).length + (selectedAnswer !== null ? 1 : 0);
+                                    const correct = correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
+                                    const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+                                    const elapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+                                    return (
+                                        <div className="border border-white/10 bg-[#0d0d0d] p-5 rounded-[2.5rem]">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Zap className="h-4 w-4 text-emerald-400" />
+                                                <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Your Stats</span>
+                                            </div>
+                                            <div className="space-y-2.5">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-mono text-white/40">Score</span>
+                                                    <span className="text-sm font-black text-emerald-400">{correct}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-mono text-white/40">Accuracy</span>
+                                                    <span className="text-sm font-black">{accuracy}%</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-mono text-white/40">Remaining</span>
+                                                    <span className="text-sm font-black">{questions.length - currentQuestionIndex - (selectedAnswer !== null ? 1 : 0)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-mono text-white/40">Elapsed</span>
+                                                    <span className="text-sm font-black">{elapsed}s</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                {participants.filter(p => {
+                                    const isMe = (isHost && p.name === adminName) || (!isHost && p.name === participantName);
+                                    return !isMe;
+                                }).map(opponent => (
+                                    <div key={opponent.id} className="border border-white/10 bg-[#0d0d0d] p-5 rounded-[2.5rem]">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <Eye className="h-4 w-4 text-blue-400" />
+                                            <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Opponent</span>
+                                        </div>
+                                        <div className="text-center py-2">
+                                            <div className="h-10 w-10 bg-blue-500/20 border border-blue-500/30 rounded-full flex items-center justify-center mx-auto mb-2">
+                                                <User className="h-5 w-5 text-blue-400" />
+                                            </div>
+                                            <p className="text-sm font-bold">{opponent.name}</p>
+                                            <div className="flex items-center justify-center gap-1.5 mt-2">
+                                                <div className={`h-2 w-2 rounded-full ${opponent.finished ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
+                                                <span className="text-[10px] font-mono text-white/40">
+                                                    {opponent.finished ? "Finished all questions" : "Answering..."}
+                                                </span>
+                                            </div>
+                                            {opponent.finished && (
+                                                <div className="mt-3 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                                                    <span className="text-[10px] font-mono text-emerald-400">Score: {opponent.score} pts</span>
+                                                </div>
+                                            )}
+                                            {!opponent.finished && (
+                                                <div className="mt-3 text-[9px] font-mono text-white/30">
+                                                    Waiting for opponent to finish...
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
+                        </div>
+                    )}
+
+                    {!error && phase === "active" && hasSubmitted && (
+                        <div className="max-w-lg mx-auto mt-20 text-center">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="border border-white/10 bg-[#0d0d0d] p-10 rounded-[2.5rem]"
+                            >
+                                <div className="h-16 w-16 bg-amber-500/20 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <Loader2 className="h-8 w-8 text-amber-400 animate-spin" />
+                                </div>
+                                <h2 className="text-xl font-black uppercase tracking-tight mb-2">You're All Set!</h2>
+                                <p className="text-sm text-white/60 mb-2">
+                                    You answered all {questions.length} questions.
+                                </p>
+                                <div className="flex items-center justify-center gap-2 mb-6">
+                                    <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
+                                    <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">
+                                        Waiting for opponent to finish...
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3 justify-center mb-6">
+                                    {participants.filter(p => {
+                                        const isMe = (isHost && p.name === adminName) || (!isHost && p.name === participantName);
+                                        return !isMe;
+                                    }).map(opponent => (
+                                        <div key={opponent.id} className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl">
+                                            <div className={`h-2 w-2 rounded-full ${opponent.finished ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
+                                            <span className="text-xs">{opponent.name}</span>
+                                            <span className="text-[9px] font-mono text-white/40">{opponent.finished ? "Done" : "Playing..."}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="w-full bg-white/10 rounded-full h-1 overflow-hidden">
+                                    <motion.div
+                                        className="h-full bg-white"
+                                        animate={{ x: ["-100%", "100%"] }}
+                                        transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={() => setShowQuitConfirm(true)}
+                                    className="mt-6 px-6 py-3 border border-red-500/30 text-red-400 text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:bg-red-500/10 transition-all"
+                                >
+                                    Quit Battle
+                                </button>
+                            </motion.div>
                         </div>
                     )}
 
@@ -767,6 +928,49 @@ function ArenaContent() {
                     )}
                 </main>
             </div>
+
+            {showQuitConfirm && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+                    onClick={() => setShowQuitConfirm(false)}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        className="border border-white/10 bg-[#0d0d0d] p-8 rounded-[2.5rem] max-w-sm w-full text-center"
+                    >
+                        <div className="h-14 w-14 bg-red-500/20 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-5">
+                            <AlertTriangle className="h-7 w-7 text-red-400" />
+                        </div>
+                        <h3 className="text-lg font-black uppercase tracking-tight mb-2">Quit Battle?</h3>
+                        <p className="text-sm text-white/60 mb-6">
+                            {phase === "active"
+                                ? "You will forfeit the match and your progress will be lost."
+                                : "Are you sure you want to leave the battle arena?"}
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowQuitConfirm(false)}
+                                className="flex-1 py-3 border border-white/20 text-white/80 text-[10px] font-mono font-black uppercase tracking-[0.2em] rounded-[2rem] hover:bg-white/10 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowQuitConfirm(false);
+                                    handleLeave();
+                                }}
+                                className="flex-1 py-3 bg-red-500 text-white text-[10px] font-mono font-black uppercase tracking-[0.2em] rounded-[2rem] hover:bg-red-600 transition-all"
+                            >
+                                Quit
+                            </button>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
         </div>
     );
 }
