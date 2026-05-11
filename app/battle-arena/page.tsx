@@ -53,8 +53,49 @@ function ArenaContent() {
     const [tab, setTab] = useState<"leaderboard" | "analysis">("leaderboard");
     const [showQuitConfirm, setShowQuitConfirm] = useState(false);
     const [hasSubmitted, setHasSubmitted] = useState(false);
+    const audioCtxRef = useRef<AudioContext | null>(null);
+    const audioBufferRef = useRef<AudioBuffer | null>(null);
 
     const QUESTION_TIME = 30;
+
+    useEffect(() => {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioCtxRef.current = ctx;
+        fetch("/sword_sound.aiff")
+            .then((res) => res.arrayBuffer())
+            .then((data) => ctx.decodeAudioData(data))
+            .then((buffer) => { audioBufferRef.current = buffer; })
+            .catch(() => {});
+        return () => { ctx.close(); };
+    }, []);
+
+    const playSwordSound = useCallback(() => {
+        const ctx = audioCtxRef.current;
+        const buffer = audioBufferRef.current;
+        if (ctx && buffer) {
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(ctx.destination);
+            source.start(0);
+        }
+    }, []);
+
+    const playSoundRef = useRef(playSwordSound);
+    playSoundRef.current = playSwordSound;
+
+    useEffect(() => {
+        if (phase === "active" && questions.length > 0) {
+            const timer = setTimeout(() => playSwordSound(), 80);
+            return () => clearTimeout(timer);
+        }
+    }, [currentQuestionIndex, phase, playSwordSound, questions.length]);
+
+    useEffect(() => {
+        if (phase === "finished") {
+            const timer = setTimeout(() => playSwordSound(), 300);
+            return () => clearTimeout(timer);
+        }
+    }, [phase, playSwordSound]);
 
     useEffect(() => {
         const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "";
@@ -125,6 +166,7 @@ function ArenaContent() {
         socket.on("arena_finished", (data) => {
             setLeaderboard(data.leaderboard);
             setPhase("finished");
+            playSoundRef.current();
         });
 
         socket.on("error", (data) => {
@@ -145,26 +187,25 @@ function ArenaContent() {
         if (phase !== "active" || timeLeft <= 0) return;
         const timer = setInterval(() => {
             setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    handleTimeUp();
-                    return 0;
-                }
+                if (prev <= 1) return 0;
                 return prev - 1;
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [phase, timeLeft, currentQuestionIndex]);
+    }, [phase, timeLeft, currentQuestionIndex, hasSubmitted]);
 
-    const handleTimeUp = useCallback(() => {
-        submitAnswer();
-    }, [currentQuestionIndex, selectedAnswer, questions]);
+    useEffect(() => {
+        if (phase === "active" && timeLeft === 0 && !hasSubmitted && questions.length > 0) {
+            submitAnswer();
+        }
+    }, [timeLeft, phase, hasSubmitted, questions.length]);
 
     const handleSelectAnswer = (optionIndex: number) => {
         if (selectedAnswer !== null) return;
         setSelectedAnswer(optionIndex);
     };
 
-    const submitAnswer = () => {
+    const submitAnswer = useCallback(() => {
         const socket = socketRef.current;
         if (!socket) return;
 
@@ -194,7 +235,7 @@ function ArenaContent() {
                 });
             }, 1500);
         }
-    };
+    }, [currentQuestionIndex, selectedAnswer, questions, answers, correctCount, startTime, lobbyCode]);
 
     const handleStart = () => {
         socketRef.current?.emit("start_arena", lobbyCode);
@@ -408,8 +449,25 @@ function ArenaContent() {
                                         >
                                             {isStarting ? (
                                                 <>
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                    Generating Questions...
+                                    <span className="relative flex items-center justify-center" style={{width: 20, height: 20}}>
+                                        <motion.span
+                                            className="absolute"
+                                            animate={{ rotate: [0, -20, 0], x: [0, -4, 0] }}
+                                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
+                                            style={{ display: 'flex' }}
+                                        >
+                                            <Swords className="h-4 w-4" style={{ transform: 'scaleX(-1)' }} />
+                                        </motion.span>
+                                        <motion.span
+                                            className="absolute"
+                                            animate={{ rotate: [0, 20, 0], x: [0, 4, 0] }}
+                                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
+                                            style={{ display: 'flex' }}
+                                        >
+                                            <Swords className="h-4 w-4" />
+                                        </motion.span>
+                                    </span>
+                                    Generating Questions...
                                                 </>
                                             ) : (
                                                 <>
@@ -457,13 +515,13 @@ function ArenaContent() {
                                     </div>
 
                                     <h3 className="text-lg sm:text-xl font-bold mb-6 leading-relaxed">
-                                        {questions[currentQuestionIndex].question}
+                                        {questions[currentQuestionIndex]?.question}
                                     </h3>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {questions[currentQuestionIndex].options.map((opt, i) => {
+                                        {questions[currentQuestionIndex]?.options.map((opt, i) => {
                                             const isSelected = selectedAnswer === i;
-                                            const isCorrect = questions[currentQuestionIndex].correctOptionIndex === i;
+                                            const isCorrect = questions[currentQuestionIndex]?.correctOptionIndex === i;
                                             const showResult = selectedAnswer !== null;
                                             let optionClass = "bg-white/5 border-white/10 hover:border-white/30 hover:bg-white/10";
 
@@ -499,14 +557,14 @@ function ArenaContent() {
                                         })}
                                     </div>
 
-                                    {selectedAnswer !== null && questions[currentQuestionIndex].explanation && (
+                                    {selectedAnswer !== null && questions[currentQuestionIndex]?.explanation && (
                                         <motion.div
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             className="mt-5 p-4 border border-white/10 bg-white/5 rounded-2xl"
                                         >
                                             <span className="text-[9px] font-mono text-white/40 uppercase tracking-[0.2em] block mb-2">Explanation</span>
-                                            <p className="text-sm text-white/80">{questions[currentQuestionIndex].explanation}</p>
+                                            <p className="text-sm text-white/80">{questions[currentQuestionIndex]?.explanation}</p>
                                         </motion.div>
                                     )}
                                 </motion.div>
@@ -649,8 +707,23 @@ function ArenaContent() {
                                 animate={{ opacity: 1, scale: 1 }}
                                 className="border border-white/10 bg-[#0d0d0d] p-10 rounded-[2.5rem]"
                             >
-                                <div className="h-16 w-16 bg-amber-500/20 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                                    <Loader2 className="h-8 w-8 text-amber-400 animate-spin" />
+                                <div className="h-16 w-16 bg-amber-500/20 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-6 overflow-hidden">
+                                    <div className="relative flex items-center justify-center" style={{width: 40, height: 40}}>
+                                        <motion.div
+                                            className="absolute"
+                                            animate={{ rotate: [0, -25, 0], x: [0, -6, 0] }}
+                                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
+                                        >
+                                            <Swords className="h-7 w-7 text-amber-400" style={{ transform: 'scaleX(-1)' }} />
+                                        </motion.div>
+                                        <motion.div
+                                            className="absolute"
+                                            animate={{ rotate: [0, 25, 0], x: [0, 6, 0] }}
+                                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
+                                        >
+                                            <Swords className="h-7 w-7 text-amber-400" />
+                                        </motion.div>
+                                    </div>
                                 </div>
                                 <h2 className="text-xl font-black uppercase tracking-tight mb-2">You're All Set!</h2>
                                 <p className="text-sm text-white/60 mb-2">
@@ -980,7 +1053,22 @@ export default function BattleArenaPage() {
         <Suspense fallback={
             <div className="min-h-screen w-full bg-[#0a0a0a] text-white flex items-center justify-center">
                 <div className="text-center">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                    <div className="relative flex items-center justify-center mx-auto mb-4" style={{width: 48, height: 48}}>
+                        <motion.div
+                            className="absolute"
+                            animate={{ rotate: [0, -25, 0], x: [0, -8, 0] }}
+                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
+                        >
+                            <Swords className="h-8 w-8 text-white/80" style={{ transform: 'scaleX(-1)' }} />
+                        </motion.div>
+                        <motion.div
+                            className="absolute"
+                            animate={{ rotate: [0, 25, 0], x: [0, 8, 0] }}
+                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
+                        >
+                            <Swords className="h-8 w-8 text-white/80" />
+                        </motion.div>
+                    </div>
                     <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/60">Loading Battle Arena...</p>
                 </div>
             </div>
