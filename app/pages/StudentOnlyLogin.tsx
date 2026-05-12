@@ -31,11 +31,11 @@ export default function StudentOnlyLogin() {
                     </Link>
 
                     <Link
-                        href="/auth"
+                        href="/"
                         className="px-6 py-2.5 border border-white/10 text-white text-[10px] font-mono uppercase tracking-widest font-bold hover:bg-white/5 transition-all active:scale-95 flex items-center gap-2"
                     >
                         <ArrowLeft className="h-3.5 w-3.5" />
-                        Back to Roles
+                        Back to Home
                     </Link>
                 </div>
             </div>

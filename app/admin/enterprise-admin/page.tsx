@@ -7,7 +7,7 @@ import { removeApiKey } from "@/lib/auth"
 export default function EnterpriseAdminPage() {
   const handleLogout = () => {
     removeApiKey()
-    window.location.href = "/admin"
+    window.location.href = "/"
   }
 
   return (
@@ -23,8 +23,8 @@ export default function EnterpriseAdminPage() {
           Login successful. Enterprise admin routing is active and this panel is ready for next feature integration.
         </p>
         <div className="flex items-center gap-3">
-          <Link href="/auth" className="px-5 py-3 border border-white/10 rounded-2xl text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-white/5">
-            Back to Roles
+          <Link href="/" className="px-5 py-3 border border-white/10 rounded-2xl text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-white/5">
+            Back to Home
           </Link>
           <button
             onClick={handleLogout}

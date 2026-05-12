@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Phone, Mail, GitBranch, KeyRound, Check, ChevronRight, User, GraduationCap, LogIn, UserPlus } from "lucide-react"
-import { GoogleAuthProvider, GithubAuthProvider, signInWithPopup } from "firebase/auth"
+import { GithubAuthProvider, GoogleAuthProvider, signInWithPopup } from "firebase/auth"
 import { getFirebaseAuth, sendFirebaseOTP, cleanupRecaptcha } from "@/lib/firebase"
 import { setApiKey, setUserInfo } from "@/lib/auth"
 import { googleLogin, githubLogin, studentSignup, studentLogin } from "@/lib/chat-api"
@@ -40,7 +40,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-8"
+            className="relative w-full max-w-md max-h-[92vh] bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-8"
           >
             {/* Close */}
             <button
@@ -120,14 +120,18 @@ function RegularUserAuth({ onSuccess }: { onSuccess: () => void }) {
     setLoading(true)
     setError("")
     try {
+      // Firebase Google sign-in via popup
       const provider = new GoogleAuthProvider()
-      provider.addScope("profile")
-      provider.addScope("email")
       const auth = getFirebaseAuth()
       const result = await signInWithPopup(auth, provider)
       const user = result.user
+
+      // Prefer provider UID for Google if available, else fallback to Firebase UID
+      const googleProviderData = user.providerData.find((p) => p.providerId === 'google.com')
+      const googleId = (googleProviderData && googleProviderData.uid) || user.uid
+
       const data = await googleLogin({
-        google_id: user.uid,
+        google_id: googleId,
         email: user.email || "",
         name: user.displayName || "Google User",
       })
@@ -138,7 +142,7 @@ function RegularUserAuth({ onSuccess }: { onSuccess: () => void }) {
         window.location.href = "/chat"
       }
     } catch (e: any) {
-      if (e.code === "auth/popup-closed-by-user") return
+      if (e?.code === 'auth/popup-closed-by-user') return
       setError(e.message || "Google sign-in failed")
     }
     setLoading(false)
@@ -152,8 +156,11 @@ function RegularUserAuth({ onSuccess }: { onSuccess: () => void }) {
       const auth = getFirebaseAuth()
       const result = await signInWithPopup(auth, provider)
       const user = result.user
+      const ghProviderData = user.providerData.find((p) => p.providerId === 'github.com')
+      const githubId = (ghProviderData && ghProviderData.uid) || user.uid
       const data = await githubLogin({
-        github_id: user.uid,
+        github_id: githubId,
+        email: user.email || "",
         name: user.displayName || "GitHub User",
       })
       if (data.api_key) {

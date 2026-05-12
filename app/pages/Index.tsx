@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
 import HeroScene from "@/components/ui/HeroScene";
 
 import Navbar from "@/components/ui/Navbar";
@@ -64,16 +63,16 @@ const Index = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.8, delay: 0.4 }}
-                            className="col-span-12 lg:col-span-4 lg:pl-12 mt-12 lg:mt-0"
+                            className="col-span-12 lg:col-span-4 lg:pl-12 mt-12 lg:mt-0 relative z-30"
                         >
                             {/* <p className={`text-lg md:text-xl ${isDarkMode ? "text-white/70" : "text-black/70"} leading-snug mb-10 font-medium`}>
                                 One quiet, precise <span className={`italic font-serif ${isDarkMode ? "text-white" : "text-black"}`}>intelligence</span> for your entire student life — from cracking tech interviews to mastering 100-page textbooks.
                             </p> */}
-                            <div className="flex items-center gap-4">
-                                <button onClick={() => setShowAuth(true)} className={`whitespace-nowrap px-8 py-4 bg-white text-black border-2 ${isDarkMode ? "border-white" : "border-black"} text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/90 transition-all active:scale-95 text-center`}>
+                            <div className="flex items-center gap-4 relative z-40 top-[20px]">
+                                <button onClick={() => setShowAuth(true)} className={`relative z-40 whitespace-nowrap px-8 py-4 mt-[5px] bg-white text-black border-2 ${isDarkMode ? "border-white" : "border-black"} text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/90 transition-all active:scale-95 text-center`}>
                                     Start Free →
                                 </button>
-                                <button className={`whitespace-nowrap px-8 py-4 border ${isDarkMode ? "border-white/20 text-white hover:bg-white/5" : "border-black/20 text-black hover:bg-black/5"} bg-transparent text-[10px] font-mono font-bold uppercase tracking-widest transition-all active:scale-95`}>
+                                <button className={`relative z-40 whitespace-nowrap px-8 py-4 mt-[5px] border ${isDarkMode ? "border-white/20 text-white hover:bg-white/5" : "border-black/20 text-black hover:bg-black/5"} bg-transparent text-[10px] font-mono font-bold uppercase tracking-widest transition-all active:scale-95`}>
                                     Watch Demo
                                 </button>
 
@@ -321,18 +320,18 @@ const Index = () => {
                         {/* Company Links */}
                         <div className="flex flex-col gap-3">
                             <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Company</span>
-                            <Link to="/about" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>About Us</Link>
-                            <Link to="/privacy" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Privacy Policy</Link>
-                            <Link to="/terms" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Terms of Service</Link>
-                            <Link to="/contact" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Contact Us</Link>
+                            <a href="/about" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>About Us</a>
+                            <a href="/privacy" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Privacy Policy</a>
+                            <a href="/terms" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Terms of Service</a>
+                            <a href="/contact" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Contact Us</a>
                         </div>
 
                         {/* Platforms */}
                         <div className="flex flex-col gap-3">
                             <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Platforms</span>
-                            <a href="#" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>For Schools</a>
-                            <a href="#" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>For B2B</a>
-                            <Link to="/pricing" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Pricing</Link>
+                            <a href="/schools" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>For Schools</a>
+                            <a href="/pricing" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>For B2B</a>
+                            <a href="/pricing" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Pricing</a>
                         </div>
 
                         {/* Social */}

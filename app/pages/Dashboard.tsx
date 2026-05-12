@@ -5,22 +5,21 @@ import {
     MoreHorizontal, Plus, Briefcase, Users, Clock, CheckCircle2,
     ChevronRight, ArrowUpRight, Globe, Shield, Zap, Table as TableIcon, LayoutDashboard,
     ChevronLeft, ChevronRight as ChevronRightIcon, LogOut, Moon, Sun, RefreshCw, Database,
-    TrendingUp, ShieldCheck, Cpu, X, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown
+    TrendingUp, ShieldCheck, Cpu, X, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown, Trash2
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser } from '@/lib/chat-api';
+import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser, getAdminRequests, declineAdminRequest, AdminRequest, getAdminSchools, getAdminSchoolAdmins, AdminSchool, AdminSchoolAdmin, getFrozenUsers, getAdminSchoolFacultyByCode, SchoolFacultyMember, deleteAdminUser, deleteSchoolFaculty } from '@/lib/chat-api';
 import { isAdminAuthenticated, setAdminKey, removeAdminKey, setApiKey } from '@/lib/auth';
 import { toast } from 'sonner';
 
 const PlanCard = ({ plan, isDarkMode, onEdit }: { plan: any, isDarkMode: boolean, onEdit: (plan: any) => void }) => {
     return (
         <div
-            className={`relative border rounded-[2.5rem] p-8 transition-all hover:scale-105 overflow-hidden group ${
-                isDarkMode
+            className={`relative border rounded-[2.5rem] p-8 transition-all hover:scale-105 overflow-hidden group ${isDarkMode
                     ? (plan.is_active ? "border-emerald-500/30 bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "border-zinc-800/50 bg-gradient-to-br from-zinc-900 via-black to-zinc-900")
                     : (plan.is_active ? "border-emerald-500/30 bg-gradient-to-br from-zinc-100 via-white to-zinc-100" : "border-zinc-800/50 bg-gradient-to-br from-zinc-100 via-white to-zinc-100")
-            }`}
+                }`}
         >
             <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
             <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
@@ -106,7 +105,7 @@ const Dashboard = () => {
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
-    const [view, setView] = useState<'visual' | 'table' | 'plans' | 'sites'>('visual');
+    const [view, setView] = useState<'visual' | 'table' | 'plans' | 'sites' | 'requests' | 'schools'>('visual');
     const [isDarkMode, setIsDarkMode] = useState(true);
     const [plans, setPlans] = useState<Plan[]>([]);
     const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
@@ -140,7 +139,33 @@ const Dashboard = () => {
     const [editingSiteSetting, setEditingSiteSetting] = useState<{ key: string; value: string } | null>(null);
     const [siteFormData, setSiteFormData] = useState<any>(null);
     const [isSavingSiteSetting, setIsSavingSiteSetting] = useState(false);
+    const [requests, setRequests] = useState<AdminRequest[]>([]);
+    const [isRequestsLoading, setIsRequestsLoading] = useState(false);
+    const [decliningRequestId, setDecliningRequestId] = useState<number | null>(null);
     const [copied, setCopied] = useState(false);
+
+    // Schools view state
+    const [schools, setSchools] = useState<AdminSchool[]>([]);
+    const [schoolAdmins, setSchoolAdmins] = useState<AdminSchoolAdmin[]>([]);
+    const [isSchoolsLoading, setIsSchoolsLoading] = useState(false);
+    const [freezingAdminId, setFreezingAdminId] = useState<string | null>(null);
+    const [frozenAdminIds, setFrozenAdminIds] = useState<string[]>([]);
+    const [selectedSchool, setSelectedSchool] = useState<AdminSchool | null>(null);
+    const [facultyBySchool, setFacultyBySchool] = useState<Record<string, SchoolFacultyMember[]>>({});
+    const [facultyLoadingCodes, setFacultyLoadingCodes] = useState<Set<string>>(new Set());
+    const [schoolsSearch, setSchoolsSearch] = useState("");
+    const [schoolsSortField, setSchoolsSortField] = useState<'name' | 'code' | 'created'>("created");
+    const [schoolsSortOrder, setSchoolsSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [schoolsRowsPerPage, setSchoolsRowsPerPage] = useState<number>(10);
+    const [schoolsPage, setSchoolsPage] = useState<number>(1);
+    const [schoolsDateFrom, setSchoolsDateFrom] = useState<string>("");
+    const [schoolsDateTo, setSchoolsDateTo] = useState<string>("");
+    const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<string | null>(null);
+    const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+    const [confirmDeleteSchoolAdminId, setConfirmDeleteSchoolAdminId] = useState<string | null>(null);
+    const [deletingSchoolAdminId, setDeletingSchoolAdminId] = useState<string | null>(null);
+    const [confirmDeleteFacultyCode, setConfirmDeleteFacultyCode] = useState<string | null>(null);
+    const [deletingFacultyCode, setDeletingFacultyCode] = useState<string | null>(null);
     const USERS_PER_PAGE = 10;
 
     const sortedUsers = useMemo(() => {
@@ -184,6 +209,219 @@ const Dashboard = () => {
         } catch (e) { toast.error("Failed to fetch data"); }
         finally { setIsRefreshing(false); setIsLoading(false); }
     };
+
+    // Load schools and school-admins lists
+    const fetchSchoolsData = async () => {
+        setIsSchoolsLoading(true);
+        try {
+            const [schoolsRes, adminsRes, frozenRes] = await Promise.all([
+                getAdminSchools(),
+                getAdminSchoolAdmins(),
+                getFrozenUsers().catch(() => ({ success: true, frozen_users: [] as { user_id: string }[] })),
+            ]);
+            if (schoolsRes.success) setSchools(schoolsRes.schools || []);
+            if (adminsRes.success) setSchoolAdmins(adminsRes.admins || []);
+            const ids = (frozenRes as any).frozen_users?.map((f: any) => f.user_id) || [];
+            setFrozenAdminIds(ids);
+        } catch (e) {
+            toast.error("Failed to load schools data");
+        } finally {
+            setIsSchoolsLoading(false);
+        }
+    };
+
+    const handleFreezeAdmin = async (userId: string) => {
+        setFreezingAdminId(userId);
+        try {
+            const res = await freezeUser(userId);
+            if (res.success) {
+                toast.success(res.message || 'Admin frozen');
+                await fetchSchoolsData();
+            } else {
+                throw new Error(res.error || 'Failed to freeze');
+            }
+        } catch (e: any) {
+            toast.error(e.message || 'Freeze failed');
+        } finally {
+            setFreezingAdminId(null);
+        }
+    };
+
+    const handleUnfreezeAdmin = async (userId: string) => {
+        setFreezingAdminId(userId);
+        try {
+            const res = await unfreezeUser(userId);
+            if (res.success) {
+                toast.success(res.message || 'Admin unfrozen');
+                await fetchSchoolsData();
+            } else {
+                throw new Error(res.error || 'Failed to unfreeze');
+            }
+        } catch (e: any) {
+            toast.error(e.message || 'Unfreeze failed');
+        } finally {
+            setFreezingAdminId(null);
+        }
+    };
+
+    const handleDeleteUser = async (userId: string) => {
+        setDeletingUserId(userId);
+        try {
+            await deleteAdminUser(userId);
+            setUsers(prev => prev.filter(u => u.id !== userId));
+            setConfirmDeleteUserId(null);
+            if (selectedUser?.id === userId) setSelectedUser(null);
+            toast.success("User deleted successfully");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to delete user");
+        } finally {
+            setDeletingUserId(null);
+        }
+    };
+
+    const handleDeleteSchoolAdmin = async (userId: string) => {
+        setDeletingSchoolAdminId(userId);
+        try {
+            await deleteAdminUser(userId);
+            setSchoolAdmins(prev => prev.filter(a => a.id !== userId));
+            setConfirmDeleteSchoolAdminId(null);
+            toast.success("School admin deleted successfully");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to delete school admin");
+        } finally {
+            setDeletingSchoolAdminId(null);
+        }
+    };
+
+    const handleDeleteFacultyFromDashboard = async (faculty: SchoolFacultyMember, schoolCode: string) => {
+        const actionKey = faculty.id || faculty.admin_code || "";
+        setDeletingFacultyCode(actionKey);
+        try {
+            // Global admin can reliably delete faculty through the admin user id route.
+            if (faculty.id) {
+                await deleteAdminUser(faculty.id);
+            } else if (faculty.admin_code) {
+                await deleteSchoolFaculty(faculty.admin_code);
+            } else {
+                throw new Error("Faculty identifier not found");
+            }
+
+            setFacultyBySchool(prev => ({
+                ...prev,
+                [schoolCode]: (prev[schoolCode] || []).filter(f => {
+                    if (faculty.id && f.id) return f.id !== faculty.id;
+                    if (faculty.admin_code && f.admin_code) return f.admin_code !== faculty.admin_code;
+                    return true;
+                }),
+            }));
+            setConfirmDeleteFacultyCode(null);
+            toast.success("Faculty deleted successfully");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to delete faculty");
+        } finally {
+            setDeletingFacultyCode(null);
+        }
+    };
+
+    const loadFacultyForSchool = async (schoolCode: string) => {
+        setFacultyLoadingCodes(prev => {
+            const next = new Set(prev);
+            next.add(schoolCode);
+            return next;
+        })
+        try {
+            const res = await getAdminSchoolFacultyByCode(schoolCode)
+            if (res.success) {
+                setFacultyBySchool(prev => ({ ...prev, [schoolCode]: res.faculty || [] }))
+            }
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to load faculty')
+        } finally {
+            setFacultyLoadingCodes(prev => {
+                const next = new Set(prev);
+                next.delete(schoolCode);
+                return next;
+            })
+        }
+    }
+
+    // Derived schools list: filter -> sort -> paginate
+    const processedSchools = useMemo(() => {
+        let list = [...schools];
+        const q = schoolsSearch.trim().toLowerCase();
+        if (q) {
+            list = list.filter(s => s.school_name.toLowerCase().includes(q) || s.school_code.toLowerCase().includes(q));
+        }
+        if (schoolsDateFrom) {
+            const from = new Date(schoolsDateFrom);
+            list = list.filter(s => new Date(s.created_at) >= from);
+        }
+        if (schoolsDateTo) {
+            const to = new Date(schoolsDateTo);
+            // include entire end date
+            to.setHours(23, 59, 59, 999);
+            list = list.filter(s => new Date(s.created_at) <= to);
+        }
+        list.sort((a, b) => {
+            let va: any, vb: any;
+            if (schoolsSortField === 'name') { va = a.school_name.toLowerCase(); vb = b.school_name.toLowerCase(); }
+            else if (schoolsSortField === 'code') { va = a.school_code.toLowerCase(); vb = b.school_code.toLowerCase(); }
+            else { va = new Date(a.created_at).getTime(); vb = new Date(b.created_at).getTime(); }
+            if (va < vb) return schoolsSortOrder === 'asc' ? -1 : 1;
+            if (va > vb) return schoolsSortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return list;
+    }, [schools, schoolsSearch, schoolsDateFrom, schoolsDateTo, schoolsSortField, schoolsSortOrder]);
+
+    const schoolsTotalPages = useMemo(() => Math.max(1, Math.ceil(processedSchools.length / Math.max(1, schoolsRowsPerPage))), [processedSchools.length, schoolsRowsPerPage]);
+    const visibleSchools = useMemo(() => processedSchools.slice((schoolsPage - 1) * schoolsRowsPerPage, schoolsPage * schoolsRowsPerPage), [processedSchools, schoolsPage, schoolsRowsPerPage]);
+
+    const toggleSchoolsSort = (field: 'name' | 'code' | 'created') => {
+        if (schoolsSortField === field) setSchoolsSortOrder(o => o === 'asc' ? 'desc' : 'asc');
+        else { setSchoolsSortField(field); setSchoolsSortOrder('asc'); }
+        setSchoolsPage(1);
+    };
+
+    const fetchRequests = async () => {
+        setIsRequestsLoading(true)
+        try {
+            const res = await getAdminRequests()
+            if (res.success) setRequests(res.requests || [])
+        } catch (e) {
+            // silently fail, not critical
+        } finally {
+            setIsRequestsLoading(false)
+        }
+    }
+
+    const handleApproveRequest = (req: AdminRequest) => {
+        const schoolCode = req.school_name.substring(0, 4).toUpperCase() + Math.floor(100 + Math.random() * 900)
+        setNewSchoolName(req.school_name)
+        setNewSchoolCode(schoolCode)
+        setNewSchoolAdminName(req.admin_name)
+        setNewSchoolAdminEmail(req.admin_email)
+        setNewSchoolAdminPassword(req.admin_password)
+        setNewSchoolStudentLimit(100)
+        setShowCreateSchoolAdminModal(true)
+    }
+
+    const handleDeclineRequest = async (req: AdminRequest) => {
+        setDecliningRequestId(req.id)
+        try {
+            const res = await declineAdminRequest(req.id)
+            if (res.success) {
+                toast.success(`Request from "${req.school_name}" declined`)
+                fetchRequests()
+            } else {
+                toast.error("Failed to decline request")
+            }
+        } catch (e: any) {
+            toast.error(e.message || "Failed to decline request")
+        } finally {
+            setDecliningRequestId(null)
+        }
+    }
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -244,7 +482,7 @@ const Dashboard = () => {
     const handleAdminLogout = () => {
         removeAdminKey();
         setIsAdmin(false);
-        toast.info("Admin Session Terminated.");
+        window.location.href = "/";
     };
 
     const handleCreateSchoolAdmin = async (e: React.FormEvent) => {
@@ -468,8 +706,8 @@ const Dashboard = () => {
         <div className={`h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} font-sans selection:bg-white selection:text-black overflow-hidden flex flex-col transition-colors duration-500`}>
             <div className={`absolute inset-0 noise opacity-[0.03] pointer-events-none ${isDarkMode ? "" : "invert"}`} />
 
-             {/* Top Navigation */}
-             <nav className={`h-20 flex items-center justify-between px-10 border-b ${isDarkMode ? "border-white bg-black/80" : "border-black bg-white/80"} backdrop-blur-2xl sticky top-0 z-[100]`}>
+            {/* Top Navigation */}
+            <nav className={`h-20 flex items-center justify-between px-10 border-b ${isDarkMode ? "border-white bg-black/80" : "border-black bg-white/80"} backdrop-blur-2xl sticky top-0 z-[100]`}>
                 <div className="flex items-center gap-12">
                     <Link href="/" className="flex items-center gap-4 group">
                         <div className={`h-[30px] w-[30px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center transition-transform group-hover:rotate-45`}>
@@ -483,32 +721,39 @@ const Dashboard = () => {
                         </div>
                     </Link>
 
-                     <div className="hidden lg:flex items-center gap-8">
-                         <button
-                             onClick={() => setView('visual')}
-                             className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'visual' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
-                         >
-                             <LayoutDashboard className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Dashboard
-                         </button>
-                         <button
-                             onClick={() => setView('table')}
-                             className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'table' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
-                         >
-                             <TableIcon className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Table Logs
-                         </button>
-                         <button
-                              onClick={() => setView('plans')}
-                              className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'plans' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
-                          >
-                              <Zap className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Plans
-                          </button>
-                          <button
-                              onClick={() => setView('sites')}
-                              className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'sites' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
-                          >
-                              <FileText className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Sites
-                          </button>
-                      </div>
+                    <div className="hidden lg:flex items-center gap-8">
+                        <button
+                            onClick={() => setView('visual')}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'visual' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                        >
+                            <LayoutDashboard className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Dashboard
+                        </button>
+                        <button
+                            onClick={() => setView('table')}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'table' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                        >
+                            <TableIcon className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Tabular
+                        </button>
+                        <button
+                            onClick={() => setView('plans')}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'plans' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                        >
+                            <Zap className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Plans
+                        </button>
+                        <button
+                            onClick={() => { setView('schools'); fetchSchoolsData(); }}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'schools' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                        >
+                            <Users className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Schools
+                        </button>
+                        <button
+                            onClick={() => setView('sites')}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'sites' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                        >
+                            <FileText className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Sites
+                        </button>
+                        {/* Requests text tab removed; icon moved to right cluster */}
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-6">
@@ -519,13 +764,7 @@ const Dashboard = () => {
                         <Plus className="h-3.5 w-3.5" />
                         Add School Admin
                     </button>
-                    <button
-                        onClick={fetchData}
-                        disabled={isRefreshing}
-                        className={`p-2 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5" : "border-black/10 hover:bg-black/5"} ${isRefreshing ? "animate-spin" : ""}`}
-                    >
-                        <RefreshCw className={`h-4 w-4 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
-                    </button>
+                    {/* Navbar refresh removed as requested */}
 
                     <div className={`h-8 w-[1px] mx-2 ${isDarkMode ? "bg-white/20" : "bg-black/20"}`} />
 
@@ -536,6 +775,18 @@ const Dashboard = () => {
                         >
                             {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
                         </div>
+                        <button
+                            onClick={() => { setView('requests'); fetchRequests(); }}
+                            className={`relative h-10 w-10 rounded-2xl border flex items-center justify-center transition-all ${isDarkMode ? 'border-white/10 hover:bg-white/5' : 'border-black/10 hover:bg-black/5'}`}
+                            title="Notifications"
+                        >
+                            <Bell className={`h-4 w-4 ${isDarkMode ? 'text-white' : 'text-black'}`} />
+                            {requests.filter(r => r.status === 'pending').length > 0 && (
+                                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-[8px] font-bold flex items-center justify-center text-white">
+                                    {requests.filter(r => r.status === 'pending').length}
+                                </span>
+                            )}
+                        </button>
                         <div
                             onClick={handleAdminLogout}
                             className="h-10 w-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center group cursor-pointer overflow-hidden hover:bg-amber-500 transition-all"
@@ -546,7 +797,7 @@ const Dashboard = () => {
                 </div>
             </nav>
 
-             <main className={`flex-1 overflow-y-auto p-10 relative z-10 w-full max-w-[1800px] mx-auto custom-scrollbar ${isDarkMode ? "text-white" : "text-black"}`}>
+            <main className={`flex-1 overflow-y-auto p-10 relative z-10 w-full max-w-[1800px] mx-auto custom-scrollbar ${isDarkMode ? "text-white" : "text-black"}`}>
                 <AnimatePresence mode="wait">
                     {view === 'visual' && (
                         <motion.div
@@ -558,15 +809,14 @@ const Dashboard = () => {
                         >
                             {/* Left Panel: Users List */}
                             <div className="col-span-12 lg:col-span-3 space-y-8">
-                                 <div className={`relative border border-zinc-800/50 p-8 rounded-[2.5rem] backdrop-blur-xl overflow-hidden group ${
-                                        isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                                <div className={`relative border border-zinc-800/50 p-8 rounded-[2.5rem] backdrop-blur-xl overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
                                     }`}>
-                 <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                                            <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                            <div className="flex items-center justify-between mb-8">
-                                           <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>System Users</h3>
-                                           <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                                       </div>
+                                    <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                                    <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>System Users</h3>
+                                        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    </div>
 
                                     <div className="relative mb-6">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-20" />
@@ -580,45 +830,44 @@ const Dashboard = () => {
                                     </div>
 
                                     <div className="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
-                                         {isLoading ? (
-                                             Array.from({ length: 5 }).map((_, i) => (
-                                                 <div key={i} className={`h-12 w-full animate-pulse rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-                                             ))
-                                         ) : (
-                                             filteredUsers.map((user) => (
-                                                 <button
-                                                     key={user.id}
-                                                     onClick={() => setSelectedUser(user)}
-                                                     className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group ${selectedUser?.id === user.id
-                                                         ? "bg-emerald-500 text-black font-bold shadow-[0_10px_30px_rgba(16,185,129,0.2)]"
-                                                         : (isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black")
-                                                         }`}
-                                                 >
-                                                     <div className="flex items-center gap-4 text-left">
-                                                         <div className={`h-8 w-8 rounded-full border flex items-center justify-center ${selectedUser?.id === user.id ? "border-black/20" : isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                                                             <User className={`h-3.5 w-3.5 ${selectedUser?.id === user.id ? "text-black" : ""}`} />
-                                                         </div>
-                                                         <div className="flex flex-col min-w-0">
-                                                             <span className="text-[11px] font-bold truncate tracking-tight">{user.name}</span>
-                                                             <span className={`text-[9px] font-mono uppercase truncate ${selectedUser?.id === user.id ? "text-black" : isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{user.subscription.plan}</span>
-                                                         </div>
-                                                     </div>
-                                                     <ChevronRight className={`h-3.5 w-3.5 transition-transform ${selectedUser?.id === user.id ? "translate-x-1 text-black" : isDarkMode ? "opacity-0 group-hover:opacity-100 text-white" : "opacity-0 group-hover:opacity-100 text-black"}`} />
-                                                 </button>
-                                             ))
-                                         )}
-                                     </div>
+                                        {isLoading ? (
+                                            Array.from({ length: 5 }).map((_, i) => (
+                                                <div key={i} className={`h-12 w-full animate-pulse rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+                                            ))
+                                        ) : (
+                                            filteredUsers.map((user) => (
+                                                <button
+                                                    key={user.id}
+                                                    onClick={() => setSelectedUser(user)}
+                                                    className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group ${selectedUser?.id === user.id
+                                                        ? "bg-emerald-500 text-black font-bold shadow-[0_10px_30px_rgba(16,185,129,0.2)]"
+                                                        : (isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black")
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center gap-4 text-left">
+                                                        <div className={`h-8 w-8 rounded-full border flex items-center justify-center ${selectedUser?.id === user.id ? "border-black/20" : isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                                            <User className={`h-3.5 w-3.5 ${selectedUser?.id === user.id ? "text-black" : ""}`} />
+                                                        </div>
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="text-[11px] font-bold truncate tracking-tight">{user.name}</span>
+                                                            <span className={`text-[9px] font-mono uppercase truncate ${selectedUser?.id === user.id ? "text-black" : isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{user.subscription.plan}</span>
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight className={`h-3.5 w-3.5 transition-transform ${selectedUser?.id === user.id ? "translate-x-1 text-black" : isDarkMode ? "opacity-0 group-hover:opacity-100 text-white" : "opacity-0 group-hover:opacity-100 text-black"}`} />
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
                                 </div>
 
-                                 <div className={`relative border border-zinc-800/50 p-8 rounded-[2.5rem] backdrop-blur-xl text-center overflow-hidden group ${
-                                        isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                                <div className={`relative border border-zinc-800/50 p-8 rounded-[2.5rem] backdrop-blur-xl text-center overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
                                     }`}>
-                                       <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                                       <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                       <Database className={`h-8 w-8 mx-auto mb-4 ${isDarkMode ? "opacity-20 text-white" : "opacity-30 text-black"}`} />
-                                       <h4 className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>System Core</h4>
-                                       <p className={`text-xs font-bold mt-2 ${isDarkMode ? "text-white" : "text-black"}`}>Active Node: IND-01</p>
-                                   </div>
+                                    <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                                    <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                                    <Database className={`h-8 w-8 mx-auto mb-4 ${isDarkMode ? "opacity-20 text-white" : "opacity-30 text-black"}`} />
+                                    <h4 className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>System Core</h4>
+                                    <p className={`text-xs font-bold mt-2 ${isDarkMode ? "text-white" : "text-black"}`}>Active Node: IND-01</p>
+                                </div>
                             </div>
 
                             {/* Center Panel: Analytics */}
@@ -626,33 +875,31 @@ const Dashboard = () => {
                                 {selectedUser ? (
                                     <>
                                         {/* User Identity Header */}
-                                         <div className={`relative border border-zinc-800/50 p-10 rounded-[3rem] overflow-hidden group ${
-                                                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                                        <div className={`relative border border-zinc-800/50 p-10 rounded-[3rem] overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
                                             }`}>
-                                               <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                                               <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full" />
-                                              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative z-10">
+                                            <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                                            <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                                            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full" />
+                                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative z-10">
                                                 <div className="flex items-center gap-8">
                                                     <div className="h-24 w-24 rounded-[2rem] bg-emerald-500 flex items-center justify-center text-black">
                                                         <User className="h-10 w-10" />
                                                     </div>
-                                                     <div>
-                                                         <div className="flex items-center gap-3 mb-2">
-                                                             <h2 className={`text-4xl font-display font-black tracking-tighter ${isDarkMode ? "text-white" : "text-black"}`}>{selectedUser.name}</h2>
-                                                              <span className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-widest ${
-                                                                  selectedUser.subscription.status === 'active' ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" :
-                                                                  selectedUser.subscription.status === 'frozen' ? "bg-red-500/20 text-red-400 border border-red-500/30" :
-                                                                  "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                                                              }`}>
-                                                                  {selectedUser.subscription.status}
-                                                              </span>
-                                                         </div>
-                                                         <p className={`text-sm font-mono flex items-center gap-2 uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                                             <Mail className="h-3.5 w-3.5" /> {selectedUser.email}
-                                                         </p>
-                                                         <p className={`text-[10px] font-mono mt-1 uppercase tracking-widest ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>UUID: {selectedUser.id}</p>
-                                                     </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <h2 className={`text-4xl font-display font-black tracking-tighter ${isDarkMode ? "text-white" : "text-black"}`}>{selectedUser.name}</h2>
+                                                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-widest ${selectedUser.subscription.status === 'active' ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" :
+                                                                    selectedUser.subscription.status === 'frozen' ? "bg-red-500/20 text-red-400 border border-red-500/30" :
+                                                                        "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                                                }`}>
+                                                                {selectedUser.subscription.status}
+                                                            </span>
+                                                        </div>
+                                                        <p className={`text-sm font-mono flex items-center gap-2 uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                                            <Mail className="h-3.5 w-3.5" /> {selectedUser.email}
+                                                        </p>
+                                                        <p className={`text-[10px] font-mono mt-1 uppercase tracking-widest ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>UUID: {selectedUser.id}</p>
+                                                    </div>
                                                 </div>
                                                 <div className="flex flex-wrap items-center gap-4">
                                                     {selectedUser.is_frozen ? (
@@ -672,6 +919,30 @@ const Dashboard = () => {
                                                             <Zap className="h-4 w-4" /> {isFreezing ? 'FREEZING...' : 'FREEZE'}
                                                         </button>
                                                     )}
+                                                    {confirmDeleteUserId === selectedUser.id ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => handleDeleteUser(selectedUser.id)}
+                                                                disabled={deletingUserId === selectedUser.id}
+                                                                className="px-8 py-4 bg-red-600 text-white text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3 disabled:opacity-50"
+                                                            >
+                                                                {deletingUserId === selectedUser.id ? 'DELETING...' : 'CONFIRM DELETE'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setConfirmDeleteUserId(null)}
+                                                                className={`p-4 border rounded-2xl transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setConfirmDeleteUserId(selectedUser.id)}
+                                                            className="px-8 py-4 bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" /> DELETE
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -679,114 +950,112 @@ const Dashboard = () => {
                                         {/* Core Metrics Grid */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                             <StatCard
-                                                 title="Subscription Plan"
-                                                 value={selectedUser.subscription.plan.toUpperCase()}
-                                                 icon={Briefcase}
-                                                 color="#10b981"
-                                                 subtext="Active"
-                                                 isDarkMode={isDarkMode}
-                                             />
+                                                title="Subscription Plan"
+                                                value={selectedUser.subscription.plan.toUpperCase()}
+                                                icon={Briefcase}
+                                                color="#10b981"
+                                                subtext="Active"
+                                                isDarkMode={isDarkMode}
+                                            />
                                             <StatCard
-                                                 title="System Latency"
-                                                 value={selectedUser.subscription.latency_ms}
-                                                 icon={Activity}
-                                                 color="#3b82f6"
-                                                 subtext="ms"
-                                                 isDarkMode={isDarkMode}
-                                             />
+                                                title="System Latency"
+                                                value={selectedUser.subscription.latency_ms}
+                                                icon={Activity}
+                                                color="#3b82f6"
+                                                subtext="ms"
+                                                isDarkMode={isDarkMode}
+                                            />
                                             <StatCard
-                                                 title="Total Personas"
-                                                 value={selectedUser.subscription.personas_used}
-                                                 icon={Users}
-                                                 color="#f59e0b"
-                                                 subtext={`/ ${selectedUser.subscription.personas_limit}`}
-                                                 isDarkMode={isDarkMode}
-                                             />
+                                                title="Total Personas"
+                                                value={selectedUser.subscription.personas_used}
+                                                icon={Users}
+                                                color="#f59e0b"
+                                                subtext={`/ ${selectedUser.subscription.personas_limit}`}
+                                                isDarkMode={isDarkMode}
+                                            />
                                             <StatCard
-                                                 title="Image Generation"
-                                                 value={selectedUser.subscription.images_used}
-                                                 icon={PieChart}
-                                                 color="#8b5cf6"
-                                                 subtext={`/ ${selectedUser.subscription.images_limit}`}
-                                                 isDarkMode={isDarkMode}
-                                             />
+                                                title="Image Generation"
+                                                value={selectedUser.subscription.images_used}
+                                                icon={PieChart}
+                                                color="#8b5cf6"
+                                                subtext={`/ ${selectedUser.subscription.images_limit}`}
+                                                isDarkMode={isDarkMode}
+                                            />
                                         </div>
 
                                         {/* Visualization Section */}
                                         <div className="grid grid-cols-12 gap-8">
-                                                <div className={`relative col-span-12 lg:col-span-8 border border-zinc-800/50 p-10 rounded-[3rem] overflow-hidden group ${
-                                                    isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                                            <div className={`relative col-span-12 lg:col-span-8 border border-zinc-800/50 p-10 rounded-[3rem] overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
                                                 }`}>
-                                                     <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                                                     <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                                 <div className="flex items-center justify-between mb-12">
-                                                     <div>
-                                                         <h3 className={`text-lg font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Resource Utilization</h3>
-                                                         <p className={`text-[10px] font-mono uppercase tracking-[0.3em] mt-1 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Live spectral analysis of user assets</p>
-                                                     </div>
-                                                     <div className="flex items-center gap-4">
-                                                         <div className="flex items-center gap-2">
-                                                             <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                                                             <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Healthy</span>
-                                                         </div>
-                                                     </div>
-                                                 </div>
+                                                <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                                                <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                                                <div className="flex items-center justify-between mb-12">
+                                                    <div>
+                                                        <h3 className={`text-lg font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Resource Utilization</h3>
+                                                        <p className={`text-[10px] font-mono uppercase tracking-[0.3em] mt-1 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Live spectral analysis of user assets</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                                            <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Healthy</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
 
                                                 <div className="flex flex-wrap justify-center gap-16 lg:justify-between px-6">
                                                     <ProgressCircle
-                                                         value={selectedUser.subscription.tokens_used}
-                                                         limit={selectedUser.subscription.tokens_limit}
-                                                         label="Token Delta"
-                                                         color="#10b981"
-                                                         isDarkMode={isDarkMode}
-                                                     />
+                                                        value={selectedUser.subscription.tokens_used}
+                                                        limit={selectedUser.subscription.tokens_limit}
+                                                        label="Token Delta"
+                                                        color="#10b981"
+                                                        isDarkMode={isDarkMode}
+                                                    />
                                                     <ProgressCircle
-                                                         value={selectedUser.subscription.images_used}
-                                                         limit={selectedUser.subscription.images_limit}
-                                                         label="Image Buffer"
-                                                         color="#8b5cf6"
-                                                         isDarkMode={isDarkMode}
-                                                     />
+                                                        value={selectedUser.subscription.images_used}
+                                                        limit={selectedUser.subscription.images_limit}
+                                                        label="Image Buffer"
+                                                        color="#8b5cf6"
+                                                        isDarkMode={isDarkMode}
+                                                    />
                                                     <ProgressCircle
-                                                         value={selectedUser.subscription.personas_used}
-                                                         limit={selectedUser.subscription.personas_limit}
-                                                         label="Persona Load"
-                                                         color="#f59e0b"
-                                                         isDarkMode={isDarkMode}
-                                                     />
+                                                        value={selectedUser.subscription.personas_used}
+                                                        limit={selectedUser.subscription.personas_limit}
+                                                        label="Persona Load"
+                                                        color="#f59e0b"
+                                                        isDarkMode={isDarkMode}
+                                                    />
                                                 </div>
                                             </div>
 
-                                             <div className={`relative col-span-12 lg:col-span-4 border border-zinc-800/50 p-10 rounded-[3rem] flex flex-col justify-between overflow-hidden group ${
-                                                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                                            }`}>
-                                                 <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                                                 <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                                 <div>
-                                                     <div className="flex items-center gap-3 mb-6">
-                                                         <TrendingUp className={`h-5 w-5 ${isDarkMode ? "text-emerald-400" : "text-emerald-600"}`} />
-                                                         <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>User Efficiency</h3>
-                                                     </div>
-                                                     <p className={`text-[10px] font-mono uppercase leading-relaxed tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                                         Current user is operating at <b>{(100 - (selectedUser.subscription.tokens_used / selectedUser.subscription.tokens_limit * 100)).toFixed(1)}%</b> headroom. Latency is optimal for region.
-                                                     </p>
-                                                 </div>
+                                            <div className={`relative col-span-12 lg:col-span-4 border border-zinc-800/50 p-10 rounded-[3rem] flex flex-col justify-between overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                                                }`}>
+                                                <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                                                <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                                                <div>
+                                                    <div className="flex items-center gap-3 mb-6">
+                                                        <TrendingUp className={`h-5 w-5 ${isDarkMode ? "text-emerald-400" : "text-emerald-600"}`} />
+                                                        <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>User Efficiency</h3>
+                                                    </div>
+                                                    <p className={`text-[10px] font-mono uppercase leading-relaxed tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                                        Current user is operating at <b>{(100 - (selectedUser.subscription.tokens_used / selectedUser.subscription.tokens_limit * 100)).toFixed(1)}%</b> headroom. Latency is optimal for region.
+                                                    </p>
+                                                </div>
 
-                                                 <div className="space-y-4 mt-8">
-                                                     <div className={`flex justify-between items-center text-[10px] font-mono tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                                         <span>SECURITY</span>
-                                                         <span>ENCRYPTED</span>
-                                                     </div>
-                                                     <div className={`h-1.5 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
-                                                         <motion.div
-                                                             className="h-full bg-emerald-500"
-                                                             initial={{ width: 0 }}
-                                                             animate={{ width: "100%" }}
-                                                             transition={{ duration: 2 }}
-                                                         />
-                                                     </div>
-                                                 </div>
-                                             </div>
+                                                <div className="space-y-4 mt-8">
+                                                    <div className={`flex justify-between items-center text-[10px] font-mono tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                                        <span>SECURITY</span>
+                                                        <span>ENCRYPTED</span>
+                                                    </div>
+                                                    <div className={`h-1.5 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                                        <motion.div
+                                                            className="h-full bg-emerald-500"
+                                                            initial={{ width: 0 }}
+                                                            animate={{ width: "100%" }}
+                                                            transition={{ duration: 2 }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </>
                                 ) : (
@@ -799,522 +1068,930 @@ const Dashboard = () => {
                             </div>
                         </motion.div>
                     )}
-                    
-                     {view === 'table' && (
-                          <motion.div
-                              key="table"
-                              initial={{ opacity: 0, scale: 0.98 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.98 }}
-                              className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
-                                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                              }`}
-                          >
-                              <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                              <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                              <div className={`p-10 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
-                                 <div>
-                                     <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>User Transaction Logs</h2>
-                                     <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Full system registry • {users.length} active nodes</p>
-                                 </div>
-                                 <div className="flex items-center gap-4">
-                                     <div className="relative">
-                                         <Search className={`absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`} />
-                                         <input
-                                             type="text"
-                                             placeholder="FILTER LOGS..."
-                                             value={searchQuery}
-                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                             className={`pl-11 pr-8 py-3 text-[10px] font-mono tracking-widest border rounded-2xl focus:outline-none focus:border-emerald-500/50 min-w-[300px] ${
-                                                isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black placeholder:text-black/40"
-                                             }`}
-                                         />
-                                     </div>
-                                     <button
-                                         onClick={handleExportCSV}
-                                         className={`px-6 py-3.5 text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:opacity-90 transition-all rounded-2xl ${
-                                            isDarkMode ? "bg-white text-black" : "bg-black text-white"
-                                         }`}
-                                     >
-                                         Export CSV
-                                     </button>
-                                 </div>
-                             </div>
 
-                              <div className="overflow-x-auto relative overflow-hidden group">
-                                  <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                  <table className="w-full text-left border-collapse">
-                                      <thead>
-                                          <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
-                                              <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
+                    {view === 'table' && (
+                        <motion.div
+                            key="table"
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                                }`}
+                        >
+                            <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                            <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                            <div className={`p-10 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
+                                <div>
+                                    <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>User Transaction Logs</h2>
+                                    <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Full system registry • {users.length} active nodes</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="relative">
+                                        <Search className={`absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`} />
+                                        <input
+                                            type="text"
+                                            placeholder="FILTER LOGS..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className={`pl-11 pr-8 py-3 text-[10px] font-mono tracking-widest border rounded-2xl focus:outline-none focus:border-emerald-500/50 min-w-[300px] ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black placeholder:text-black/40"
+                                                }`}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleExportCSV}
+                                        className={`px-6 py-3.5 text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:opacity-90 transition-all rounded-2xl ${isDarkMode ? "bg-white text-black" : "bg-black text-white"
+                                            }`}
+                                    >
+                                        Export CSV
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto relative overflow-hidden group">
+                                <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
+                                            <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
                                                 <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:opacity-80 transition-all">
-                                                  Identity {sortField === "name" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                    Identity {sortField === "name" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                                                 </button>
-                                              </th>
-                                              <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
+                                            </th>
+                                            <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
                                                 <button onClick={() => toggleSort("plan")} className="flex items-center gap-1 hover:opacity-80 transition-all">
-                                                  Subscription {sortField === "plan" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                    Subscription {sortField === "plan" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                                                 </button>
-                                              </th>
-                                              <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Resources</th>
-                                              <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
+                                            </th>
+                                            <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Resources</th>
+                                            <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
                                                 <button onClick={() => toggleSort("latency")} className="flex items-center gap-1 hover:opacity-80 transition-all">
-                                                  Uptime / Latency {sortField === "latency" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                    Uptime / Latency {sortField === "latency" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                                                 </button>
-                                              </th>
-                                              <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>Administrative</th>
-                                          </tr>
-                                      </thead>
-                                      <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
-                                         {isLoading ? (
-                                             Array.from({ length: 5 }).map((_, i) => (
-                                                 <tr key={i} className="animate-pulse opacity-20">
-                                                     <td colSpan={5} className={`p-8 border-b h-16 ${isDarkMode ? "border-white/5 bg-white/5" : "border-black/10 bg-black/5"}`} />
-                                                 </tr>
-                                             ))
-                                         ) : paginatedUsers.length === 0 ? (
-                                             <tr>
-                                                 <td colSpan={5} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>Void Found</td>
-                                             </tr>
-                                          ) : (
-                                              paginatedUsers.map((user) => (
-                                                  <tr key={user.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
-                                                      <td className="p-8">
-                                                          <div className="flex items-center gap-4">
-                                                              <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
-                                                                  <User className={`h-4 w-4 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
-                                                              </div>
-                                                              <div className="flex flex-col">
-                                                                  <span className={`text-[13px] font-bold tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{user.name}</span>
-                                                                  <span className={`text-[9px] lowercase font-sans ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>{user.email}</span>
-                                                              </div>
-                                                          </div>
-                                                      </td>
-                                                      <td className="p-8">
-                                                          <div className="flex flex-col gap-1.5">
-                                                              <span className={`text-[10px] font-black w-fit px-2 py-0.5 rounded border ${user.subscription.plan === 'pro' ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" : isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}>
-                                                                  {user.subscription.plan}
-                                                              </span>
-                                                              <div className="flex items-center gap-2">
-                                                                   <div className={`h-1 w-1 rounded-full ${
-                                                                       user.subscription.status === 'active' ? "bg-emerald-500" :
-                                                                       user.subscription.status === 'frozen' ? "bg-red-500" :
-                                                                       "bg-amber-500"
-                                                                   }`} />
-                                                                  <span className={`text-[9px] ${isDarkMode ? "text-white opacity-40" : "text-black opacity-60"}`}>{user.subscription.status}</span>
-                                                              </div>
-                                                          </div>
-                                                      </td>
-                                                      <td className="p-8">
-                                                          <div className="flex flex-col gap-3 max-w-[200px] mx-auto">
-                                                              <div className={`flex justify-between text-[9px] ${isDarkMode ? "text-white opacity-40" : "text-black opacity-60"}`}>
-                                                                  <span>TOKENS</span>
-                                                                  <span>{((user.subscription.tokens_used / user.subscription.tokens_limit) * 100).toFixed(0)}%</span>
-                                                              </div>
-                                                              <div className={`h-1 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
-                                                                  <div className={`h-full ${isDarkMode ? "bg-white/20" : "bg-black/20"}`} style={{ width: `${(user.subscription.tokens_used / user.subscription.tokens_limit) * 100}%` }} />
-                                                              </div>
-                                                          </div>
-                                                      </td>
-                                                      <td className="p-8">
-                                                          <div className="flex items-center gap-2">
-                                                              <Activity className="h-3 w-3 text-emerald-500/50" />
-                                                              <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{user.subscription.latency_ms}</span>
-                                                             <span className={`text-[9px] ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>MS</span>
-                                                         </div>
-                                                     </td>
+                                            </th>
+                                            <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>Administrative</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
+                                        {isLoading ? (
+                                            Array.from({ length: 5 }).map((_, i) => (
+                                                <tr key={i} className="animate-pulse opacity-20">
+                                                    <td colSpan={5} className={`p-8 border-b h-16 ${isDarkMode ? "border-white/5 bg-white/5" : "border-black/10 bg-black/5"}`} />
+                                                </tr>
+                                            ))
+                                        ) : paginatedUsers.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>Void Found</td>
+                                            </tr>
+                                        ) : (
+                                            paginatedUsers.map((user) => (
+                                                <tr key={user.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
+                                                    <td className="p-8">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                                                                <User className={`h-4 w-4 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className={`text-[13px] font-bold tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{user.name}</span>
+                                                                <span className={`text-[9px] lowercase font-sans ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>{user.email}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-8">
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <span className={`text-[10px] font-black w-fit px-2 py-0.5 rounded border ${user.subscription.plan === 'pro' ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" : isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}>
+                                                                {user.subscription.plan}
+                                                            </span>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={`h-1 w-1 rounded-full ${user.subscription.status === 'active' ? "bg-emerald-500" :
+                                                                        user.subscription.status === 'frozen' ? "bg-red-500" :
+                                                                            "bg-amber-500"
+                                                                    }`} />
+                                                                <span className={`text-[9px] ${isDarkMode ? "text-white opacity-40" : "text-black opacity-60"}`}>{user.subscription.status}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-8">
+                                                        <div className="flex flex-col gap-3 max-w-[200px] mx-auto">
+                                                            <div className={`flex justify-between text-[9px] ${isDarkMode ? "text-white opacity-40" : "text-black opacity-60"}`}>
+                                                                <span>TOKENS</span>
+                                                                <span>{((user.subscription.tokens_used / user.subscription.tokens_limit) * 100).toFixed(0)}%</span>
+                                                            </div>
+                                                            <div className={`h-1 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                                                <div className={`h-full ${isDarkMode ? "bg-white/20" : "bg-black/20"}`} style={{ width: `${(user.subscription.tokens_used / user.subscription.tokens_limit) * 100}%` }} />
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-8">
+                                                        <div className="flex items-center gap-2">
+                                                            <Activity className="h-3 w-3 text-emerald-500/50" />
+                                                            <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{user.subscription.latency_ms}</span>
+                                                            <span className={`text-[9px] ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>MS</span>
+                                                        </div>
+                                                    </td>
                                                      <td className="p-8 text-right">
-                                                         <button
-                                                             onClick={() => {
-                                                                 setSelectedUser(user);
-                                                                 setView('visual');
-                                                             }}
-                                                             className={`px-5 py-2.5 border transition-all text-[9px] font-bold tracking-widest rounded-xl ${
-                                                                isDarkMode ? "border-white/5 hover:border-white/20 hover:bg-white/5 text-white" : "border-black/10 hover:border-black/20 hover:bg-black/5 text-black"
-                                                             }`}
-                                                         >
-                                                             Visualize
-                                                         </button>
-                                                     </td>
-                                                 </tr>
-                                             ))
-                                         )}
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedUser(user);
+                                                                    setView('visual');
+                                                                }}
+                                                                className={`px-5 py-2.5 border transition-all text-[9px] font-bold tracking-widest rounded-xl ${isDarkMode ? "border-white/5 hover:border-white/20 hover:bg-white/5 text-white" : "border-black/10 hover:border-black/20 hover:bg-black/5 text-black"}`}
+                                                            >
+                                                                Visualize
+                                                            </button>
+                                                            {confirmDeleteUserId === user.id ? (
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <button
+                                                                        onClick={() => handleDeleteUser(user.id)}
+                                                                        disabled={deletingUserId === user.id}
+                                                                        className="px-3 py-2 bg-red-500 text-white text-[9px] font-bold tracking-widest rounded-xl hover:bg-red-600 disabled:opacity-50 transition-all"
+                                                                    >
+                                                                        {deletingUserId === user.id ? '...' : 'CONFIRM'}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setConfirmDeleteUserId(null)}
+                                                                        className={`p-2 border rounded-xl transition-all text-[9px] ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                                                    >
+                                                                        <X className="h-3 w-3" />
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => setConfirmDeleteUserId(user.id)}
+                                                                    className={`p-2.5 border rounded-xl transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-white/5 text-white/40" : "border-black/10 text-black/40"}`}
+                                                                    title="Delete user"
+                                                                >
+                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
 
-                              {/* Pagination Controls */}
-                              <div className={`p-8 flex items-center justify-between border-t ${isDarkMode ? "bg-black border-white/10" : "bg-white border-black/10"}`}>
-                                  <div className={`flex items-center gap-4 text-[9px] font-mono tracking-[0.3em] uppercase ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                      <Database className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
-                                      <span>Page {currentPage} // {totalPages || 1}</span>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                      <button
-                                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                          disabled={currentPage === 1}
-                                          className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
-                                      >
-                                          <ChevronLeft className="h-4 w-4" />
-                                      </button>
-                                      <div className="flex gap-2">
-                                          {Array.from({ length: totalPages }, (_, i) => i + 1)
-                                              .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                                              .map((pageNum, i, arr) => (
-                                                  <React.Fragment key={pageNum}>
-                                                      {i > 0 && arr[i - 1] !== pageNum - 1 && <span className={`opacity-20 px-2 ${isDarkMode ? "text-white" : "text-black"}`}>...</span>}
-                                                      <button
-                                                          onClick={() => setCurrentPage(pageNum)}
-                                                          className={`h-10 w-10 text-[10px] font-mono rounded-xl transition-all ${currentPage === pageNum
-                                                              ? (isDarkMode ? 'bg-white text-black font-black' : 'bg-black text-white font-black')
-                                                              : (isDarkMode ? 'hover:bg-white/5 opacity-40 text-white' : 'hover:bg-black/5 opacity-60 text-black')
-                                                              }`}
-                                                      >
-                                                          {pageNum}
-                                                      </button>
-                                                 </React.Fragment>
-                                             ))
-                                         }
-                                     </div>
-                                     <button
-                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                         disabled={currentPage === totalPages || totalPages === 0}
-                                         className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
-                                     >
-                                         <ChevronRightIcon className="h-4 w-4" />
-                                     </button>
-                                 </div>
-                             </div>
+                            {/* Pagination Controls */}
+                            <div className={`p-8 flex items-center justify-between border-t ${isDarkMode ? "bg-black border-white/10" : "bg-white border-black/10"}`}>
+                                <div className={`flex items-center gap-4 text-[9px] font-mono tracking-[0.3em] uppercase ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                    <Database className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
+                                    <span>Page {currentPage} // {totalPages || 1}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </button>
+                                    <div className="flex gap-2">
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                            .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                                            .map((pageNum, i, arr) => (
+                                                <React.Fragment key={pageNum}>
+                                                    {i > 0 && arr[i - 1] !== pageNum - 1 && <span className={`opacity-20 px-2 ${isDarkMode ? "text-white" : "text-black"}`}>...</span>}
+                                                    <button
+                                                        onClick={() => setCurrentPage(pageNum)}
+                                                        className={`h-10 w-10 text-[10px] font-mono rounded-xl transition-all ${currentPage === pageNum
+                                                            ? (isDarkMode ? 'bg-white text-black font-black' : 'bg-black text-white font-black')
+                                                            : (isDarkMode ? 'hover:bg-white/5 opacity-40 text-white' : 'hover:bg-black/5 opacity-60 text-black')
+                                                            }`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                </React.Fragment>
+                                            ))
+                                        }
+                                    </div>
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages || totalPages === 0}
+                                        className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                                    >
+                                        <ChevronRightIcon className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
                         </motion.div>
                     )}
-                    
+
                     {/* Sites View */}
-                     {view === 'sites' && (
-                         <motion.div
-                             key="sites"
-                             initial={{ opacity: 0, y: 20 }}
-                             animate={{ opacity: 1, y: 0 }}
-                             exit={{ opacity: 0, y: -20 }}
-                             className="p-4 sm:p-6 lg:p-10"
-                         >
-                             <div className={`border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl ${
-                                 isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                             }`}>
-                                 <div className={`p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                                     <div>
-                                         <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Site Pages</h2>
-                                         <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Manage About Us, Privacy Policy, Terms & Contact</p>
-                                     </div>
-                                     <button
-                                         onClick={fetchData}
-                                         className={`p-3 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
-                                     >
-                                         <RefreshCw className={`h-4 w-4 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
-                                     </button>
-                                 </div>
-                                 <div className="p-10">
-                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                         {[
-                                             { key: 'about_us', label: 'About Us', icon: 'ℹ️' },
-                                             { key: 'privacy_policy', label: 'Privacy Policy', icon: '🔒' },
-                                             { key: 'terms_conditions', label: 'Terms of Service', icon: '📜' },
-                                             { key: 'contact_info', label: 'Contact Us', icon: '📧' },
-                                         ].map((page) => {
-                                             const setting = siteSettings.find(s => s.key === page.key)
-                                             return (
-                                                 <div
-                                                     key={page.key}
-                                                     className={`relative border rounded-[2.5rem] p-8 transition-all hover:scale-[1.02] overflow-hidden group cursor-pointer ${
-                                                         isDarkMode
-                                                             ? "border-zinc-800/50 bg-gradient-to-br from-zinc-900 via-black to-zinc-900"
-                                                             : "border-zinc-800/50 bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                                                     }`}
-                                                       onClick={() => {
-                                                          const raw = setting?.value || '';
-                                                          setEditingSiteSetting({ key: page.key, value: raw });
-                                                          try {
-                                                              const parsed = JSON.parse(raw);
-                                                              if (page.key === 'about_us' && Array.isArray(parsed.sections) && !parsed.elements) {
-                                                                  setSiteFormData({ elements: parsed.sections.map((s: string) => ({ type: 'paragraph', content: s })) });
-                                                              } else if (page.key === 'contact_info' && parsed.description && !parsed.paragraphs) {
-                                                                  setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
-                                                              } else {
-                                                                  setSiteFormData(parsed);
-                                                              }
-                                                          } catch {
-                                                              if (page.key === 'about_us') {
-                                                                  setSiteFormData({ elements: raw.split('\n\n').filter(Boolean).map((p: string) => ({ type: 'paragraph', content: p })) });
-                                                              } else if (page.key === 'contact_info') {
-                                                                  setSiteFormData({ paragraphs: raw.split('\n\n').filter(Boolean), email: '', responseTime: '' });
-                                                              } else {
-                                                                  setSiteFormData(null);
-                                                              }
-                                                          }
-                                                      }}
-                                                 >
-                                                     <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                                                     <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                                     <div className="flex items-center justify-between mb-4">
-                                                         <h3 className={`text-lg font-display font-black tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{page.label}</h3>
-                                                         <span className="text-2xl">{page.icon}</span>
-                                                     </div>
-                                                     <p className={`text-[10px] font-mono line-clamp-3 leading-relaxed ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
-                                                         {setting?.value?.substring(0, 150) || 'No content yet...'}
-                                                     </p>
-                                                     <div className={`mt-4 text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`}>
-                                                         Click to edit
-                                                     </div>
-                                                 </div>
-                                             )
-                                         })}
-                                     </div>
-                                 </div>
-                             </div>
-                         </motion.div>
-                     )}
+                    {view === 'sites' && (
+                        <motion.div
+                            key="sites"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="p-4 sm:p-6 lg:p-10"
+                        >
+                            <div className={`border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                                }`}>
+                                <div className={`p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                    <div>
+                                        <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Site Pages</h2>
+                                        <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Manage About Us, Privacy Policy, Terms & Contact</p>
+                                    </div>
+                                    <button
+                                        onClick={fetchData}
+                                        className={`p-3 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                    >
+                                        <RefreshCw className={`h-4 w-4 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
+                                    </button>
+                                </div>
+                                <div className="p-10">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {[
+                                            { key: 'about_us', label: 'About Us', icon: 'ℹ️' },
+                                            { key: 'privacy_policy', label: 'Privacy Policy', icon: '🔒' },
+                                            { key: 'terms_conditions', label: 'Terms of Service', icon: '📜' },
+                                            { key: 'contact_info', label: 'Contact Us', icon: '📧' },
+                                        ].map((page) => {
+                                            const setting = siteSettings.find(s => s.key === page.key)
+                                            return (
+                                                <div
+                                                    key={page.key}
+                                                    className={`relative border rounded-[2.5rem] p-8 transition-all hover:scale-[1.02] overflow-hidden group cursor-pointer ${isDarkMode
+                                                            ? "border-zinc-800/50 bg-gradient-to-br from-zinc-900 via-black to-zinc-900"
+                                                            : "border-zinc-800/50 bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                                                        }`}
+                                                    onClick={() => {
+                                                        const raw = setting?.value || '';
+                                                        setEditingSiteSetting({ key: page.key, value: raw });
+                                                        try {
+                                                            const parsed = JSON.parse(raw);
+                                                            if (page.key === 'about_us' && Array.isArray(parsed.sections) && !parsed.elements) {
+                                                                setSiteFormData({ elements: parsed.sections.map((s: string) => ({ type: 'paragraph', content: s })) });
+                                                            } else if (page.key === 'contact_info' && parsed.description && !parsed.paragraphs) {
+                                                                setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
+                                                            } else {
+                                                                setSiteFormData(parsed);
+                                                            }
+                                                        } catch {
+                                                            if (page.key === 'about_us') {
+                                                                setSiteFormData({ elements: raw.split('\n\n').filter(Boolean).map((p: string) => ({ type: 'paragraph', content: p })) });
+                                                            } else if (page.key === 'contact_info') {
+                                                                setSiteFormData({ paragraphs: raw.split('\n\n').filter(Boolean), email: '', responseTime: '' });
+                                                            } else {
+                                                                setSiteFormData(null);
+                                                            }
+                                                        }
+                                                    }}
+                                                >
+                                                    <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                                                    <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <h3 className={`text-lg font-display font-black tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{page.label}</h3>
+                                                        <span className="text-2xl">{page.icon}</span>
+                                                    </div>
+                                                    <p className={`text-[10px] font-mono line-clamp-3 leading-relaxed ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
+                                                        {setting?.value?.substring(0, 150) || 'No content yet...'}
+                                                    </p>
+                                                    <div className={`mt-4 text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`}>
+                                                        Click to edit
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Requests View */}
+                    {view === 'requests' && (
+                        <motion.div
+                            key="requests"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="p-4 sm:p-6 lg:p-10"
+                        >
+                            <div className={`border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                                }`}>
+                                <div className={`p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                    <div>
+                                        <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>School Onboarding Requests</h2>
+                                        <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                            {requests.filter(r => r.status === 'pending').length} pending
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={fetchRequests}
+                                        className={`p-3 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"} ${isRequestsLoading ? "animate-spin" : ""}`}
+                                    >
+                                        <RefreshCw className={`h-4 w-4 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
+                                    </button>
+                                </div>
+
+                                {requests.length === 0 ? (
+                                    <div className="p-20 text-center">
+                                        <Bell className={`h-12 w-12 mx-auto mb-6 ${isDarkMode ? "opacity-20 text-white" : "opacity-30 text-black"}`} />
+                                        <h3 className={`text-xl font-display font-black mb-2 ${isDarkMode ? "text-white" : "text-black"}`}>No Requests</h3>
+                                        <p className={`text-xs max-w-md mx-auto ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                            No school onboarding requests yet. Schools can submit requests from the /schools page.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full">
+                                            <thead>
+                                                <tr className={`border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                    <th className="text-left p-6 text-[9px] font-mono uppercase tracking-[0.3em] opacity-40">School</th>
+                                                    <th className="text-left p-6 text-[9px] font-mono uppercase tracking-[0.3em] opacity-40">Admin</th>
+                                                    <th className="text-left p-6 text-[9px] font-mono uppercase tracking-[0.3em] opacity-40">Email</th>
+                                                    <th className="text-left p-6 text-[9px] font-mono uppercase tracking-[0.3em] opacity-40">Status</th>
+                                                    <th className="text-left p-6 text-[9px] font-mono uppercase tracking-[0.3em] opacity-40">Date</th>
+                                                    <th className="text-right p-6 text-[9px] font-mono uppercase tracking-[0.3em] opacity-40">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {requests.map((req) => (
+                                                    <tr key={req.id} className={`border-b transition-all ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/5 hover:bg-black/[0.02]"}`}>
+                                                        <td className="p-6">
+                                                            <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{req.school_name}</span>
+                                                        </td>
+                                                        <td className="p-6">
+                                                            <span className={`text-xs ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{req.admin_name}</span>
+                                                        </td>
+                                                        <td className="p-6">
+                                                            <span className={`text-xs font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{req.admin_email}</span>
+                                                        </td>
+                                                        <td className="p-6">
+                                                            <span className={`px-3 py-1 rounded-full text-[9px] font-mono uppercase tracking-widest font-bold ${req.status === 'pending'
+                                                                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                                                    : req.status === 'approved'
+                                                                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                                                        : "bg-red-500/20 text-red-400 border border-red-500/30"
+                                                                }`}>
+                                                                {req.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-6">
+                                                            <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                                {new Date(req.created_at).toLocaleDateString()}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-6 text-right">
+                                                            {req.status === 'pending' && (
+                                                                <div className="flex items-center justify-end gap-3">
+                                                                    <button
+                                                                        onClick={() => handleApproveRequest(req)}
+                                                                        className="px-5 py-2 bg-emerald-500 text-black text-[9px] font-mono uppercase tracking-[0.2em] font-bold rounded-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                                                                    >
+                                                                        <Check className="h-3 w-3" />
+                                                                        Approve
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeclineRequest(req)}
+                                                                        disabled={decliningRequestId === req.id}
+                                                                        className="px-5 py-2 bg-red-500/20 border border-red-500/30 text-red-400 text-[9px] font-mono uppercase tracking-[0.2em] font-bold rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                                                                    >
+                                                                        {decliningRequestId === req.id ? (
+                                                                            <RefreshCw className="h-3 w-3 animate-spin" />
+                                                                        ) : (
+                                                                            <X className="h-3 w-3" />
+                                                                        )}
+                                                                        Decline
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Schools View */}
+                    {view === 'schools' && (
+                        <motion.div
+                            key="schools"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="p-0 sm:p-0 lg:p-0"
+                        >
+                            <div className={`${isDarkMode ? 'bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/20' : 'bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-black'} border rounded-none overflow-hidden backdrop-blur-3xl min-h-[calc(100vh-80px)]`}>
+                                <div className="p-4 lg:p-6">
+                                    {/* Controls: search, dates, rows per page */}
+                                    <div className="flex flex-col md:flex-row md:items-end gap-4 mb-6 justify-between">
+                                        <div className="flex-1 min-w-[220px]">
+                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>Search</label>
+                                            <div className="relative">
+                                                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${isDarkMode ? 'opacity-30 text-white' : 'opacity-40 text-black'}`} />
+                                                <input
+                                                    value={schoolsSearch}
+                                                    onChange={(e) => { setSchoolsSearch(e.target.value); setSchoolsPage(1); }}
+                                                    placeholder="Search name or code..."
+                                                    className={`w-full pl-9 pr-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white placeholder:text-white/30' : 'bg-black/5 border-black/10 text-black placeholder:text-black/40'}`}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>From</label>
+                                            <input type="date" value={schoolsDateFrom} onChange={(e) => { setSchoolsDateFrom(e.target.value); setSchoolsPage(1); }} className={`px-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'}`} />
+                                        </div>
+                                        <div>
+                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>To</label>
+                                            <input type="date" value={schoolsDateTo} onChange={(e) => { setSchoolsDateTo(e.target.value); setSchoolsPage(1); }} className={`px-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'}`} />
+                                        </div>
+                                        <div>
+                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>Rows</label>
+                                            <select value={schoolsRowsPerPage} onChange={(e) => { setSchoolsRowsPerPage(parseInt(e.target.value) || 10); setSchoolsPage(1); }} className={`px-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'}`}>
+                                                <option value={10}>10</option>
+                                                <option value={25}>25</option>
+                                                <option value={50}>50</option>
+                                                <option value={100}>100</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 opacity-0 select-none`}>Refresh</label>
+                                            <button
+                                                onClick={fetchSchoolsData}
+                                                className={`h-10 w-10 rounded-xl border flex items-center justify-center transition-all ${isDarkMode ? 'border-white/10 hover:bg-white/5 text-white' : 'border-black/10 hover:bg-black/5 text-black'} ${isSchoolsLoading ? 'animate-spin' : ''}`}
+                                                title="Refresh"
+                                            >
+                                                <RefreshCw className={`h-4 w-4 ${isDarkMode ? 'opacity-60' : 'opacity-60'}`} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {/* Schools List */}
+                                    <div className={`relative border rounded-[1rem] overflow-hidden ${isDarkMode ? 'border-white/10 bg-white/[0.03]' : 'border-black bg-black/[0.02]'}`}>
+                                        <div className={`p-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black' } flex items-center justify-between`}>
+                                            <h3 className={`text-lg font-display font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>Schools</h3>
+                                            <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? 'opacity-40' : 'opacity-60'}`}>{processedSchools.length} results</span>
+                                        </div>
+                                        {isSchoolsLoading ? (
+                                            <div className="p-10 text-center text-[10px] font-mono opacity-40">Loading...</div>
+                                        ) : processedSchools.length === 0 ? (
+                                            <div className="p-10 text-center text-[10px] font-mono opacity-40">No schools found</div>
+                                        ) : (
+                                            <div className="overflow-x-auto">
+                                                <table className={`w-full border ${isDarkMode ? 'border-white/10' : 'border-black'} rounded-xl overflow-hidden`}>
+                                                    <thead>
+                                                        <tr className={`${isDarkMode ? 'text-white/60' : 'text-black/70'} text-[9px] font-mono uppercase tracking-[0.3em] border-b ${isDarkMode ? 'border-white/10' : 'border-black'}`}>
+                                                            <th className="p-4 text-left">
+                                                                <button onClick={() => toggleSchoolsSort('name')} className="flex items-center gap-1 hover:opacity-80">
+                                                                    Name {schoolsSortField === 'name' ? (schoolsSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                                                                </button>
+                                                            </th>
+                                                            <th className="p-4 text-left">
+                                                                <button onClick={() => toggleSchoolsSort('code')} className="flex items-center gap-1 hover:opacity-80">
+                                                                    Code {schoolsSortField === 'code' ? (schoolsSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                                                                </button>
+                                                            </th>
+                                                            <th className="p-4 text-left">
+                                                                <button onClick={() => toggleSchoolsSort('created')} className="flex items-center gap-1 hover:opacity-80">
+                                                                    Created {schoolsSortField === 'created' ? (schoolsSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                                                                </button>
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {visibleSchools.map((s) => (
+                                                            <React.Fragment key={s.id}>
+                                                                 <tr
+                                                                     onClick={() => {
+                                                                         const willOpen = selectedSchool?.id !== s.id;
+                                                                         setSelectedSchool(prev => prev?.id === s.id ? null : s);
+                                                                         if (willOpen && !facultyBySchool[s.school_code]) {
+                                                                             loadFacultyForSchool(s.school_code)
+                                                                         }
+                                                                     }}
+                                                                     className={`border-b cursor-pointer transition-colors ${isDarkMode ? 'border-white/10 hover:bg-white/[0.04]' : 'border-black/20 hover:bg-black/[0.03]'} ${selectedSchool?.id === s.id ? (isDarkMode ? 'bg-emerald-500/10' : 'bg-emerald-500/10') : ''}`}
+                                                                 >
+                                                                    <td className="p-4 text-sm font-bold">{s.school_name}</td>
+                                                                    <td className="p-4 text-xs font-mono opacity-80">{s.school_code}</td>
+                                                                    <td className="p-4 text-xs font-mono opacity-60">{new Date(s.created_at).toLocaleDateString()}</td>
+                                                                </tr>
+                                                                {selectedSchool?.id === s.id && (
+                                                                    <tr>
+                                                                        <td className="p-0" colSpan={3}>
+                                                                            <div className={`p-4 sm:p-6 ${isDarkMode ? 'bg-white/[0.02] border-t border-white/10' : 'bg-black/[0.02] border-t border-black'}`}>
+                                                                                <div className="flex items-center justify-between mb-3">
+                                                                                    <h4 className={`text-sm font-display font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>Admins</h4>
+                                                                                    <button
+                                                                                        onClick={() => setSelectedSchool(null)}
+                                                                                        className={`text-[10px] font-mono uppercase tracking-widest underline ${isDarkMode ? 'text-white/80 hover:text-white' : 'text-black/60 hover:text-black'}`}
+                                                                                    >
+                                                                                        Close
+                                                                                    </button>
+                                                                                </div>
+                                                                                  {schoolAdmins.filter(a => a.school_name === s.school_name).length === 0 ? (
+                                                                                      <div className={`text-[10px] font-mono opacity-60 ${isDarkMode ? 'text-white' : 'text-black'}`}>No admins for this school</div>
+                                                                                  ) : (
+                                                                                      <div className="overflow-x-auto">
+                                                                                          <table className={`w-full border ${isDarkMode ? 'border-white/10' : 'border-black'} rounded-xl overflow-hidden`}>
+                                                                                              <thead>
+                                                                                                  <tr className={`${isDarkMode ? 'text-white/60' : 'text-black/70'} text-[9px] font-mono uppercase tracking-[0.3em] border-b ${isDarkMode ? 'border-white/10' : 'border-black'}`}>
+                                                                                                      <th className="p-3 text-left">Name</th>
+                                                                                                      <th className="p-3 text-left">Admin Code</th>
+                                                                                                      <th className="p-3 text-left">Students</th>
+                                                                                                      <th className="p-3 text-left">Email</th>
+                                                                                                      <th className="p-3 text-right">Actions</th>
+                                                                                                      <th className="p-3 text-right">Delete</th>
+                                                                                                  </tr>
+                                                                                              </thead>
+                                                                                              <tbody>
+                                                                                                  {schoolAdmins.filter(a => a.school_name === s.school_name).map((a) => {
+                                                                                                      const isFrozen = frozenAdminIds.includes(a.id);
+                                                                                                      return (
+                                                                                                          <tr key={a.id} className={`${isDarkMode ? 'border-white/10' : 'border-black/20'} border-b`}>
+                                                                                                              <td className="p-3">
+                                                                                                                  <div className="flex items-center gap-2">
+                                                                                                                      <span className="text-sm font-bold">{a.name}</span>
+                                                                                                                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono uppercase tracking-widest ${isFrozen ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>{isFrozen ? 'frozen' : 'active'}</span>
+                                                                                                                  </div>
+                                                                                                              </td>
+                                                                                                              <td className="p-3 text-xs font-mono">{a.admin_code}</td>
+                                                                                                              <td className="p-3 text-xs font-mono">{a.student_count}</td>
+                                                                                                              <td className="p-3 text-xs font-mono opacity-80">{a.email || '-'}</td>
+                                                                                                               <td className="p-3 text-right">
+                                                                                                                  {isFrozen ? (
+                                                                                                                      <button
+                                                                                                                          onClick={() => handleUnfreezeAdmin(a.id)}
+                                                                                                                          disabled={freezingAdminId === a.id}
+                                                                                                                          className="px-3 py-1.5 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.2em] rounded-lg hover:scale-105 active:scale-95 transition-all"
+                                                                                                                      >
+                                                                                                                          {freezingAdminId === a.id ? 'UNFREEZING...' : 'UNFREEZE'}
+                                                                                                                      </button>
+                                                                                                                  ) : (
+                                                                                                                      <button
+                                                                                                                          onClick={() => handleFreezeAdmin(a.id)}
+                                                                                                                          disabled={freezingAdminId === a.id}
+                                                                                                                          className="px-3 py-1.5 bg-red-500 text-white text-[10px] font-mono uppercase tracking-[0.2em] rounded-lg hover:scale-105 active:scale-95 transition-all"
+                                                                                                                      >
+                                                                                                                          {freezingAdminId === a.id ? 'FREEZING...' : 'FREEZE'}
+                                                                                                                      </button>
+                                                                                                                  )}
+                                                                                                               </td>
+                                                                                                               <td className="p-3 text-right">
+                                                                                                                   {confirmDeleteSchoolAdminId === a.id ? (
+                                                                                                                       <div className="flex items-center justify-end gap-1">
+                                                                                                                           <button
+                                                                                                                               onClick={() => handleDeleteSchoolAdmin(a.id)}
+                                                                                                                               disabled={deletingSchoolAdminId === a.id}
+                                                                                                                               className="px-2 py-1.5 bg-red-600 text-white text-[9px] font-bold tracking-widest rounded-lg hover:bg-red-700 disabled:opacity-50 transition-all"
+                                                                                                                           >
+                                                                                                                               {deletingSchoolAdminId === a.id ? '...' : 'CONFIRM'}
+                                                                                                                           </button>
+                                                                                                                           <button
+                                                                                                                               onClick={() => setConfirmDeleteSchoolAdminId(null)}
+                                                                                                                               className={`p-1.5 border rounded-lg transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                                                                                                           >
+                                                                                                                               <X className="h-3 w-3" />
+                                                                                                                           </button>
+                                                                                                                       </div>
+                                                                                                                   ) : (
+                                                                                                                       <button
+                                                                                                                           onClick={() => setConfirmDeleteSchoolAdminId(a.id)}
+                                                                                                                           className={`p-1.5 border rounded-lg transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-white/10 text-white/40" : "border-black/10 text-black/40"}`}
+                                                                                                                           title="Delete admin"
+                                                                                                                       >
+                                                                                                                           <Trash2 className="h-3 w-3" />
+                                                                                                                       </button>
+                                                                                                                   )}
+                                                                                                               </td>
+                                                                                                          </tr>
+                                                                                                      );
+                                                                                                  })}
+                                                                                              </tbody>
+                                                                                          </table>
+                                                                                      </div>
+                                                                                  )}
+
+                                                                                  {/* Faculty List */}
+                                                                                  <div className={`mt-6 ${isDarkMode ? '' : ''}`}>
+                                                                                      <div className="flex items-center justify-between mb-2">
+                                                                                          <h4 className={`text-sm font-display font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>Faculty</h4>
+                                                                                          {facultyLoadingCodes.has(s.school_code) && (
+                                                                                              <span className={`text-[10px] font-mono ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>Loading...</span>
+                                                                                          )}
+                                                                                      </div>
+                                                                                      {(!facultyBySchool[s.school_code] || facultyBySchool[s.school_code].length === 0) && !facultyLoadingCodes.has(s.school_code) ? (
+                                                                                          <div className={`text-[10px] font-mono opacity-60 ${isDarkMode ? 'text-white' : 'text-black'}`}>No faculty found</div>
+                                                                                      ) : (
+                                                                                          <div className="overflow-x-auto">
+                                                                                              <table className={`w-full border ${isDarkMode ? 'border-white/10' : 'border-black'} rounded-xl overflow-hidden`}>
+                                                                                                  <thead>
+                                                                                                      <tr className={`${isDarkMode ? 'text-white/60' : 'text-black/70'} text-[9px] font-mono uppercase tracking-[0.3em] border-b ${isDarkMode ? 'border-white/10' : 'border-black'}`}>
+                                                                                                          <th className="p-3 text-left">Name</th>
+                                                                                                          <th className="p-3 text-left">Admin Code</th>
+                                                                                                          <th className="p-3 text-left">Class</th>
+                                                                                                          <th className="p-3 text-left">Email</th>
+                                                                                                          <th className="p-3 text-right">Delete</th>
+                                                                                                      </tr>
+                                                                                                  </thead>
+                                                                                                  <tbody>
+                                                                                                      {(facultyBySchool[s.school_code] || []).map((f) => {
+                                                                                                          const actionKey = f.id || f.admin_code || "";
+                                                                                                          return (
+                                                                                                          <tr key={f.id || f.admin_code} className={`${isDarkMode ? 'border-white/10' : 'border-black/20'} border-b`}>
+                                                                                                              <td className="p-3 text-sm font-bold">{f.name}</td>
+                                                                                                              <td className="p-3 text-xs font-mono">{f.admin_code || '—'}</td>
+                                                                                                              <td className="p-3 text-xs font-mono">{f.assigned_class || '—'}</td>
+                                                                                                              <td className="p-3 text-xs font-mono opacity-80">{f.email || '—'}</td>
+                                                                                                              <td className="p-3 text-right">
+                                                                                                                  {confirmDeleteFacultyCode === actionKey ? (
+                                                                                                                      <div className="flex items-center justify-end gap-1">
+                                                                                                                          <button
+                                                                                                                              onClick={() => handleDeleteFacultyFromDashboard(f, s.school_code)}
+                                                                                                                              disabled={deletingFacultyCode === actionKey || !actionKey}
+                                                                                                                              className="px-2 py-1.5 bg-red-600 text-white text-[9px] font-bold tracking-widest rounded-lg hover:bg-red-700 disabled:opacity-50 transition-all"
+                                                                                                                          >
+                                                                                                                              {deletingFacultyCode === actionKey ? '...' : 'CONFIRM'}
+                                                                                                                          </button>
+                                                                                                                          <button
+                                                                                                                              onClick={() => setConfirmDeleteFacultyCode(null)}
+                                                                                                                              className={`p-1.5 border rounded-lg transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                                                                                                          >
+                                                                                                                              <X className="h-3 w-3" />
+                                                                                                                          </button>
+                                                                                                                      </div>
+                                                                                                                  ) : (
+                                                                                                                      <button
+                                                                                                                          onClick={() => actionKey && setConfirmDeleteFacultyCode(actionKey)}
+                                                                                                                          className={`p-1.5 border rounded-lg transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-white/10 text-white/40" : "border-black/10 text-black/40"}`}
+                                                                                                                          title="Delete faculty"
+                                                                                                                          disabled={!actionKey}
+                                                                                                                      >
+                                                                                                                          <Trash2 className="h-3 w-3" />
+                                                                                                                      </button>
+                                                                                                                  )}
+                                                                                                              </td>
+                                                                                                          </tr>
+                                                                                                          );
+                                                                                                      })}
+                                                                                                  </tbody>
+                                                                                              </table>
+                                                                                          </div>
+                                                                                      )}
+                                                                                  </div>
+                                                                              </div>
+                                                                          </td>
+                                                                      </tr>
+                                                                  )}
+                                                            </React.Fragment>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                        {/* Pagination */}
+                                        <div className={`p-4 flex items-center justify-between border-t ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
+                                            <div className={`text-[10px] font-mono ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>Page {schoolsPage} / {schoolsTotalPages}</div>
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={() => setSchoolsPage(p => Math.max(1, p - 1))} disabled={schoolsPage === 1} className={`px-3 py-1.5 rounded-lg border text-[10px] ${isDarkMode ? 'border-white/10 text-white/80 disabled:opacity-30 hover:bg-white/5' : 'border-black/10 text-black/80 disabled:opacity-30 hover:bg-black/5'}`}>Prev</button>
+                                                <button onClick={() => setSchoolsPage(p => Math.min(schoolsTotalPages, p + 1))} disabled={schoolsPage === schoolsTotalPages} className={`px-3 py-1.5 rounded-lg border text-[10px] ${isDarkMode ? 'border-white/10 text-white/80 disabled:opacity-30 hover:bg-white/5' : 'border-black/10 text-black/80 disabled:opacity-30 hover:bg-black/5'}`}>Next</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Admins are rendered inline within the selected school's row */}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
 
                     {/* Plans View */}
-                     {view === 'plans' && (
-                         <motion.div
-                             initial={{ opacity: 0, y: 20 }}
-                             animate={{ opacity: 1, y: 0 }}
-                             exit={{ opacity: 0, y: -20 }}
-                             className="p-10"
-                         >
-                             <div className={`border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl ${
-                                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                             }`}>
-                                 <div className={`p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                                     <div>
-                                         <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Plans & Pricing</h2>
-                                         <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>System-wide subscription tiers</p>
-                                     </div>
-                                     <button
-                                         onClick={fetchData}
-                                         disabled={isPlansLoading}
-                                         className={`p-3 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"} ${isPlansLoading ? "animate-spin" : ""}`}
-                                     >
-                                         <RefreshCw className={`h-4 w-4 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
-                                     </button>
-                                 </div>
-                                 
-                                  <div className="p-10">
-                                      <div className="flex items-center justify-between mb-8">
-                                          <h3 className={`text-lg font-display font-black uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>All Plans</h3>
-                                          <button
-                                              onClick={() => setEditingPlan({ id: 'new', name: '', price: 0, tokens_limit: 0, images_limit: 0, personas_limit: 0, plan_name: '', price_inr: 0, daily_chat_limit: 0, daily_coding_limit: 0, daily_vision_limit: 0, monthly_image_limit: 0, monthly_flux_limit: 0, daily_tts_limit: 0, daily_stt_limit: 0 })}
-                                              className="px-6 py-3 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 transition-all rounded-2xl flex items-center gap-2"
-                                          >
-                                              <Plus className="h-4 w-4" /> Create Plan
-                                          </button>
-                                      </div>
-                                      {isPlansLoading ? (
-                                          <div className={`text-center py-20 text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                              Loading plans...
-                                          </div>
-                                      ) : plans.length === 0 ? (
-                                          <div className={`text-center py-20 text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                              No plans found
-                                          </div>
-                                      ) : (
-                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                              {plans.map((plan, index) => (
-                                                  <PlanCard key={plan.id || index} plan={plan} isDarkMode={isDarkMode} onEdit={setEditingPlan} />
-                                              ))}
-                                          </div>
-                                      )}
-                                  </div>
-                             </div>
-                         </motion.div>
-                     )}
+                    {view === 'plans' && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="p-10"
+                        >
+                            <div className={`border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                                }`}>
+                                <div className={`p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                    <div>
+                                        <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Plans & Pricing</h2>
+                                        <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>System-wide subscription tiers</p>
+                                    </div>
+                                    <button
+                                        onClick={fetchData}
+                                        disabled={isPlansLoading}
+                                        className={`p-3 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"} ${isPlansLoading ? "animate-spin" : ""}`}
+                                    >
+                                        <RefreshCw className={`h-4 w-4 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
+                                    </button>
+                                </div>
+
+                                <div className="p-10">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className={`text-lg font-display font-black uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>All Plans</h3>
+                                        <button
+                                            onClick={() => setEditingPlan({ id: 'new', name: '', price: 0, tokens_limit: 0, images_limit: 0, personas_limit: 0, plan_name: '', price_inr: 0, daily_chat_limit: 0, daily_coding_limit: 0, daily_vision_limit: 0, monthly_image_limit: 0, monthly_flux_limit: 0, daily_tts_limit: 0, daily_stt_limit: 0 })}
+                                            className="px-6 py-3 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 transition-all rounded-2xl flex items-center gap-2"
+                                        >
+                                            <Plus className="h-4 w-4" /> Create Plan
+                                        </button>
+                                    </div>
+                                    {isPlansLoading ? (
+                                        <div className={`text-center py-20 text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                            Loading plans...
+                                        </div>
+                                    ) : plans.length === 0 ? (
+                                        <div className={`text-center py-20 text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                            No plans found
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                            {plans.map((plan, index) => (
+                                                <PlanCard key={plan.id || index} plan={plan} isDarkMode={isDarkMode} onEdit={setEditingPlan} />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
                 </AnimatePresence>
             </main>
 
-             {/* Edit/Create Plan Modal */}
-              {editingPlan && (
-                  <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
-                       <motion.div
-                           initial={{ opacity: 0, scale: 0.95 }}
-                           animate={{ opacity: 1, scale: 1 }}
-                           className={`relative w-full max-w-xl max-h-[80vh] overflow-y-auto border border-zinc-800/50 p-6 rounded-[2rem] overflow-hidden group ${
-                             isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
-                           }`}
-                       >
-                           <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                           <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                          <button
-                              onClick={() => setEditingPlan(null)}
-                              className={`absolute top-4 right-4 p-2 rounded-xl transition-all ${isDarkMode ? "opacity-40 text-white hover:opacity-100 hover:bg-white/5" : "opacity-60 text-black hover:opacity-100 hover:bg-black/5"}`}
-                          >
-                              <X className="h-4 w-4" />
-                          </button>
+            {/* Edit/Create Plan Modal */}
+            {editingPlan && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className={`relative w-full max-w-xl max-h-[80vh] overflow-y-auto border border-zinc-800/50 p-6 rounded-[2rem] overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
+                            }`}
+                    >
+                        <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                        <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                        <button
+                            onClick={() => setEditingPlan(null)}
+                            className={`absolute top-4 right-4 p-2 rounded-xl transition-all ${isDarkMode ? "opacity-40 text-white hover:opacity-100 hover:bg-white/5" : "opacity-60 text-black hover:opacity-100 hover:bg-black/5"}`}
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
 
-                          <h2 className={`text-xl font-display font-black uppercase tracking-tight mb-6 ${isDarkMode ? "text-white" : "text-black"}`}>
-                              {editingPlan.id === 'new' ? 'Create New Plan' : 'Edit Plan'}
-                          </h2>
+                        <h2 className={`text-xl font-display font-black uppercase tracking-tight mb-6 ${isDarkMode ? "text-white" : "text-black"}`}>
+                            {editingPlan.id === 'new' ? 'Create New Plan' : 'Edit Plan'}
+                        </h2>
 
-                          <form onSubmit={(e) => {
-                              e.preventDefault();
-                              const formData = new FormData(e.target as HTMLFormElement);
-                              if (editingPlan.id === 'new') {
-                                  setIsCreatingPlan(true);
-                                  createPlan({
-                                      plan_name: formData.get('plan_name') as string,
-                                      price_inr: Number(formData.get('price_inr')),
-                                      daily_chat_limit: Number(formData.get('daily_chat_limit')),
-                                      daily_coding_limit: Number(formData.get('daily_coding_limit')),
-                                      daily_vision_limit: Number(formData.get('daily_vision_limit')),
-                                      monthly_image_limit: Number(formData.get('monthly_image_limit')),
-                                      monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
-                                      daily_tts_limit: Number(formData.get('daily_tts_limit')),
-                                      daily_stt_limit: Number(formData.get('daily_stt_limit'))
-                                  }).then(() => {
-                                      toast.success("Plan created successfully");
-                                      setEditingPlan(null);
-                                      fetchData();
-                                  }).catch(err => {
-                                      toast.error("Error creating plan: " + (err as Error).message);
-                                  }).finally(() => {
-                                      setIsCreatingPlan(false);
-                                  });
-                              } else {
-                                  handleUpdatePlan(editingPlan.id?.toString() || '', {
-                                      plan_name: formData.get('plan_name') as string,
-                                      price_inr: Number(formData.get('price_inr')),
-                                      daily_chat_limit: Number(formData.get('daily_chat_limit')),
-                                      daily_coding_limit: Number(formData.get('daily_coding_limit')),
-                                      daily_vision_limit: Number(formData.get('daily_vision_limit')),
-                                      monthly_image_limit: Number(formData.get('monthly_image_limit')),
-                                      monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
-                                      daily_tts_limit: Number(formData.get('daily_tts_limit')),
-                                      daily_stt_limit: Number(formData.get('daily_stt_limit'))
-                                  });
-                              }
-                          }} className="space-y-4">
-                              <div>
-                                  <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Plan Name</label>
-                                  <input
-                                      name="plan_name"
-                                      defaultValue={editingPlan.plan_name || editingPlan.name || ''}
-                                      required
-                                      className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                         isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                      }`}
-                                  />
-                              </div>
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            const formData = new FormData(e.target as HTMLFormElement);
+                            if (editingPlan.id === 'new') {
+                                setIsCreatingPlan(true);
+                                createPlan({
+                                    plan_name: formData.get('plan_name') as string,
+                                    price_inr: Number(formData.get('price_inr')),
+                                    daily_chat_limit: Number(formData.get('daily_chat_limit')),
+                                    daily_coding_limit: Number(formData.get('daily_coding_limit')),
+                                    daily_vision_limit: Number(formData.get('daily_vision_limit')),
+                                    monthly_image_limit: Number(formData.get('monthly_image_limit')),
+                                    monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
+                                    daily_tts_limit: Number(formData.get('daily_tts_limit')),
+                                    daily_stt_limit: Number(formData.get('daily_stt_limit'))
+                                }).then(() => {
+                                    toast.success("Plan created successfully");
+                                    setEditingPlan(null);
+                                    fetchData();
+                                }).catch(err => {
+                                    toast.error("Error creating plan: " + (err as Error).message);
+                                }).finally(() => {
+                                    setIsCreatingPlan(false);
+                                });
+                            } else {
+                                handleUpdatePlan(editingPlan.id?.toString() || '', {
+                                    plan_name: formData.get('plan_name') as string,
+                                    price_inr: Number(formData.get('price_inr')),
+                                    daily_chat_limit: Number(formData.get('daily_chat_limit')),
+                                    daily_coding_limit: Number(formData.get('daily_coding_limit')),
+                                    daily_vision_limit: Number(formData.get('daily_vision_limit')),
+                                    monthly_image_limit: Number(formData.get('monthly_image_limit')),
+                                    monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
+                                    daily_tts_limit: Number(formData.get('daily_tts_limit')),
+                                    daily_stt_limit: Number(formData.get('daily_stt_limit'))
+                                });
+                            }
+                        }} className="space-y-4">
+                            <div>
+                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Plan Name</label>
+                                <input
+                                    name="plan_name"
+                                    defaultValue={editingPlan.plan_name || editingPlan.name || ''}
+                                    required
+                                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                        }`}
+                                />
+                            </div>
 
-                              <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                      <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Price (INR)</label>
-                                      <input
-                                          name="price_inr"
-                                          type="number"
-                                          defaultValue={editingPlan.price_inr || editingPlan.price || 0}
-                                          required
-                                          className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                             isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                          }`}
-                                      />
-                                  </div>
-                                  <div>
-                                      <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily Chat</label>
-                                      <input
-                                          name="daily_chat_limit"
-                                          type="number"
-                                          defaultValue={editingPlan.daily_chat_limit || 0}
-                                          className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                             isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                          }`}
-                                      />
-                                  </div>
-                              </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Price (INR)</label>
+                                    <input
+                                        name="price_inr"
+                                        type="number"
+                                        defaultValue={editingPlan.price_inr || editingPlan.price || 0}
+                                        required
+                                        className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily Chat</label>
+                                    <input
+                                        name="daily_chat_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.daily_chat_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
+                                    />
+                                </div>
+                            </div>
 
-                              <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                      <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily Coding</label>
-                                      <input
-                                          name="daily_coding_limit"
-                                          type="number"
-                                          defaultValue={editingPlan.daily_coding_limit || 0}
-                                          className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                             isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                          }`}
-                                      />
-                                  </div>
-                                  <div>
-                                      <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily Vision</label>
-                                      <input
-                                          name="daily_vision_limit"
-                                          type="number"
-                                          defaultValue={editingPlan.daily_vision_limit || 0}
-                                          className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                             isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                          }`}
-                                      />
-                                  </div>
-                              </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily Coding</label>
+                                    <input
+                                        name="daily_coding_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.daily_coding_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily Vision</label>
+                                    <input
+                                        name="daily_vision_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.daily_vision_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
+                                    />
+                                </div>
+                            </div>
 
-                              <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                      <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Monthly Images</label>
-                                      <input
-                                          name="monthly_image_limit"
-                                          type="number"
-                                          defaultValue={editingPlan.monthly_image_limit || 0}
-                                          className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                             isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                          }`}
-                                      />
-                                  </div>
-                                  <div>
-                                      <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Monthly Flux</label>
-                                      <input
-                                          name="monthly_flux_limit"
-                                          type="number"
-                                          defaultValue={editingPlan.monthly_flux_limit || 0}
-                                          className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                             isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                          }`}
-                                      />
-                                  </div>
-                              </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Monthly Images</label>
+                                    <input
+                                        name="monthly_image_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.monthly_image_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Monthly Flux</label>
+                                    <input
+                                        name="monthly_flux_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.monthly_flux_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
+                                    />
+                                </div>
+                            </div>
 
-                              <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                      <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily TTS</label>
-                                      <input
-                                          name="daily_tts_limit"
-                                          type="number"
-                                          defaultValue={editingPlan.daily_tts_limit || 0}
-                                          className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                             isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                          }`}
-                                      />
-                                  </div>
-                                  <div>
-                                      <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily STT</label>
-                                      <input
-                                          name="daily_stt_limit"
-                                          type="number"
-                                          defaultValue={editingPlan.daily_stt_limit || 0}
-                                          className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                             isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                          }`}
-                                      />
-                                  </div>
-                              </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily TTS</label>
+                                    <input
+                                        name="daily_tts_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.daily_tts_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily STT</label>
+                                    <input
+                                        name="daily_stt_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.daily_stt_limit || 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
+                                    />
+                                </div>
+                            </div>
 
-                              <button
-                                  type="submit"
-                                  disabled={isUpdatingPlan || isCreatingPlan}
-                                  className="w-full py-3 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl disabled:opacity-50"
-                              >
-                                  {isUpdatingPlan || isCreatingPlan ? "PROCESSING..." : (editingPlan.id === 'new' ? "CREATE PLAN" : "UPDATE PLAN")}
-                              </button>
-                          </form>
-                      </motion.div>
-                  </div>
-              )}
+                            <button
+                                type="submit"
+                                disabled={isUpdatingPlan || isCreatingPlan}
+                                className="w-full py-3 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl disabled:opacity-50"
+                            >
+                                {isUpdatingPlan || isCreatingPlan ? "PROCESSING..." : (editingPlan.id === 'new' ? "CREATE PLAN" : "UPDATE PLAN")}
+                            </button>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
 
             {/* Site Settings Editor Modal */}
             {editingSiteSetting && (
@@ -1322,9 +1999,8 @@ const Dashboard = () => {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className={`relative w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-zinc-800/50 p-6 rounded-[2rem] ${
-                            isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
-                        }`}
+                        className={`relative w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-zinc-800/50 p-6 rounded-[2rem] ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
+                            }`}
                     >
                         <button
                             onClick={() => { setEditingSiteSetting(null); setSiteFormData(null); }}
@@ -1335,9 +2011,9 @@ const Dashboard = () => {
 
                         <h2 className={`text-xl font-display font-black uppercase tracking-tight mb-6 ${isDarkMode ? "text-white" : "text-black"}`}>
                             {editingSiteSetting.key === 'about_us' ? 'About Us' :
-                             editingSiteSetting.key === 'privacy_policy' ? 'Privacy Policy' :
-                             editingSiteSetting.key === 'terms_conditions' ? 'Terms of Service' :
-                             editingSiteSetting.key === 'contact_info' ? 'Contact Us' : editingSiteSetting.key}
+                                editingSiteSetting.key === 'privacy_policy' ? 'Privacy Policy' :
+                                    editingSiteSetting.key === 'terms_conditions' ? 'Terms of Service' :
+                                        editingSiteSetting.key === 'contact_info' ? 'Contact Us' : editingSiteSetting.key}
                         </h2>
 
                         {editingSiteSetting.key === 'about_us' && (
@@ -1355,9 +2031,8 @@ const Dashboard = () => {
                                                 <select
                                                     value={el.type || 'paragraph'}
                                                     onChange={(e) => updateField('type', e.target.value)}
-                                                    className={`p-2 text-[10px] font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                                        isDarkMode ? "bg-black border-white/10 text-white" : "bg-white border-black/10 text-black"
-                                                    }`}
+                                                    className={`p-2 text-[10px] font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-black border-white/10 text-white" : "bg-white border-black/10 text-black"
+                                                        }`}
                                                 >
                                                     <option value="heading">Heading</option>
                                                     <option value="subheading">Subheading</option>
@@ -1380,9 +2055,8 @@ const Dashboard = () => {
                                                 onChange={(e) => updateField('content', e.target.value)}
                                                 rows={4}
                                                 placeholder={el.type === 'paragraph' ? 'Paragraph text...' : el.type === 'heading' ? 'Heading text...' : 'Subheading text...'}
-                                                className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${
-                                                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                                }`}
+                                                className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                    }`}
                                             />
                                         </div>
                                     );
@@ -1433,9 +2107,8 @@ const Dashboard = () => {
                                                     setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
                                                 }}
                                                 rows={3}
-                                                className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${
-                                                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                                }`}
+                                                className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                    }`}
                                             />
                                         </div>
                                     ))}
@@ -1461,9 +2134,8 @@ const Dashboard = () => {
                                             setSiteFormData(next);
                                             setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
                                         }}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                            isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                        }`}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
                                     />
                                 </div>
                                 <div>
@@ -1475,9 +2147,8 @@ const Dashboard = () => {
                                             setSiteFormData(next);
                                             setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
                                         }}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                            isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                        }`}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
                                     />
                                 </div>
                             </div>
@@ -1494,9 +2165,8 @@ const Dashboard = () => {
                                             setSiteFormData(next);
                                             setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
                                         }}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                            isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                        }`}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
                                     />
                                 </div>
                                 {(Array.isArray(siteFormData?.sections) ? siteFormData.sections : []).map((s: any, i: number) => {
@@ -1526,18 +2196,16 @@ const Dashboard = () => {
                                                 value={s.title || ''}
                                                 onChange={(e) => updateField('title', e.target.value)}
                                                 placeholder="Section title"
-                                                className={`w-full mb-2 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                                                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                                }`}
+                                                className={`w-full mb-2 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                    }`}
                                             />
                                             <textarea
                                                 value={s.content || ''}
                                                 onChange={(e) => updateField('content', e.target.value)}
                                                 rows={4}
                                                 placeholder="Section content"
-                                                className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${
-                                                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                                }`}
+                                                className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                    }`}
                                             />
                                         </div>
                                     );
@@ -1560,9 +2228,8 @@ const Dashboard = () => {
                         <div className="flex gap-3 mt-6">
                             <button
                                 onClick={() => { setEditingSiteSetting(null); setSiteFormData(null); }}
-                                className={`flex-1 py-3 border text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl ${
-                                    isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"
-                                }`}
+                                className={`flex-1 py-3 border text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl ${isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"
+                                    }`}
                             >
                                 Cancel
                             </button>
@@ -1599,9 +2266,8 @@ const Dashboard = () => {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className={`relative w-full max-w-lg border border-zinc-800/50 p-6 rounded-[2rem] ${
-                            isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
-                        }`}
+                        className={`relative w-full max-w-lg border border-zinc-800/50 p-6 rounded-[2rem] ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
+                            }`}
                     >
                         <button
                             onClick={() => setShowCreateSchoolAdminModal(false)}
@@ -1691,9 +2357,8 @@ const Dashboard = () => {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className={`relative w-full max-w-lg border border-zinc-800/50 p-6 rounded-[2rem] overflow-hidden ${
-                            isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
-                        }`}
+                        className={`relative w-full max-w-lg border border-zinc-800/50 p-6 rounded-[2rem] overflow-hidden ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
+                            }`}
                     >
                         <button
                             onClick={() => setCreatedAdminInfo(null)}
@@ -1732,9 +2397,8 @@ const Dashboard = () => {
                                 { label: 'Admin Code', value: createdAdminInfo.adminCode, highlight: true },
                                 { label: 'Password', value: createdAdminInfo.adminPassword, highlight: true },
                             ] as { label: string; value: string; highlight?: boolean }[]).map(({ label, value, highlight }) => (
-                                <div key={label} className={`flex items-center justify-between gap-4 px-3 py-2 rounded-xl ${
-                                    highlight ? (isDarkMode ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-500/10 border border-emerald-500/20') : ''
-                                }`}>
+                                <div key={label} className={`flex items-center justify-between gap-4 px-3 py-2 rounded-xl ${highlight ? (isDarkMode ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-500/10 border border-emerald-500/20') : ''
+                                    }`}>
                                     <span className={`text-[9px] uppercase tracking-widest shrink-0 ${isDarkMode ? 'opacity-40' : 'opacity-60'}`}>{label}</span>
                                     <span className={`font-bold truncate ${highlight ? 'text-emerald-400' : ''}`}>{value}</span>
                                     <button
@@ -1769,10 +2433,10 @@ const Dashboard = () => {
             )}
 
             {/* Footer Style Decoration */}
-             <div className="fixed bottom-10 left-10 flex items-center gap-4 pointer-events-none opacity-10">
-                 <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                 <span className={`text-[10px] font-mono tracking-[0.5em] uppercase ${isDarkMode ? "text-white" : "text-black"}`}>R_CORE_STABLE // NO_VULN</span>
-             </div>
+            <div className="fixed bottom-10 left-10 flex items-center gap-4 pointer-events-none opacity-10">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className={`text-[10px] font-mono tracking-[0.5em] uppercase ${isDarkMode ? "text-white" : "text-black"}`}>R_CORE_STABLE // NO_VULN</span>
+            </div>
         </div>
     );
 };

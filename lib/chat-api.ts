@@ -163,6 +163,48 @@ export async function unfreezeUser(userId: string) {
   return data
 }
 
+export interface DeleteUserResponse {
+  success: boolean
+  message?: string
+  error?: string
+}
+
+export async function deleteAdminUser(userId: string) {
+  const res = await fetch(`${API_BASE}/admin/users/${userId}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<DeleteUserResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to delete user.")
+  }
+  return data
+}
+
+export async function deleteSchoolFaculty(adminCode: string) {
+  const res = await fetch(`${API_BASE}/school/faculty/${encodeURIComponent(adminCode)}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<DeleteUserResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to delete faculty.")
+  }
+  return data
+}
+
+export async function deleteSchoolStudent(studentId: string) {
+  const res = await fetch(`${API_BASE}/school/students/${studentId}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<DeleteUserResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to delete student.")
+  }
+  return data
+}
+
 export interface UpdatePlanResponse {
   success: boolean
   plan?: Plan
@@ -468,6 +510,54 @@ export interface CreateSchoolAdminResponse {
   admin?: { id: string; name: string; admin_code: string }
   email_sent?: boolean
   error?: string
+}
+
+export interface AdminRequest {
+  id: number
+  school_name: string
+  admin_name: string
+  admin_email: string
+  admin_password: string
+  status: string
+  created_at: string
+  reviewed_at?: string
+}
+
+export interface AdminRequestsResponse {
+  success: boolean
+  requests?: AdminRequest[]
+  count?: number
+  error?: string
+}
+
+export async function getAdminRequests() {
+  const res = await fetch(`${API_BASE}/admin/requests`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<AdminRequestsResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to fetch requests")
+  }
+  return data
+}
+
+export interface DeclineRequestResponse {
+  success: boolean
+  message?: string
+  error?: string
+}
+
+export async function declineAdminRequest(requestId: number) {
+  const res = await fetch(`${API_BASE}/admin/requests/${requestId}/decline`, {
+    method: "POST",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<DeclineRequestResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to decline request")
+  }
+  return data
 }
 
 export async function createSchoolAdmin(payload: CreateSchoolAdminPayload) {
@@ -808,6 +898,35 @@ export async function getAdminSchoolAdmins() {
     throw new Error(data.error || "Unable to fetch school admins")
   }
   return data
+}
+
+// Admin: fetch faculty list for a specific school by code
+export interface AdminSchoolFacultyListResponse {
+  success: boolean
+  faculty?: SchoolFacultyMember[]
+  error?: string
+}
+
+export async function getAdminSchoolFacultyByCode(schoolCode: string) {
+  try {
+    const res = await fetch(`${API_BASE}/admin/schools/code/${encodeURIComponent(schoolCode)}/faculty`, {
+      method: "GET",
+      headers: getHeaders(),
+    })
+    const text = await res.text()
+    try {
+      const data = JSON.parse(text) as AdminSchoolFacultyListResponse
+      if (!res.ok || !data.success) {
+        return { success: false, faculty: [], error: data.error || "Unable to fetch school faculty" }
+      }
+      return data
+    } catch {
+      // Endpoint likely not available on this backend; fail gracefully
+      return { success: false, faculty: [], error: 'Faculty endpoint not available' }
+    }
+  } catch (e: any) {
+    return { success: false, faculty: [], error: e.message || 'Failed to fetch school faculty' }
+  }
 }
 
 export interface AdminActivityItem {

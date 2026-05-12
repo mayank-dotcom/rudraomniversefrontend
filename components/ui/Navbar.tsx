@@ -18,7 +18,7 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
     const handleLogout = () => {
         removeApiKey()
         setAuthed(false)
-        window.location.reload()
+        window.location.href = "/"
     }
 
     return (
@@ -46,6 +46,7 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
                     <Link href="/pricing" className={`transition-colors duration-300 ${isDarkMode ? "hover:text-white" : "hover:text-gray-400"}`}>02 — Pricing</Link>
                     <a href="/#manifesto" className={`transition-colors duration-300 ${isDarkMode ? "hover:text-white" : "hover:text-gray-400"}`}>03 — Manifesto</a>
                     <a href="/#cta" className={`transition-colors duration-300 ${isDarkMode ? "hover:text-white" : "hover:text-gray-400"}`}>04 — Access</a>
+                    <Link href="/schools" className={`transition-colors duration-300 ${isDarkMode ? "hover:text-white" : "hover:text-gray-400"}`}>05 — Schools</Link>
                 </div>
 
                 <div className="flex items-center gap-4">

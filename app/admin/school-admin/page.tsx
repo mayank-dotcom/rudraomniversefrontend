@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { LogOut, Users, GraduationCap, RefreshCw, Plus, X, Search, BarChart3, Sun, Moon, User, Activity, TrendingUp, LayoutDashboard, ChevronLeft, ChevronRight as ChevronRightIcon, Database, Phone, MessageSquare } from "lucide-react"
+import { LogOut, Users, GraduationCap, RefreshCw, Plus, X, Search, BarChart3, Sun, Moon, User, Activity, TrendingUp, LayoutDashboard, ChevronLeft, ChevronRight as ChevronRightIcon, Database, Phone, MessageSquare, Trash2 } from "lucide-react"
 import { removeApiKey } from "@/lib/auth"
-import { createSchoolFaculty, getSchoolFaculty, getSchoolStats, getSchoolStudents, SchoolFacultyMember, SchoolStudent } from "@/lib/chat-api"
+import { createSchoolFaculty, getSchoolFaculty, getSchoolStats, getSchoolStudents, SchoolFacultyMember, SchoolStudent, deleteSchoolFaculty, deleteSchoolStudent, freezeUser, getFrozenUsers, unfreezeUser } from "@/lib/chat-api"
 import { toast } from "sonner"
 
 const StatCard = ({ title, value, icon: Icon, color, subtext, isDarkMode }: { title: string, value: any, icon: any, color: string, subtext?: string, isDarkMode: boolean }) => (
@@ -41,6 +41,12 @@ export default function SchoolAdminPage() {
   const [showAddFaculty, setShowAddFaculty] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [creatingFaculty, setCreatingFaculty] = useState(false)
+  const [confirmDeleteFacultyCode, setConfirmDeleteFacultyCode] = useState<string | null>(null)
+  const [deletingFacultyCode, setDeletingFacultyCode] = useState<string | null>(null)
+  const [confirmDeleteStudentId, setConfirmDeleteStudentId] = useState<string | null>(null)
+  const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null)
+  const [frozenUserIds, setFrozenUserIds] = useState<string[]>([])
+  const [togglingFreezeUserId, setTogglingFreezeUserId] = useState<string | null>(null)
   const [facultyForm, setFacultyForm] = useState({
     name: "",
     email: "",
@@ -55,10 +61,11 @@ export default function SchoolAdminPage() {
   const loadDashboard = async () => {
     setRefreshing(true)
     try {
-      const [statsRes, facultyRes, studentsRes] = await Promise.all([
+      const [statsRes, facultyRes, studentsRes, frozenRes] = await Promise.all([
         getSchoolStats(),
         getSchoolFaculty(),
         getSchoolStudents(),
+        getFrozenUsers().catch(() => ({ success: true, frozen_users: [] as { user_id: string }[] })),
       ])
 
       setStats({
@@ -68,6 +75,7 @@ export default function SchoolAdminPage() {
       })
       setFaculty(facultyRes.faculty || [])
       setStudents(studentsRes.students || [])
+      setFrozenUserIds((frozenRes as any).frozen_users?.map((item: any) => item.user_id) || [])
     } catch (err) {
       toast.error("Failed to load school dashboard: " + (err as Error).message)
     } finally {
@@ -141,9 +149,56 @@ export default function SchoolAdminPage() {
     }
   }
 
+  const handleDeleteFaculty = async (adminCode: string) => {
+    setDeletingFacultyCode(adminCode)
+    try {
+      await deleteSchoolFaculty(adminCode)
+      setFaculty(prev => prev.filter(f => f.admin_code !== adminCode))
+      setConfirmDeleteFacultyCode(null)
+      toast.success("Faculty deleted successfully")
+    } catch (err) {
+      toast.error("Failed to delete faculty: " + (err as Error).message)
+    } finally {
+      setDeletingFacultyCode(null)
+    }
+  }
+
+  const handleDeleteStudent = async (studentId: string) => {
+    setDeletingStudentId(studentId)
+    try {
+      await deleteSchoolStudent(studentId)
+      setStudents(prev => prev.filter(s => s.id !== studentId))
+      setConfirmDeleteStudentId(null)
+      toast.success("Student deleted successfully")
+    } catch (err) {
+      toast.error("Failed to delete student: " + (err as Error).message)
+    } finally {
+      setDeletingStudentId(null)
+    }
+  }
+
+  const handleToggleFreeze = async (userId: string, isFrozen: boolean, label: string) => {
+    setTogglingFreezeUserId(userId)
+    try {
+      if (isFrozen) {
+        await unfreezeUser(userId)
+        setFrozenUserIds(prev => prev.filter(id => id !== userId))
+        toast.success(`${label} unfrozen successfully`)
+      } else {
+        await freezeUser(userId)
+        setFrozenUserIds(prev => Array.from(new Set([...prev, userId])))
+        toast.success(`${label} frozen successfully`)
+      }
+    } catch (err) {
+      toast.error(`Failed to ${isFrozen ? "unfreeze" : "freeze"} ${label.toLowerCase()}: ` + (err as Error).message)
+    } finally {
+      setTogglingFreezeUserId(null)
+    }
+  }
+
   const handleLogout = () => {
     removeApiKey()
-    window.location.href = "/admin"
+    window.location.href = "/"
   }
 
   const handleExportCSV = () => {
@@ -164,13 +219,15 @@ export default function SchoolAdminPage() {
   const allTableData = useMemo(() => {
     const facultyEntries = faculty.map(f => ({
       type: "Faculty" as const,
-      id: undefined as string | undefined,
+      id: f.id,
+      admin_code: f.admin_code,
       name: f.name,
       contact: f.email || "—",
       codeOrClass: f.admin_code || "—",
       metric: String(f.student_quota || 0),
       metricLabel: "Quota" as const,
       created: f.created_at ? new Date(f.created_at).toLocaleDateString() : "—",
+      isFrozen: frozenUserIds.includes(f.id),
     }))
     const studentEntries = students.map(s => ({
       type: "Student" as const,
@@ -181,6 +238,7 @@ export default function SchoolAdminPage() {
       metric: String(s.daily_chats || 0),
       metricLabel: "Chats" as const,
       created: s.created_at ? new Date(s.created_at).toLocaleDateString() : "—",
+      isFrozen: frozenUserIds.includes(s.id),
     }))
     const combined = tableFilter === "faculty" ? facultyEntries : tableFilter === "students" ? studentEntries : [...facultyEntries, ...studentEntries]
     const sectioned = sectionFilter ? combined.filter(item => item.type !== "Student" || item.codeOrClass === sectionFilter) : combined
@@ -192,7 +250,7 @@ export default function SchoolAdminPage() {
       const cmp = a.name.localeCompare(b.name)
       return sortOrder === "asc" ? cmp : -cmp
     })
-  }, [faculty, students, query, tableFilter, sortOrder, sectionFilter])
+  }, [faculty, students, query, tableFilter, sortOrder, sectionFilter, frozenUserIds])
 
   const totalTablePages = Math.ceil(allTableData.length / ITEMS_PER_PAGE)
   const paginatedTableData = allTableData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
@@ -439,22 +497,7 @@ export default function SchoolAdminPage() {
                             </div>
                           </div>
                         </button>
-                        <button
-                          onClick={() => setView("students")}
-                          className={`w-full p-5 border rounded-[2rem] text-left transition-all hover:scale-[1.02] active:scale-[0.98] group ${
-                            isDarkMode ? "border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10" : "border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10"
-                          }`}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
-                              <GraduationCap className="h-5 w-5 text-blue-400" />
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-display font-black text-blue-400">Manage Students</h4>
-                              <p className={`text-[9px] font-mono uppercase tracking-widest mt-1 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>View all registered students</p>
-                            </div>
-                          </div>
-                        </button>
+                        {/* Removed: Manage Students quick action per request */}
                         <button
                           onClick={() => setView("usage")}
                           className={`w-full p-5 border rounded-[2rem] text-left transition-all hover:scale-[1.02] active:scale-[0.98] group ${
@@ -608,16 +651,19 @@ export default function SchoolAdminPage() {
                       <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Admin Code</th>
                       <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-center`}>Assigned Class</th>
                       <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Quota</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-right`}>Created</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Created</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-right`}>Actions</th>
                     </tr>
                   </thead>
                   <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
                     {paginatedFaculty.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>Void Found</td>
+                        <td colSpan={6} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>Void Found</td>
                       </tr>
                     ) : (
-                      paginatedFaculty.map((f) => (
+                      paginatedFaculty.map((f) => {
+                        const isFrozen = frozenUserIds.includes(f.id)
+                        return (
                         <tr key={f.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/30 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
                           <td className="p-8">
                             <div className="flex items-center gap-4">
@@ -646,11 +692,51 @@ export default function SchoolAdminPage() {
                               <span className={`text-[9px] ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>SEATS</span>
                             </div>
                           </td>
-                          <td className="p-8 text-right text-[10px] opacity-40">
+                          <td className="p-8 text-[10px] opacity-40">
                             {f.created_at ? new Date(f.created_at).toLocaleDateString() : "—"}
                           </td>
+                          <td className="p-8 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleToggleFreeze(f.id, isFrozen, "Faculty")}
+                                disabled={togglingFreezeUserId === f.id}
+                                className={`px-3 py-2 text-[9px] font-bold tracking-widest rounded-xl transition-all disabled:opacity-50 ${
+                                  isFrozen
+                                    ? "bg-emerald-500 text-black hover:bg-emerald-400"
+                                    : "bg-amber-500 text-black hover:bg-amber-400"
+                                }`}
+                              >
+                                {togglingFreezeUserId === f.id ? "..." : isFrozen ? "UNFREEZE" : "FREEZE"}
+                              </button>
+                              {confirmDeleteFacultyCode === f.admin_code ? (
+                                <>
+                                  <button
+                                    onClick={() => f.admin_code && handleDeleteFaculty(f.admin_code)}
+                                    disabled={deletingFacultyCode === f.admin_code}
+                                    className="px-3 py-2 bg-red-600 text-white text-[9px] font-bold tracking-widest rounded-xl hover:bg-red-700 disabled:opacity-50 transition-all"
+                                  >
+                                    {deletingFacultyCode === f.admin_code ? "..." : "CONFIRM"}
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteFacultyCode(null)}
+                                    className={`p-2 border rounded-xl transition-all ${isDarkMode ? "border-white/30 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => f.admin_code && setConfirmDeleteFacultyCode(f.admin_code)}
+                                  className={`p-2.5 border rounded-xl transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-white/30 text-white/40" : "border-black/10 text-black/40"}`}
+                                  title="Delete faculty"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
-                      ))
+                      )})
                     )}
                   </tbody>
                 </table>
@@ -760,7 +846,8 @@ export default function SchoolAdminPage() {
                       <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Identity</th>
                       <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Mobile</th>
                       <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-center`}>Class</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-right`}>Daily Chats</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Daily Chats</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-right`}>Actions</th>
                     </tr>
                   </thead>
                   <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
@@ -769,7 +856,9 @@ export default function SchoolAdminPage() {
                         <td colSpan={4} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>Void Found</td>
                       </tr>
                     ) : (
-                      paginatedStudents.map((s) => (
+                      paginatedStudents.map((s) => {
+                        const isFrozen = frozenUserIds.includes(s.id)
+                        return (
                         <tr key={s.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/30 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
                           <td className="p-8">
                             <div className="flex items-center gap-4">
@@ -792,14 +881,54 @@ export default function SchoolAdminPage() {
                               {s.assigned_class || "—"}
                             </span>
                           </td>
-                          <td className="p-8 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                          <td className="p-8">
+                            <div className="flex items-center gap-2">
                               <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{s.daily_chats || 0}</span>
                               <span className={`text-[9px] ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>CHATS</span>
                             </div>
                           </td>
+                          <td className="p-8 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleToggleFreeze(s.id, isFrozen, "Student")}
+                                disabled={togglingFreezeUserId === s.id}
+                                className={`px-3 py-2 text-[9px] font-bold tracking-widest rounded-xl transition-all disabled:opacity-50 ${
+                                  isFrozen
+                                    ? "bg-emerald-500 text-black hover:bg-emerald-400"
+                                    : "bg-amber-500 text-black hover:bg-amber-400"
+                                }`}
+                              >
+                                {togglingFreezeUserId === s.id ? "..." : isFrozen ? "UNFREEZE" : "FREEZE"}
+                              </button>
+                              {confirmDeleteStudentId === s.id ? (
+                                <>
+                                  <button
+                                    onClick={() => handleDeleteStudent(s.id)}
+                                    disabled={deletingStudentId === s.id}
+                                    className="px-3 py-2 bg-red-600 text-white text-[9px] font-bold tracking-widest rounded-xl hover:bg-red-700 disabled:opacity-50 transition-all"
+                                  >
+                                    {deletingStudentId === s.id ? "..." : "CONFIRM"}
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteStudentId(null)}
+                                    className={`p-2 border rounded-xl transition-all ${isDarkMode ? "border-white/30 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmDeleteStudentId(s.id)}
+                                  className={`p-2.5 border rounded-xl transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-white/30 text-white/40" : "border-black/10 text-black/40"}`}
+                                  title="Delete student"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
-                      )))}
+                      )}))}
                   </tbody>
                 </table>
               </div>
@@ -1080,12 +1209,13 @@ export default function SchoolAdminPage() {
                       <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Code / Class</th>
                       <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-center`}>Quota / Chats</th>
                       <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Created</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-right`}>Actions</th>
                     </tr>
                   </thead>
                   <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
                     {paginatedTableData.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>Void Found</td>
+                        <td colSpan={7} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>Void Found</td>
                       </tr>
                     ) : (
                       paginatedTableData.map((item, idx) => (
@@ -1114,6 +1244,87 @@ export default function SchoolAdminPage() {
                             <span className={`text-[9px] ml-1 ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>{item.metricLabel}</span>
                           </td>
                           <td className={`p-8 text-[10px] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{item.created}</td>
+                          <td className="p-8 text-right">
+                            {item.type === "Faculty" && item.id && item.admin_code ? (
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => handleToggleFreeze(item.id, item.isFrozen, "Faculty")}
+                                  disabled={togglingFreezeUserId === item.id}
+                                  className={`px-3 py-2 text-[9px] font-bold tracking-widest rounded-xl transition-all disabled:opacity-50 ${
+                                    item.isFrozen
+                                      ? "bg-emerald-500 text-black hover:bg-emerald-400"
+                                      : "bg-amber-500 text-black hover:bg-amber-400"
+                                  }`}
+                                >
+                                  {togglingFreezeUserId === item.id ? "..." : item.isFrozen ? "UNFREEZE" : "FREEZE"}
+                                </button>
+                                {confirmDeleteFacultyCode === item.admin_code ? (
+                                  <>
+                                    <button
+                                      onClick={() => item.admin_code && handleDeleteFaculty(item.admin_code)}
+                                      disabled={deletingFacultyCode === item.admin_code}
+                                      className="px-3 py-2 bg-red-600 text-white text-[9px] font-bold tracking-widest rounded-xl hover:bg-red-700 disabled:opacity-50 transition-all"
+                                    >
+                                      {deletingFacultyCode === item.admin_code ? "..." : "CONFIRM"}
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmDeleteFacultyCode(null)}
+                                      className={`p-2 border rounded-xl transition-all ${isDarkMode ? "border-white/30 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    onClick={() => item.admin_code && setConfirmDeleteFacultyCode(item.admin_code)}
+                                    className={`p-2.5 border rounded-xl transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-white/30 text-white/40" : "border-black/10 text-black/40"}`}
+                                    title="Delete faculty"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            ) : item.type === "Student" && item.id ? (
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => handleToggleFreeze(item.id, item.isFrozen, "Student")}
+                                  disabled={togglingFreezeUserId === item.id}
+                                  className={`px-3 py-2 text-[9px] font-bold tracking-widest rounded-xl transition-all disabled:opacity-50 ${
+                                    item.isFrozen
+                                      ? "bg-emerald-500 text-black hover:bg-emerald-400"
+                                      : "bg-amber-500 text-black hover:bg-amber-400"
+                                  }`}
+                                >
+                                  {togglingFreezeUserId === item.id ? "..." : item.isFrozen ? "UNFREEZE" : "FREEZE"}
+                                </button>
+                                {confirmDeleteStudentId === item.id ? (
+                                  <>
+                                    <button
+                                      onClick={() => handleDeleteStudent(item.id)}
+                                      disabled={deletingStudentId === item.id}
+                                      className="px-3 py-2 bg-red-600 text-white text-[9px] font-bold tracking-widest rounded-xl hover:bg-red-700 disabled:opacity-50 transition-all"
+                                    >
+                                      {deletingStudentId === item.id ? "..." : "CONFIRM"}
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmDeleteStudentId(null)}
+                                      className={`p-2 border rounded-xl transition-all ${isDarkMode ? "border-white/30 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    onClick={() => setConfirmDeleteStudentId(item.id)}
+                                    className={`p-2.5 border rounded-xl transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-white/30 text-white/40" : "border-black/10 text-black/40"}`}
+                                    title="Delete student"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            ) : null}
+                          </td>
                         </tr>
                       ))
                     )}

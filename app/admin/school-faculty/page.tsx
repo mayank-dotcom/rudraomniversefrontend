@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { Users, LogOut, GraduationCap, RefreshCw, Plus, X, Search, BarChart3, Sun, Moon, User, Activity, TrendingUp, LayoutDashboard, ChevronLeft, ChevronRight as ChevronRightIcon, Database, Phone, MessageSquare, Clock, BookOpen, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import { Users, LogOut, GraduationCap, RefreshCw, Plus, X, Search, BarChart3, Sun, Moon, User, Activity, TrendingUp, LayoutDashboard, ChevronLeft, ChevronRight as ChevronRightIcon, Database, Phone, MessageSquare, Clock, BookOpen, ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from "lucide-react"
 import { removeApiKey } from "@/lib/auth"
-import { getSchoolStats, getSchoolStudents, createSchoolStudent, SchoolStudent, SchoolStatsResponse } from "@/lib/chat-api"
+import { getSchoolStats, getSchoolStudents, createSchoolStudent, SchoolStudent, SchoolStatsResponse, deleteSchoolStudent, freezeUser, getFrozenUsers, unfreezeUser } from "@/lib/chat-api"
 import { toast } from "sonner"
 
 const CircularProgress = ({ value, max, size = 100, strokeWidth = 8, color = "#8b5cf6", label }: { value: number; max: number; size?: number; strokeWidth?: number; color?: string; label: string }) => {
@@ -58,6 +58,10 @@ export default function SchoolFacultyAdminPage() {
   const [sortField, setSortField] = useState<"name" | "daily_chats" | "assigned_class">("name")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   const [creatingStudent, setCreatingStudent] = useState(false)
+  const [confirmDeleteStudentId, setConfirmDeleteStudentId] = useState<string | null>(null)
+  const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null)
+  const [frozenUserIds, setFrozenUserIds] = useState<string[]>([])
+  const [togglingFreezeUserId, setTogglingFreezeUserId] = useState<string | null>(null)
   const [studentForm, setStudentForm] = useState({
     name: "",
     roll_no: "",
@@ -70,9 +74,10 @@ export default function SchoolFacultyAdminPage() {
   const loadDashboard = async () => {
     setRefreshing(true)
     try {
-      const [statsRes, studentsRes] = await Promise.all([
+      const [statsRes, studentsRes, frozenRes] = await Promise.all([
         getSchoolStats(),
         getSchoolStudents(),
+        getFrozenUsers().catch(() => ({ success: true, frozen_users: [] as { user_id: string }[] })),
       ])
       console.log('[FacultyDashboard] Stats:', statsRes)
       console.log('[FacultyDashboard] Students:', studentsRes)
@@ -90,6 +95,7 @@ export default function SchoolFacultyAdminPage() {
         leaderboard,
       })
       setStudents(studentList)
+      setFrozenUserIds((frozenRes as any).frozen_users?.map((item: any) => item.user_id) || [])
     } catch (err) {
       console.error('[FacultyDashboard] Load Error:', err)
       toast.error("Failed to load dashboard: " + (err as Error).message)
@@ -163,9 +169,42 @@ export default function SchoolFacultyAdminPage() {
     }
   }
 
+  const handleDeleteStudent = async (studentId: string) => {
+    setDeletingStudentId(studentId)
+    try {
+      await deleteSchoolStudent(studentId)
+      setStudents(prev => prev.filter(s => s.id !== studentId))
+      setConfirmDeleteStudentId(null)
+      toast.success("Student deleted successfully")
+    } catch (err) {
+      toast.error("Failed to delete student: " + (err as Error).message)
+    } finally {
+      setDeletingStudentId(null)
+    }
+  }
+
+  const handleToggleFreeze = async (studentId: string, isFrozen: boolean) => {
+    setTogglingFreezeUserId(studentId)
+    try {
+      if (isFrozen) {
+        await unfreezeUser(studentId)
+        setFrozenUserIds(prev => prev.filter(id => id !== studentId))
+        toast.success("Student unfrozen successfully")
+      } else {
+        await freezeUser(studentId)
+        setFrozenUserIds(prev => Array.from(new Set([...prev, studentId])))
+        toast.success("Student frozen successfully")
+      }
+    } catch (err) {
+      toast.error(`Failed to ${isFrozen ? "unfreeze" : "freeze"} student: ` + (err as Error).message)
+    } finally {
+      setTogglingFreezeUserId(null)
+    }
+  }
+
   const handleLogout = () => {
     removeApiKey()
-    window.location.href = "/admin"
+    window.location.href = "/"
   }
 
   if (loading) {
@@ -623,20 +662,23 @@ export default function SchoolFacultyAdminPage() {
                           Class {sortField === "assigned_class" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                         </button>
                       </th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>
-                        <button onClick={() => toggleSort("daily_chats")} className="flex items-center gap-1 hover:opacity-80 transition-all justify-end ml-auto">
-                          Daily Chats {sortField === "daily_chats" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
+                        <button onClick={() => toggleSort("daily_chats")} className="flex items-center gap-1 hover:opacity-80 transition-all">
+                          Score {sortField === "daily_chats" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                         </button>
                       </th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>Actions</th>
                     </tr>
                   </thead>
                   <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
                     {paginatedStudents.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>Void Found</td>
+                        <td colSpan={5} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>Void Found</td>
                       </tr>
                     ) : (
-                      paginatedStudents.map((s) => (
+                      paginatedStudents.map((s) => {
+                        const isFrozen = frozenUserIds.includes(s.id)
+                        return (
                         <tr key={s.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
                           <td className="p-8">
                             <div className="flex items-center gap-4">
@@ -665,8 +707,48 @@ export default function SchoolFacultyAdminPage() {
                               <span className={`text-[9px] ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>SCORE</span>
                             </div>
                           </td>
+                          <td className="p-8 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleToggleFreeze(s.id, isFrozen)}
+                                disabled={togglingFreezeUserId === s.id}
+                                className={`px-3 py-2 text-[9px] font-bold tracking-widest rounded-xl transition-all disabled:opacity-50 ${
+                                  isFrozen
+                                    ? "bg-emerald-500 text-black hover:bg-emerald-400"
+                                    : "bg-amber-500 text-black hover:bg-amber-400"
+                                }`}
+                              >
+                                {togglingFreezeUserId === s.id ? "..." : isFrozen ? "UNFREEZE" : "FREEZE"}
+                              </button>
+                              {confirmDeleteStudentId === s.id ? (
+                                <>
+                                  <button
+                                    onClick={() => handleDeleteStudent(s.id)}
+                                    disabled={deletingStudentId === s.id}
+                                    className="px-3 py-2 bg-red-600 text-white text-[9px] font-bold tracking-widest rounded-xl hover:bg-red-700 disabled:opacity-50 transition-all"
+                                  >
+                                    {deletingStudentId === s.id ? "..." : "CONFIRM"}
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteStudentId(null)}
+                                    className={`p-2 border rounded-xl transition-all ${isDarkMode ? "border-white/30 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmDeleteStudentId(s.id)}
+                                  className={`p-2.5 border rounded-xl transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-white/30 text-white/40" : "border-black/10 text-black/40"}`}
+                                  title="Delete student"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
-                      ))
+                      )})
                     )}
                   </tbody>
                 </table>

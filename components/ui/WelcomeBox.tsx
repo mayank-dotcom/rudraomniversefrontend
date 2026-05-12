@@ -178,10 +178,11 @@ const WelcomeBox = ({ isDarkMode, onSelectEngine, onOpenMockPaper, onOpenIntervi
                                         <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)]`} />
                                         <div className="flex items-center gap-3 mb-2">
                                              <Icon
-                                                 className={`h-5 w-5 flex-shrink-0 transition-colors duration-300 ${isDarkMode
-                                                     ? "text-emerald-500/60 group-hover:text-emerald-400"
-                                                     : "text-emerald-600/60 group-hover:text-emerald-500"
-                                                     }`}
+                                                 className={`h-5 w-5 flex-shrink-0 transition-colors duration-300 ${
+                                                     isDarkMode
+                                                         ? (Icon === Calendar ? 'text-white' : 'text-emerald-500/60 group-hover:text-emerald-400')
+                                                         : 'text-emerald-600/60 group-hover:text-emerald-500'
+                                                 }`}
                                              />
                                              <h3 className={`text-xs font-bold tracking-wide ${isDarkMode ? "text-white" : "text-black"
                                                  }`}>

@@ -14,6 +14,7 @@ import StudentLogin from "./pages/StudentLogin";
 import SchoolAdminLogin from "./pages/SchoolAdminLogin";
 import SchoolFacultyLogin from "./pages/SchoolFacultyLogin";
 import EnterpriseLogin from "./pages/EnterpriseLogin";
+import Schools from "./pages/Schools";
 import About from "./pages/About";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -39,6 +40,7 @@ const AppContent = () => (
                         <Route path="/privacy" element={<Privacy />} />
                         <Route path="/terms" element={<Terms />} />
                         <Route path="/contact" element={<Contact />} />
+                        <Route path="/schools" element={<Schools />} />
                         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
 
                         <Route path="*" element={<NotFound />} />

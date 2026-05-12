@@ -1,6 +1,5 @@
 "use client"
 
-import { Link } from "react-router-dom";
 import { useTheme } from "@/lib/theme-context";
 
 export default function Footer() {
@@ -22,17 +21,17 @@ export default function Footer() {
 
                     <div className="flex flex-col gap-3">
                         <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Company</span>
-                        <Link to="/about" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>About Us</Link>
-                        <Link to="/privacy" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Privacy Policy</Link>
-                        <Link to="/terms" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Terms of Service</Link>
-                        <Link to="/contact" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Contact Us</Link>
+                        <a href="/about" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>About Us</a>
+                        <a href="/privacy" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Privacy Policy</a>
+                        <a href="/terms" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Terms of Service</a>
+                        <a href="/contact" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Contact Us</a>
                     </div>
 
                     <div className="flex flex-col gap-3">
                         <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Platforms</span>
-                        <a href="#" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>For Schools</a>
-                        <a href="#" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>For B2B</a>
-                        <Link to="/pricing" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Pricing</Link>
+                        <a href="/schools" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>For Schools</a>
+                        <a href="/pricing" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>For B2B</a>
+                        <a href="/pricing" className={`text-[10px] font-mono uppercase tracking-widest transition-all duration-300 ${isDarkMode ? "text-muted-foreground hover:text-white" : "text-black/60 hover:text-black"} hover:translate-x-1`}>Pricing</a>
                     </div>
 
                     <div className="flex flex-col gap-3">

@@ -951,7 +951,7 @@ STRICT RULES:
     }
 
     if (!authed) {
-        window.location.href = "/auth";
+        window.location.href = "/";
         return null;
     }
 
@@ -1125,8 +1125,14 @@ STRICT RULES:
                                                     ? (isDarkMode ? "bg-white/5 text-white border-l border-white" : "bg-black/5 text-black border-l border-black")
                                                     : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
                                             }`}
-                                        >
-                                            <engine.icon className="h-4 w-4 flex-shrink-0" />
+                                            >
+                                            {(() => {
+                                                const Icon = engine.icon as any;
+                                                const isCalendar = Icon === Calendar;
+                                                return (
+                                                    <Icon className={`h-4 w-4 flex-shrink-0 ${isDarkMode && isCalendar ? 'text-white' : ''}`} />
+                                                );
+                                            })()}
                                             {sidebarWidth > 120 && (
                                                 <div className="flex items-center justify-between w-full min-w-0">
                                                     <span className="truncate">{engine.name}</span>

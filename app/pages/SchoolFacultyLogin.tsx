@@ -46,9 +46,9 @@ export default function SchoolFacultyLogin() {
                             <span className="font-serif text-lg text-white/40 italic">ai</span>
                         </div>
                     </Link>
-                    <Link href="/auth" className="px-6 py-2.5 border border-white/10 text-white text-[10px] font-mono uppercase tracking-widest font-bold hover:bg-white/5 transition-all flex items-center gap-2">
+                    <Link href="/" className="px-6 py-2.5 border border-white/10 text-white text-[10px] font-mono uppercase tracking-widest font-bold hover:bg-white/5 transition-all flex items-center gap-2">
                         <ArrowLeft className="h-3.5 w-3.5" />
-                        Back to Roles
+                        Back to Home
                     </Link>
                 </div>
             </div>
