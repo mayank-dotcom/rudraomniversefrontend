@@ -3,13 +3,13 @@
 import React, { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { ShieldCheck, LogOut, Users, GraduationCap, RefreshCw, Plus, X, Search, BarChart3, Sun, Moon, User, Activity, TrendingUp, LayoutDashboard, ChevronLeft, ChevronRight as ChevronRightIcon, Database, Phone, MessageSquare, Building2, Shield, Clock, BookOpen, Table as TableIcon } from "lucide-react"
+import { LogOut, Users, GraduationCap, RefreshCw, Plus, X, Search, BarChart3, Sun, Moon, User, Activity, TrendingUp, LayoutDashboard, ChevronLeft, ChevronRight as ChevronRightIcon, Database, Phone, MessageSquare } from "lucide-react"
 import { removeApiKey } from "@/lib/auth"
-import { createSchoolFaculty, getSchoolFaculty, getSchoolStats, getSchoolStudents, getAdminSchools, getAdminSchoolAdmins, getAdminActivity, getAdminPlans, SchoolFacultyMember, SchoolStudent, AdminSchool, AdminSchoolAdmin, AdminActivityItem, AdminPlan } from "@/lib/chat-api"
+import { createSchoolFaculty, getSchoolFaculty, getSchoolStats, getSchoolStudents, SchoolFacultyMember, SchoolStudent } from "@/lib/chat-api"
 import { toast } from "sonner"
 
 const StatCard = ({ title, value, icon: Icon, color, subtext, isDarkMode }: { title: string, value: any, icon: any, color: string, subtext?: string, isDarkMode: boolean }) => (
-    <div className={`relative border rounded-[2.5rem] p-8 overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-zinc-800/50" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"}`}>
+    <div className={`relative border rounded-[2.5rem] p-8 overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/30" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"}`}>
         <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
         <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
         <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{title}</span>
@@ -33,13 +33,11 @@ export default function SchoolAdminPage() {
     leaderboard: [],
   })
   const [displayMode, setDisplayMode] = useState<"dashboard" | "table">("dashboard")
-  const [view, setView] = useState<"overview" | "faculty" | "students" | "schools" | "admins" | "plans" | "activity" | "usage">("overview")
-  const [adminSchools, setAdminSchools] = useState<AdminSchool[]>([])
-  const [schoolAdmins, setSchoolAdmins] = useState<AdminSchoolAdmin[]>([])
-  const [activityLogs, setActivityLogs] = useState<AdminActivityItem[]>([])
-  const [allPlans, setAllPlans] = useState<AdminPlan[]>([])
-  const [adminDataError, setAdminDataError] = useState<string | null>(null)
+  const [view, setView] = useState<"overview" | "faculty" | "students" | "usage">("overview")
+  const [tableFilter, setTableFilter] = useState<"all" | "faculty" | "students">("all")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   const [query, setQuery] = useState("")
+  const [sectionFilter, setSectionFilter] = useState("")
   const [showAddFaculty, setShowAddFaculty] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [creatingFaculty, setCreatingFaculty] = useState(false)
@@ -56,7 +54,6 @@ export default function SchoolAdminPage() {
 
   const loadDashboard = async () => {
     setRefreshing(true)
-    setAdminDataError(null)
     try {
       const [statsRes, facultyRes, studentsRes] = await Promise.all([
         getSchoolStats(),
@@ -71,22 +68,6 @@ export default function SchoolAdminPage() {
       })
       setFaculty(facultyRes.faculty || [])
       setStudents(studentsRes.students || [])
-
-      // Admin-level data (may fail if no admin key)
-      try {
-        const [schoolsRes, adminsRes, activityRes, plansRes] = await Promise.all([
-          getAdminSchools(),
-          getAdminSchoolAdmins(),
-          getAdminActivity(),
-          getAdminPlans(),
-        ])
-        if (schoolsRes.success) setAdminSchools(schoolsRes.schools || [])
-        if (adminsRes.success) setSchoolAdmins(adminsRes.admins || [])
-        if (activityRes.success) setActivityLogs(activityRes.activity || [])
-        if (plansRes.success) setAllPlans(plansRes.plans || [])
-      } catch (adminErr) {
-        setAdminDataError((adminErr as Error).message)
-      }
     } catch (err) {
       toast.error("Failed to load school dashboard: " + (err as Error).message)
     } finally {
@@ -105,11 +86,20 @@ export default function SchoolAdminPage() {
     return faculty.filter((f) => [f.name, f.email, f.admin_code, f.assigned_class].some((v) => (v || "").toLowerCase().includes(q)))
   }, [faculty, query])
 
+  const uniqueClasses = useMemo(() => {
+    const classes = new Set(students.map(s => s.assigned_class).filter(Boolean) as string[])
+    return ["", ...Array.from(classes).sort()]
+  }, [students])
+
   const filteredStudents = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return students
-    return students.filter((s) => [s.name, s.mobile_number, s.assigned_class].some((v) => (v || "").toLowerCase().includes(q)))
-  }, [students, query])
+    let list = students
+    if (sectionFilter) {
+      list = list.filter(s => s.assigned_class === sectionFilter)
+    }
+    if (!q) return list
+    return list.filter((s) => [s.name, s.mobile_number, s.assigned_class].some((v) => (v || "").toLowerCase().includes(q)))
+  }, [students, query, sectionFilter])
 
   const totalFacultyPages = Math.ceil(filteredFaculty.length / ITEMS_PER_PAGE)
   const paginatedFaculty = filteredFaculty.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
@@ -174,6 +164,7 @@ export default function SchoolAdminPage() {
   const allTableData = useMemo(() => {
     const facultyEntries = faculty.map(f => ({
       type: "Faculty" as const,
+      id: undefined as string | undefined,
       name: f.name,
       contact: f.email || "—",
       codeOrClass: f.admin_code || "—",
@@ -183,6 +174,7 @@ export default function SchoolAdminPage() {
     }))
     const studentEntries = students.map(s => ({
       type: "Student" as const,
+      id: s.id,
       name: s.name,
       contact: s.mobile_number || "—",
       codeOrClass: s.assigned_class || "—",
@@ -190,13 +182,17 @@ export default function SchoolAdminPage() {
       metricLabel: "Chats" as const,
       created: s.created_at ? new Date(s.created_at).toLocaleDateString() : "—",
     }))
-    const all = [...facultyEntries, ...studentEntries]
+    const combined = tableFilter === "faculty" ? facultyEntries : tableFilter === "students" ? studentEntries : [...facultyEntries, ...studentEntries]
+    const sectioned = sectionFilter ? combined.filter(item => item.type !== "Student" || item.codeOrClass === sectionFilter) : combined
     const q = query.trim().toLowerCase()
-    if (!q) return all
-    return all.filter(item =>
+    const filtered = !q ? sectioned : sectioned.filter(item =>
       [item.name, item.contact, item.codeOrClass, item.type].some(v => v.toLowerCase().includes(q))
     )
-  }, [faculty, students, query])
+    return filtered.sort((a, b) => {
+      const cmp = a.name.localeCompare(b.name)
+      return sortOrder === "asc" ? cmp : -cmp
+    })
+  }, [faculty, students, query, tableFilter, sortOrder, sectionFilter])
 
   const totalTablePages = Math.ceil(allTableData.length / ITEMS_PER_PAGE)
   const paginatedTableData = allTableData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
@@ -214,7 +210,7 @@ export default function SchoolAdminPage() {
       <div className={`absolute inset-0 noise opacity-[0.03] pointer-events-none ${isDarkMode ? "" : "invert"}`} />
 
       {/* Top Navigation */}
-      <nav className={`h-20 flex items-center justify-between px-10 border-b ${isDarkMode ? "border-white/5 bg-black/80" : "border-black/5 bg-white/80"} backdrop-blur-2xl sticky top-0 z-[100]`}>
+      <nav className={`h-20 flex items-center justify-between px-10 border-b ${isDarkMode ? "border-white/30 bg-black/80" : "border-black/5 bg-white/80"} backdrop-blur-2xl sticky top-0 z-[100]`}>
         <div className="flex items-center gap-12">
           <Link href="/" className="flex items-center gap-4 group">
             <div className={`h-6 w-6 ${isDarkMode ? "bg-white" : "bg-black"} flex items-center justify-center transition-transform group-hover:rotate-45`}>
@@ -226,7 +222,7 @@ export default function SchoolAdminPage() {
             </div>
           </Link>
 
-          <div className={`flex items-center gap-1 p-1 rounded-2xl border ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}>
+          <div className={`flex items-center gap-1 p-1 rounded-2xl border ${isDarkMode ? "border-white/30 bg-white/5" : "border-black/10 bg-black/5"}`}>
             <button
               onClick={() => { setDisplayMode('dashboard'); setCurrentPage(1) }}
               className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${displayMode === 'dashboard' ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold") : "opacity-40 hover:opacity-100"}`}
@@ -240,53 +236,7 @@ export default function SchoolAdminPage() {
               <Database className="h-3.5 w-3.5 inline-block mr-1.5 -mt-0.5" /> Table
             </button>
           </div>
-          {displayMode === 'dashboard' && (
-            <div className="hidden xl:flex items-center gap-6">
-              <button
-                onClick={() => { setView('overview'); setCurrentPage(1) }}
-                className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'overview' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
-              >
-                <LayoutDashboard className="h-3.5 w-3.5" /> Overview
-              </button>
-              <button
-                onClick={() => { setView('faculty'); setCurrentPage(1) }}
-                className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'faculty' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
-              >
-                <Users className="h-3.5 w-3.5" /> Faculty
-              </button>
-              <button
-                onClick={() => { setView('students'); setCurrentPage(1) }}
-                className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'students' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
-              >
-                <GraduationCap className="h-3.5 w-3.5" /> Students
-              </button>
-              <div className="h-6 w-[1px] bg-white/10" />
-              <button
-                onClick={() => { setView('schools'); setCurrentPage(1) }}
-                className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'schools' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
-              >
-                <Building2 className="h-3.5 w-3.5" /> Schools
-              </button>
-              <button
-                onClick={() => { setView('admins'); setCurrentPage(1) }}
-                className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'admins' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
-              >
-                <Shield className="h-3.5 w-3.5" /> Admins
-              </button>
-              <button
-                onClick={() => { setView('plans'); setCurrentPage(1) }}
-                className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'plans' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
-              >
-                <BookOpen className="h-3.5 w-3.5" /> Plans
-              </button>
-              <button
-                onClick={() => { setView('activity'); setCurrentPage(1) }}
-                className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'activity' ? "text-emerald-400 font-bold" : "opacity-40 hover:opacity-100"}`}
-              >
-                <Clock className="h-3.5 w-3.5" /> Activity
-              </button>
-            </div>
-          )}
+
         </div>
 
         <div className="flex items-center gap-6">
@@ -300,7 +250,7 @@ export default function SchoolAdminPage() {
           <button
             onClick={loadDashboard}
             disabled={refreshing}
-            className={`p-2 rounded-full border border-white/10 hover:bg-white/5 transition-all ${refreshing ? "animate-spin" : ""}`}
+            className={`p-2 rounded-full border ${isDarkMode ? "border-white/30 hover:bg-white/10" : "border-white/10 hover:bg-white/5"} transition-all ${refreshing ? "animate-spin" : ""}`}
           >
             <RefreshCw className="h-4 w-4 opacity-40" />
           </button>
@@ -310,13 +260,13 @@ export default function SchoolAdminPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => { setDisplayMode('dashboard'); setView('overview'); setCurrentPage(1); setQuery("") }}
-              className={`h-10 w-10 rounded-2xl border flex items-center justify-center transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5" : "border-black/10 hover:bg-black/5"}`}
+              className={`h-10 w-10 rounded-2xl border flex items-center justify-center transition-all ${isDarkMode ? "border-white/30 hover:bg-white/10" : "border-black/10 hover:bg-black/5"}`}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <div
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`h-10 w-10 rounded-2xl border flex items-center justify-center cursor-pointer transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5" : "border-black/10 hover:bg-black/5"}`}
+              className={`h-10 w-10 rounded-2xl border flex items-center justify-center cursor-pointer transition-all ${isDarkMode ? "border-white/30 hover:bg-white/10" : "border-black/10 hover:bg-black/5"}`}
             >
               {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </div>
@@ -343,8 +293,8 @@ export default function SchoolAdminPage() {
             >
               {/* Left Panel: Stats Summary */}
               <div className="col-span-12 lg:col-span-3 space-y-8">
-                <div className={`relative border border-zinc-800/50 p-8 rounded-[2.5rem] backdrop-blur-xl overflow-hidden group ${
-                  isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                <div className={`relative border p-8 rounded-[2.5rem] backdrop-blur-xl overflow-hidden group ${
+                  isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/30" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"
                 }`}>
                   <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
                   <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
@@ -380,8 +330,8 @@ export default function SchoolAdminPage() {
                   </div>
                 </div>
 
-                <div className={`relative border border-zinc-800/50 p-8 rounded-[2.5rem] backdrop-blur-xl text-center overflow-hidden group ${
-                  isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                <div className={`relative border p-8 rounded-[2.5rem] backdrop-blur-xl text-center overflow-hidden group ${
+                  isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/30" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"
                 }`}>
                   <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
                   <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
@@ -394,8 +344,8 @@ export default function SchoolAdminPage() {
               {/* Right Panel */}
               <div className="col-span-12 lg:col-span-9 space-y-8">
                 {/* Institution Analytics */}
-                <div className={`relative border border-zinc-800/50 p-10 rounded-[3rem] overflow-hidden group ${
-                  isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                <div className={`relative border p-10 rounded-[3rem] overflow-hidden group ${
+                  isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/30" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"
                 }`}>
                   <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
                   <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
@@ -421,8 +371,8 @@ export default function SchoolAdminPage() {
                 </div>
 
                 {/* School Dashboard */}
-                <div className={`relative border border-zinc-800/50 p-10 rounded-[3rem] overflow-hidden group ${
-                  isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                <div className={`relative border p-10 rounded-[3rem] overflow-hidden group ${
+                  isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/30" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"
                 }`}>
                   <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
                   <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
@@ -438,7 +388,7 @@ export default function SchoolAdminPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
                     {/* Leaderboard */}
                     <div className={`relative border rounded-[2.5rem] p-8 overflow-hidden group ${
-                      isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"
+                      isDarkMode ? "bg-white/5 border-white/30" : "bg-black/5 border-black/10"
                     }`}>
                       <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
                       <div className="flex items-center gap-3 mb-6">
@@ -465,7 +415,7 @@ export default function SchoolAdminPage() {
 
                     {/* Quick Actions */}
                     <div className={`relative border rounded-[2.5rem] p-8 overflow-hidden group ${
-                      isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"
+                      isDarkMode ? "bg-white/5 border-white/30" : "bg-black/5 border-black/10"
                     }`}>
                       <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
                       <div className="flex items-center gap-3 mb-6">
@@ -521,22 +471,7 @@ export default function SchoolAdminPage() {
                             </div>
                           </div>
                         </button>
-                        <button
-                          onClick={() => setView("activity")}
-                          className={`w-full p-5 border rounded-[2rem] text-left transition-all hover:scale-[1.02] active:scale-[0.98] group ${
-                            isDarkMode ? "border-zinc-500/30 bg-zinc-500/5 hover:bg-zinc-500/10" : "border-zinc-500/30 bg-zinc-500/5 hover:bg-zinc-500/10"
-                          }`}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-2xl bg-zinc-500/20 border border-zinc-500/30 flex items-center justify-center">
-                              <Clock className="h-5 w-5 text-zinc-400" />
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-display font-black text-zinc-400">Activity Logs</h4>
-                              <p className={`text-[9px] font-mono uppercase tracking-widest mt-1 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>View system-wide institution activity</p>
-                            </div>
-                          </div>
-                        </button>
+
                         <button
                           onClick={loadDashboard}
                           className={`w-full p-5 border rounded-[2rem] text-left transition-all hover:scale-[1.02] active:scale-[0.98] group ${
@@ -559,7 +494,7 @@ export default function SchoolAdminPage() {
 
                   {/* Student Usage Summary */}
                   <div className={`relative border rounded-[2.5rem] p-8 overflow-hidden group mt-8 ${
-                    isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"
+                    isDarkMode ? "bg-white/5 border-white/30" : "bg-black/5 border-black/10"
                   }`}>
                     <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
                     <div className="flex items-center gap-3 mb-6">
@@ -584,13 +519,15 @@ export default function SchoolAdminPage() {
                             </tr>
                           ) : (
                             students.slice(0, 10).map((s) => (
-                              <tr key={s.id} className={`border-t transition-colors ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
+                              <tr key={s.id} className={`border-t transition-colors ${isDarkMode ? "border-white/30 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
                                 <td className="py-3 pr-4">
                                   <div className="flex items-center gap-3">
-                                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/30" : "bg-black/5 border-black/10"}`}>
                                       <User className={`h-3.5 w-3.5 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
                                     </div>
-                                    <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{s.name}</span>
+                                      <div className="flex flex-col">
+                                      <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{s.name}</span>
+                                    </div>
                                   </div>
                                 </td>
                                 <td className="py-3 px-4 text-center">
@@ -606,36 +543,36 @@ export default function SchoolAdminPage() {
                                     <div className="w-24 h-1.5 rounded-full bg-white/10">
                                       <div className="h-full rounded-full bg-purple-500" style={{ width: `${Math.min(((s.daily_chats || 0) / 100) * 100, 100)}%` }} />
                                     </div>
-                                    <span className={`text-[10px] font-mono ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                      {Math.min(((s.daily_chats || 0) / 100) * 100, 100).toFixed(0)}%
-                                    </span>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                                  <span className={(isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black") + " text-[10px] font-mono"}>
+                                    {Math.min(((s.daily_chats || 0) / 100) * 100, 100).toFixed(0)}%
+                                  </span>
+                                </div>
+                              </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
+            </div>
+          </div>
             </motion.div>
           )}
-
+          
           {displayMode === 'dashboard' && view === "faculty" && (
             <motion.div
               key="faculty"
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
-                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+              className={`relative border rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
+                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/30" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"
               }`}
             >
               <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
               <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-              <div className={`p-10 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
+              <div className={`p-10 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-black border-white/30" : "bg-white border-black/10"}`}>
                 <div>
                   <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Faculty Registry</h2>
                   <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Institution educators • {filteredFaculty.length} members</p>
@@ -649,7 +586,7 @@ export default function SchoolAdminPage() {
                       value={query}
                       onChange={(e) => { setQuery(e.target.value); setCurrentPage(1) }}
                       className={`pl-11 pr-8 py-3 text-[10px] font-mono tracking-widest border rounded-2xl focus:outline-none focus:border-emerald-500/50 min-w-[250px] ${
-                        isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black placeholder:text-black/40"
+                        isDarkMode ? "bg-white/5 border-white/30 text-white" : "bg-black/5 border-black/10 text-black placeholder:text-black/40"
                       }`}
                     />
                   </div>
@@ -667,11 +604,11 @@ export default function SchoolAdminPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Identity</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Admin Code</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Assigned Class</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Quota</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>Created</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Identity</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Admin Code</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-center`}>Assigned Class</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Quota</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-right`}>Created</th>
                     </tr>
                   </thead>
                   <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
@@ -681,10 +618,10 @@ export default function SchoolAdminPage() {
                       </tr>
                     ) : (
                       paginatedFaculty.map((f) => (
-                        <tr key={f.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
+                        <tr key={f.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/30 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
                           <td className="p-8">
                             <div className="flex items-center gap-4">
-                              <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                              <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/30" : "bg-black/5 border-black/10"}`}>
                                 <User className={`h-4 w-4 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
                               </div>
                               <div className="flex flex-col">
@@ -694,7 +631,7 @@ export default function SchoolAdminPage() {
                             </div>
                           </td>
                           <td className="p-8">
-                            <span className={`text-[10px] font-black w-fit px-2 py-0.5 rounded border ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}>
+                            <span className={`text-[10px] font-black w-fit px-2 py-0.5 rounded border ${isDarkMode ? "border-white/30 text-white" : "border-black/10 text-black"}`}>
                               {f.admin_code || "—"}
                             </span>
                           </td>
@@ -720,7 +657,7 @@ export default function SchoolAdminPage() {
               </div>
 
               {/* Pagination */}
-              <div className={`p-8 flex items-center justify-between border-t ${isDarkMode ? "bg-black border-white/10" : "bg-white border-black/10"}`}>
+              <div className={`p-8 flex items-center justify-between border-t ${isDarkMode ? "bg-black border-white/30" : "bg-white border-black/10"}`}>
                 <div className={`flex items-center gap-4 text-[9px] font-mono tracking-[0.3em] uppercase ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
                   <Database className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
                   <span>Page {currentPage} // {totalFacultyPages || 1}</span>
@@ -729,7 +666,7 @@ export default function SchoolAdminPage() {
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/30 text-white" : "border-black/10 text-black"}`}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
@@ -755,7 +692,7 @@ export default function SchoolAdminPage() {
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalFacultyPages, p + 1))}
                     disabled={currentPage === totalFacultyPages || totalFacultyPages === 0}
-                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/30 text-white" : "border-black/10 text-black"}`}
                   >
                     <ChevronRightIcon className="h-4 w-4" />
                   </button>
@@ -770,13 +707,13 @@ export default function SchoolAdminPage() {
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
-                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+              className={`relative border rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
+                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/30" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"
               }`}
             >
               <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
               <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-              <div className={`p-10 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
+              <div className={`p-10 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-black border-white/30" : "bg-white border-black/10"}`}>
                 <div>
                   <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Student Directory</h2>
                   <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Enrolled learners • {filteredStudents.length} records</p>
@@ -790,11 +727,29 @@ export default function SchoolAdminPage() {
                       value={query}
                       onChange={(e) => { setQuery(e.target.value); setCurrentPage(1) }}
                       className={`pl-11 pr-8 py-3 text-[10px] font-mono tracking-widest border rounded-2xl focus:outline-none focus:border-emerald-500/50 min-w-[250px] ${
-                        isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black placeholder:text-black/40"
+                        isDarkMode ? "bg-white/5 border-white/30 text-white" : "bg-black/5 border-black/10 text-black placeholder:text-black/40"
                       }`}
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Section Filter */}
+              <div className={`px-10 py-4 border-b flex items-center gap-2 overflow-x-auto ${isDarkMode ? "bg-black/50 border-white/30" : "bg-white/50 border-black/5"}`}>
+                <span className={`text-[9px] font-mono uppercase tracking-[0.3em] mr-2 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Section:</span>
+                {uniqueClasses.map((cls) => (
+                  <button
+                    key={cls || "all"}
+                    onClick={() => { setSectionFilter(cls); setCurrentPage(1) }}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.15em] transition-all whitespace-nowrap ${
+                      sectionFilter === cls
+                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
+                        : (isDarkMode ? "opacity-40 hover:opacity-100 text-white" : "opacity-60 hover:opacity-100 text-black")
+                    }`}
+                  >
+                    {cls || "All"}
+                  </button>
+                ))}
               </div>
 
               <div className="overflow-x-auto relative overflow-hidden group">
@@ -802,10 +757,10 @@ export default function SchoolAdminPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Identity</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Mobile</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Class</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>Daily Chats</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Identity</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Mobile</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-center`}>Class</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-right`}>Daily Chats</th>
                     </tr>
                   </thead>
                   <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
@@ -815,10 +770,10 @@ export default function SchoolAdminPage() {
                       </tr>
                     ) : (
                       paginatedStudents.map((s) => (
-                        <tr key={s.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
+                        <tr key={s.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/30 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
                           <td className="p-8">
                             <div className="flex items-center gap-4">
-                              <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                              <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/30" : "bg-black/5 border-black/10"}`}>
                                 <User className={`h-4 w-4 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
                               </div>
                               <div className="flex flex-col">
@@ -844,14 +799,13 @@ export default function SchoolAdminPage() {
                             </div>
                           </td>
                         </tr>
-                      ))
-                    )}
+                      )))}
                   </tbody>
                 </table>
               </div>
 
               {/* Pagination */}
-              <div className={`p-8 flex items-center justify-between border-t ${isDarkMode ? "bg-black border-white/10" : "bg-white border-black/10"}`}>
+              <div className={`p-8 flex items-center justify-between border-t ${isDarkMode ? "bg-black border-white/30" : "bg-white border-black/10"}`}>
                 <div className={`flex items-center gap-4 text-[9px] font-mono tracking-[0.3em] uppercase ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
                   <Database className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
                   <span>Page {currentPage} // {totalStudentPages || 1}</span>
@@ -860,7 +814,7 @@ export default function SchoolAdminPage() {
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/30 text-white" : "border-black/10 text-black"}`}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
@@ -880,13 +834,12 @@ export default function SchoolAdminPage() {
                             {pageNum}
                           </button>
                         </React.Fragment>
-                      ))
-                    }
+                      ))}
                   </div>
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalStudentPages, p + 1))}
                     disabled={currentPage === totalStudentPages || totalStudentPages === 0}
-                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/30 text-white" : "border-black/10 text-black"}`}
                   >
                     <ChevronRightIcon className="h-4 w-4" />
                   </button>
@@ -895,249 +848,7 @@ export default function SchoolAdminPage() {
             </motion.div>
           )}
 
-          {displayMode === 'dashboard' && view === "schools" && (
-            <motion.div
-              key="schools"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
-                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-              }`}
-            >
-              <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-              <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-              <div className={`p-10 border-b ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
-                <div>
-                  <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Schools Registry</h2>
-                  <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>All registered institutions • {adminSchools.length} schools</p>
-                </div>
-              </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>ID</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>School Name</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>School Code</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Created</th>
-                    </tr>
-                  </thead>
-                  <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
-                    {adminSchools.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>
-                          {adminDataError || "Void Found"}
-                        </td>
-                      </tr>
-                    ) : (
-                      adminSchools.map((s) => (
-                        <tr key={s.id} className={`border-b transition-colors ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
-                          <td className="p-8 opacity-40">{s.id}</td>
-                          <td className="p-8">
-                            <div className="flex items-center gap-3">
-                              <Building2 className={`h-4 w-4 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
-                              <span className="text-[13px] font-bold tracking-tight">{s.school_name}</span>
-                            </div>
-                          </td>
-                          <td className="p-8">
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}>
-                              {s.school_code}
-                            </span>
-                          </td>
-                          <td className={`p-8 text-[10px] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                            {new Date(s.created_at).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          )}
-
-          {displayMode === 'dashboard' && view === "admins" && (
-            <motion.div
-              key="admins"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
-                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-              }`}
-            >
-              <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-              <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-              <div className={`p-10 border-b ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
-                <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>School Admins</h2>
-                <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Admin personnel • {schoolAdmins.length} records</p>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Name</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Email</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Admin Code</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>School</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Students</th>
-                    </tr>
-                  </thead>
-                  <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
-                    {schoolAdmins.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>
-                          {adminDataError || "Void Found"}
-                        </td>
-                      </tr>
-                    ) : (
-                      schoolAdmins.map((a) => (
-                        <tr key={a.id} className={`border-b transition-colors ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
-                          <td className="p-8">
-                            <div className="flex items-center gap-3">
-                              <Shield className={`h-4 w-4 ${isDarkMode ? "text-amber-400" : "text-amber-600"}`} />
-                              <span className="text-[13px] font-bold tracking-tight">{a.name}</span>
-                            </div>
-                          </td>
-                          <td className={`p-8 text-[10px] ${isDarkMode ? "opacity-60 text-white" : "opacity-80 text-black"}`}>{a.email || "—"}</td>
-                          <td className="p-8">
-                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}>
-                              {a.admin_code}
-                            </span>
-                          </td>
-                          <td className={`p-8 text-[10px] ${isDarkMode ? "opacity-60 text-white" : "opacity-80 text-black"}`}>{a.school_name}</td>
-                          <td className="p-8 text-center">
-                            <span className={`px-3 py-1 rounded-lg text-[10px] font-bold ${isDarkMode ? "bg-emerald-500/10 text-emerald-400" : "bg-emerald-500/10 text-emerald-600"}`}>
-                              {a.student_count}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          )}
-
-          {displayMode === 'dashboard' && view === "plans" && (
-            <motion.div
-              key="plans"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
-                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-              }`}
-            >
-              <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-              <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-              <div className={`p-10 border-b ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
-                <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Subscription Plans</h2>
-                <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Available tiers • {allPlans.length} plans</p>
-              </div>
-
-              <div className="p-10">
-                {allPlans.length === 0 ? (
-                  <div className={`text-center py-20 text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                    {adminDataError || "No plans found"}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {allPlans.map((plan) => (
-                      <div
-                        key={plan.id}
-                        className={`relative border rounded-[2.5rem] p-8 transition-all hover:scale-105 overflow-hidden group ${
-                          isDarkMode
-                            ? "border-zinc-800/50 bg-gradient-to-br from-zinc-900 via-black to-zinc-900"
-                            : "border-zinc-800/50 bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                        }`}
-                      >
-                        <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                        <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                        <h3 className={`text-lg font-display font-black mb-4 ${isDarkMode ? "text-white" : "text-black"}`}>{plan.plan_name}</h3>
-                        <p className={`text-3xl font-display font-black mb-6 ${isDarkMode ? "text-white" : "text-black"}`}>₹{plan.price_inr}</p>
-                        <div className={`space-y-2 mb-6 text-[10px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
-                          <div className="flex justify-between"><span>Daily Chat</span><span className="font-bold">{plan.daily_chat_limit}</span></div>
-                          <div className="flex justify-between"><span>Daily Coding</span><span className="font-bold">{plan.daily_coding_limit}</span></div>
-                          <div className="flex justify-between"><span>Daily Vision</span><span className="font-bold">{plan.daily_vision_limit}</span></div>
-                          <div className="flex justify-between"><span>Monthly Images</span><span className="font-bold">{plan.monthly_image_limit}</span></div>
-                          <div className="flex justify-between"><span>Monthly Flux</span><span className="font-bold">{plan.monthly_flux_limit}</span></div>
-                          <div className="flex justify-between"><span>Daily TTS</span><span className="font-bold">{plan.daily_tts_limit}</span></div>
-                          <div className="flex justify-between"><span>Daily STT</span><span className="font-bold">{plan.daily_stt_limit}</span></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-
-          {displayMode === 'dashboard' && view === "activity" && (
-            <motion.div
-              key="activity"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
-                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-              }`}
-            >
-              <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-              <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-              <div className={`p-10 border-b ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
-                <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Activity Logs</h2>
-                <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>System-wide institution activity</p>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Type</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Institution</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>User</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Activity</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Timestamp</th>
-                    </tr>
-                  </thead>
-                  <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
-                    {activityLogs.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>
-                          {adminDataError || "Void Found"}
-                        </td>
-                      </tr>
-                    ) : (
-                      activityLogs.map((log, idx) => (
-                        <tr key={idx} className={`border-b transition-colors ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
-                          <td className="p-8">
-                            <span className={`px-3 py-1 rounded-lg text-[10px] ${
-                              log.type === "school"
-                                ? (isDarkMode ? "bg-emerald-500/10 text-emerald-400" : "bg-emerald-500/10 text-emerald-600")
-                                : (isDarkMode ? "bg-blue-500/10 text-blue-400" : "bg-blue-500/10 text-blue-600")
-                            }`}>
-                              {log.type}
-                            </span>
-                          </td>
-                          <td className={`p-8 text-[11px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{log.institution}</td>
-                          <td className={`p-8 text-[10px] ${isDarkMode ? "opacity-60 text-white" : "opacity-80 text-black"}`}>{log.user_name}</td>
-                          <td className={`p-8 text-[10px] ${isDarkMode ? "opacity-60 text-white" : "opacity-80 text-black"}`}>{log.activity_type}</td>
-                          <td className={`p-8 text-[10px] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                            {new Date(log.created_at).toLocaleString()}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          )}
 
           {displayMode === 'dashboard' && view === "usage" && (
             <motion.div
@@ -1145,13 +856,13 @@ export default function SchoolAdminPage() {
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
-                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+              className={`relative border rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
+                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/30" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"
               }`}
             >
               <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
               <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-              <div className={`p-10 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
+              <div className={`p-10 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-black border-white/30" : "bg-white border-black/10"}`}>
                 <div>
                   <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Student Token Usage</h2>
                   <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Per-student AI usage statistics &bull; {filteredStudents.length} students</p>
@@ -1164,7 +875,7 @@ export default function SchoolAdminPage() {
                     value={query}
                     onChange={(e) => { setQuery(e.target.value); setCurrentPage(1) }}
                     className={`pl-11 pr-8 py-3 text-[10px] font-mono tracking-widest border rounded-2xl focus:outline-none focus:border-emerald-500/50 min-w-[250px] ${
-                      isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black placeholder:text-black/40"
+                      isDarkMode ? "bg-white/5 border-white/30 text-white" : "bg-black/5 border-black/10 text-black placeholder:text-black/40"
                     }`}
                   />
                 </div>
@@ -1175,11 +886,11 @@ export default function SchoolAdminPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Student</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Class</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Daily Chats</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Chats Used</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>Last Active</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Student</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-center`}>Class</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-center`}>Daily Chats</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-center`}>Chats Used</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-right`}>Last Active</th>
                     </tr>
                   </thead>
                   <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
@@ -1189,10 +900,10 @@ export default function SchoolAdminPage() {
                       </tr>
                     ) : (
                       paginatedStudents.map((s) => (
-                        <tr key={s.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
+                        <tr key={s.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/30 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
                           <td className="p-8">
                             <div className="flex items-center gap-4">
-                              <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                              <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/30" : "bg-black/5 border-black/10"}`}>
                                 <User className={`h-4 w-4 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
                               </div>
                               <div className="flex flex-col">
@@ -1220,15 +931,14 @@ export default function SchoolAdminPage() {
                           <td className={`p-8 text-right text-[10px] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
                             {s.created_at ? new Date(s.created_at).toLocaleDateString() : "—"}
                           </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
+                          </tr>
+                      )))}
+                    </tbody>
                 </table>
               </div>
 
               {/* Pagination */}
-              <div className={`p-8 flex items-center justify-between border-t ${isDarkMode ? "bg-black border-white/10" : "bg-white border-black/10"}`}>
+              <div className={`p-8 flex items-center justify-between border-t ${isDarkMode ? "bg-black border-white/30" : "bg-white border-black/10"}`}>
                 <div className={`flex items-center gap-4 text-[9px] font-mono tracking-[0.3em] uppercase ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
                   <BarChart3 className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
                   <span>Page {currentPage} // {totalStudentPages || 1}</span>
@@ -1237,7 +947,7 @@ export default function SchoolAdminPage() {
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/30 text-white" : "border-black/10 text-black"}`}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
@@ -1263,7 +973,7 @@ export default function SchoolAdminPage() {
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalStudentPages, p + 1))}
                     disabled={currentPage === totalStudentPages || totalStudentPages === 0}
-                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/30 text-white" : "border-black/10 text-black"}`}
                   >
                     <ChevronRightIcon className="h-4 w-4" />
                   </button>
@@ -1278,16 +988,16 @@ export default function SchoolAdminPage() {
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
-                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+              className={`relative border rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${
+                isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/30" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"
               }`}
             >
               <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
               <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-              <div className={`p-10 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
+              <div className={`p-10 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-black border-white/30" : "bg-white border-black/10"}`}>
                 <div>
                   <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Consolidated Records</h2>
-                  <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>All institution data • {allTableData.length} entries</p>
+                  <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{tableFilter === "all" ? "All" : tableFilter === "faculty" ? "Faculty" : "Student"} records • {allTableData.length} entries</p>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="relative">
@@ -1298,7 +1008,7 @@ export default function SchoolAdminPage() {
                       value={query}
                       onChange={(e) => { setQuery(e.target.value); setCurrentPage(1) }}
                       className={`pl-11 pr-8 py-3 text-[10px] font-mono tracking-widest border rounded-2xl focus:outline-none focus:border-emerald-500/50 min-w-[250px] ${
-                        isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black placeholder:text-black/40"
+                        isDarkMode ? "bg-white/5 border-white/30 text-white" : "bg-black/5 border-black/10 text-black placeholder:text-black/40"
                       }`}
                     />
                   </div>
@@ -1313,17 +1023,63 @@ export default function SchoolAdminPage() {
                 </div>
               </div>
 
+              {/* Filter & Sort Toolbar */}
+              <div className={`px-10 py-4 border-b flex flex-col gap-3 ${isDarkMode ? "bg-black/50 border-white/30" : "bg-white/50 border-black/5"}`}>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    {(["all", "faculty", "students"] as const).map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => { setTableFilter(f); setCurrentPage(1) }}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-mono uppercase tracking-[0.15em] transition-all ${
+                          tableFilter === f
+                            ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
+                            : (isDarkMode ? "opacity-40 hover:opacity-100 text-white" : "opacity-60 hover:opacity-100 text-black")
+                        }`}
+                      >
+                        {f === "all" ? "All" : f === "faculty" ? "Faculty" : "Students"}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setSortOrder(o => o === "asc" ? "desc" : "asc")}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-mono uppercase tracking-[0.15em] transition-all flex items-center gap-2 ${
+                      isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
+                    }`}
+                  >
+                    {sortOrder === "asc" ? "A→Z" : "Z→A"}
+                    <ChevronLeft className={`h-3 w-3 transition-transform ${sortOrder === "desc" ? "rotate-90" : "-rotate-90"}`} />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 overflow-x-auto">
+                  <span className={`text-[9px] font-mono uppercase tracking-[0.3em] mr-2 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Section:</span>
+                  {uniqueClasses.map((cls) => (
+                    <button
+                      key={cls || "all"}
+                      onClick={() => { setSectionFilter(cls); setCurrentPage(1) }}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.15em] transition-all whitespace-nowrap ${
+                        sectionFilter === cls
+                          ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
+                          : (isDarkMode ? "opacity-40 hover:opacity-100 text-white" : "opacity-60 hover:opacity-100 text-black")
+                      }`}
+                    >
+                      {cls || "All"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="overflow-x-auto relative overflow-hidden group">
                 <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Type</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Identity</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Contact</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Code / Class</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Quota / Chats</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Created</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Type</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Identity</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Contact</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Code / Class</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"} text-center`}>Quota / Chats</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/30" : "border-black/10"}`}>Created</th>
                     </tr>
                   </thead>
                   <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
@@ -1333,7 +1089,7 @@ export default function SchoolAdminPage() {
                       </tr>
                     ) : (
                       paginatedTableData.map((item, idx) => (
-                        <tr key={idx} className={`border-b transition-colors group ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
+                        <tr key={idx} className={`border-b transition-colors group ${isDarkMode ? "border-white/30 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
                           <td className="p-8">
                             <span className={`px-3 py-1 rounded-lg text-[10px] ${
                               item.type === "Faculty"
@@ -1345,7 +1101,7 @@ export default function SchoolAdminPage() {
                           </td>
                           <td className="p-8">
                             <div className="flex items-center gap-4">
-                              <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                              <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/30" : "bg-black/5 border-black/10"}`}>
                                 <User className={`h-4 w-4 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
                               </div>
                               <span className={`text-[13px] font-bold tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{item.name}</span>
@@ -1366,7 +1122,7 @@ export default function SchoolAdminPage() {
               </div>
 
               {/* Pagination */}
-              <div className={`p-8 flex items-center justify-between border-t ${isDarkMode ? "bg-black border-white/10" : "bg-white border-black/10"}`}>
+              <div className={`p-8 flex items-center justify-between border-t ${isDarkMode ? "bg-black border-white/30" : "bg-white border-black/10"}`}>
                 <div className={`flex items-center gap-4 text-[9px] font-mono tracking-[0.3em] uppercase ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
                   <Database className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
                   <span>Page {currentPage} // {totalTablePages || 1}</span>
@@ -1375,7 +1131,7 @@ export default function SchoolAdminPage() {
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/30 text-white" : "border-black/10 text-black"}`}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
@@ -1401,7 +1157,7 @@ export default function SchoolAdminPage() {
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalTablePages, p + 1))}
                     disabled={currentPage === totalTablePages || totalTablePages === 0}
-                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                    className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/30 text-white" : "border-black/10 text-black"}`}
                   >
                     <ChevronRightIcon className="h-4 w-4" />
                   </button>
@@ -1418,8 +1174,8 @@ export default function SchoolAdminPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`relative w-full max-w-lg max-h-[80vh] overflow-y-auto border border-zinc-800/50 p-6 rounded-[2rem] overflow-hidden group ${
-              isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
+            className={`relative w-full max-w-lg max-h-[80vh] overflow-y-auto border p-6 rounded-[2rem] overflow-hidden group ${
+              isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/30 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50 text-black"
             }`}
           >
             <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
@@ -1443,7 +1199,7 @@ export default function SchoolAdminPage() {
                   onChange={(e) => setFacultyForm((prev) => ({ ...prev, name: e.target.value }))}
                   required
                   className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                    isDarkMode ? "bg-white/5 border-white/30 text-white" : "bg-black/5 border-black/10 text-black"
                   }`}
                 />
               </div>
@@ -1454,7 +1210,7 @@ export default function SchoolAdminPage() {
                   value={facultyForm.email}
                   onChange={(e) => setFacultyForm((prev) => ({ ...prev, email: e.target.value }))}
                   className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                    isDarkMode ? "bg-white/5 border-white/30 text-white" : "bg-black/5 border-black/10 text-black"
                   }`}
                 />
               </div>
@@ -1465,7 +1221,7 @@ export default function SchoolAdminPage() {
                   onChange={(e) => setFacultyForm((prev) => ({ ...prev, admin_code: e.target.value.toUpperCase() }))}
                   required
                   className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                    isDarkMode ? "bg-white/5 border-white/30 text-white" : "bg-black/5 border-black/10 text-black"
                   }`}
                 />
               </div>
@@ -1477,7 +1233,7 @@ export default function SchoolAdminPage() {
                   onChange={(e) => setFacultyForm((prev) => ({ ...prev, password: e.target.value }))}
                   required
                   className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                    isDarkMode ? "bg-white/5 border-white/30 text-white" : "bg-black/5 border-black/10 text-black"
                   }`}
                 />
               </div>
@@ -1487,7 +1243,7 @@ export default function SchoolAdminPage() {
                   value={facultyForm.assigned_class}
                   onChange={(e) => setFacultyForm((prev) => ({ ...prev, assigned_class: e.target.value }))}
                   className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                    isDarkMode ? "bg-white/5 border-white/30 text-white" : "bg-black/5 border-black/10 text-black"
                   }`}
                 />
               </div>
@@ -1499,7 +1255,7 @@ export default function SchoolAdminPage() {
                   onChange={(e) => setFacultyForm((prev) => ({ ...prev, quota: e.target.value }))}
                   min={1}
                   className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                    isDarkMode ? "bg-white/5 border-white/30 text-white" : "bg-black/5 border-black/10 text-black"
                   }`}
                 />
               </div>

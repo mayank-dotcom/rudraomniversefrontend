@@ -1,19 +1,49 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/ui/Navbar";
 import Footer from "@/components/ui/Footer";
 import { useTheme } from "@/lib/theme-context";
+import { getPublicSiteSettings } from "@/lib/chat-api";
 import { Mail, MessageSquare, Send } from "lucide-react";
+
+const DEFAULT_PARAGRAPHS = ["Have a question, suggestion, or want to partner with us? We'd love to hear from you. Feel free to reach out through the form below, or email us directly. Our team typically responds within 24 hours."];
+const DEFAULT_EMAIL = "hello@rudranex.ai";
+const DEFAULT_RESPONSE_TIME = "Usually within 24 hours";
+
+interface ContactData {
+  paragraphs?: string[];
+  email?: string;
+  responseTime?: string;
+}
+
+function parseContact(value: string): ContactData {
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed.paragraphs || parsed.email || parsed.responseTime) return parsed;
+    if (parsed.description) return { paragraphs: [parsed.description], email: parsed.email, responseTime: parsed.responseTime };
+  } catch {}
+  if (value) return { paragraphs: value.split("\n\n").filter(Boolean) };
+  return {};
+}
 
 export default function Contact() {
     const { isDarkMode } = useTheme();
+    const [raw, setRaw] = useState("");
+    const data = useMemo(() => parseContact(raw), [raw]);
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [message, setMessage] = useState("");
     const [sent, setSent] = useState(false);
+
+    useEffect(() => {
+        getPublicSiteSettings().then(res => {
+            const setting = res.settings?.find(s => s.key === "contact_info");
+            if (setting?.value) setRaw(setting.value);
+        }).catch(() => {});
+    }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,9 +71,9 @@ export default function Contact() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
                         <div className={`space-y-6 text-base leading-relaxed ${isDarkMode ? "text-white/70" : "text-black/70"}`}>
-                            <p className="font-medium text-lg">
-                                Have a question, suggestion, or want to partner with us? We'd love to hear from you.
-                            </p>
+                            {(data.paragraphs || DEFAULT_PARAGRAPHS).map((p, i) => (
+                                <p key={i} className={i === 0 ? "font-medium text-lg" : ""}>{p}</p>
+                            ))}
 
                             <div className="flex items-center gap-4 mt-10">
                                 <div className={`h-10 w-10 rounded-full border flex items-center justify-center ${isDarkMode ? "border-white/20" : "border-black/20"}`}>
@@ -51,7 +81,7 @@ export default function Contact() {
                                 </div>
                                 <div>
                                     <p className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Email</p>
-                                    <p className="text-sm">hello@rudranex.ai</p>
+                                    <p className="text-sm">{data.email || DEFAULT_EMAIL}</p>
                                 </div>
                             </div>
 
@@ -61,7 +91,7 @@ export default function Contact() {
                                 </div>
                                 <div>
                                     <p className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Response Time</p>
-                                    <p className="text-sm">Usually within 24 hours</p>
+                                    <p className="text-sm">{data.responseTime || DEFAULT_RESPONSE_TIME}</p>
                                 </div>
                             </div>
                         </div>

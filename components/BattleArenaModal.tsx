@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Swords, Key, User, BookOpen, ListOrdered, Signal } from "lucide-react";
+import { X, Swords, Key, User, BookOpen, ListOrdered, Signal, Trophy, TrendingUp, History } from "lucide-react";
+import Link from "next/link";
 
 interface BattleArenaModalProps {
     isOpen: boolean;
@@ -89,6 +90,37 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                             <button onClick={onClose} className={`p-2 rounded-full transition-colors ${isDarkMode ? "hover:bg-white/10 text-white/40 hover:text-white" : "hover:bg-black/10 text-black/40 hover:text-black"}`}>
                                 <X className="h-5 w-5" />
                             </button>
+                        </div>
+
+                        {/* Quick Navigation */}
+                        <div className="flex gap-2 mb-6">
+                            <Link
+                                href="/arena-history"
+                                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[8px] font-mono uppercase tracking-wider transition-all ${
+                                    isDarkMode ? "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white" : "bg-black/5 text-black/50 hover:bg-black/10 hover:text-black"
+                                }`}
+                            >
+                                <History className="h-3 w-3" />
+                                History
+                            </Link>
+                            <Link
+                                href="/global-leaderboard"
+                                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[8px] font-mono uppercase tracking-wider transition-all ${
+                                    isDarkMode ? "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white" : "bg-black/5 text-black/50 hover:bg-black/10 hover:text-black"
+                                }`}
+                            >
+                                <Trophy className="h-3 w-3" />
+                                Leaderboard
+                            </Link>
+                            <Link
+                                href="/user-analytics"
+                                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[8px] font-mono uppercase tracking-wider transition-all ${
+                                    isDarkMode ? "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white" : "bg-black/5 text-black/50 hover:bg-black/10 hover:text-black"
+                                }`}
+                            >
+                                <TrendingUp className="h-3 w-3" />
+                                My Stats
+                            </Link>
                         </div>
 
                         {/* Tab Switcher */}

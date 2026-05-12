@@ -1,13 +1,47 @@
 "use client"
 
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/ui/Navbar";
 import Footer from "@/components/ui/Footer";
 import { useTheme } from "@/lib/theme-context";
+import { getPublicSiteSettings } from "@/lib/chat-api";
+
+const DEFAULT_SECTIONS: { title: string; content: string }[] = [
+  { title: "1. Acceptance of Terms", content: "By accessing or using Rudranex AI, you agree to be bound by these Terms of Service. If you do not agree, do not use our services." },
+  { title: "2. Description of Service", content: "Rudranex AI provides AI-powered tools for students including chat-based tutoring, interview simulation, resume analysis, PDF intelligence, and vision-based problem solving. These tools are provided \"as is\" without warranty of any kind." },
+  { title: "3. User Obligations", content: "You agree to use the service responsibly and not to misuse the AI systems for any illegal, harmful, or unauthorized purposes. You are responsible for maintaining the confidentiality of your account credentials." },
+  { title: "4. Limitation of Liability", content: "Rudranex AI shall not be liable for any indirect, incidental, or consequential damages arising from the use of our services. Our total liability is limited to the amount paid by you in the past 12 months." },
+  { title: "5. Changes to Terms", content: "We reserve the right to modify these terms at any time. Users will be notified of material changes via email or through the platform." }
+];
+
+const DEFAULT_LAST_UPDATED = "May 2026";
+
+interface TermsData {
+  lastUpdated?: string;
+  sections?: { title: string; content: string }[];
+}
+
+function parseTerms(value: string): TermsData {
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed.sections || parsed.lastUpdated) return parsed;
+  } catch {}
+  return { lastUpdated: DEFAULT_LAST_UPDATED, sections: DEFAULT_SECTIONS };
+}
 
 export default function Terms() {
     const { isDarkMode } = useTheme();
+    const [raw, setRaw] = useState("");
+    const data = useMemo(() => parseTerms(raw), [raw]);
+
+    useEffect(() => {
+        getPublicSiteSettings().then(res => {
+            const setting = res.settings?.find(s => s.key === "terms_conditions");
+            if (setting?.value) setRaw(setting.value);
+        }).catch(() => {});
+    }, []);
 
     return (
         <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black`}>
@@ -25,23 +59,15 @@ export default function Terms() {
                     </h1>
                     <div className={`h-px w-full ${isDarkMode ? "bg-white/10" : "bg-black/10"} mb-12`} />
 
-                    <div className={`space-y-8 text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white/70" : "text-black/70"}`}>
-                        <p className="font-medium">Last updated: May 2026</p>
+                    <p className={`text-sm font-mono mb-10 ${isDarkMode ? "text-white/40" : "text-black/50"}`}>Last updated: {data.lastUpdated}</p>
 
-                        <h2 className={`text-lg font-display font-bold tracking-tight mt-10 ${isDarkMode ? "text-white" : "text-black"}`}>1. Acceptance of Terms</h2>
-                        <p>By accessing or using Rudranex AI, you agree to be bound by these Terms of Service. If you do not agree, do not use our services.</p>
-
-                        <h2 className={`text-lg font-display font-bold tracking-tight mt-10 ${isDarkMode ? "text-white" : "text-black"}`}>2. Description of Service</h2>
-                        <p>Rudranex AI provides AI-powered tools for students including chat-based tutoring, interview simulation, resume analysis, PDF intelligence, and vision-based problem solving. These tools are provided "as is" without warranty of any kind.</p>
-
-                        <h2 className={`text-lg font-display font-bold tracking-tight mt-10 ${isDarkMode ? "text-white" : "text-black"}`}>3. User Obligations</h2>
-                        <p>You agree to use the service responsibly and not to misuse the AI systems for any illegal, harmful, or unauthorized purposes. You are responsible for maintaining the confidentiality of your account credentials.</p>
-
-                        <h2 className={`text-lg font-display font-bold tracking-tight mt-10 ${isDarkMode ? "text-white" : "text-black"}`}>4. Limitation of Liability</h2>
-                        <p>Rudranex AI shall not be liable for any indirect, incidental, or consequential damages arising from the use of our services. Our total liability is limited to the amount paid by you in the past 12 months.</p>
-
-                        <h2 className={`text-lg font-display font-bold tracking-tight mt-10 ${isDarkMode ? "text-white" : "text-black"}`}>5. Changes to Terms</h2>
-                        <p>We reserve the right to modify these terms at any time. Users will be notified of material changes via email or through the platform.</p>
+                    <div className={`space-y-10 text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white/70" : "text-black/70"}`}>
+                        {(data.sections || []).map((s, i) => (
+                            <div key={i}>
+                                <h2 className={`text-lg font-display font-bold tracking-tight mb-4 ${isDarkMode ? "text-white" : "text-black"}`}>{s.title}</h2>
+                                <p>{s.content}</p>
+                            </div>
+                        ))}
                     </div>
 
                     <div className="mt-16">

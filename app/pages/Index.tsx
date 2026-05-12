@@ -1,20 +1,24 @@
 "use client"
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import HeroScene from "@/components/ui/HeroScene";
 
 import Navbar from "@/components/ui/Navbar";
 import FeatureCard from "@/components/ui/FeatureCard";
+import AuthModal from "@/components/ui/AuthModal";
 import { ArrowRight, Bot, Cpu, Globe, Zap } from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
 
 const Index = () => {
     const { isDarkMode } = useTheme();
+    const [showAuth, setShowAuth] = useState(false);
 
     return (
         <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black`}>
-            <Navbar />
+            <Navbar onAuthClick={() => setShowAuth(true)} />
+            <AuthModal open={showAuth} onClose={() => setShowAuth(false)} />
 
             {/* Hero Section */}
             <section className="relative h-screen flex flex-col overflow-hidden">
@@ -66,9 +70,9 @@ const Index = () => {
                                 One quiet, precise <span className={`italic font-serif ${isDarkMode ? "text-white" : "text-black"}`}>intelligence</span> for your entire student life — from cracking tech interviews to mastering 100-page textbooks.
                             </p> */}
                             <div className="flex items-center gap-4">
-                                <Link to="/chat" className={`whitespace-nowrap px-8 py-4 bg-white text-black border-2 ${isDarkMode ? "border-white" : "border-black"} text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/90 transition-all active:scale-95 text-center`}>
+                                <button onClick={() => setShowAuth(true)} className={`whitespace-nowrap px-8 py-4 bg-white text-black border-2 ${isDarkMode ? "border-white" : "border-black"} text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/90 transition-all active:scale-95 text-center`}>
                                     Start Free →
-                                </Link>
+                                </button>
                                 <button className={`whitespace-nowrap px-8 py-4 border ${isDarkMode ? "border-white/20 text-white hover:bg-white/5" : "border-black/20 text-black hover:bg-black/5"} bg-transparent text-[10px] font-mono font-bold uppercase tracking-widest transition-all active:scale-95`}>
                                     Watch Demo
                                 </button>
@@ -287,9 +291,9 @@ const Index = () => {
                                 <p className="text-white/60 text-lg md:text-xl leading-snug mb-12 font-light">
                                     Join thousands of students already moving faster, sharper, and quieter — with Rudranex AI.
                                 </p>
-                                <Link to="/chat" className="inline-block w-full md:w-auto px-12 py-6 bg-white text-black text-[10px] font-mono font-bold uppercase tracking-[0.3em] hover:bg-white/90 transition-all active:scale-95 shadow-2xl shadow-white/5 text-center">
+                                <button onClick={() => setShowAuth(true)} className="inline-block w-full md:w-auto px-12 py-6 bg-white text-black text-[10px] font-mono font-bold uppercase tracking-[0.3em] hover:bg-white/90 transition-all active:scale-95 shadow-2xl shadow-white/5 text-center">
                                     Get Started — Free →
-                                </Link>
+                                </button>
 
                             </motion.div>
                         </div>

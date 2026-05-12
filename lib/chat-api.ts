@@ -132,6 +132,36 @@ export async function updateTokens(userId: string, newLimit: number) {
   return data
 }
 
+export interface FreezeUserResponse {
+  success: boolean
+  message?: string
+  user_id?: string
+  error?: string
+}
+
+export async function freezeUser(userId: string) {
+  const res = await fetch(`${API_BASE}/admin/users/${userId}/freeze`, {
+    method: "POST",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<FreezeUserResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Access Denied: You do not have permission to freeze this user. Global Admin privileges required.")
+  }
+  return data
+}
+
+export async function unfreezeUser(userId: string) {
+  const res = await fetch(`${API_BASE}/admin/users/${userId}/unfreeze`, {
+    method: "POST",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<FreezeUserResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Access Denied: You do not have permission to unfreeze this user. Global Admin privileges required.")
+  }
+  return data
+}
 
 export interface UpdatePlanResponse {
   success: boolean
@@ -220,6 +250,7 @@ export interface AdminUser {
   id: string
   name: string
   email: string
+  is_frozen: boolean
   subscription: {
     plan: string
     status: string
@@ -239,35 +270,66 @@ export interface AdminUsersResponse {
   error?: string
 }
 
-export async function getAdminUsers() {
-  const res = await fetch(`${API_BASE}/admin/users`, {
+export interface FrozenUser {
+  user_id: string
+  name: string
+  email: string
+  original_plan_id: number
+  original_plan_name: string | null
+  frozen_at: string
+}
+
+export interface FrozenUsersResponse {
+  success: boolean
+  count?: number
+  frozen_users?: FrozenUser[]
+  error?: string
+}
+
+export async function getFrozenUsers() {
+  const res = await fetch(`${API_BASE}/admin/users/frozen`, {
     method: "GET",
     headers: getHeaders(),
   })
+  const data: FrozenUsersResponse = await res.json()
+  if (!res.ok) throw new Error(data.error || "Unable to fetch frozen users")
+  return data
+}
 
-  const data = await res.json()
-  if (!res.ok) {
+export async function getAdminUsers() {
+  const [usersRes, frozenRes] = await Promise.all([
+    fetch(`${API_BASE}/admin/users`, { method: "GET", headers: getHeaders() }),
+    getFrozenUsers().catch(() => ({ success: true, frozen_users: [] as FrozenUser[] })),
+  ])
+
+  const data = await usersRes.json()
+  if (!usersRes.ok) {
     throw new Error(data.error || "Unable to fetch users.")
   }
 
+  const frozenUserIds = new Set((frozenRes.frozen_users || []).map(f => f.user_id))
+
   // Map flat backend response to nested frontend interface
   if (data.success && Array.isArray(data.users)) {
-    data.users = data.users.map((u: any) => ({
+    data.users = data.users.map((u: any) => {
+      const isFrozen = frozenUserIds.has(u.id);
+      return {
       id: u.id,
       name: u.name,
       email: u.email,
+      is_frozen: isFrozen,
       subscription: {
-        plan: u.plan_name || "Free Trial",
-        status: "active", // Default status as backend doesn't provide it yet
+        plan: isFrozen ? "Frozen" : (u.plan_name || "Free Trial"),
+        status: isFrozen ? "frozen" : "active",
         tokens_used: u.daily_chats || 0,
-        tokens_limit: 1000, // Placeholder as backend doesn't join with limits yet
+        tokens_limit: 1000,
         images_used: u.monthly_images || 0,
-        images_limit: 100, // Placeholder
+        images_limit: 100,
         personas_used: 0,
         personas_limit: 10,
         latency_ms: "24"
       }
-    }))
+    }})
   }
 
   return data as AdminUsersResponse
@@ -397,6 +459,7 @@ export interface CreateSchoolAdminPayload {
   admin_name: string
   admin_email: string
   admin_password: string
+  student_limit?: number
 }
 
 export interface CreateSchoolAdminResponse {
@@ -408,45 +471,50 @@ export interface CreateSchoolAdminResponse {
 }
 
 export async function createSchoolAdmin(payload: CreateSchoolAdminPayload) {
-  // Step 1: Create school
-  const schoolRes = await fetch(`${API_BASE}/admin/schools`, {
+  const res = await fetch(`${API_BASE}/admin/onboard-school`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({
       school_name: payload.school_name,
       school_code: payload.school_code,
+      admin_name: payload.admin_name,
+      admin_email: payload.admin_email,
+      admin_password: payload.admin_password,
+      student_limit: payload.student_limit ?? 100,
     }),
-  })
+  });
 
-  const schoolData = await parseJson<{ success: boolean; school?: { id: number }; error?: string }>(schoolRes)
-  if (!schoolRes.ok || !schoolData.success) {
-    throw new Error(schoolData.error || "Failed to create school")
+  const data = await parseJson<{ success: boolean; school?: { id: number }; admin?: { id: string; name: string; admin_code: string }; error?: string }>(res);
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to create school admin");
   }
 
-  // Step 2: Create admin under the school (sends credentials email via nodemailer)
-  const adminRes = await fetch(`${API_BASE}/admin/school-admin`, {
-    method: "POST",
-    headers: getHeaders(),
-    body: JSON.stringify({
-      name: payload.admin_name,
-      school_id: schoolData.school!.id,
-      email: payload.admin_email,
-      password: payload.admin_password,
-    }),
-  })
+  const combined: CreateSchoolAdminResponse = {
+    success: true,
+    school: data.school,
+    admin: data.admin,
+  };
+  return combined;
+}
 
-  const adminData = await parseJson<CreateSchoolAdminResponse>(adminRes)
-  if (!adminRes.ok || !adminData.success) {
-    throw new Error(adminData.error || "Failed to create school admin")
-  }
-
-  return { ...adminData, school: schoolData.school }
+export interface FacultyStats {
+  quota: number
+  assigned: number
+  performance_avg: string
+  attendance_rate: string
+  node_distribution?: Array<{ assigned_class: string; activity_count: number }>
+  trends?: any[]
 }
 
 export interface SchoolStatsResponse {
   success: boolean
+  school_name?: string
+  school_code?: string
   total_students?: string | number
   total_faculty?: string | number
+  faculty_stats?: FacultyStats
+  node_distribution?: Array<{ assigned_class: string; activity_count: number }>
+  engagement_distribution?: Array<{ action: string; count: number }>
   leaderboard?: Array<{ name: string; daily_chats: number }>
   error?: string
 }
@@ -486,10 +554,25 @@ export interface CreateSchoolFacultyResponse {
 export interface SchoolStudent {
   id: string
   name: string
+  roll_no?: string
   mobile_number?: string
   assigned_class?: string
+  total_score?: number
   daily_chats?: number
   created_at?: string
+}
+
+export interface CreateSchoolStudentPayload {
+  name: string
+  roll_no: string
+  password: string
+  assigned_class?: string
+}
+
+export interface CreateSchoolStudentResponse {
+  success: boolean
+  student?: { id: string; name: string; roll_no: string }
+  error?: string
 }
 
 export interface SchoolStudentsResponse {
@@ -566,6 +649,86 @@ export interface StudentSignupResponse {
   error?: string
 }
 
+export interface GoogleLoginPayload {
+  google_id: string
+  email: string
+  name?: string
+}
+
+export interface GoogleLoginResponse {
+  success: boolean
+  api_key?: string
+  message?: string
+  error?: string
+}
+
+export async function googleLogin(payload: GoogleLoginPayload) {
+  const res = await fetch(`${API_BASE}/auth/3rdparty/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<GoogleLoginResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Google sign-in failed")
+  }
+  return data
+}
+
+export interface GithubLoginPayload {
+  github_id: string
+  email?: string
+  name?: string
+}
+
+export interface GithubLoginResponse {
+  success: boolean
+  api_key?: string
+  message?: string
+  error?: string
+}
+
+export async function githubLogin(payload: GithubLoginPayload) {
+  const res = await fetch(`${API_BASE}/auth/3rdparty/github`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<GithubLoginResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "GitHub sign-in failed")
+  }
+  return data
+}
+
+export interface StudentLoginPayload {
+  roll_no: string
+  school_code: string
+  password: string
+}
+
+export interface StudentLoginResponse {
+  success: boolean
+  api_key?: string
+  name?: string
+  school_name?: string
+  role?: string
+  error?: string
+}
+
+export async function studentLogin(payload: StudentLoginPayload) {
+  const res = await fetch(`${API_BASE}/auth/student/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<StudentLoginResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Student login failed")
+  }
+  return data
+}
+
 export async function studentSignup(payload: StudentSignupPayload) {
   const res = await fetch(`${API_BASE}/auth/student/signup`, {
     method: "POST",
@@ -573,6 +736,19 @@ export async function studentSignup(payload: StudentSignupPayload) {
     body: JSON.stringify(payload),
   })
   const data = await parseJson<StudentSignupResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to create student")
+  }
+  return data
+}
+
+export async function createSchoolStudent(payload: CreateSchoolStudentPayload) {
+  const res = await fetch(`${API_BASE}/school/students`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<CreateSchoolStudentResponse>(res)
   if (!res.ok || !data.success) {
     throw new Error(data.error || "Unable to create student")
   }
@@ -1029,6 +1205,200 @@ export async function transcribeSpeech(audioBlob: Blob, language: string = 'hi-I
   }
   
   throw new Error("Transcription failed after all retries")
+}
+
+// ─── Arena endpoints ───
+
+export interface ArenaHistoryItem {
+  id: string
+  topic: string
+  difficulty: string
+  question_count: number
+  status: string
+  created_at: string
+  participant_count?: number
+  leaderboard?: Array<{
+    name: string
+    score: number
+    time_taken: number
+    rank: number
+  }>
+}
+
+export interface ArenaHistoryResponse {
+  success: boolean
+  history?: ArenaHistoryItem[]
+  error?: string
+}
+
+export async function getArenaHistory() {
+  const res = await fetch(`${API_BASE}/arena/history`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<any>(res)
+  console.log("[getArenaHistory] Raw response:", data)
+
+  const normalized: ArenaHistoryResponse = {
+    success: data.success ?? true,
+    history: data.history || data.data || [],
+    error: data.error,
+  }
+
+  if (!res.ok || !normalized.success) {
+    throw new Error(normalized.error || "Unable to fetch arena history")
+  }
+  return normalized
+}
+
+export interface GlobalLeaderboardEntry {
+  rank: number
+  name: string
+  score: number
+  arena_wins?: number
+  mock_tests?: number
+  activities?: number
+}
+
+export interface GlobalLeaderboardResponse {
+  success: boolean
+  leaderboard?: GlobalLeaderboardEntry[]
+  error?: string
+}
+
+export async function getGlobalLeaderboard() {
+  const res = await fetch(`${API_BASE}/leaderboard/global`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<any>(res)
+  console.log("[getGlobalLeaderboard] Raw response:", data)
+
+  const raw = data.leaderboard || data.data || []
+  const leaderboard: GlobalLeaderboardEntry[] = (Array.isArray(raw) ? raw : []).map((e: any) => ({
+    rank: Number(e.rank) || 0,
+    name: e.name ?? "",
+    score: Number(e.score ?? e.points ?? e.total_score ?? 0),
+    arena_wins: Number(e.arena_wins ?? e.wins ?? 0),
+    mock_tests: Number(e.mock_tests ?? e.tests ?? 0),
+    activities: Number(e.activities ?? e.activity_count ?? 0),
+  }))
+
+  const normalized: GlobalLeaderboardResponse = {
+    success: data.success ?? true,
+    leaderboard,
+    error: data.error,
+  }
+
+  if (!res.ok || !normalized.success) {
+    throw new Error(normalized.error || "Unable to fetch global leaderboard")
+  }
+  return normalized
+}
+
+export interface UserAnalyticsData {
+  total_battles: number
+  total_wins: number
+  total_participation: number
+  win_rate: number
+  recent_battles?: Array<{
+    topic: string
+    difficulty: string
+    score: number
+    rank: number
+    created_at: string
+  }>
+}
+
+export interface UserAnalyticsResponse {
+  success: boolean
+  analytics?: UserAnalyticsData
+  error?: string
+}
+
+export async function getUserAnalytics() {
+  const res = await fetch(`${API_BASE}/user/analytics`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<any>(res)
+  console.log("[getUserAnalytics] Raw response:", data)
+
+  const raw = data.analytics || data.data || (data.success !== undefined && data.total_battles !== undefined ? data : null)
+  const analytics: UserAnalyticsData | undefined = raw ? {
+    total_battles: raw.total_battles ?? 0,
+    total_wins: raw.total_wins ?? 0,
+    total_participation: raw.total_participation ?? 0,
+    win_rate: raw.win_rate ?? 0,
+    recent_battles: raw.recent_battles ?? undefined,
+  } : undefined
+
+  const normalized: UserAnalyticsResponse = {
+    success: data.success ?? true,
+    analytics,
+    error: data.error,
+  }
+
+  if (!res.ok || !normalized.success) {
+    throw new Error(normalized.error || "Unable to fetch user analytics")
+  }
+  return normalized
+}
+
+// ─── Site Settings (Footer Pages) ───
+
+export interface SiteSetting {
+  key: string
+  value: string
+  updated_at: string
+}
+
+export interface SiteSettingsResponse {
+  success: boolean
+  settings?: SiteSetting[]
+  error?: string
+}
+
+export interface UpdateSiteSettingResponse {
+  success: boolean
+  setting?: SiteSetting
+  error?: string
+}
+
+export async function getSiteSettings() {
+  const res = await fetch(`${API_BASE}/admin/settings`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<SiteSettingsResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to fetch site settings")
+  }
+  return data
+}
+
+export async function getPublicSiteSettings() {
+  const res = await fetch(`${API_BASE}/public/settings`, {
+    method: "GET",
+  })
+  const data = await parseJson<SiteSettingsResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to fetch site settings")
+  }
+  return data
+}
+
+export async function updateSiteSetting(key: string, value: string) {
+  const res = await fetch(`${API_BASE}/admin/settings/${key}`, {
+    method: "PUT",
+    headers: getHeaders(),
+    body: JSON.stringify({ value }),
+  })
+  const data = await parseJson<UpdateSiteSettingResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to update setting")
+  }
+  return data
 }
 
 // Web Speech API fallback for transcription

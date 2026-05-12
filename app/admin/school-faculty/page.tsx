@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { Users, LogOut, GraduationCap, RefreshCw, Plus, X, Search, BarChart3, Sun, Moon, User, Activity, TrendingUp, LayoutDashboard, ChevronLeft, ChevronRight as ChevronRightIcon, Database, Phone, MessageSquare, Clock, BookOpen } from "lucide-react"
+import { Users, LogOut, GraduationCap, RefreshCw, Plus, X, Search, BarChart3, Sun, Moon, User, Activity, TrendingUp, LayoutDashboard, ChevronLeft, ChevronRight as ChevronRightIcon, Database, Phone, MessageSquare, Clock, BookOpen, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import { removeApiKey } from "@/lib/auth"
-import { getSchoolStats, getSchoolStudents, studentSignup, SchoolStudent } from "@/lib/chat-api"
+import { getSchoolStats, getSchoolStudents, createSchoolStudent, SchoolStudent, SchoolStatsResponse } from "@/lib/chat-api"
 import { toast } from "sonner"
 
 const CircularProgress = ({ value, max, size = 100, strokeWidth = 8, color = "#8b5cf6", label }: { value: number; max: number; size?: number; strokeWidth?: number; color?: string; label: string }) => {
@@ -45,7 +45,8 @@ export default function SchoolFacultyAdminPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [students, setStudents] = useState<SchoolStudent[]>([])
-  const [stats, setStats] = useState<{ total_students: number; total_faculty: number; leaderboard: Array<{ name: string; daily_chats: number }> }>({
+  const [stats, setStats] = useState<SchoolStatsResponse & { leaderboard: Array<{ name: string; daily_chats: number }> }>({
+    success: false,
     total_students: 0,
     total_faculty: 0,
     leaderboard: [],
@@ -54,11 +55,12 @@ export default function SchoolFacultyAdminPage() {
   const [query, setQuery] = useState("")
   const [showAddStudent, setShowAddStudent] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [sortField, setSortField] = useState<"name" | "daily_chats" | "assigned_class">("name")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   const [creatingStudent, setCreatingStudent] = useState(false)
   const [studentForm, setStudentForm] = useState({
     name: "",
-    mobile_number: "",
-    school_code: "",
+    roll_no: "",
     password: "",
     assigned_class: "",
   })
@@ -72,13 +74,24 @@ export default function SchoolFacultyAdminPage() {
         getSchoolStats(),
         getSchoolStudents(),
       ])
+      console.log('[FacultyDashboard] Stats:', statsRes)
+      console.log('[FacultyDashboard] Students:', studentsRes)
+
+      const studentList = studentsRes.students || []
+      const leaderboard = [...studentList]
+        .sort((a, b) => (Number(b.total_score || 0)) - (Number(a.total_score || 0)))
+        .slice(0, 10)
+        .map((s) => ({ name: s.name, daily_chats: Number(s.total_score || 0) }))
+
       setStats({
+        ...statsRes,
         total_students: Number(statsRes.total_students || 0),
         total_faculty: Number(statsRes.total_faculty || 0),
-        leaderboard: statsRes.leaderboard || [],
+        leaderboard,
       })
-      setStudents(studentsRes.students || [])
+      setStudents(studentList)
     } catch (err) {
+      console.error('[FacultyDashboard] Load Error:', err)
       toast.error("Failed to load dashboard: " + (err as Error).message)
     } finally {
       setRefreshing(false)
@@ -90,25 +103,46 @@ export default function SchoolFacultyAdminPage() {
     loadDashboard()
   }, [])
 
+  const sortedStudents = useMemo(() => {
+    const list = [...students]
+    list.sort((a, b) => {
+      let va: any, vb: any
+      switch (sortField) {
+        case "name": va = (a.name || "").toLowerCase(); vb = (b.name || "").toLowerCase(); break
+        case "assigned_class": va = (a.assigned_class || "").toLowerCase(); vb = (b.assigned_class || "").toLowerCase(); break
+        default: va = a.daily_chats || 0; vb = b.daily_chats || 0
+      }
+      if (va < vb) return sortOrder === "asc" ? -1 : 1
+      if (va > vb) return sortOrder === "asc" ? 1 : -1
+      return 0
+    })
+    return list
+  }, [students, sortField, sortOrder])
+
   const filteredStudents = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return students
-    return students.filter((s) => [s.name, s.mobile_number, s.assigned_class].some((v) => (v || "").toLowerCase().includes(q)))
-  }, [students, query])
+    if (!q) return sortedStudents
+    return sortedStudents.filter((s) => [s.name, s.mobile_number, s.assigned_class].some((v) => (v || "").toLowerCase().includes(q)))
+  }, [sortedStudents, query])
 
   const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE)
   const paginatedStudents = filteredStudents.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+
+  const toggleSort = (field: "name" | "daily_chats" | "assigned_class") => {
+    if (sortField === field) setSortOrder(o => o === "asc" ? "desc" : "asc")
+    else { setSortField(field); setSortOrder("asc") }
+  }
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault()
     const payload = {
       name: studentForm.name.trim(),
-      mobile_number: studentForm.mobile_number.trim(),
-      school_code: studentForm.school_code.trim().toUpperCase(),
+      roll_no: studentForm.roll_no.trim(),
       password: studentForm.password,
+      assigned_class: studentForm.assigned_class.trim() || undefined,
     }
-    if (!payload.name || !payload.mobile_number || !payload.school_code || !payload.password) {
-      toast.error("All fields are required")
+    if (!payload.name || !payload.roll_no || !payload.password) {
+      toast.error("Name, Roll No and Password are required")
       return
     }
     if (payload.password.length < 6) {
@@ -117,10 +151,10 @@ export default function SchoolFacultyAdminPage() {
     }
     setCreatingStudent(true)
     try {
-      await studentSignup(payload)
+      await createSchoolStudent(payload)
       toast.success("Student added successfully")
       setShowAddStudent(false)
-      setStudentForm({ name: "", mobile_number: "", school_code: "", password: "", assigned_class: "" })
+      setStudentForm({ name: "", roll_no: "", password: "", assigned_class: "" })
       await loadDashboard()
     } catch (err) {
       toast.error("Failed to add student: " + (err as Error).message)
@@ -249,9 +283,24 @@ export default function SchoolFacultyAdminPage() {
                     <div className={`flex items-center justify-between p-4 rounded-2xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
                       <div className="flex items-center gap-3">
                         <GraduationCap className="h-4 w-4 text-blue-400" />
-                        <span className="text-[10px] font-mono uppercase tracking-widest opacity-60">Students</span>
+                        <span className="text-[10px] font-mono uppercase tracking-widest opacity-60">
+                          {stats.faculty_stats ? "Assigned Students" : "Total Students"}
+                        </span>
                       </div>
-                      <span className="text-lg font-display font-black">{stats.total_students}</span>
+                      <span className="text-lg font-display font-black">
+                        {stats.faculty_stats ? stats.faculty_stats.assigned : stats.total_students}
+                      </span>
+                    </div>
+                    <div className={`flex items-center justify-between p-4 rounded-2xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                      <div className="flex items-center gap-3">
+                        <Users className="h-4 w-4 text-emerald-400" />
+                        <span className="text-[10px] font-mono uppercase tracking-widest opacity-60">
+                          {stats.faculty_stats ? "Student Quota" : "Total Faculty"}
+                        </span>
+                      </div>
+                      <span className="text-lg font-display font-black">
+                        {stats.faculty_stats ? stats.faculty_stats.quota : stats.total_faculty}
+                      </span>
                     </div>
                     <div className={`flex items-center justify-between p-4 rounded-2xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
                       <div className="flex items-center gap-3">
@@ -299,10 +348,10 @@ export default function SchoolFacultyAdminPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <StatCard title="Total Students" value={stats.total_students} icon={GraduationCap} color="#3b82f6" isDarkMode={isDarkMode} />
-                    <StatCard title="Active Chats" value={stats.leaderboard.reduce((sum, l) => sum + (l.daily_chats || 0), 0)} icon={MessageSquare} color="#10b981" isDarkMode={isDarkMode} />
-                    <StatCard title="Top Performer" value={stats.leaderboard[0]?.name || "N/A"} icon={TrendingUp} color="#f59e0b" isDarkMode={isDarkMode} />
-                    <StatCard title="Faculty Count" value={stats.total_faculty} icon={Users} color="#8b5cf6" isDarkMode={isDarkMode} />
+                    <StatCard title={stats.faculty_stats ? "Assigned" : "Students"} value={stats.faculty_stats ? stats.faculty_stats.assigned : stats.total_students} icon={GraduationCap} color="#3b82f6" isDarkMode={isDarkMode} />
+                    <StatCard title={stats.faculty_stats ? "Quota" : "Faculty"} value={stats.faculty_stats ? stats.faculty_stats.quota : stats.total_faculty} icon={Users} color="#10b981" isDarkMode={isDarkMode} />
+                    <StatCard title="Active Chats" value={stats.leaderboard.reduce((sum, l) => sum + (l.daily_chats || 0), 0)} icon={MessageSquare} color="#f59e0b" isDarkMode={isDarkMode} />
+                    <StatCard title="Performance" value={stats.faculty_stats ? stats.faculty_stats.performance_avg : (stats.leaderboard[0]?.name || "N/A")} icon={TrendingUp} color="#8b5cf6" isDarkMode={isDarkMode} />
                   </div>
                 </div>
 
@@ -441,9 +490,21 @@ export default function SchoolFacultyAdminPage() {
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/40" : "text-black/60"}`}>
-                            <th className="pb-4 font-bold">Student</th>
-                            <th className="pb-4 font-bold text-center">Class</th>
-                            <th className="pb-4 font-bold text-center">Chats</th>
+                            <th className="pb-4 font-bold">
+                              <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:opacity-80 transition-all">
+                                Student {sortField === "name" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                              </button>
+                            </th>
+                            <th className="pb-4 font-bold text-center">
+                              <button onClick={() => toggleSort("assigned_class")} className="flex items-center gap-1 hover:opacity-80 transition-all mx-auto">
+                                Class {sortField === "assigned_class" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                              </button>
+                            </th>
+                            <th className="pb-4 font-bold text-center">
+                              <button onClick={() => toggleSort("daily_chats")} className="flex items-center gap-1 hover:opacity-80 transition-all mx-auto">
+                                Chats {sortField === "daily_chats" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                              </button>
+                            </th>
                             <th className="pb-4 font-bold text-right">Usage</th>
                           </tr>
                         </thead>
@@ -469,15 +530,15 @@ export default function SchoolFacultyAdminPage() {
                                   </span>
                                 </td>
                                 <td className="py-3 px-4 text-center">
-                                  <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{s.daily_chats || 0}</span>
+                                <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{s.total_score || 0}</span>
                                 </td>
                                 <td className="py-3 pl-4 text-right">
                                   <div className="flex items-center justify-end gap-3">
                                     <div className="w-24 h-1.5 rounded-full bg-white/10">
-                                      <div className="h-full rounded-full bg-purple-500" style={{ width: `${Math.min(((s.daily_chats || 0) / 100) * 100, 100)}%` }} />
+                                      <div className="h-full rounded-full bg-purple-500" style={{ width: `${Math.min(((s.total_score || 0) / 100) * 100, 100)}%` }} />
                                     </div>
                                     <span className={`text-[10px] font-mono ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                      {Math.min(((s.daily_chats || 0) / 100) * 100, 100).toFixed(0)}%
+                                      {Math.min(((s.total_score || 0) / 100) * 100, 100).toFixed(0)}%
                                     </span>
                                   </div>
                                 </td>
@@ -532,15 +593,41 @@ export default function SchoolFacultyAdminPage() {
                 </div>
               </div>
 
+              {/* Sort Toggle */}
+              <div className={`px-10 py-4 border-b flex items-center gap-2 ${isDarkMode ? "bg-black/50 border-white/5" : "bg-white/50 border-black/10"}`}>
+                <span className={`text-[9px] font-mono uppercase tracking-[0.3em] mr-2 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Sort:</span>
+                <button
+                  onClick={() => setSortOrder(o => o === "asc" ? "desc" : "asc")}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-mono uppercase tracking-[0.15em] transition-all flex items-center gap-2 ${
+                    isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
+                  }`}
+                >
+                  {sortOrder === "asc" ? "A→Z" : "Z→A"}
+                  <ChevronLeft className={`h-3 w-3 transition-transform ${sortOrder === "desc" ? "rotate-90" : "-rotate-90"}`} />
+                </button>
+              </div>
+
               <div className="overflow-x-auto relative overflow-hidden group">
                 <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Identity</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
+                        <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:opacity-80 transition-all">
+                          Identity {sortField === "name" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                        </button>
+                      </th>
                       <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Mobile</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Class</th>
-                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>Daily Chats</th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>
+                        <button onClick={() => toggleSort("assigned_class")} className="flex items-center gap-1 hover:opacity-80 transition-all mx-auto">
+                          Class {sortField === "assigned_class" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                        </button>
+                      </th>
+                      <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>
+                        <button onClick={() => toggleSort("daily_chats")} className="flex items-center gap-1 hover:opacity-80 transition-all justify-end ml-auto">
+                          Daily Chats {sortField === "daily_chats" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                        </button>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
@@ -574,8 +661,8 @@ export default function SchoolFacultyAdminPage() {
                           </td>
                           <td className="p-8 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{s.daily_chats || 0}</span>
-                              <span className={`text-[9px] ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>CHATS</span>
+                              <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{s.total_score || 0}</span>
+                              <span className={`text-[9px] ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>SCORE</span>
                             </div>
                           </td>
                         </tr>
@@ -671,7 +758,7 @@ export default function SchoolFacultyAdminPage() {
                         <span className={`text-[9px] font-mono uppercase tracking-widest mb-6 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{s.assigned_class || "Unassigned"}</span>
 
                         <div className="relative flex items-center justify-center mb-4">
-                          <CircularProgress value={s.daily_chats || 0} max={100} size={110} strokeWidth={10} color="#3b82f6" label="Daily Chats" />
+                          <CircularProgress value={s.total_score || 0} max={100} size={110} strokeWidth={10} color="#3b82f6" label="Score" />
                         </div>
 
                         <div className="w-full mt-2 space-y-2">
@@ -720,30 +807,32 @@ export default function SchoolFacultyAdminPage() {
                   value={studentForm.name}
                   onChange={(e) => setStudentForm((prev) => ({ ...prev, name: e.target.value }))}
                   required
+                  placeholder="Full name"
                   className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                    isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20" : "bg-black/5 border-black/10 text-black placeholder:text-black/30"
                   }`}
                 />
               </div>
               <div>
-                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Mobile Number</label>
+                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Roll No</label>
                 <input
-                  value={studentForm.mobile_number}
-                  onChange={(e) => setStudentForm((prev) => ({ ...prev, mobile_number: e.target.value }))}
+                  value={studentForm.roll_no}
+                  onChange={(e) => setStudentForm((prev) => ({ ...prev, roll_no: e.target.value }))}
                   required
+                  placeholder="e.g. STD001"
                   className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                    isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20" : "bg-black/5 border-black/10 text-black placeholder:text-black/30"
                   }`}
                 />
               </div>
               <div>
-                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>School Code</label>
+                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Assigned Class <span className="opacity-50">(optional)</span></label>
                 <input
-                  value={studentForm.school_code}
-                  onChange={(e) => setStudentForm((prev) => ({ ...prev, school_code: e.target.value.toUpperCase() }))}
-                  required
+                  value={studentForm.assigned_class}
+                  onChange={(e) => setStudentForm((prev) => ({ ...prev, assigned_class: e.target.value }))}
+                  placeholder="e.g. Class 10A"
                   className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                    isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20" : "bg-black/5 border-black/10 text-black placeholder:text-black/30"
                   }`}
                 />
               </div>
@@ -754,8 +843,9 @@ export default function SchoolFacultyAdminPage() {
                   value={studentForm.password}
                   onChange={(e) => setStudentForm((prev) => ({ ...prev, password: e.target.value }))}
                   required
+                  placeholder="Min 6 characters"
                   className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                    isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20" : "bg-black/5 border-black/10 text-black placeholder:text-black/30"
                   }`}
                 />
               </div>

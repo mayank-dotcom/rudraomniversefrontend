@@ -62,6 +62,7 @@ function ArenaContent() {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         audioCtxRef.current = ctx;
         fetch("/sword_sound.mp3")
+
             .then((res) => res.arrayBuffer())
             .then((data) => ctx.decodeAudioData(data))
             .then((buffer) => { audioBufferRef.current = buffer; })
@@ -410,8 +411,8 @@ function ArenaContent() {
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ delay: i * 0.1 }}
                                                     className={`flex items-center justify-between p-4 border rounded-2xl ${(isHost && p.name === adminName) || (!isHost && p.name === participantName)
-                                                            ? "bg-white/10 border-white/30"
-                                                            : "bg-white/5 border-white/10"
+                                                        ? "bg-white/10 border-white/30"
+                                                        : "bg-white/5 border-white/10"
                                                         }`}
                                                 >
                                                     <div className="flex items-center gap-3">
@@ -770,8 +771,8 @@ function ArenaContent() {
                                 <button
                                     onClick={() => setTab("leaderboard")}
                                     className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "leaderboard"
-                                            ? "bg-white text-black font-bold"
-                                            : "text-white/40 hover:text-white"
+                                        ? "bg-white text-black font-bold"
+                                        : "text-white/40 hover:text-white"
                                         }`}
                                 >
                                     <Trophy className="h-3 w-3 inline mr-1.5 -mt-0.5" />
@@ -780,8 +781,8 @@ function ArenaContent() {
                                 <button
                                     onClick={() => setTab("analysis")}
                                     className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "analysis"
-                                            ? "bg-white text-black font-bold"
-                                            : "text-white/40 hover:text-white"
+                                        ? "bg-white text-black font-bold"
+                                        : "text-white/40 hover:text-white"
                                         }`}
                                 >
                                     <BarChart3 className="h-3 w-3 inline mr-1.5 -mt-0.5" />
@@ -816,8 +817,8 @@ function ArenaContent() {
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ delay: i * 0.1 }}
                                                     className={`flex items-center p-5 rounded-2xl border transition-all ${isMe
-                                                            ? "bg-white/10 border-white/30 scale-[1.02]"
-                                                            : "bg-white/5 border-white/10"
+                                                        ? "bg-white/10 border-white/30 scale-[1.02]"
+                                                        : "bg-white/5 border-white/10"
                                                         }`}
                                                 >
                                                     <div className={`w-10 h-10 flex items-center justify-center text-lg font-black font-mono ${i < 3 ? medals[i] : "text-white/30"}`}>
@@ -934,10 +935,10 @@ function ArenaContent() {
                                                         <div key={i} className="p-5 border border-white/10 rounded-2xl bg-white/5">
                                                             <div className="flex items-start gap-3">
                                                                 <div className={`h-7 w-7 flex items-center justify-center rounded-full text-xs font-mono border flex-shrink-0 mt-0.5 ${userAnswer === -1
-                                                                        ? "border-white/10 text-white/30"
-                                                                        : isUserCorrect
-                                                                            ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
-                                                                            : "border-red-500 bg-red-500/20 text-red-400"
+                                                                    ? "border-white/10 text-white/30"
+                                                                    : isUserCorrect
+                                                                        ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
+                                                                        : "border-red-500 bg-red-500/20 text-red-400"
                                                                     }`}>
                                                                     {userAnswer === -1 ? "—" : isUserCorrect ? "✓" : "✗"}
                                                                 </div>
@@ -952,10 +953,10 @@ function ArenaContent() {
                                                                             const isUserOpt = userAnswer === oi;
                                                                             return (
                                                                                 <div key={oi} className={`p-3 rounded-xl text-xs border ${isCorrectOpt
-                                                                                        ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
-                                                                                        : isUserOpt && !isCorrectOpt
-                                                                                            ? "border-red-500/50 bg-red-500/10 text-red-400"
-                                                                                            : "border-white/5 text-white/50"
+                                                                                    ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+                                                                                    : isUserOpt && !isCorrectOpt
+                                                                                        ? "border-red-500/50 bg-red-500/10 text-red-400"
+                                                                                        : "border-white/5 text-white/50"
                                                                                     }`}>
                                                                                     <span className="font-mono text-[9px] opacity-60 mr-2">{String.fromCharCode(65 + oi)}</span>
                                                                                     {opt}

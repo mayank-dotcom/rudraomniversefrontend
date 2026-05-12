@@ -5,11 +5,11 @@ import {
     MoreHorizontal, Plus, Briefcase, Users, Clock, CheckCircle2,
     ChevronRight, ArrowUpRight, Globe, Shield, Zap, Table as TableIcon, LayoutDashboard,
     ChevronLeft, ChevronRight as ChevronRightIcon, LogOut, Moon, Sun, RefreshCw, Database,
-    TrendingUp, ShieldCheck, Cpu, X, Copy, Check
+    TrendingUp, ShieldCheck, Cpu, X, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin } from '@/lib/chat-api';
+import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser } from '@/lib/chat-api';
 import { isAdminAuthenticated, setAdminKey, removeAdminKey, setApiKey } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -106,22 +106,27 @@ const Dashboard = () => {
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
-    const [view, setView] = useState<'visual' | 'table' | 'plans'>('visual');
+    const [view, setView] = useState<'visual' | 'table' | 'plans' | 'sites'>('visual');
     const [isDarkMode, setIsDarkMode] = useState(true);
     const [plans, setPlans] = useState<Plan[]>([]);
     const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
     const [isUpdatingTokens, setIsUpdatingTokens] = useState(false);
+    const [isFreezing, setIsFreezing] = useState(false);
+    const [isUnfreezing, setIsUnfreezing] = useState(false);
     const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
     const [isCreatingPlan, setIsCreatingPlan] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isPlansLoading, setIsPlansLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
+    const [sortField, setSortField] = useState<"name" | "plan" | "status" | "latency">("name");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
     const [showCreateSchoolAdminModal, setShowCreateSchoolAdminModal] = useState(false);
     const [newSchoolName, setNewSchoolName] = useState("");
     const [newSchoolCode, setNewSchoolCode] = useState("");
     const [newSchoolAdminName, setNewSchoolAdminName] = useState("");
     const [newSchoolAdminEmail, setNewSchoolAdminEmail] = useState("");
     const [newSchoolAdminPassword, setNewSchoolAdminPassword] = useState("");
+    const [newSchoolStudentLimit, setNewSchoolStudentLimit] = useState<number>(100);
     const [isCreatingSchoolAdmin, setIsCreatingSchoolAdmin] = useState(false);
     const [createdAdminInfo, setCreatedAdminInfo] = useState<{
         schoolName: string;
@@ -131,24 +136,51 @@ const Dashboard = () => {
         adminPassword: string;
         adminCode: string;
     } | null>(null);
+    const [siteSettings, setSiteSettings] = useState<SiteSetting[]>([]);
+    const [editingSiteSetting, setEditingSiteSetting] = useState<{ key: string; value: string } | null>(null);
+    const [siteFormData, setSiteFormData] = useState<any>(null);
+    const [isSavingSiteSetting, setIsSavingSiteSetting] = useState(false);
     const [copied, setCopied] = useState(false);
     const USERS_PER_PAGE = 10;
 
+    const sortedUsers = useMemo(() => {
+        const list = [...users];
+        list.sort((a, b) => {
+            let va: any, vb: any;
+            switch (sortField) {
+                case "plan": va = a.subscription.plan.toLowerCase(); vb = b.subscription.plan.toLowerCase(); break;
+                case "status": va = a.subscription.status.toLowerCase(); vb = b.subscription.status.toLowerCase(); break;
+                case "latency": va = a.subscription.latency_ms; vb = b.subscription.latency_ms; break;
+                default: va = a.name.toLowerCase(); vb = b.name.toLowerCase();
+            }
+            if (va < vb) return sortOrder === "asc" ? -1 : 1;
+            if (va > vb) return sortOrder === "asc" ? 1 : -1;
+            return 0;
+        });
+        return list;
+    }, [users, sortField, sortOrder]);
+
     const filteredUsers = useMemo(() => {
-        if (!searchQuery) return users;
-        return users.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.id.toLowerCase().includes(searchQuery.toLowerCase()));
-    }, [users, searchQuery]);
+        if (!searchQuery) return sortedUsers;
+        return sortedUsers.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.id.toLowerCase().includes(searchQuery.toLowerCase()));
+    }, [sortedUsers, searchQuery]);
 
     const totalPages = Math.ceil(filteredUsers.length / USERS_PER_PAGE);
     const paginatedUsers = filteredUsers.slice((currentPage - 1) * USERS_PER_PAGE, currentPage * USERS_PER_PAGE);
+
+    const toggleSort = (field: "name" | "plan" | "status" | "latency") => {
+        if (sortField === field) setSortOrder(o => o === "asc" ? "desc" : "asc");
+        else { setSortField(field); setSortOrder("asc"); }
+    };
 
     const fetchData = async () => {
         setIsLoading(true);
         setIsRefreshing(true);
         try {
-            const [usersRes, plansRes] = await Promise.all([getAdminUsers(), getPlansList()]);
+            const [usersRes, plansRes, settingsRes] = await Promise.all([getAdminUsers(), getPlansList(), getSiteSettings()]);
             if (usersRes.success) setUsers(usersRes.users || []);
             if (plansRes.success) setPlans(plansRes.plans || []);
+            if (settingsRes.success) setSiteSettings(settingsRes.settings || []);
         } catch (e) { toast.error("Failed to fetch data"); }
         finally { setIsRefreshing(false); setIsLoading(false); }
     };
@@ -246,6 +278,7 @@ const Dashboard = () => {
                 admin_name: name,
                 admin_email: email,
                 admin_password: adminPassword,
+                student_limit: newSchoolStudentLimit,
             });
             const adminCode = res.admin?.admin_code || schoolCode;
             setCreatedAdminInfo({
@@ -262,12 +295,10 @@ const Dashboard = () => {
             setNewSchoolAdminName("");
             setNewSchoolAdminEmail("");
             setNewSchoolAdminPassword("");
+            setNewSchoolStudentLimit(100);
 
-            if (res.email_sent) {
-                toast.success("School admin created. Credentials sent to " + email);
-            } else {
-                toast.warning("Admin created but email could not be sent. SMTP not configured on server.");
-            }
+            toast.success("School onboarded successfully!");
+            toast.warning("Copy credentials from the dialog — email delivery is not guaranteed.", { duration: 6000 });
         } catch (err) {
             toast.error("Failed to create school admin: " + (err as Error).message);
         } finally {
@@ -287,6 +318,46 @@ const Dashboard = () => {
             toast.error("Error updating tokens: " + (err as Error).message);
         } finally {
             setIsUpdatingTokens(false);
+        }
+    };
+
+    const handleFreezeUser = async (userId: string) => {
+        setIsFreezing(true);
+        try {
+            const res = await freezeUser(userId);
+            if (res.success) {
+                toast.success(res.message || "User frozen successfully");
+                setSelectedUser(prev => prev && prev.id === userId ? {
+                    ...prev,
+                    is_frozen: true,
+                    subscription: { ...prev.subscription, plan: "Frozen", status: "frozen" }
+                } : prev);
+                fetchData();
+            } else throw new Error(res.error || "Failed to freeze");
+        } catch (err) {
+            toast.error("Error freezing user: " + (err as Error).message);
+        } finally {
+            setIsFreezing(false);
+        }
+    };
+
+    const handleUnfreezeUser = async (userId: string) => {
+        setIsUnfreezing(true);
+        try {
+            const res = await unfreezeUser(userId);
+            if (res.success) {
+                toast.success(res.message || "User unfrozen successfully");
+                setSelectedUser(prev => prev && prev.id === userId ? {
+                    ...prev,
+                    is_frozen: false,
+                    subscription: { ...prev.subscription, plan: "Free Trial", status: "active" }
+                } : prev);
+                fetchData();
+            } else throw new Error(res.error || "Failed to unfreeze");
+        } catch (err) {
+            toast.error("Error unfreezing user: " + (err as Error).message);
+        } finally {
+            setIsUnfreezing(false);
         }
     };
 
@@ -426,12 +497,18 @@ const Dashboard = () => {
                              <TableIcon className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Table Logs
                          </button>
                          <button
-                             onClick={() => setView('plans')}
-                             className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'plans' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
-                         >
-                             <Zap className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Plans
-                         </button>
-                     </div>
+                              onClick={() => setView('plans')}
+                              className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'plans' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                          >
+                              <Zap className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Plans
+                          </button>
+                          <button
+                              onClick={() => setView('sites')}
+                              className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'sites' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                          >
+                              <FileText className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Sites
+                          </button>
+                      </div>
                 </div>
 
                 <div className="flex items-center gap-6">
@@ -563,9 +640,13 @@ const Dashboard = () => {
                                                      <div>
                                                          <div className="flex items-center gap-3 mb-2">
                                                              <h2 className={`text-4xl font-display font-black tracking-tighter ${isDarkMode ? "text-white" : "text-black"}`}>{selectedUser.name}</h2>
-                                                             <span className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-widest ${selectedUser.subscription.status === 'active' ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"}`}>
-                                                                 {selectedUser.subscription.status}
-                                                             </span>
+                                                              <span className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-widest ${
+                                                                  selectedUser.subscription.status === 'active' ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" :
+                                                                  selectedUser.subscription.status === 'frozen' ? "bg-red-500/20 text-red-400 border border-red-500/30" :
+                                                                  "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                                              }`}>
+                                                                  {selectedUser.subscription.status}
+                                                              </span>
                                                          </div>
                                                          <p className={`text-sm font-mono flex items-center gap-2 uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
                                                              <Mail className="h-3.5 w-3.5" /> {selectedUser.email}
@@ -574,16 +655,23 @@ const Dashboard = () => {
                                                      </div>
                                                 </div>
                                                 <div className="flex flex-wrap items-center gap-4">
-                                                    <button
-                                                        onClick={() => handleUpdateTokens(selectedUser.id, selectedUser.subscription.tokens_limit)}
-                                                        disabled={isUpdatingTokens}
-                                                        className="px-8 py-4 bg-white text-black text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3"
-                                                    >
-                                                        <Zap className="h-4 w-4" /> {isUpdatingTokens ? 'UPDATING...' : 'MANAGE TOKENS'}
-                                                    </button>
-                                                    <button className="px-8 py-4 border border-white/10 text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:bg-white/5 transition-all rounded-2xl">
-                                                        RESET ACCOUNT
-                                                    </button>
+                                                    {selectedUser.is_frozen ? (
+                                                        <button
+                                                            onClick={() => handleUnfreezeUser(selectedUser.id)}
+                                                            disabled={isUnfreezing}
+                                                            className="px-8 py-4 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3"
+                                                        >
+                                                            <Zap className="h-4 w-4" /> {isUnfreezing ? 'UNFREEZING...' : 'UNFREEZE'}
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleFreezeUser(selectedUser.id)}
+                                                            disabled={isFreezing}
+                                                            className="px-8 py-4 bg-red-500 text-white text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3"
+                                                        >
+                                                            <Zap className="h-4 w-4" /> {isFreezing ? 'FREEZING...' : 'FREEZE'}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -758,10 +846,22 @@ const Dashboard = () => {
                                   <table className="w-full text-left border-collapse">
                                       <thead>
                                           <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
-                                              <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Identity</th>
-                                              <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Subscription</th>
+                                              <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
+                                                <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:opacity-80 transition-all">
+                                                  Identity {sortField === "name" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                </button>
+                                              </th>
+                                              <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
+                                                <button onClick={() => toggleSort("plan")} className="flex items-center gap-1 hover:opacity-80 transition-all">
+                                                  Subscription {sortField === "plan" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                </button>
+                                              </th>
                                               <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Resources</th>
-                                              <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>Uptime / Latency</th>
+                                              <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
+                                                <button onClick={() => toggleSort("latency")} className="flex items-center gap-1 hover:opacity-80 transition-all">
+                                                  Uptime / Latency {sortField === "latency" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                </button>
+                                              </th>
                                               <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>Administrative</th>
                                           </tr>
                                       </thead>
@@ -796,7 +896,11 @@ const Dashboard = () => {
                                                                   {user.subscription.plan}
                                                               </span>
                                                               <div className="flex items-center gap-2">
-                                                                  <div className={`h-1 w-1 rounded-full ${user.subscription.status === 'active' ? "bg-emerald-500" : "bg-amber-500"}`} />
+                                                                   <div className={`h-1 w-1 rounded-full ${
+                                                                       user.subscription.status === 'active' ? "bg-emerald-500" :
+                                                                       user.subscription.status === 'frozen' ? "bg-red-500" :
+                                                                       "bg-amber-500"
+                                                                   }`} />
                                                                   <span className={`text-[9px] ${isDarkMode ? "text-white opacity-40" : "text-black opacity-60"}`}>{user.subscription.status}</span>
                                                               </div>
                                                           </div>
@@ -884,6 +988,91 @@ const Dashboard = () => {
                         </motion.div>
                     )}
                     
+                    {/* Sites View */}
+                     {view === 'sites' && (
+                         <motion.div
+                             key="sites"
+                             initial={{ opacity: 0, y: 20 }}
+                             animate={{ opacity: 1, y: 0 }}
+                             exit={{ opacity: 0, y: -20 }}
+                             className="p-4 sm:p-6 lg:p-10"
+                         >
+                             <div className={`border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl ${
+                                 isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                             }`}>
+                                 <div className={`p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                     <div>
+                                         <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Site Pages</h2>
+                                         <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Manage About Us, Privacy Policy, Terms & Contact</p>
+                                     </div>
+                                     <button
+                                         onClick={fetchData}
+                                         className={`p-3 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                     >
+                                         <RefreshCw className={`h-4 w-4 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
+                                     </button>
+                                 </div>
+                                 <div className="p-10">
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                         {[
+                                             { key: 'about_us', label: 'About Us', icon: 'ℹ️' },
+                                             { key: 'privacy_policy', label: 'Privacy Policy', icon: '🔒' },
+                                             { key: 'terms_conditions', label: 'Terms of Service', icon: '📜' },
+                                             { key: 'contact_info', label: 'Contact Us', icon: '📧' },
+                                         ].map((page) => {
+                                             const setting = siteSettings.find(s => s.key === page.key)
+                                             return (
+                                                 <div
+                                                     key={page.key}
+                                                     className={`relative border rounded-[2.5rem] p-8 transition-all hover:scale-[1.02] overflow-hidden group cursor-pointer ${
+                                                         isDarkMode
+                                                             ? "border-zinc-800/50 bg-gradient-to-br from-zinc-900 via-black to-zinc-900"
+                                                             : "border-zinc-800/50 bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                                                     }`}
+                                                       onClick={() => {
+                                                          const raw = setting?.value || '';
+                                                          setEditingSiteSetting({ key: page.key, value: raw });
+                                                          try {
+                                                              const parsed = JSON.parse(raw);
+                                                              if (page.key === 'about_us' && Array.isArray(parsed.sections) && !parsed.elements) {
+                                                                  setSiteFormData({ elements: parsed.sections.map((s: string) => ({ type: 'paragraph', content: s })) });
+                                                              } else if (page.key === 'contact_info' && parsed.description && !parsed.paragraphs) {
+                                                                  setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
+                                                              } else {
+                                                                  setSiteFormData(parsed);
+                                                              }
+                                                          } catch {
+                                                              if (page.key === 'about_us') {
+                                                                  setSiteFormData({ elements: raw.split('\n\n').filter(Boolean).map((p: string) => ({ type: 'paragraph', content: p })) });
+                                                              } else if (page.key === 'contact_info') {
+                                                                  setSiteFormData({ paragraphs: raw.split('\n\n').filter(Boolean), email: '', responseTime: '' });
+                                                              } else {
+                                                                  setSiteFormData(null);
+                                                              }
+                                                          }
+                                                      }}
+                                                 >
+                                                     <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
+                                                     <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                                                     <div className="flex items-center justify-between mb-4">
+                                                         <h3 className={`text-lg font-display font-black tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{page.label}</h3>
+                                                         <span className="text-2xl">{page.icon}</span>
+                                                     </div>
+                                                     <p className={`text-[10px] font-mono line-clamp-3 leading-relaxed ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
+                                                         {setting?.value?.substring(0, 150) || 'No content yet...'}
+                                                     </p>
+                                                     <div className={`mt-4 text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`}>
+                                                         Click to edit
+                                                     </div>
+                                                 </div>
+                                             )
+                                         })}
+                                     </div>
+                                 </div>
+                             </div>
+                         </motion.div>
+                     )}
+
                     {/* Plans View */}
                      {view === 'plans' && (
                          <motion.div
@@ -1127,6 +1316,283 @@ const Dashboard = () => {
                   </div>
               )}
 
+            {/* Site Settings Editor Modal */}
+            {editingSiteSetting && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className={`relative w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-zinc-800/50 p-6 rounded-[2rem] ${
+                            isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
+                        }`}
+                    >
+                        <button
+                            onClick={() => { setEditingSiteSetting(null); setSiteFormData(null); }}
+                            className={`absolute top-4 right-4 p-2 rounded-xl transition-all ${isDarkMode ? "opacity-40 text-white hover:opacity-100 hover:bg-white/5" : "opacity-60 text-black hover:opacity-100 hover:bg-black/5"}`}
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+
+                        <h2 className={`text-xl font-display font-black uppercase tracking-tight mb-6 ${isDarkMode ? "text-white" : "text-black"}`}>
+                            {editingSiteSetting.key === 'about_us' ? 'About Us' :
+                             editingSiteSetting.key === 'privacy_policy' ? 'Privacy Policy' :
+                             editingSiteSetting.key === 'terms_conditions' ? 'Terms of Service' :
+                             editingSiteSetting.key === 'contact_info' ? 'Contact Us' : editingSiteSetting.key}
+                        </h2>
+
+                        {editingSiteSetting.key === 'about_us' && (
+                            <div className="space-y-4">
+                                {(Array.isArray(siteFormData?.elements) ? siteFormData.elements : []).map((el: any, i: number) => {
+                                    const updateField = (field: string, val: string) => {
+                                        const next = JSON.parse(JSON.stringify(siteFormData));
+                                        if (next.elements && next.elements[i]) next.elements[i][field] = val;
+                                        setSiteFormData(next);
+                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                    };
+                                    return (
+                                        <div key={i} className={`p-4 rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                            <div className="flex items-center justify-between gap-3 mb-2">
+                                                <select
+                                                    value={el.type || 'paragraph'}
+                                                    onChange={(e) => updateField('type', e.target.value)}
+                                                    className={`p-2 text-[10px] font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
+                                                        isDarkMode ? "bg-black border-white/10 text-white" : "bg-white border-black/10 text-black"
+                                                    }`}
+                                                >
+                                                    <option value="heading">Heading</option>
+                                                    <option value="subheading">Subheading</option>
+                                                    <option value="paragraph">Paragraph</option>
+                                                </select>
+                                                <button
+                                                    onClick={() => {
+                                                        const next = JSON.parse(JSON.stringify(siteFormData));
+                                                        next.elements = next.elements.filter((_: any, j: number) => j !== i);
+                                                        setSiteFormData(next);
+                                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                    }}
+                                                    className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                            <textarea
+                                                value={el.content || ''}
+                                                onChange={(e) => updateField('content', e.target.value)}
+                                                rows={4}
+                                                placeholder={el.type === 'paragraph' ? 'Paragraph text...' : el.type === 'heading' ? 'Heading text...' : 'Subheading text...'}
+                                                className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${
+                                                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                }`}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                                <button
+                                    onClick={() => {
+                                        const next = JSON.parse(JSON.stringify(siteFormData || {}));
+                                        if (!next.elements) next.elements = [];
+                                        next.elements.push({ type: 'paragraph', content: '' });
+                                        setSiteFormData(next);
+                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                    }}
+                                    className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                >
+                                    + Add Element
+                                </button>
+                            </div>
+                        )}
+
+                        {editingSiteSetting.key === 'contact_info' && (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Paragraphs</label>
+                                    {(Array.isArray(siteFormData?.paragraphs) ? siteFormData.paragraphs : ['']).map((p: string, i: number) => (
+                                        <div key={i} className="mb-2">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className={`text-[8px] font-mono ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>Paragraph {i + 1}</span>
+                                                {siteFormData?.paragraphs?.length > 1 && (
+                                                    <button
+                                                        onClick={() => {
+                                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                                            next.paragraphs = next.paragraphs.filter((_: any, j: number) => j !== i);
+                                                            setSiteFormData(next);
+                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                        }}
+                                                        className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <textarea
+                                                value={p}
+                                                onChange={(e) => {
+                                                    const next = JSON.parse(JSON.stringify(siteFormData));
+                                                    if (next.paragraphs && next.paragraphs[i] !== undefined) next.paragraphs[i] = e.target.value;
+                                                    setSiteFormData(next);
+                                                    setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                }}
+                                                rows={3}
+                                                className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${
+                                                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                }`}
+                                            />
+                                        </div>
+                                    ))}
+                                    <button
+                                        onClick={() => {
+                                            const next = JSON.parse(JSON.stringify(siteFormData || {}));
+                                            if (!next.paragraphs) next.paragraphs = [];
+                                            next.paragraphs.push('');
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                    >
+                                        + Add Paragraph
+                                    </button>
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Email</label>
+                                    <input
+                                        value={siteFormData?.email || ''}
+                                        onChange={(e) => {
+                                            const next = { ...siteFormData, email: e.target.value };
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
+                                            isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                        }`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Response Time</label>
+                                    <input
+                                        value={siteFormData?.responseTime || ''}
+                                        onChange={(e) => {
+                                            const next = { ...siteFormData, responseTime: e.target.value };
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
+                                            isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                        }`}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {(editingSiteSetting.key === 'privacy_policy' || editingSiteSetting.key === 'terms_conditions') && (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Last Updated</label>
+                                    <input
+                                        value={siteFormData?.lastUpdated || ''}
+                                        onChange={(e) => {
+                                            const next = { ...siteFormData, lastUpdated: e.target.value };
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
+                                            isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                        }`}
+                                    />
+                                </div>
+                                {(Array.isArray(siteFormData?.sections) ? siteFormData.sections : []).map((s: any, i: number) => {
+                                    const updateField = (field: string, val: string) => {
+                                        const next = JSON.parse(JSON.stringify(siteFormData));
+                                        if (next.sections && next.sections[i]) next.sections[i][field] = val;
+                                        setSiteFormData(next);
+                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                    };
+                                    return (
+                                        <div key={i} className={`p-4 rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Section {i + 1}</label>
+                                                <button
+                                                    onClick={() => {
+                                                        const next = JSON.parse(JSON.stringify(siteFormData));
+                                                        next.sections = next.sections.filter((_: any, j: number) => j !== i);
+                                                        setSiteFormData(next);
+                                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                    }}
+                                                    className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                            <input
+                                                value={s.title || ''}
+                                                onChange={(e) => updateField('title', e.target.value)}
+                                                placeholder="Section title"
+                                                className={`w-full mb-2 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${
+                                                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                }`}
+                                            />
+                                            <textarea
+                                                value={s.content || ''}
+                                                onChange={(e) => updateField('content', e.target.value)}
+                                                rows={4}
+                                                placeholder="Section content"
+                                                className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${
+                                                    isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                }`}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                                <button
+                                    onClick={() => {
+                                        const next = JSON.parse(JSON.stringify(siteFormData || {}));
+                                        if (!next.sections) next.sections = [];
+                                        next.sections.push({ title: '', content: '' });
+                                        setSiteFormData(next);
+                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                    }}
+                                    className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                >
+                                    + Add Section
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => { setEditingSiteSetting(null); setSiteFormData(null); }}
+                                className={`flex-1 py-3 border text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl ${
+                                    isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"
+                                }`}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setIsSavingSiteSetting(true);
+                                    try {
+                                        const res = await updateSiteSetting(editingSiteSetting.key, editingSiteSetting.value);
+                                        if (res.success) {
+                                            toast.success("Page updated successfully");
+                                            setEditingSiteSetting(null);
+                                            setSiteFormData(null);
+                                            fetchData();
+                                        } else throw new Error(res.error || "Failed to update");
+                                    } catch (err) {
+                                        toast.error("Error updating page: " + (err as Error).message);
+                                    } finally {
+                                        setIsSavingSiteSetting(false);
+                                    }
+                                }}
+                                disabled={isSavingSiteSetting}
+                                className="flex-1 py-3 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl disabled:opacity-50"
+                            >
+                                {isSavingSiteSetting ? "SAVING..." : "SAVE CHANGES"}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
             {/* Create School Admin Modal */}
             {showCreateSchoolAdminModal && (
                 <div className="fixed inset-0 z-[210] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
@@ -1196,6 +1662,17 @@ const Dashboard = () => {
                                     className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
                                 />
                             </div>
+                            <div>
+                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Student Limit <span className="opacity-50">(default: 100)</span></label>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={10000}
+                                    value={newSchoolStudentLimit}
+                                    onChange={(e) => setNewSchoolStudentLimit(Math.max(1, parseInt(e.target.value) || 100))}
+                                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                />
+                            </div>
                             <button
                                 type="submit"
                                 disabled={isCreatingSchoolAdmin}
@@ -1214,7 +1691,7 @@ const Dashboard = () => {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className={`relative w-full max-w-lg border border-zinc-800/50 p-6 rounded-[2rem] ${
+                        className={`relative w-full max-w-lg border border-zinc-800/50 p-6 rounded-[2rem] overflow-hidden ${
                             isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
                         }`}
                     >
@@ -1225,55 +1702,55 @@ const Dashboard = () => {
                             <X className="h-4 w-4" />
                         </button>
 
-                        <div className="text-center mb-6">
-                            <div className="h-14 w-14 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4">
-                                <CheckCircle2 className="h-7 w-7 text-emerald-400" />
+                        {/* Warning Banner */}
+                        <div className="mb-5 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+                            <Zap className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400">Email Delivery Not Guaranteed</p>
+                                <p className="text-[10px] font-mono text-amber-400/70 mt-0.5 leading-relaxed">
+                                    SMTP may not be configured on the server. Copy & save these credentials NOW — this dialog will not reappear.
+                                </p>
                             </div>
-                            <h2 className={`text-xl font-display font-black uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
-                                School Admin Created
-                            </h2>
-                            <p className={`text-[10px] font-mono mt-2 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                Share these credentials with the admin. Email may not have been delivered — save this now.
-                            </p>
                         </div>
 
-                        <div className={`space-y-3 p-4 rounded-xl text-xs font-mono ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
-                            <div className="flex justify-between">
-                                <span className="opacity-40">School</span>
-                                <span className="font-bold">{createdAdminInfo.schoolName}</span>
+                        <div className="text-center mb-5">
+                            <div className="h-12 w-12 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto mb-3">
+                                <CheckCircle2 className="h-6 w-6 text-emerald-400" />
                             </div>
-                            <div className="flex justify-between">
-                                <span className="opacity-40">School Code</span>
-                                <span className="font-bold">{createdAdminInfo.schoolCode}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="opacity-40">Admin Name</span>
-                                <span className="font-bold">{createdAdminInfo.adminName}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="opacity-40">Email</span>
-                                <span className="font-bold">{createdAdminInfo.adminEmail}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="opacity-40">Admin Code</span>
-                                <span className="font-bold font-mono">{createdAdminInfo.adminCode}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="opacity-40">Password</span>
-                                <span className="font-bold font-mono">{createdAdminInfo.adminPassword}</span>
-                            </div>
+                            <h2 className={`text-xl font-display font-black uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
+                                School Onboarded
+                            </h2>
+                        </div>
+
+                        {/* Credential rows with individual copy */}
+                        <div className={`space-y-2 p-4 rounded-2xl text-xs font-mono ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                            {([
+                                { label: 'School', value: createdAdminInfo.schoolName },
+                                { label: 'School Code', value: createdAdminInfo.schoolCode },
+                                { label: 'Admin Name', value: createdAdminInfo.adminName },
+                                { label: 'Login Email', value: createdAdminInfo.adminEmail },
+                                { label: 'Admin Code', value: createdAdminInfo.adminCode, highlight: true },
+                                { label: 'Password', value: createdAdminInfo.adminPassword, highlight: true },
+                            ] as { label: string; value: string; highlight?: boolean }[]).map(({ label, value, highlight }) => (
+                                <div key={label} className={`flex items-center justify-between gap-4 px-3 py-2 rounded-xl ${
+                                    highlight ? (isDarkMode ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-500/10 border border-emerald-500/20') : ''
+                                }`}>
+                                    <span className={`text-[9px] uppercase tracking-widest shrink-0 ${isDarkMode ? 'opacity-40' : 'opacity-60'}`}>{label}</span>
+                                    <span className={`font-bold truncate ${highlight ? 'text-emerald-400' : ''}`}>{value}</span>
+                                    <button
+                                        onClick={() => navigator.clipboard.writeText(value)}
+                                        className={`shrink-0 p-1 rounded-lg transition-all hover:scale-110 ${isDarkMode ? 'opacity-30 hover:opacity-80 hover:bg-white/10' : 'opacity-40 hover:opacity-80 hover:bg-black/10'}`}
+                                        title={`Copy ${label}`}
+                                    >
+                                        <Copy className="h-3 w-3" />
+                                    </button>
+                                </div>
+                            ))}
                         </div>
 
                         <button
                             onClick={() => {
-                                const text = `School: ${createdAdminInfo.schoolName}
-School Code: ${createdAdminInfo.schoolCode}
-Admin Name: ${createdAdminInfo.adminName}
-Email: ${createdAdminInfo.adminEmail}
-Admin Code: ${createdAdminInfo.adminCode}
-Password: ${createdAdminInfo.adminPassword}
-
-Login at: ${window.location.origin}/auth/school-admin`;
+                                const text = `School: ${createdAdminInfo.schoolName}\nSchool Code: ${createdAdminInfo.schoolCode}\nAdmin Name: ${createdAdminInfo.adminName}\nEmail: ${createdAdminInfo.adminEmail}\nAdmin Code (Login ID): ${createdAdminInfo.adminCode}\nPassword: ${createdAdminInfo.adminPassword}\n\nLogin at: ${window.location.origin}/auth/school-admin`;
                                 navigator.clipboard.writeText(text).then(() => {
                                     setCopied(true);
                                     setTimeout(() => setCopied(false), 2000);
@@ -1282,9 +1759,9 @@ Login at: ${window.location.origin}/auth/school-admin`;
                             className="w-full mt-4 py-3 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl flex items-center justify-center gap-2"
                         >
                             {copied ? (
-                                <><Check className="h-3.5 w-3.5" />Copied</>
+                                <><Check className="h-3.5 w-3.5" />Copied!</>
                             ) : (
-                                <><Copy className="h-3.5 w-3.5" />Copy Credentials</>
+                                <><Copy className="h-3.5 w-3.5" />Copy All Credentials</>
                             )}
                         </button>
                     </motion.div>

@@ -7,7 +7,11 @@ import { LogOut, Moon, Sun } from "lucide-react"
 import { isAuthenticated, removeApiKey } from "@/lib/auth"
 import { useTheme } from "@/lib/theme-context"
 
-const Navbar = () => {
+interface NavbarProps {
+    onAuthClick?: () => void
+}
+
+const Navbar = ({ onAuthClick }: NavbarProps) => {
     const [authed, setAuthed] = useState(false)
     const { isDarkMode, toggleTheme } = useTheme()
 
@@ -62,12 +66,12 @@ const Navbar = () => {
                             Logout
                         </button>
                     ) : (
-                        <Link
-                            href="/auth"
+                        <button
+                            onClick={onAuthClick}
                             className={`px-6 py-2.5 text-[10px] font-mono uppercase tracking-widest font-bold transition-all active:scale-95 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
                         >
                             Login / Sign Up
-                        </Link>
+                        </button>
                     )}
                 </div>
             </div>
