@@ -28,9 +28,9 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
 
     return (
         <div
-            className={`prose max-w-none
+            className={`chat-markdown prose max-w-none
                 ${isDarkMode ? "prose-invert" : ""}
-                prose-p:font-serif prose-p:italic prose-p:text-base prose-p:leading-relaxed
+                prose-p:text-base prose-p:leading-relaxed
                 md:prose-p:text-lg
             `}
             style={{
@@ -106,7 +106,7 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                     },
                     p(props) {
                         const { children } = props;
-                        return <p className={`${isDarkMode ? "text-white" : "text-black"} font-serif italic text-base md:text-lg leading-relaxed`}>{children}</p>;
+                        return <p className={`${isDarkMode ? "text-white" : "text-black"} text-base md:text-lg leading-relaxed`}>{children}</p>;
                     },
                 }}
             >

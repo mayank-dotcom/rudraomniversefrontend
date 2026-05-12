@@ -260,3 +260,44 @@ body {
   0% { left: -100%; }
   100% { left: 150%; }
 }
+
+.chat-shell {
+  font-family: var(--font-chat-body), sans-serif;
+}
+
+.chat-shell button,
+.chat-shell h1,
+.chat-shell h2,
+.chat-shell h3,
+.chat-shell h4,
+.chat-shell h5,
+.chat-shell h6,
+.chat-shell .chat-heading,
+.chat-shell .font-display {
+  font-family: var(--font-chat-heading), sans-serif !important;
+}
+
+.chat-shell p,
+.chat-shell li,
+.chat-shell input,
+.chat-shell textarea,
+.chat-shell .chat-body {
+  font-family: var(--font-chat-body), sans-serif !important;
+}
+
+.chat-shell .font-mono,
+.chat-shell .chat-accent,
+.chat-shell code:not(pre code),
+.chat-shell .chat-markdown code:not(pre code) {
+  font-family: var(--font-chat-accent), sans-serif !important;
+}
+
+.chat-shell .chat-markdown,
+.chat-shell .chat-markdown :is(p, li, blockquote, td, th) {
+  font-family: var(--font-chat-body), sans-serif !important;
+  font-style: normal !important;
+}
+
+.chat-shell .chat-markdown :is(h1, h2, h3, h4, h5, h6, strong) {
+  font-family: var(--font-chat-heading), sans-serif !important;
+}

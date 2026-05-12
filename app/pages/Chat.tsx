@@ -11,6 +11,7 @@ import {
     Swords
 } from "lucide-react";
 import Link from "next/link";
+import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
 import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo } from "@/lib/auth";
 import { useTheme } from "@/lib/theme-context";
 import {
@@ -54,6 +55,24 @@ interface Message {
 
 const WELCOME_CONTENT = "Welcome to Rudranex AI. I am your study-pilot. How can I assist your learning journey today?";
 const ACTIVE_CHAT_STORAGE_KEY = "rudranex_active_chat_id";
+
+const chatHeadingFont = Poppins({
+    subsets: ["latin"],
+    weight: ["400", "500", "600", "700", "800"],
+    variable: "--font-chat-heading",
+});
+
+const chatBodyFont = Roboto({
+    subsets: ["latin"],
+    weight: ["400", "500", "700"],
+    variable: "--font-chat-body",
+});
+
+const chatAccentFont = Space_Grotesk({
+    subsets: ["latin"],
+    weight: ["400", "500", "700"],
+    variable: "--font-chat-accent",
+});
 
 const getWelcomeMessages = (): Message[] => [
     {
@@ -958,7 +977,7 @@ STRICT RULES:
     const isChatEmpty = messages.length === 0 || messages.every((msg) => msg.localOnly);
 
     return (
-        <div className={`h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black flex font-sans overflow-hidden transition-colors duration-500 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+        <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black flex overflow-hidden transition-colors duration-500 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
             <div className={`absolute inset-0 noise opacity-[0.02] pointer-events-none ${isDarkMode ? "invert-0" : "invert"}`} />
 
             <aside
