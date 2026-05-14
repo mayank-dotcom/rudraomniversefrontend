@@ -40,6 +40,22 @@ const StatCard = ({ title, value, icon: Icon, color, isDarkMode }: { title: stri
   </div>
 )
 
+function parseCSVLine(line: string): string[] {
+  const trimmed = line.trim()
+  if (!trimmed) return []
+  if (trimmed.includes("\t")) return trimmed.split("\t")
+  const result: string[] = []
+  let current = ""
+  let inQuotes = false
+  for (const ch of trimmed) {
+    if (ch === '"') { inQuotes = !inQuotes; continue }
+    if (ch === "," && !inQuotes) { result.push(current.trim()); current = ""; continue }
+    current += ch
+  }
+  result.push(current.trim())
+  return result
+}
+
 export default function SchoolFacultyAdminPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -68,6 +84,10 @@ export default function SchoolFacultyAdminPage() {
     password: "",
     assigned_class: "",
   })
+  const [uploadTab, setUploadTab] = useState<"manual" | "csv">("manual")
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadResult, setUploadResult] = useState<{ added: number; failed: number; errors: string[] } | null>(null)
 
   const ITEMS_PER_PAGE = 8
 
@@ -108,6 +128,14 @@ export default function SchoolFacultyAdminPage() {
   useEffect(() => {
     loadDashboard()
   }, [])
+
+  useEffect(() => {
+    if (showAddStudent) {
+      setUploadTab("manual")
+      setUploadFile(null)
+      setUploadResult(null)
+    }
+  }, [showAddStudent])
 
   const sortedStudents = useMemo(() => {
     const list = [...students]
@@ -865,14 +893,14 @@ export default function SchoolFacultyAdminPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`relative w-full max-w-lg max-h-[80vh] overflow-y-auto border border-zinc-800/50 p-6 rounded-[2rem] overflow-hidden group ${
+            className={`relative w-full max-w-lg max-h-[80vh] overflow-y-auto border border-zinc-800/50 p-6 rounded-[2rem] ${
               isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
             }`}
           >
             <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
             <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
             <button
-              onClick={() => setShowAddStudent(false)}
+              onClick={() => { setShowAddStudent(false); setUploadTab("manual"); setUploadFile(null); setUploadResult(null) }}
               className={`absolute top-4 right-4 p-2 rounded-xl transition-all ${isDarkMode ? "opacity-40 text-white hover:opacity-100 hover:bg-white/5" : "opacity-60 text-black hover:opacity-100 hover:bg-black/5"}`}
             >
               <X className="h-4 w-4" />
@@ -882,63 +910,245 @@ export default function SchoolFacultyAdminPage() {
               Add Student
             </h2>
 
-            <form onSubmit={handleAddStudent} className="space-y-4">
-              <div>
-                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Student Name</label>
-                <input
-                  value={studentForm.name}
-                  onChange={(e) => setStudentForm((prev) => ({ ...prev, name: e.target.value }))}
-                  required
-                  placeholder="Full name"
-                  className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20" : "bg-black/5 border-black/10 text-black placeholder:text-black/30"
-                  }`}
-                />
-              </div>
-              <div>
-                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Roll No</label>
-                <input
-                  value={studentForm.roll_no}
-                  onChange={(e) => setStudentForm((prev) => ({ ...prev, roll_no: e.target.value }))}
-                  required
-                  placeholder="e.g. STD001"
-                  className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20" : "bg-black/5 border-black/10 text-black placeholder:text-black/30"
-                  }`}
-                />
-              </div>
-              <div>
-                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Assigned Class <span className="opacity-50">(optional)</span></label>
-                <input
-                  value={studentForm.assigned_class}
-                  onChange={(e) => setStudentForm((prev) => ({ ...prev, assigned_class: e.target.value }))}
-                  placeholder="e.g. Class 10A"
-                  className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20" : "bg-black/5 border-black/10 text-black placeholder:text-black/30"
-                  }`}
-                />
-              </div>
-              <div>
-                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Password</label>
-                <input
-                  type="password"
-                  value={studentForm.password}
-                  onChange={(e) => setStudentForm((prev) => ({ ...prev, password: e.target.value }))}
-                  required
-                  placeholder="Min 6 characters"
-                  className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
-                    isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20" : "bg-black/5 border-black/10 text-black placeholder:text-black/30"
-                  }`}
-                />
-              </div>
+            {/* Tabs */}
+            <div className={`flex items-center gap-1 p-1 rounded-2xl border mb-6 ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}>
               <button
-                type="submit"
-                disabled={creatingStudent}
-                className="w-full py-3 bg-blue-500 text-black text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl disabled:opacity-50"
+                onClick={() => { setUploadTab("manual"); setUploadResult(null) }}
+                className={`flex-1 px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${uploadTab === "manual" ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold") : "opacity-40 hover:opacity-100"}`}
               >
-                {creatingStudent ? "ADDING..." : "ADD STUDENT"}
+                <User className="h-3 w-3 inline-block mr-1.5 -mt-0.5" /> Manual Entry
               </button>
-            </form>
+              <button
+                onClick={() => { setUploadTab("csv"); setUploadResult(null) }}
+                className={`flex-1 px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${uploadTab === "csv" ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold") : "opacity-40 hover:opacity-100"}`}
+              >
+                <Database className="h-3 w-3 inline-block mr-1.5 -mt-0.5" /> CSV Upload
+              </button>
+            </div>
+
+            {uploadTab === "manual" ? (
+              <form onSubmit={handleAddStudent} className="space-y-4">
+                <div>
+                  <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Student Name</label>
+                  <input
+                    value={studentForm.name}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, name: e.target.value }))}
+                    required
+                    placeholder="Full name"
+                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
+                      isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20" : "bg-black/5 border-black/10 text-black placeholder:text-black/30"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Roll No</label>
+                  <input
+                    value={studentForm.roll_no}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, roll_no: e.target.value }))}
+                    required
+                    placeholder="e.g. STD001"
+                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
+                      isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20" : "bg-black/5 border-black/10 text-black placeholder:text-black/30"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Assigned Class <span className="opacity-50">(optional)</span></label>
+                  <input
+                    value={studentForm.assigned_class}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, assigned_class: e.target.value }))}
+                    placeholder="e.g. Class 10A"
+                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
+                      isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20" : "bg-black/5 border-black/10 text-black placeholder:text-black/30"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Password</label>
+                  <input
+                    type="password"
+                    value={studentForm.password}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, password: e.target.value }))}
+                    required
+                    placeholder="Min 6 characters"
+                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-blue-500/50 ${
+                      isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20" : "bg-black/5 border-black/10 text-black placeholder:text-black/30"
+                    }`}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={creatingStudent}
+                  className="w-full py-3 bg-blue-500 text-black text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl disabled:opacity-50"
+                >
+                  {creatingStudent ? "ADDING..." : "ADD STUDENT"}
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                {/* Expected format info */}
+                <div className={`p-4 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                  <p className={`text-[9px] font-mono uppercase tracking-widest mb-2 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Expected CSV Columns</p>
+                  <div className={`text-[10px] font-mono space-y-0.5 ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                    <p><span className="text-blue-400 font-bold">name</span> <span className="opacity-40">(required)</span> — Student name</p>
+                    <p><span className="text-blue-400 font-bold">roll_no</span> <span className="opacity-40">(required)</span> — Unique roll number</p>
+                    <p><span className="opacity-80">class</span> <span className="opacity-40">(optional)</span> — Class/section</p>
+                    <p><span className="opacity-80">password</span> <span className="opacity-40">(optional, defaults to roll_no)</span></p>
+                  </div>
+                </div>
+
+                {/* File drop zone */}
+                <div
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) setUploadFile(f) }}
+                  className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer hover:border-blue-500/50 ${
+                    uploadFile
+                      ? (isDarkMode ? "border-blue-500/50 bg-blue-500/5" : "border-blue-500/50 bg-blue-500/5")
+                      : (isDarkMode ? "border-white/20 hover:border-white/40" : "border-black/20 hover:border-black/40")
+                  }`}
+                  onClick={() => document.getElementById("csv-file-input")?.click()}
+                >
+                  <input
+                    id="csv-file-input"
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) setUploadFile(f) }}
+                  />
+                  {uploadFile ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Database className={`h-6 w-6 ${isDarkMode ? "text-blue-400" : "text-blue-600"}`} />
+                      <span className={`text-xs font-mono font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{uploadFile.name}</span>
+                      <span className={`text-[9px] font-mono opacity-40`}>{(uploadFile.size / 1024).toFixed(1)} KB</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setUploadFile(null); setUploadResult(null) }}
+                        className="text-[9px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 mt-1"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <Database className={`h-6 w-6 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
+                      <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                        Drop CSV file here or click to browse
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload button */}
+                {uploadFile && !uploadResult && (
+                  <button
+                    onClick={async () => {
+                      if (!uploadFile) return
+                      setUploading(true)
+                      setUploadResult(null)
+                      const total: { added: number; failed: number; errors: string[] } = { added: 0, failed: 0, errors: [] }
+                      try {
+                        const text = await new Promise<string>((resolve, reject) => {
+                          const reader = new FileReader()
+                          reader.onload = (e) => resolve(e.target?.result as string)
+                          reader.onerror = () => reject(new Error("Failed to read file"))
+                          reader.readAsText(uploadFile)
+                        })
+
+                        const lines = text.split(/\r?\n/).filter(Boolean)
+                        if (lines.length < 2) {
+                          total.failed++
+                          total.errors.push("CSV must have a header row and at least one data row")
+                        } else {
+                          const headers = parseCSVLine(lines[0])
+                          const nameIdx = headers.findIndex((h) => /name/i.test(h))
+                          const rollIdx = headers.findIndex((h) => /roll/i.test(h))
+                          const classIdx = headers.findIndex((h) => /class/i.test(h))
+                          const passIdx = headers.findIndex((h) => /pass/i.test(h))
+
+                          if (nameIdx === -1 || rollIdx === -1) {
+                            total.errors.push('CSV must have "name" and "roll_no" columns')
+                            total.failed++
+                          } else {
+                            for (let i = 1; i < lines.length; i++) {
+                              const cols = parseCSVLine(lines[i])
+                              const name = cols[nameIdx]?.trim()
+                              const roll_no = cols[rollIdx]?.trim()
+                              if (!name || !roll_no) {
+                                total.failed++
+                                total.errors.push(`Row ${i}: missing name or roll_no`)
+                                continue
+                              }
+                              try {
+                                await createSchoolStudent({
+                                  name,
+                                  roll_no,
+                                  password: passIdx !== -1 ? (cols[passIdx]?.trim() || roll_no) : roll_no,
+                                  assigned_class: classIdx !== -1 ? (cols[classIdx]?.trim() || undefined) : undefined,
+                                })
+                                total.added++
+                              } catch (err: any) {
+                                total.failed++
+                                total.errors.push(`Row ${i} (${name}): ${err.message}`)
+                              }
+                            }
+                          }
+                        }
+
+                        setUploadResult(total)
+                        if (total.added > 0) {
+                          toast.success(`${total.added} students added successfully`)
+                          await loadDashboard()
+                        }
+                      } catch (err) {
+                        toast.error("Upload failed: " + (err as Error).message)
+                      } finally {
+                        setUploading(false)
+                      }
+                    }}
+                    disabled={uploading}
+                    className="w-full py-3 bg-blue-500 text-black text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {uploading ? (
+                      <>
+                        <div className="h-3.5 w-3.5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                        PROCESSING...
+                      </>
+                    ) : "UPLOAD CSV"}
+                  </button>
+                )}
+
+                {/* Upload results */}
+                {uploadResult && (
+                  <div className={`p-4 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className={`text-[10px] font-mono uppercase tracking-widest font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Upload Results</h3>
+                      <button
+                        onClick={() => setUploadResult(null)}
+                        className={`p-1 rounded-lg transition-all ${isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"}`}
+                      >
+                        <X className="h-3 w-3 opacity-40" />
+                      </button>
+                    </div>
+                    <div className="flex gap-4 mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{uploadResult.added} added</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full ${uploadResult.failed > 0 ? "bg-red-500" : "bg-zinc-500"}`} />
+                        <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{uploadResult.failed} failed</span>
+                      </div>
+                    </div>
+                    {uploadResult.errors.length > 0 && (
+                      <div className={`max-h-32 overflow-y-auto space-y-1 custom-scrollbar`}>
+                        {uploadResult.errors.map((err, i) => (
+                          <p key={i} className="text-[9px] font-mono text-red-400/80 leading-relaxed">{err}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </motion.div>
         </div>
       )}
