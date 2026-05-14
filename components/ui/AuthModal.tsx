@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Phone, Mail, GitBranch, KeyRound, Check, ChevronRight, User, GraduationCap, LogIn, UserPlus } from "lucide-react"
+import { X, Phone, Mail, GitBranch, KeyRound, Check, ChevronRight, User, GraduationCap } from "lucide-react"
 import { GithubAuthProvider, GoogleAuthProvider, signInWithPopup } from "firebase/auth"
 import { getFirebaseAuth, sendFirebaseOTP, cleanupRecaptcha } from "@/lib/firebase"
 import { setApiKey, setUserInfo } from "@/lib/auth"
-import { googleLogin, githubLogin, studentSignup, studentLogin } from "@/lib/chat-api"
+import { googleLogin, githubLogin, studentLogin } from "@/lib/chat-api"
+import { useTheme } from "@/lib/theme-context"
 
 interface AuthModalProps {
   open: boolean
@@ -15,15 +16,15 @@ interface AuthModalProps {
 
 type AuthTab = "user" | "student"
 type PhoneStep = "phone" | "otp" | "details" | "success"
-type StudentMode = "signup" | "login"
 
 export default function AuthModal({ open, onClose }: AuthModalProps) {
   const [tab, setTab] = useState<AuthTab>("user")
-  const [studentMode, setStudentMode] = useState<StudentMode>("login")
 
   const handleClose = () => {
     onClose()
   }
+
+  const { isDarkMode } = useTheme()
 
   return (
     <AnimatePresence>
@@ -32,7 +33,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className={`fixed inset-0 z-[300] flex items-center justify-center p-4 backdrop-blur-sm ${isDarkMode ? "bg-black/60" : "bg-white/60"}`}
           onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}
         >
           <motion.div
@@ -40,33 +41,39 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full max-w-md max-h-[92vh] bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-8"
+            className={`relative w-full max-w-md max-h-[92vh] ${isDarkMode ? "bg-[#0a0a0a] border border-white/10" : "bg-white border border-black/10"} rounded-[2rem] p-8`}
           >
             {/* Close */}
             <button
               onClick={handleClose}
-              className="absolute top-4 right-4 p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all"
+              className={`absolute top-4 right-4 p-2 rounded-xl ${isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5"} transition-all`}
             >
               <X className="h-4 w-4" />
             </button>
 
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
-                <LogIn className="h-6 w-6 text-white/60" />
+              <div className={`h-14 w-14 rounded-2xl ${isDarkMode ? "bg-white/5 border border-white/10" : "bg-black/5 border border-black/10"} flex items-center justify-center mx-auto mb-4`}>
+                <div className={`h-[30px] w-[30px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
+                  <svg width="28" height="28" viewBox="0 0 128 128" className={`${isDarkMode ? "text-white" : "text-black"}`}>
+                    <polygon points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108" fill="currentColor" />
+                  </svg>
+                </div>
               </div>
-              <h2 className="font-display font-black text-2xl tracking-tight text-white">Get Started</h2>
-              <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/40 mt-2">Sign in to Rudranex AI</p>
+              <h2 className={`font-display font-black text-2xl tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>Get Started</h2>
+              <p className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/40" : "text-black/40"} mt-2`}>Sign in to Rudranex AI</p>
             </div>
 
             {/* Tab Toggle: User / Student */}
-            <div className="flex mb-6 bg-white/5 rounded-2xl p-1 border border-white/5">
+            <div className={`flex mb-6 ${isDarkMode ? "bg-white/5 border border-white/5" : "bg-black/5 border border-black/5"} rounded-2xl p-1`}>
               <button
                 onClick={() => setTab("user")}
                 className={`flex-1 py-2.5 text-[10px] font-mono uppercase tracking-[0.2em] font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
                   tab === "user"
                     ? "bg-white text-black shadow-lg"
-                    : "text-white/40 hover:text-white/60"
+                    : isDarkMode
+                      ? "text-white/40 hover:text-white/60"
+                      : "text-black/40 hover:text-black/60"
                 }`}
               >
                 <User className="h-3.5 w-3.5" /> Regular User
@@ -76,7 +83,9 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
                 className={`flex-1 py-2.5 text-[10px] font-mono uppercase tracking-[0.2em] font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
                   tab === "student"
                     ? "bg-white text-black shadow-lg"
-                    : "text-white/40 hover:text-white/60"
+                    : isDarkMode
+                      ? "text-white/40 hover:text-white/60"
+                      : "text-black/40 hover:text-black/60"
                 }`}
               >
                 <GraduationCap className="h-3.5 w-3.5" /> Student
@@ -85,13 +94,12 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
             <AnimatePresence mode="wait">
               {tab === "user" ? (
-                <RegularUserAuth key="user" onSuccess={handleClose} />
+                <RegularUserAuth key="user" onSuccess={handleClose} isDarkMode={isDarkMode} />
               ) : (
                 <StudentAuth
                   key="student"
-                  mode={studentMode}
-                  onModeChange={setStudentMode}
                   onSuccess={handleClose}
+                  isDarkMode={isDarkMode}
                 />
               )}
             </AnimatePresence>
@@ -102,7 +110,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   )
 }
 
-function RegularUserAuth({ onSuccess }: { onSuccess: () => void }) {
+function RegularUserAuth({ onSuccess, isDarkMode }: { onSuccess: () => void; isDarkMode: boolean }) {
   const [step, setStep] = useState<PhoneStep>("phone")
   const [phone, setPhone] = useState("")
   const [otp, setOtp] = useState("")
@@ -268,7 +276,7 @@ function RegularUserAuth({ onSuccess }: { onSuccess: () => void }) {
         >
           <Check className="h-8 w-8 text-green-400" />
         </motion.div>
-        <p className="text-white/60 text-sm font-mono">Redirecting...</p>
+        <p className={`text-sm font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>Redirecting...</p>
       </motion.div>
     )
   }
@@ -290,14 +298,14 @@ function RegularUserAuth({ onSuccess }: { onSuccess: () => void }) {
         <button
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="w-full py-3.5 border border-white/10 rounded-2xl text-[10px] font-mono uppercase tracking-[0.15em] font-bold hover:bg-white/5 transition-all flex items-center justify-center gap-3 text-white disabled:opacity-50"
+          className="w-full py-3.5 rounded-2xl text-[10px] font-mono uppercase tracking-[0.15em] font-bold transition-all flex items-center justify-center gap-3 disabled:opacity-50 bg-[#4285F4] text-white hover:bg-[#3367D6] border border-[#4285F4]"
         >
           <Mail className="h-4 w-4" /> Sign in with Google
         </button>
         <button
           onClick={handleGithubLogin}
           disabled={loading}
-          className="w-full py-3.5 border border-white/10 rounded-2xl text-[10px] font-mono uppercase tracking-[0.15em] font-bold hover:bg-white/5 transition-all flex items-center justify-center gap-3 text-white disabled:opacity-50"
+          className="w-full py-3.5 rounded-2xl text-[10px] font-mono uppercase tracking-[0.15em] font-bold transition-all flex items-center justify-center gap-3 disabled:opacity-50 bg-[#24292e] text-white hover:bg-[#1b1f23] border border-[#24292e]"
         >
           <GitBranch className="h-4 w-4" /> Sign in with GitHub
         </button>
@@ -305,30 +313,30 @@ function RegularUserAuth({ onSuccess }: { onSuccess: () => void }) {
 
       {/* Divider */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="flex-1 h-[1px] bg-white/10" />
-        <span className="text-[9px] font-mono uppercase tracking-[0.3em] text-white/30">Or continue with phone</span>
-        <div className="flex-1 h-[1px] bg-white/10" />
+        <div className={`flex-1 h-[1px] ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
+        <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Or continue with phone</span>
+        <div className={`flex-1 h-[1px] ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
       </div>
 
       {/* Phone OTP */}
       {step === "phone" && (
         <div className="space-y-4">
           <div className="relative group">
-            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
+            <Phone className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${isDarkMode ? "text-white/20 group-focus-within:text-white/60" : "text-black/20 group-focus-within:text-black/60"} transition-colors`} />
             <input
               type="tel"
               placeholder="+91XXXXXXXXXX"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSendOTP()}
-              className="w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
+              className={`w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest rounded-2xl focus:outline-none transition-all ${isDarkMode ? "bg-white/5 border border-white/5 focus:border-white/20 placeholder:text-white/20" : "bg-black/5 border border-black/5 focus:border-black/40 placeholder:text-black/40"}`}
               autoFocus
             />
           </div>
           <button
             onClick={handleSendOTP}
             disabled={loading}
-            className="w-full py-3.5 bg-white text-black text-[10px] font-mono uppercase tracking-[0.2em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
+            className={`w-full py-3.5 text-[10px] font-mono uppercase tracking-[0.2em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}
           >
             {loading ? "Sending..." : "Send OTP"} <ChevronRight className="h-3.5 w-3.5" />
           </button>
@@ -338,7 +346,7 @@ function RegularUserAuth({ onSuccess }: { onSuccess: () => void }) {
       {step === "otp" && (
         <div className="space-y-4">
           <div className="relative group">
-            <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
+            <KeyRound className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${isDarkMode ? "text-white/20 group-focus-within:text-white/60" : "text-black/20 group-focus-within:text-black/60"} transition-colors`} />
             <input
               type="text"
               inputMode="numeric"
@@ -346,7 +354,7 @@ function RegularUserAuth({ onSuccess }: { onSuccess: () => void }) {
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
               onKeyDown={(e) => e.key === "Enter" && handleVerifyOTP()}
-              className="w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20 text-center text-lg tracking-[0.5em]"
+              className={`w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest rounded-2xl focus:outline-none transition-all text-center text-lg tracking-[0.5em] ${isDarkMode ? "bg-white/5 border border-white/5 focus:border-white/20 placeholder:text-white/20" : "bg-black/5 border border-black/5 focus:border-black/40 placeholder:text-black/40"}`}
               maxLength={6}
               autoFocus
             />
@@ -354,13 +362,13 @@ function RegularUserAuth({ onSuccess }: { onSuccess: () => void }) {
           <button
             onClick={handleVerifyOTP}
             disabled={loading || otp.length < 6}
-            className="w-full py-3.5 bg-white text-black text-[10px] font-mono uppercase tracking-[0.2em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
+            className={`w-full py-3.5 text-[10px] font-mono uppercase tracking-[0.2em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}
           >
             {loading ? "Verifying..." : "Verify OTP"} <Check className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => { setStep("phone"); setOtp(""); setError("") }}
-            className="w-full text-center text-[10px] font-mono uppercase tracking-[0.3em] text-white/40 hover:text-white transition-colors"
+            className={`w-full text-center text-[10px] font-mono uppercase tracking-[0.3em] transition-colors ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`}
           >
             Change phone number
           </button>
@@ -370,20 +378,20 @@ function RegularUserAuth({ onSuccess }: { onSuccess: () => void }) {
       {step === "details" && (
         <form onSubmit={handleCompleteSignup} className="space-y-4">
           <div className="relative group">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
+            <User className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${isDarkMode ? "text-white/20 group-focus-within:text-white/60" : "text-black/20 group-focus-within:text-black/60"} transition-colors`} />
             <input
               type="text"
               placeholder="Full Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
+              className={`w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest rounded-2xl focus:outline-none transition-all ${isDarkMode ? "bg-white/5 border border-white/5 focus:border-white/20 placeholder:text-white/20" : "bg-black/5 border border-black/5 focus:border-black/40 placeholder:text-black/40"}`}
               autoFocus
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-white text-black text-[10px] font-mono uppercase tracking-[0.2em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
+            className={`w-full py-3.5 text-[10px] font-mono uppercase tracking-[0.2em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}
           >
             {loading ? "Setting up..." : "Create Account"} <ChevronRight className="h-3.5 w-3.5" />
           </button>
@@ -395,48 +403,15 @@ function RegularUserAuth({ onSuccess }: { onSuccess: () => void }) {
   )
 }
 
-function StudentAuth({ mode, onModeChange, onSuccess }: { mode: StudentMode; onModeChange: (m: StudentMode) => void; onSuccess: () => void }) {
+function StudentAuth({ onSuccess, isDarkMode }: { onSuccess: () => void; isDarkMode: boolean }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // Signup fields
-  const [signupName, setSignupName] = useState("")
-  const [signupMobile, setSignupMobile] = useState("")
-  const [signupSchoolCode, setSignupSchoolCode] = useState("")
-  const [signupPassword, setSignupPassword] = useState("")
-
-  // Login fields
   const [loginRollNo, setLoginRollNo] = useState("")
   const [loginSchoolCode, setLoginSchoolCode] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
 
   const [success, setSuccess] = useState(false)
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!signupName || !signupMobile || !signupSchoolCode || !signupPassword) {
-      return setError("All fields are required")
-    }
-    setLoading(true)
-    setError("")
-    try {
-      const data = await studentSignup({
-        name: signupName,
-        mobile_number: signupMobile,
-        school_code: signupSchoolCode,
-        password: signupPassword,
-      })
-      if (data.api_key) {
-        setApiKey(data.api_key)
-        setUserInfo(signupName, "")
-        setSuccess(true)
-        setTimeout(() => { onSuccess(); window.location.href = "/chat" }, 1000)
-      }
-    } catch (e: any) {
-      setError(e.message || "Signup failed")
-    }
-    setLoading(false)
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -474,7 +449,7 @@ function StudentAuth({ mode, onModeChange, onSuccess }: { mode: StudentMode; onM
         >
           <Check className="h-8 w-8 text-green-400" />
         </motion.div>
-        <p className="text-white/60 text-sm font-mono">Redirecting...</p>
+        <p className={`text-sm font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>Redirecting...</p>
       </motion.div>
     )
   }
@@ -491,123 +466,46 @@ function StudentAuth({ mode, onModeChange, onSuccess }: { mode: StudentMode; onM
         </motion.div>
       )}
 
-      {/* Login / Signup Toggle */}
-      <div className="flex mb-6 bg-white/5 rounded-xl p-0.5 border border-white/5">
+      <form onSubmit={handleLogin} className="space-y-4">
+        <div className="relative group">
+          <User className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${isDarkMode ? "text-white/20 group-focus-within:text-white/60" : "text-black/20 group-focus-within:text-black/60"} transition-colors`} />
+          <input
+            type="text"
+            placeholder="Roll No"
+            value={loginRollNo}
+            onChange={(e) => setLoginRollNo(e.target.value)}
+            className={`w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest rounded-2xl focus:outline-none transition-all ${isDarkMode ? "bg-white/5 border border-white/5 focus:border-white/20 placeholder:text-white/20" : "bg-black/5 border border-black/5 focus:border-black/40 placeholder:text-black/40"}`}
+            autoFocus
+          />
+        </div>
+        <div className="relative group">
+          <GraduationCap className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${isDarkMode ? "text-white/20 group-focus-within:text-white/60" : "text-black/20 group-focus-within:text-black/60"} transition-colors`} />
+          <input
+            type="text"
+            placeholder="School Code"
+            value={loginSchoolCode}
+            onChange={(e) => setLoginSchoolCode(e.target.value.toUpperCase())}
+            className={`w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest rounded-2xl focus:outline-none transition-all ${isDarkMode ? "bg-white/5 border border-white/5 focus:border-white/20 placeholder:text-white/20" : "bg-black/5 border border-black/5 focus:border-black/40 placeholder:text-black/40"}`}
+          />
+        </div>
+        <div className="relative group">
+          <KeyRound className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 ${isDarkMode ? "text-white/20 group-focus-within:text-white/60" : "text-black/20 group-focus-within:text-black/60"} transition-colors`} />
+          <input
+            type="password"
+            placeholder="Password"
+            value={loginPassword}
+            onChange={(e) => setLoginPassword(e.target.value)}
+            className={`w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest rounded-2xl focus:outline-none transition-all ${isDarkMode ? "bg-white/5 border border-white/5 focus:border-white/20 placeholder:text-white/20" : "bg-black/5 border border-black/5 focus:border-black/40 placeholder:text-black/40"}`}
+          />
+        </div>
         <button
-          onClick={() => onModeChange("login")}
-          className={`flex-1 py-2 text-[10px] font-mono uppercase tracking-[0.15em] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-            mode === "login"
-              ? "bg-white text-black shadow-lg"
-              : "text-white/40 hover:text-white/60"
-          }`}
+          type="submit"
+          disabled={loading}
+          className={`w-full py-3.5 text-[10px] font-mono uppercase tracking-[0.2em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}
         >
-          <LogIn className="h-3 w-3" /> Login
+          {loading ? "Signing in..." : "Sign In"} <ChevronRight className="h-3.5 w-3.5" />
         </button>
-        <button
-          onClick={() => onModeChange("signup")}
-          className={`flex-1 py-2 text-[10px] font-mono uppercase tracking-[0.15em] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-            mode === "signup"
-              ? "bg-white text-black shadow-lg"
-              : "text-white/40 hover:text-white/60"
-          }`}
-        >
-          <UserPlus className="h-3 w-3" /> Sign Up
-        </button>
-      </div>
-
-      {mode === "login" ? (
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="relative group">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-            <input
-              type="text"
-              placeholder="Roll No"
-              value={loginRollNo}
-              onChange={(e) => setLoginRollNo(e.target.value)}
-              className="w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
-              autoFocus
-            />
-          </div>
-          <div className="relative group">
-            <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-            <input
-              type="text"
-              placeholder="School Code"
-              value={loginSchoolCode}
-              onChange={(e) => setLoginSchoolCode(e.target.value.toUpperCase())}
-              className="w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
-            />
-          </div>
-          <div className="relative group">
-            <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-            <input
-              type="password"
-              placeholder="Password"
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              className="w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 bg-white text-black text-[10px] font-mono uppercase tracking-[0.2em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {loading ? "Signing in..." : "Sign In"} <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={handleSignup} className="space-y-4">
-          <div className="relative group">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={signupName}
-              onChange={(e) => setSignupName(e.target.value)}
-              className="w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
-              autoFocus
-            />
-          </div>
-          <div className="relative group">
-            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-            <input
-              type="tel"
-              placeholder="Mobile Number"
-              value={signupMobile}
-              onChange={(e) => setSignupMobile(e.target.value)}
-              className="w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
-            />
-          </div>
-          <div className="relative group">
-            <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-            <input
-              type="text"
-              placeholder="School Code"
-              value={signupSchoolCode}
-              onChange={(e) => setSignupSchoolCode(e.target.value.toUpperCase())}
-              className="w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
-            />
-          </div>
-          <div className="relative group">
-            <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-            <input
-              type="password"
-              placeholder="Password"
-              value={signupPassword}
-              onChange={(e) => setSignupPassword(e.target.value)}
-              className="w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 bg-white text-black text-[10px] font-mono uppercase tracking-[0.2em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {loading ? "Creating..." : "Create Account"} <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        </form>
-      )}
+      </form>
     </motion.div>
   )
 }

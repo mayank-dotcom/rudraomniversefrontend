@@ -988,8 +988,8 @@ STRICT RULES:
                     <div className="flex flex-col h-full overflow-hidden">
                         <div className={`p-6 border-b-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-between`}>
                             <Link href="/" className="flex items-center gap-3">
-                                <div className={`h-[38px] w-[38px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
-                                    <svg width="36" height="36" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
+                                <div className={`h-[44px] w-[44px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
+                                    <svg width="42" height="42" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
                                         <polygon
                                             points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108"
                                             fill="currentColor"
@@ -1000,6 +1000,7 @@ STRICT RULES:
                             <button
                                 onClick={handleCreateChat}
                                 disabled={isCreatingChat}
+                                title="New Chat"
                                 className={`p-2 transition-all duration-300 border-2 disabled:opacity-50 ${isDarkMode ? "bg-white border-white hover:bg-gray-200 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "bg-white border-black hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"} group`}
                             >
                                 <Plus className={`h-4 w-4 ${isDarkMode ? "text-black group-hover:text-black" : "text-black group-hover:text-black"} transition-transform group-hover:rotate-90`} />
@@ -1175,16 +1176,18 @@ STRICT RULES:
                                     {sidebarWidth > 120 && (
                                         <div className="flex flex-col">
                                             <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
-                                            <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/60"}`}>Pro Member</span>
+                                            <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black"}`}>Pro Member</span>
                                         </div>
                                     )}
                                 </div>
                                 <button
                                     onClick={toggleTheme}
-                                    className={`p-2 border transition-all duration-300 ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black bg-white hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
+                                    className={`p-2 border transition-all duration-300 group ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black bg-white hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
                                     title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
                                 >
-                                    {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
+                                    <div className="group-hover:rotate-180 transition-transform duration-500">
+                                        {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
+                                    </div>
                                 </button>
                             </div>
                             <button
@@ -1197,7 +1200,8 @@ STRICT RULES:
                                     setUserEmail("");
                                     window.location.href = "/";
                                 }}
-                                className={`w-full flex items-center justify-center gap-3 p-3 border-2 ${isDarkMode ? "border-white bg-white/5 text-[10px] font-mono uppercase tracking-widest hover:bg-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all active:scale-95 text-white" : "border-black bg-white text-[10px] font-mono uppercase tracking-widest hover:bg-gray-50 hover:shadow-[0_0_20px_rgba(0,0,0,0.2)] transition-all active:scale-95 text-black"}`}
+                                title="Logout"
+                                className={`w-full flex items-center justify-center gap-3 p-3 border-2 ${isDarkMode ? "border-white bg-white/5 text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-white" : "border-black bg-white text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-black"}`}
                             >
                                 <LogOut className={`h-3 w-3 ${isDarkMode ? "text-white" : "text-black"}`} /> {sidebarWidth > 120 && "Logout session"}
                             </button>
@@ -1226,8 +1230,8 @@ STRICT RULES:
                 {/* Fixed Header / Navbar */}
                 <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-10 relative z-30`}>
                     <div className="flex items-center gap-4">
-                        <div className={`h-[30px] w-[30px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
-                            <svg width="28" height="28" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
+                        <div className={`h-[44px] w-[44px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
+                            <svg width="42" height="42" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
                                 <polygon points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108" fill="currentColor" />
                             </svg>
                         </div>
@@ -1319,41 +1323,43 @@ STRICT RULES:
                                                 <div className={`flex items-center gap-3 mt-3 ${msg.role === "user" ? "justify-end" : "justify-start px-8"}`}>
                                                     {msg.role === "user" ? (
                                                         <>
-                                                            <button onClick={() => setInput(msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <Edit3 className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                            <button onClick={() => setInput(msg.content)} title="Edit & resend" className={`p-2 ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
+                                                                <Edit3 className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => copyToClipboard(msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <Copy className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                            <button onClick={() => copyToClipboard(msg.content)} title="Copy message" className={`p-2 ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
+                                                                <Copy className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
                                                         </>
                                                     ) : (
                                                         <>
                                                             <button
+                                                                title="Like"
                                                                 onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, 1)}
-                                                                className={`p-2 rounded border-2 transition-all duration-300 group ${msg.feedback === 1
-                                                                    ? (isDarkMode ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-emerald-500/20 border-emerald-500 text-emerald-600")
-                                                                    : (isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105")
+                                                                className={`p-2 transition-all duration-300 group ${msg.feedback === 1
+                                                                    ? (isDarkMode ? "text-emerald-400" : "text-emerald-600")
+                                                                    : (isDarkMode ? "text-white/60 hover:text-white hover:scale-105" : "text-black/60 hover:text-black hover:scale-105")
                                                                     }`}
                                                             >
-                                                                <ThumbsUp className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                                <ThumbsUp className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
                                                             <button
+                                                                title="Dislike"
                                                                 onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, -1)}
-                                                                className={`p-2 rounded border-2 transition-all duration-300 group ${msg.feedback === -1
-                                                                    ? (isDarkMode ? "bg-red-500/20 border-red-500 text-red-400" : "bg-red-500/20 border-red-500 text-red-600")
-                                                                    : (isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105")
+                                                                className={`p-2 transition-all duration-300 group ${msg.feedback === -1
+                                                                    ? (isDarkMode ? "text-red-400" : "text-red-600")
+                                                                    : (isDarkMode ? "text-white/60 hover:text-white hover:scale-105" : "text-black/60 hover:text-black hover:scale-105")
                                                                     }`}
                                                             >
-                                                                <ThumbsDown className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                                <ThumbsDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => copyToClipboard(msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <Copy className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                            <button onClick={() => copyToClipboard(msg.content)} title="Copy message" className={`p-2 ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
+                                                                <Copy className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => retryMessage(i)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <RotateCcw className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                            <button onClick={() => retryMessage(i)} title="Regenerate" className={`p-2 ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
+                                                                <RotateCcw className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} className={`p-2 hover:bg-white/10 rounded border-2 ${isDarkMode ? "border-white hover:border-white text-white/60 hover:text-white hover:scale-105" : "border-black hover:border-black text-black/60 hover:text-black hover:scale-105"} transition-all duration-300 group`}>
-                                                                <FileDown className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-2 ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
+                                                                <FileDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
                                                         </>
                                                     )}

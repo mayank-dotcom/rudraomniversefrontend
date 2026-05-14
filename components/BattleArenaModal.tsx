@@ -152,7 +152,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                         {tab === "host" && (
                             <div className="space-y-8">
                                 <div className="space-y-4">
-                                    <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                    <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black"}`}>
                                         <User className="h-3 w-3" />
                                         <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Admin Name</span>
                                     </div>
@@ -161,12 +161,12 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                         value={hostConfig.adminName}
                                         onChange={(e) => setHostConfig({ ...hostConfig, adminName: e.target.value })}
                                         placeholder="Enter your name..."
-                                        className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/50" : "bg-black/5 border-black/10 text-black placeholder:text-black/20 focus:border-black/50"} border rounded-2xl focus:outline-none transition-all`}
+                                        className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/50" : "bg-black/5 border-black text-black placeholder:text-black/60 focus:border-black"} border rounded-2xl focus:outline-none transition-all`}
                                     />
                                 </div>
 
                                 <div className="space-y-4">
-                                    <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                    <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black"}`}>
                                         <BookOpen className="h-3 w-3" />
                                         <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Topic</span>
                                     </div>
@@ -175,20 +175,20 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                         value={hostConfig.topic}
                                         onChange={(e) => setHostConfig({ ...hostConfig, topic: e.target.value })}
                                         placeholder="e.g. JavaScript, Science, History..."
-                                        className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/50" : "bg-black/5 border-black/10 text-black placeholder:text-black/20 focus:border-black/50"} border rounded-2xl focus:outline-none transition-all`}
+                                        className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/50" : "bg-black/5 border-black text-black placeholder:text-black/60 focus:border-black"} border rounded-2xl focus:outline-none transition-all`}
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-4">
-                                        <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                        <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black"}`}>
                                             <Signal className="h-3 w-3" />
                                             <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Difficulty</span>
                                         </div>
                                         <select
                                             value={hostConfig.difficulty}
                                             onChange={(e) => setHostConfig({ ...hostConfig, difficulty: e.target.value })}
-                                            className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"} border rounded-2xl focus:outline-none`}
+                                            className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black text-black"} border rounded-2xl focus:outline-none`}
                                         >
                                             {difficulties.map(d => (
                                                 <option key={d} value={d} className={isDarkMode ? "bg-[#0d0d0d]" : "bg-white"}>
@@ -198,7 +198,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                         </select>
                                     </div>
                                     <div className="space-y-4">
-                                        <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                        <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black"}`}>
                                             <ListOrdered className="h-3 w-3" />
                                             <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Questions</span>
                                         </div>
@@ -211,7 +211,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                                 setHostConfig({ ...hostConfig, questionCount: parseInt(e.target.value) || 5 });
                                                 playSwordSound();
                                             }}
-                                            className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"} border rounded-2xl focus:outline-none`}
+                                            className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black text-black"} border rounded-2xl focus:outline-none`}
                                         />
                                     </div>
                                 </div>
@@ -235,7 +235,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                         {tab === "join" && (
                             <div className="space-y-8">
                                 <div className="space-y-4">
-                                    <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                    <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black"}`}>
                                         <Key className="h-3 w-3" />
                                         <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Invite Code</span>
                                     </div>
@@ -245,12 +245,12 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                         onChange={(e) => setJoinConfig({ ...joinConfig, lobbyCode: e.target.value.toUpperCase() })}
                                         placeholder="e.g. ABC123"
                                         maxLength={6}
-                                        className={`w-full p-4 text-xs font-mono tracking-widest uppercase ${isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/50" : "bg-black/5 border-black/10 text-black placeholder:text-black/20 focus:border-black/50"} border rounded-2xl focus:outline-none transition-all`}
+                                        className={`w-full p-4 text-xs font-mono tracking-widest uppercase ${isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/50" : "bg-black/5 border-black text-black placeholder:text-black/60 focus:border-black"} border rounded-2xl focus:outline-none transition-all`}
                                     />
                                 </div>
 
                                 <div className="space-y-4">
-                                    <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                    <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black"}`}>
                                         <User className="h-3 w-3" />
                                         <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Your Name</span>
                                     </div>
@@ -259,7 +259,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                         value={joinConfig.participantName}
                                         onChange={(e) => setJoinConfig({ ...joinConfig, participantName: e.target.value })}
                                         placeholder="Enter your display name..."
-                                        className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/50" : "bg-black/5 border-black/10 text-black placeholder:text-black/20 focus:border-black/50"} border rounded-2xl focus:outline-none transition-all`}
+                                        className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/50" : "bg-black/5 border-black text-black placeholder:text-black/60 focus:border-black"} border rounded-2xl focus:outline-none transition-all`}
                                     />
                                 </div>
 

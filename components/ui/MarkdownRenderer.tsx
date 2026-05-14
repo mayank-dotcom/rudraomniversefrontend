@@ -72,16 +72,16 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
 
                         return (
                             <div className="my-4 rounded-lg overflow-hidden" style={{
-                                border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+                                border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.1)" : "#000"}`,
                             }}>
                                 <div className="flex items-center gap-1.5 px-4 py-2" style={{
-                                    background: isDarkMode ? "#1a1a1a" : "#f3f4f6",
-                                    borderBottom: `1px solid ${isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
+                                    background: isDarkMode ? "#1a1a1a" : "#000",
+                                    borderBottom: `1px solid ${isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.1)"}`,
                                 }}>
                                     <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
                                     <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
                                     <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
-                                    <span className={`text-[9px] font-mono uppercase tracking-widest ml-2 ${isDarkMode ? "text-white/30" : "text-black/50"}`}>
+                                    <span className={`text-[9px] font-mono uppercase tracking-widest ml-2 ${isDarkMode ? "text-white/30" : "text-white/60"}`}>
                                         {match?.[1] || "code"}
                                     </span>
                                 </div>

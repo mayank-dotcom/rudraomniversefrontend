@@ -4,9 +4,10 @@ import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { motion } from "framer-motion";
-import { Swords, Users, Clock, Trophy, ArrowLeft, Copy, Check, Play, Loader2, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, LogOut, AlertTriangle, Eye } from "lucide-react";
+import { Swords, Users, Clock, Trophy, ArrowLeft, Copy, Check, Play, Loader2, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, AlertTriangle, Eye, Moon, Sun } from "lucide-react";
 import { getApiKey } from "@/lib/auth";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart as ReLineChart, Line } from "recharts";
+import { ThemeProvider, useTheme } from "@/lib/theme-context";
 
 type Phase = "lobby" | "active" | "finished";
 type Question = {
@@ -55,6 +56,8 @@ function ArenaContent() {
     const [hasSubmitted, setHasSubmitted] = useState(false);
     const audioCtxRef = useRef<AudioContext | null>(null);
     const audioBufferRef = useRef<AudioBuffer | null>(null);
+
+    const { isDarkMode, toggleTheme } = useTheme();
 
     const QUESTION_TIME = 30;
 
@@ -276,24 +279,32 @@ function ArenaContent() {
     });
 
     return (
-        <div className="min-h-screen w-full bg-[#0a0a0a] text-white selection:bg-white selection:text-black font-sans overflow-hidden">
+        <div className={`min-h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black font-sans overflow-hidden`}>
             <div className="absolute inset-0 noise opacity-[0.02] pointer-events-none" />
-            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden opacity-10">
+            <div className={`fixed inset-0 z-0 pointer-events-none overflow-hidden ${isDarkMode ? "opacity-10" : "opacity-5"}`}>
                 <div className="absolute inset-0" style={{
-                    backgroundImage: `linear-gradient(to right, #ffffff05 1px, transparent 1px), linear-gradient(to bottom, #ffffff05 1px, transparent 1px)`,
+                    backgroundImage: `linear-gradient(to right, ${isDarkMode ? "#ffffff05" : "#00000008"} 1px, transparent 1px), linear-gradient(to bottom, ${isDarkMode ? "#ffffff05" : "#00000008"} 1px, transparent 1px)`,
                     backgroundSize: '100px 100px'
                 }} />
             </div>
 
             <div className="relative z-10 h-screen flex flex-col">
-                <header className="h-16 flex-shrink-0 border-b-2 border-white bg-[#0a0a0a]/80 backdrop-blur-xl flex items-center justify-between px-6 relative z-30">
+                <header className={`h-16 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-6 relative z-30`}>
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => setShowQuitConfirm(true)}
-                            className="p-2 border border-white/20 hover:border-red-500/50 text-white/60 hover:text-red-400 transition-all"
-                            title="Quit Battle"
+                            onClick={toggleTheme}
+                            className={`p-2 border transition-all duration-300 group ${isDarkMode ? "border-white/20 text-white/60 hover:text-white hover:border-white/40 hover:scale-110" : "border-black text-black/60 hover:text-black hover:border-black hover:scale-110"}`}
+                            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
                         >
-                            <LogOut className="h-4 w-4" />
+                            <div className="group-hover:rotate-180 transition-transform duration-500">
+                                {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                            </div>
+                        </button>
+                        <button
+                            onClick={() => setShowQuitConfirm(true)}
+                            className={`p-2 border transition-all text-[10px] font-mono uppercase tracking-wider font-bold ${isDarkMode ? "border-white/20 text-white/60 hover:bg-red-500 hover:text-white hover:border-red-500" : "border-black text-black/60 hover:bg-red-500 hover:text-white hover:border-red-500"}`}
+                        >
+                            Exit
                         </button>
                         <div className="flex items-center gap-3">
                             <div className="h-8 w-8 bg-white text-black flex items-center justify-center">
@@ -304,11 +315,11 @@ function ArenaContent() {
                     </div>
                     {phase === "lobby" && lobbyCode && (
                         <div className="flex items-center gap-3">
-                            <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-white/40">Lobby</span>
+                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Lobby</span>
                             <span className="text-lg font-black tracking-[0.3em]">{lobbyCode}</span>
                             <button
                                 onClick={handleCopyCode}
-                                className="p-2 border border-white/20 hover:border-white/50 text-white/60 hover:text-white transition-all"
+                                className={`p-2 border transition-all ${isDarkMode ? "border-white/20 hover:border-white/50 text-white/60 hover:text-white" : "border-black/20 hover:border-black/50 text-black/60 hover:text-black"}`}
                             >
                                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             </button>
@@ -321,13 +332,13 @@ function ArenaContent() {
                                 <span className="text-sm font-black text-emerald-400">{correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0)}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <Clock className="h-3.5 w-3.5 text-white/60" />
-                                <span className={`text-sm font-black font-mono ${timeLeft <= 5 ? "text-red-400 animate-pulse" : "text-white"}`}>
+                                <Clock className={`h-3.5 w-3.5 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
+                                <span className={`text-sm font-black font-mono ${timeLeft <= 5 ? "text-red-400 animate-pulse" : `${isDarkMode ? "text-white" : "text-black"}`}`}>
                                     {timeLeft}s
                                 </span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <Target className="h-3.5 w-3.5 text-white/60" />
+                                <Target className={`h-3.5 w-3.5 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
                                 <span className="text-sm font-mono">{currentQuestionIndex + 1}/{questions.length}</span>
                             </div>
                         </div>
@@ -335,7 +346,7 @@ function ArenaContent() {
                     {phase === "finished" && (
                         <div className="flex items-center gap-3">
                             <Trophy className="h-4 w-4 text-amber-400" />
-                            <span className="text-sm font-mono text-white/80">Battle Complete</span>
+                            <span className={`text-sm font-mono ${isDarkMode ? "text-white/80" : "text-black/80"}`}>Battle Complete</span>
                         </div>
                     )}
                 </header>
@@ -359,10 +370,10 @@ function ArenaContent() {
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="border border-white/10 bg-[#0d0d0d] p-10 rounded-[2.5rem]"
+                                className={`border p-10 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black bg-white"}`}
                             >
-                                <div className="absolute top-0 right-0 w-32 h-32 blur-[60px] rounded-full bg-white/5 pointer-events-none" />
-                                <div className="absolute bottom-0 left-0 w-32 h-32 blur-[60px] rounded-full bg-white/5 pointer-events-none" />
+                                <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] rounded-full pointer-events-none ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+                                <div className={`absolute bottom-0 left-0 w-32 h-32 blur-[60px] rounded-full pointer-events-none ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
 
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-4 mb-8">
@@ -371,25 +382,25 @@ function ArenaContent() {
                                         </div>
                                         <div>
                                             <h2 className="text-2xl font-black tracking-tight uppercase">Waiting Room</h2>
-                                            <p className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">
+                                            <p className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                                 {isHost ? "Share the code to invite players" : "Waiting for host to start..."}
                                             </p>
                                         </div>
                                     </div>
 
                                     {isHost && lobbyCode && (
-                                        <div className="mb-10 p-6 border border-white/10 bg-white/5 rounded-2xl text-center">
-                                            <p className="text-[9px] font-mono text-white/30 uppercase tracking-[0.3em] mb-3">Invite Code</p>
+                                        <div className={`mb-10 p-6 border rounded-2xl text-center ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}>
+                                            <p className={`text-[9px] font-mono uppercase tracking-[0.3em] mb-3 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Invite Code</p>
                                             <div className="flex items-center justify-center gap-4">
                                                 <span className="text-4xl font-black tracking-[0.4em]">{lobbyCode}</span>
                                                 <button
                                                     onClick={handleCopyCode}
-                                                    className="p-3 bg-white/10 hover:bg-white/20 border border-white/20 transition-all rounded-xl"
+                                                    className={`p-3 border transition-all rounded-xl ${isDarkMode ? "bg-white/10 hover:bg-white/20 border-white/20" : "bg-black/10 hover:bg-black/20 border-black/20"}`}
                                                 >
                                                     {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
                                                 </button>
                                             </div>
-                                            <div className="flex items-center justify-center gap-2 mt-4 text-white/40 text-[10px] font-mono">
+                                            <div className={`flex items-center justify-center gap-2 mt-4 text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                                 <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
                                                 Listening for connections...
                                             </div>
@@ -398,8 +409,8 @@ function ArenaContent() {
 
                                     <div className="mb-8">
                                         <div className="flex items-center gap-2 mb-4">
-                                            <Users className="h-4 w-4 text-white/40" />
-                                            <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">
+                                            <Users className={`h-4 w-4 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
+                                            <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                                 Participants ({participants.length})
                                             </span>
                                         </div>
@@ -411,18 +422,18 @@ function ArenaContent() {
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ delay: i * 0.1 }}
                                                     className={`flex items-center justify-between p-4 border rounded-2xl ${(isHost && p.name === adminName) || (!isHost && p.name === participantName)
-                                                        ? "bg-white/10 border-white/30"
-                                                        : "bg-white/5 border-white/10"
+                                                        ? `${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/10 border-black/30"}`
+                                                        : `${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`
                                                         }`}
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className="h-8 w-8 bg-white/10 rounded-full flex items-center justify-center">
+                                                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
                                                             <User className="h-4 w-4" />
                                                         </div>
                                                         <div>
                                                             <span className="text-sm font-medium">{p.name}</span>
                                                             {((isHost && p.name === adminName) || (!isHost && p.name === participantName)) && (
-                                                                <span className="ml-2 text-[9px] font-mono text-white/40">(You)</span>
+                                                                <span className={`ml-2 text-[9px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>(You)</span>
                                                             )}
                                                         </div>
                                                     </div>
@@ -434,7 +445,7 @@ function ArenaContent() {
                                                 </motion.div>
                                             ))}
                                             {participants.length === 0 && (
-                                                <div className="p-8 text-center text-white/20 text-xs font-mono">
+                                                <div className={`p-8 text-center text-xs font-mono ${isDarkMode ? "text-white/20" : "text-black/20"}`}>
                                                     Waiting for players to join...
                                                 </div>
                                             )}
@@ -445,7 +456,7 @@ function ArenaContent() {
                                         <button
                                             onClick={handleStart}
                                             disabled={participants.length < 1 || isStarting}
-                                            className={`w-full py-5 bg-white text-black text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 flex items-center justify-center gap-3`}
+                                            className={`w-full py-5 text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 flex items-center justify-center gap-3 ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}
                                         >
                                             {isStarting ? (
                                                 <>
@@ -489,14 +500,14 @@ function ArenaContent() {
                                     key={currentQuestionIndex}
                                     initial={{ opacity: 0, x: 20 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    className="border border-white/10 bg-[#0d0d0d] p-6 sm:p-8 rounded-[2.5rem]"
+                                    className={`p-6 sm:p-8 rounded-[2.5rem] ${isDarkMode ? "border border-white/10 bg-[#0d0d0d]" : "border border-black bg-white"}`}
                                 >
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[9px] font-mono text-white/30 uppercase tracking-[0.2em]">
+                                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
                                                 Q{currentQuestionIndex + 1}/{questions.length}
                                             </span>
-                                            <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-white/60">
+                                            <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full ${isDarkMode ? "bg-white/10 text-white/60" : "bg-black/10 text-black/60"}`}>
                                                 {topic}
                                             </span>
                                         </div>
@@ -507,9 +518,9 @@ function ArenaContent() {
                                         </div>
                                     </div>
 
-                                    <div className="h-1 w-full bg-white/10 rounded-full mb-6 overflow-hidden">
+                                    <div className={`h-1 w-full rounded-full mb-6 overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
                                         <div
-                                            className="h-full bg-white transition-all duration-500"
+                                            className={`h-full transition-all duration-500 ${isDarkMode ? "bg-white" : "bg-black"}`}
                                             style={{ width: `${progressPercent}%` }}
                                         />
                                     </div>
@@ -523,7 +534,7 @@ function ArenaContent() {
                                             const isSelected = selectedAnswer === i;
                                             const isCorrect = questions[currentQuestionIndex]?.correctOptionIndex === i;
                                             const showResult = selectedAnswer !== null;
-                                            let optionClass = "bg-white/5 border-white/10 hover:border-white/30 hover:bg-white/10";
+                                            let optionClass = isDarkMode ? "bg-white/5 border-white/10 hover:border-white/30 hover:bg-white/10" : "bg-black/5 border-black/10 hover:border-black/30 hover:bg-black/10";
 
                                             if (showResult) {
                                                 if (isCorrect) {
@@ -531,10 +542,10 @@ function ArenaContent() {
                                                 } else if (isSelected && !isCorrect) {
                                                     optionClass = "bg-red-500/20 border-red-500 text-red-400";
                                                 } else {
-                                                    optionClass = "bg-white/5 border-white/10 text-white/40";
+                                                    optionClass = isDarkMode ? "bg-white/5 border-white/10 text-white/40" : "bg-black/5 border-black/10 text-black/40";
                                                 }
                                             } else if (isSelected) {
-                                                optionClass = "bg-white/10 border-white";
+                                                optionClass = `${isDarkMode ? "bg-white/10 border-white" : "bg-black/10 border-black"}`;
                                             }
 
                                             const optionLabels = ["A", "B", "C", "D", "E", "F"];
@@ -546,7 +557,10 @@ function ArenaContent() {
                                                     disabled={selectedAnswer !== null}
                                                     className={`w-full text-left p-4 border rounded-2xl text-sm transition-all flex items-center gap-3 ${optionClass}`}
                                                 >
-                                                    <span className={`h-7 w-7 flex items-center justify-center rounded-full text-xs font-mono border flex-shrink-0 ${isSelected ? "border-white bg-white text-black" : "border-white/20"}`}>
+                                                    <span className={`h-7 w-7 flex items-center justify-center rounded-full text-xs font-mono border flex-shrink-0 ${isSelected
+                                                        ? `${isDarkMode ? "border-white bg-white text-black" : "border-black bg-black text-white"}`
+                                                        : `${isDarkMode ? "border-white/20" : "border-black/20"}`
+                                                        }`}>
                                                         {optionLabels[i]}
                                                     </span>
                                                     <span className="flex-1 leading-tight">{opt}</span>
@@ -561,10 +575,10 @@ function ArenaContent() {
                                         <motion.div
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="mt-5 p-4 border border-white/10 bg-white/5 rounded-2xl"
+                                            className={`mt-5 p-4 border rounded-2xl ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}
                                         >
-                                            <span className="text-[9px] font-mono text-white/40 uppercase tracking-[0.2em] block mb-2">Explanation</span>
-                                            <p className="text-sm text-white/80">{questions[currentQuestionIndex]?.explanation}</p>
+                                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] block mb-2 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Explanation</span>
+                                            <p className={`text-sm ${isDarkMode ? "text-white/80" : "text-black/80"}`}>{questions[currentQuestionIndex]?.explanation}</p>
                                         </motion.div>
                                     )}
                                 </motion.div>
@@ -576,16 +590,16 @@ function ArenaContent() {
                                     const elapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
                                     return (
                                         <div className="grid grid-cols-3 gap-3">
-                                            <div className="border border-white/10 bg-[#0d0d0d] p-3 sm:p-4 rounded-2xl">
-                                                <span className="text-[8px] font-mono text-white/30 uppercase tracking-[0.2em] block mb-1">Accuracy</span>
+                                            <div className={`border p-3 sm:p-4 rounded-2xl ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
+                                                <span className={`text-[8px] font-mono uppercase tracking-[0.2em] block mb-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Accuracy</span>
                                                 <span className="text-base sm:text-lg font-black">{accuracy}%</span>
                                             </div>
-                                            <div className="border border-white/10 bg-[#0d0d0d] p-3 sm:p-4 rounded-2xl">
-                                                <span className="text-[8px] font-mono text-white/30 uppercase tracking-[0.2em] block mb-1">Correct</span>
+                                            <div className={`border p-3 sm:p-4 rounded-2xl ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
+                                                <span className={`text-[8px] font-mono uppercase tracking-[0.2em] block mb-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Correct</span>
                                                 <span className="text-base sm:text-lg font-black">{correct}/{answered}</span>
                                             </div>
-                                            <div className="border border-white/10 bg-[#0d0d0d] p-3 sm:p-4 rounded-2xl">
-                                                <span className="text-[8px] font-mono text-white/30 uppercase tracking-[0.2em] block mb-1">Time</span>
+                                            <div className={`border p-3 sm:p-4 rounded-2xl ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
+                                                <span className={`text-[8px] font-mono uppercase tracking-[0.2em] block mb-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Time</span>
                                                 <span className="text-base sm:text-lg font-black">{elapsed}s</span>
                                             </div>
                                         </div>
@@ -594,10 +608,10 @@ function ArenaContent() {
                             </div>
 
                             <div className="lg:col-span-1 space-y-4">
-                                <div className="border border-white/10 bg-[#0d0d0d] p-5 rounded-[2.5rem]">
+                                <div className={`border p-5 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
                                     <div className="flex items-center gap-2 mb-4">
-                                        <Users className="h-4 w-4 text-white/40" />
-                                        <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Players</span>
+                                        <Users className={`h-4 w-4 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
+                                        <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Players</span>
                                     </div>
                                     <div className="space-y-3">
                                         {participants.map((p) => {
@@ -606,22 +620,25 @@ function ArenaContent() {
                                             return (
                                                 <div
                                                     key={p.id}
-                                                    className={`p-3 rounded-2xl border ${isMe ? "bg-white/10 border-white/30" : "bg-white/5 border-white/10"}`}
+                                                    className={`p-3 rounded-2xl border ${isMe
+                                                        ? `${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/10 border-black/30"}`
+                                                        : `${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`
+                                                        }`}
                                                 >
                                                     <div className="flex items-center justify-between mb-2">
                                                         <div className="flex items-center gap-2 text-xs">
                                                             <div className={`h-2 w-2 rounded-full ${p.finished ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
                                                             <span className={isMe ? "font-bold" : ""}>{p.name}</span>
                                                         </div>
-                                                        <span className="text-[10px] font-mono text-white/40">{isMe ? myCurrentScore : p.score} pts</span>
+                                                        <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{isMe ? myCurrentScore : p.score} pts</span>
                                                     </div>
-                                                    <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                                                    <div className={`h-1 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
                                                         <div
-                                                            className={`h-full transition-all duration-500 ${p.finished ? "bg-emerald-500" : "bg-white"}`}
+                                                            className={`h-full transition-all duration-500 ${p.finished ? "bg-emerald-500" : `${isDarkMode ? "bg-white" : "bg-black"}`}`}
                                                             style={{ width: `${p.finished ? 100 : Math.min(((currentQuestionIndex + (selectedAnswer !== null ? 1 : 0)) / questions.length) * 100, 100)}%` }}
                                                         />
                                                     </div>
-                                                    <div className="mt-1 text-[8px] font-mono text-white/30 text-right">
+                                                    <div className={`mt-1 text-[8px] font-mono text-right ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
                                                         {p.finished ? "All done!" : isMe ? `Q${Math.min(currentQuestionIndex + 1, questions.length)}/${questions.length}` : "Playing..."}
                                                     </div>
                                                 </div>
@@ -636,26 +653,26 @@ function ArenaContent() {
                                     const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
                                     const elapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
                                     return (
-                                        <div className="border border-white/10 bg-[#0d0d0d] p-5 rounded-[2.5rem]">
+                                        <div className={`border p-5 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
                                             <div className="flex items-center gap-2 mb-4">
                                                 <Zap className="h-4 w-4 text-emerald-400" />
-                                                <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Your Stats</span>
+                                                <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Your Stats</span>
                                             </div>
                                             <div className="space-y-2.5">
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] font-mono text-white/40">Score</span>
+                                                    <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Score</span>
                                                     <span className="text-sm font-black text-emerald-400">{correct}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] font-mono text-white/40">Accuracy</span>
+                                                    <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Accuracy</span>
                                                     <span className="text-sm font-black">{accuracy}%</span>
                                                 </div>
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] font-mono text-white/40">Remaining</span>
+                                                    <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Remaining</span>
                                                     <span className="text-sm font-black">{questions.length - currentQuestionIndex - (selectedAnswer !== null ? 1 : 0)}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] font-mono text-white/40">Elapsed</span>
+                                                    <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Elapsed</span>
                                                     <span className="text-sm font-black">{elapsed}s</span>
                                                 </div>
                                             </div>
@@ -667,10 +684,10 @@ function ArenaContent() {
                                     const isMe = (isHost && p.name === adminName) || (!isHost && p.name === participantName);
                                     return !isMe;
                                 }).map(opponent => (
-                                    <div key={opponent.id} className="border border-white/10 bg-[#0d0d0d] p-5 rounded-[2.5rem]">
+                                    <div key={opponent.id} className={`border p-5 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
                                         <div className="flex items-center gap-2 mb-4">
                                             <Eye className="h-4 w-4 text-blue-400" />
-                                            <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Opponent</span>
+                                            <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Opponent</span>
                                         </div>
                                         <div className="text-center py-2">
                                             <div className="h-10 w-10 bg-blue-500/20 border border-blue-500/30 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -679,7 +696,7 @@ function ArenaContent() {
                                             <p className="text-sm font-bold">{opponent.name}</p>
                                             <div className="flex items-center justify-center gap-1.5 mt-2">
                                                 <div className={`h-2 w-2 rounded-full ${opponent.finished ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
-                                                <span className="text-[10px] font-mono text-white/40">
+                                                <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                                     {opponent.finished ? "Finished all questions" : "Answering..."}
                                                 </span>
                                             </div>
@@ -689,7 +706,7 @@ function ArenaContent() {
                                                 </div>
                                             )}
                                             {!opponent.finished && (
-                                                <div className="mt-3 text-[9px] font-mono text-white/30">
+                                                <div className={`mt-3 text-[9px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
                                                     Waiting for opponent to finish...
                                                 </div>
                                             )}
@@ -705,7 +722,7 @@ function ArenaContent() {
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="border border-white/10 bg-[#0d0d0d] p-10 rounded-[2.5rem]"
+                                className={`border p-10 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}
                             >
                                 <div className="h-16 w-16 bg-amber-500/20 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-6 overflow-hidden">
                                     <div className="relative flex items-center justify-center" style={{ width: 40, height: 40 }}>
@@ -726,12 +743,12 @@ function ArenaContent() {
                                     </div>
                                 </div>
                                 <h2 className="text-xl font-black uppercase tracking-tight mb-2">You're All Set!</h2>
-                                <p className="text-sm text-white/60 mb-2">
+                                <p className={`text-sm mb-2 ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
                                     You answered all {questions.length} questions.
                                 </p>
                                 <div className="flex items-center justify-center gap-2 mb-6">
                                     <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
-                                    <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">
+                                    <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                         Waiting for opponent to finish...
                                     </span>
                                 </div>
@@ -740,16 +757,16 @@ function ArenaContent() {
                                         const isMe = (isHost && p.name === adminName) || (!isHost && p.name === participantName);
                                         return !isMe;
                                     }).map(opponent => (
-                                        <div key={opponent.id} className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl">
+                                        <div key={opponent.id} className={`flex items-center gap-2 px-4 py-2 border rounded-xl ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
                                             <div className={`h-2 w-2 rounded-full ${opponent.finished ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
                                             <span className="text-xs">{opponent.name}</span>
-                                            <span className="text-[9px] font-mono text-white/40">{opponent.finished ? "Done" : "Playing..."}</span>
+                                            <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{opponent.finished ? "Done" : "Playing..."}</span>
                                         </div>
                                     ))}
                                 </div>
-                                <div className="w-full bg-white/10 rounded-full h-1 overflow-hidden">
+                                <div className={`w-full rounded-full h-1 overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
                                     <motion.div
-                                        className="h-full bg-white"
+                                        className={`h-full ${isDarkMode ? "bg-white" : "bg-black"}`}
                                         animate={{ x: ["-100%", "100%"] }}
                                         transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
                                     />
@@ -767,12 +784,12 @@ function ArenaContent() {
                     {!error && phase === "finished" && (
                         <div className="max-w-5xl mx-auto mt-6">
                             {/* Tab Switcher */}
-                            <div className="flex mb-6 border-b border-white/10">
+                            <div className={`flex mb-6 border-b ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
                                 <button
                                     onClick={() => setTab("leaderboard")}
                                     className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "leaderboard"
-                                        ? "bg-white text-black font-bold"
-                                        : "text-white/40 hover:text-white"
+                                        ? `${isDarkMode ? "bg-white text-black" : "bg-black text-white"} font-bold`
+                                        : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`
                                         }`}
                                 >
                                     <Trophy className="h-3 w-3 inline mr-1.5 -mt-0.5" />
@@ -781,8 +798,8 @@ function ArenaContent() {
                                 <button
                                     onClick={() => setTab("analysis")}
                                     className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "analysis"
-                                        ? "bg-white text-black font-bold"
-                                        : "text-white/40 hover:text-white"
+                                        ? `${isDarkMode ? "bg-white text-black" : "bg-black text-white"} font-bold`
+                                        : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`
                                         }`}
                                 >
                                     <BarChart3 className="h-3 w-3 inline mr-1.5 -mt-0.5" />
@@ -794,7 +811,7 @@ function ArenaContent() {
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className="border border-white/10 bg-[#0d0d0d] p-8 rounded-[2.5rem]"
+                                    className={`border p-8 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}
                                 >
                                     <div className="flex items-center gap-4 mb-8">
                                         <div className="h-12 w-12 bg-amber-500 text-black rounded-2xl flex items-center justify-center">
@@ -802,7 +819,7 @@ function ArenaContent() {
                                         </div>
                                         <div>
                                             <h2 className="text-2xl font-black tracking-tight uppercase">Final Rankings</h2>
-                                            <p className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">{topic} Battle</p>
+                                            <p className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{topic} Battle</p>
                                         </div>
                                     </div>
 
@@ -817,26 +834,26 @@ function ArenaContent() {
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ delay: i * 0.1 }}
                                                     className={`flex items-center p-5 rounded-2xl border transition-all ${isMe
-                                                        ? "bg-white/10 border-white/30 scale-[1.02]"
-                                                        : "bg-white/5 border-white/10"
+                                                        ? `${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/10 border-black/30"} scale-[1.02]`
+                                                        : `${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`
                                                         }`}
                                                 >
-                                                    <div className={`w-10 h-10 flex items-center justify-center text-lg font-black font-mono ${i < 3 ? medals[i] : "text-white/30"}`}>
+                                                    <div className={`w-10 h-10 flex items-center justify-center text-lg font-black font-mono ${i < 3 ? medals[i] : `${isDarkMode ? "text-white/30" : "text-black/30"}`}`}>
                                                         {i === 0 ? <Trophy className="h-6 w-6" /> : `#${i + 1}`}
                                                     </div>
                                                     <div className="flex-1 ml-4">
                                                         <div className="flex items-center gap-2">
                                                             <span className="font-bold">{p.name}</span>
-                                                            {isMe && <span className="text-[8px] font-mono text-white/40">(You)</span>}
+                                                            {isMe && <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>(You)</span>}
                                                         </div>
-                                                        <div className="flex items-center gap-4 mt-1 text-[10px] font-mono text-white/40">
+                                                        <div className={`flex items-center gap-4 mt-1 text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                                             <span>Score: {p.score}/{questions.length}</span>
                                                             <span>Time: {p.timeTaken}s</span>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
                                                         <div className="text-2xl font-black">{p.score}</div>
-                                                        <div className="text-[9px] font-mono text-white/40">points</div>
+                                                        <div className={`text-[9px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>points</div>
                                                     </div>
                                                 </motion.div>
                                             );
@@ -859,59 +876,59 @@ function ArenaContent() {
                                     className="space-y-6"
                                 >
                                     {/* Score Comparison Bar Chart */}
-                                    <div className="border border-white/10 bg-[#0d0d0d] p-8 rounded-[2.5rem]">
+                                    <div className={`border p-8 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
                                         <div className="flex items-center gap-3 mb-6">
-                                            <BarChart3 className="h-5 w-5 text-white/60" />
-                                            <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Score Comparison</span>
+                                            <BarChart3 className={`h-5 w-5 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
+                                            <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Score Comparison</span>
                                         </div>
                                         <div className="h-72">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart data={barData}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                                                    <XAxis dataKey="name" tick={{ fill: "#ffffff60", fontSize: 11 }} />
-                                                    <YAxis tick={{ fill: "#ffffff60", fontSize: 11 }} />
+                                                    <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#ffffff10" : "#00000010"} />
+                                                    <XAxis dataKey="name" tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 11 }} />
+                                                    <YAxis tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 11 }} />
                                                     <Tooltip
                                                         contentStyle={{
-                                                            backgroundColor: "#1a1a1a",
-                                                            border: "1px solid rgba(255,255,255,0.1)",
+                                                            backgroundColor: isDarkMode ? "#1a1a1a" : "#f5f5f5",
+                                                            border: isDarkMode ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)",
                                                             borderRadius: "12px",
-                                                            color: "#fff",
+                                                            color: isDarkMode ? "#fff" : "#000",
                                                         }}
                                                     />
-                                                    <Bar dataKey="score" fill="#ffffff" radius={[8, 8, 0, 0]} />
+                                                    <Bar dataKey="score" fill={isDarkMode ? "#ffffff" : "#000000"} radius={[8, 8, 0, 0]} />
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         </div>
                                     </div>
 
-                                    <div className="border border-white/10 bg-[#0d0d0d] p-8 rounded-[2.5rem]">
+                                    <div className={`border p-8 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
                                         <div className="flex items-center gap-3 mb-6">
-                                            <LineChart className="h-5 w-5 text-white/60" />
-                                            <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Performance Trend</span>
+                                            <LineChart className={`h-5 w-5 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
+                                            <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Performance Trend</span>
                                         </div>
                                         <div className="h-72">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <ReLineChart data={lineData}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                                                    <XAxis dataKey="question" tick={{ fill: "#ffffff60", fontSize: 11 }} />
-                                                    <YAxis tick={{ fill: "#ffffff60", fontSize: 11 }} />
+                                                    <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#ffffff10" : "#00000010"} />
+                                                    <XAxis dataKey="question" tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 11 }} />
+                                                    <YAxis tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 11 }} />
                                                     <Tooltip
                                                         contentStyle={{
-                                                            backgroundColor: "#1a1a1a",
-                                                            border: "1px solid rgba(255,255,255,0.1)",
+                                                            backgroundColor: isDarkMode ? "#1a1a1a" : "#f5f5f5",
+                                                            border: isDarkMode ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)",
                                                             borderRadius: "12px",
-                                                            color: "#fff",
+                                                            color: isDarkMode ? "#fff" : "#000",
                                                         }}
                                                     />
                                                     <Legend
-                                                        formatter={(value) => <span style={{ color: "#ffffff80", fontSize: "11px" }}>{value}</span>}
+                                                        formatter={(value) => <span style={{ color: isDarkMode ? "#ffffff80" : "#00000080", fontSize: "11px" }}>{value}</span>}
                                                     />
                                                     {leaderboard.map((p, i) => (
                                                         <Line
                                                             key={p.id}
                                                             type="monotone"
                                                             dataKey={p.name}
-                                                            stroke={["#ffffff", "#60a5fa", "#f59e0b", "#ef4444", "#10b981"][i % 5]}
+                                                            stroke={isDarkMode ? ["#ffffff", "#60a5fa", "#f59e0b", "#ef4444", "#10b981"][i % 5] : ["#000000", "#3b82f6", "#d97706", "#dc2626", "#059669"][i % 5]}
                                                             strokeWidth={2}
                                                             dot={{ r: 4 }}
                                                         />
@@ -922,20 +939,20 @@ function ArenaContent() {
                                     </div>
 
                                     {questions.length > 0 && (
-                                        <div className="border border-white/10 bg-[#0d0d0d] p-8 rounded-[2.5rem]">
+                                        <div className={`border p-8 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
                                             <div className="flex items-center gap-3 mb-6">
-                                                <Star className="h-5 w-5 text-white/60" />
-                                                <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Answer Key & Explanations</span>
+                                                <Star className={`h-5 w-5 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
+                                                <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Answer Key & Explanations</span>
                                             </div>
                                             <div className="space-y-6">
                                                 {questions.map((q, i) => {
                                                     const userAnswer = answers[i];
                                                     const isUserCorrect = userAnswer === q.correctOptionIndex;
                                                     return (
-                                                        <div key={i} className="p-5 border border-white/10 rounded-2xl bg-white/5">
+                                                        <div key={i} className={`p-5 border rounded-2xl ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}>
                                                             <div className="flex items-start gap-3">
                                                                 <div className={`h-7 w-7 flex items-center justify-center rounded-full text-xs font-mono border flex-shrink-0 mt-0.5 ${userAnswer === -1
-                                                                    ? "border-white/10 text-white/30"
+                                                                    ? `${isDarkMode ? "border-white/10 text-white/30" : "border-black/10 text-black/30"}`
                                                                     : isUserCorrect
                                                                         ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
                                                                         : "border-red-500 bg-red-500/20 text-red-400"
@@ -944,7 +961,7 @@ function ArenaContent() {
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <p className="text-sm font-bold mb-3">
-                                                                        <span className="text-white/40 font-mono text-[10px] mr-2">Q{i + 1}.</span>
+                                                                        <span className={`font-mono text-[10px] mr-2 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Q{i + 1}.</span>
                                                                         {q.question}
                                                                     </p>
                                                                     <div className="grid grid-cols-2 gap-2 mb-3">
@@ -956,7 +973,7 @@ function ArenaContent() {
                                                                                     ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
                                                                                     : isUserOpt && !isCorrectOpt
                                                                                         ? "border-red-500/50 bg-red-500/10 text-red-400"
-                                                                                        : "border-white/5 text-white/50"
+                                                                                        : `${isDarkMode ? "border-white/5 text-white/50" : "border-black/5 text-black/50"}`
                                                                                     }`}>
                                                                                     <span className="font-mono text-[9px] opacity-60 mr-2">{String.fromCharCode(65 + oi)}</span>
                                                                                     {opt}
@@ -965,7 +982,7 @@ function ArenaContent() {
                                                                             );
                                                                         })}
                                                                     </div>
-                                                                    <p className="text-[10px] text-white/50 italic">{q.explanation}</p>
+                                                                    <p className={`text-[10px] italic ${isDarkMode ? "text-white/50" : "text-black/50"}`}>{q.explanation}</p>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -984,7 +1001,7 @@ function ArenaContent() {
                                         </button>
                                         <button
                                             onClick={() => router.push(`/?arena=host&topic=${encodeURIComponent(topic)}&difficulty=${difficulty}&count=${questionCount}`)}
-                                            className="px-8 py-5 border border-white/20 text-white text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:bg-white/10 hover:border-white/40 transition-all flex items-center gap-2"
+                                            className={`px-8 py-5 border text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] transition-all flex items-center gap-2 ${isDarkMode ? "border-white/20 text-white hover:bg-white/10 hover:border-white/40" : "border-black/20 text-black hover:bg-black/10 hover:border-black/40"}`}
                                         >
                                             <RefreshCw className="h-4 w-4" />
                                             Rematch
@@ -1001,20 +1018,20 @@ function ArenaContent() {
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+                    className={`fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm p-6 ${isDarkMode ? "bg-black/70" : "bg-white/70"}`}
                     onClick={() => setShowQuitConfirm(false)}
                 >
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                        className="border border-white/10 bg-[#0d0d0d] p-8 rounded-[2.5rem] max-w-sm w-full text-center"
+                        className={`border p-8 rounded-[2.5rem] max-w-sm w-full text-center ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}
                     >
                         <div className="h-14 w-14 bg-red-500/20 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-5">
                             <AlertTriangle className="h-7 w-7 text-red-400" />
                         </div>
                         <h3 className="text-lg font-black uppercase tracking-tight mb-2">Quit Battle?</h3>
-                        <p className="text-sm text-white/60 mb-6">
+                        <p className={`text-sm mb-6 ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
                             {phase === "active"
                                 ? "You will forfeit the match and your progress will be lost."
                                 : "Are you sure you want to leave the battle arena?"}
@@ -1022,7 +1039,7 @@ function ArenaContent() {
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowQuitConfirm(false)}
-                                className="flex-1 py-3 border border-white/20 text-white/80 text-[10px] font-mono font-black uppercase tracking-[0.2em] rounded-[2rem] hover:bg-white/10 transition-all"
+                                className={`flex-1 py-3 border text-[10px] font-mono font-black uppercase tracking-[0.2em] rounded-[2rem] transition-all ${isDarkMode ? "border-white/20 text-white/80 hover:bg-white/10" : "border-black/20 text-black/80 hover:bg-black/10"}`}
                             >
                                 Cancel
                             </button>
@@ -1043,32 +1060,39 @@ function ArenaContent() {
     );
 }
 
+function LoadingFallback() {
+    const { isDarkMode } = useTheme();
+    return (
+        <div className={`min-h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} flex items-center justify-center`}>
+            <div className="text-center">
+                <div className="relative flex items-center justify-center mx-auto mb-4" style={{ width: 48, height: 48 }}>
+                    <motion.div
+                        className="absolute"
+                        animate={{ rotate: [0, -25, 0], x: [0, -8, 0] }}
+                        transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
+                    >
+                        <Swords className={`h-8 w-8 ${isDarkMode ? "text-white/80" : "text-black/80"}`} style={{ transform: 'scaleX(-1)' }} />
+                    </motion.div>
+                    <motion.div
+                        className="absolute"
+                        animate={{ rotate: [0, 25, 0], x: [0, 8, 0] }}
+                        transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
+                    >
+                        <Swords className={`h-8 w-8 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
+                    </motion.div>
+                </div>
+                <p className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/60" : "text-black/60"}`}>Loading Battle Arena...</p>
+            </div>
+        </div>
+    );
+}
+
 export default function BattleArenaPage() {
     return (
-        <Suspense fallback={
-            <div className="min-h-screen w-full bg-[#0a0a0a] text-white flex items-center justify-center">
-                <div className="text-center">
-                    <div className="relative flex items-center justify-center mx-auto mb-4" style={{ width: 48, height: 48 }}>
-                        <motion.div
-                            className="absolute"
-                            animate={{ rotate: [0, -25, 0], x: [0, -8, 0] }}
-                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
-                        >
-                            <Swords className="h-8 w-8 text-white/80" style={{ transform: 'scaleX(-1)' }} />
-                        </motion.div>
-                        <motion.div
-                            className="absolute"
-                            animate={{ rotate: [0, 25, 0], x: [0, 8, 0] }}
-                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
-                        >
-                            <Swords className="h-8 w-8 text-white/80" />
-                        </motion.div>
-                    </div>
-                    <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/60">Loading Battle Arena...</p>
-                </div>
-            </div>
-        }>
-            <ArenaContent />
-        </Suspense>
+        <ThemeProvider>
+            <Suspense fallback={<LoadingFallback />}>
+                <ArenaContent />
+            </Suspense>
+        </ThemeProvider>
     );
 }
