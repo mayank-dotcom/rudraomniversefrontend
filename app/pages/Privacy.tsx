@@ -7,6 +7,7 @@ import Navbar from "@/components/ui/Navbar";
 import Footer from "@/components/ui/Footer";
 import { useTheme } from "@/lib/theme-context";
 import { getPublicSiteSettings } from "@/lib/chat-api";
+import { ArrowLeft } from "lucide-react";
 
 const DEFAULT_SECTIONS: { title: string; content: string }[] = [
   { title: "1. Information We Collect", content: "We collect only the data necessary to provide our services: account information (name, email), chat messages and uploaded files for AI processing, and basic usage analytics to improve performance." },
