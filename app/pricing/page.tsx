@@ -6,7 +6,7 @@ import Navbar from "@/components/ui/Navbar";
 import Footer from "@/components/ui/Footer";
 import { ThemeProvider } from "@/lib/theme-context";
 import { Check, Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, ArrowRight } from "lucide-react";
-import { getPlansList, Plan } from "@/lib/chat-api";
+import { getPlansList, Plan, getPlanStrikeOff } from "@/lib/chat-api";
 import { toast } from "sonner";
 import { useTheme } from "@/lib/theme-context";
 
@@ -142,12 +142,26 @@ const PricingContent = () => {
                                             {plan.plan_name}
                                         </h3>
                                         <div className="flex items-baseline gap-2">
-                                            <span 
-                                                className="font-display font-bold leading-none tracking-tighter"
-                                                style={{ fontSize: "40px" }}
-                                            >
-                                                ₹{plan.price_inr || plan.price}
-                                            </span>
+                                            {(() => {
+                                                const strikeOff = getPlanStrikeOff(String(plan.id))
+                                                if (strikeOff) {
+                                                    return (
+                                                        <>
+                                                            <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
+                                                                ₹{plan.price_inr || plan.price}
+                                                            </span>
+                                                            <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
+                                                                ₹{strikeOff.price_inr}
+                                                            </span>
+                                                        </>
+                                                    )
+                                                }
+                                                return (
+                                                    <span className="font-display font-bold leading-none tracking-tighter" style={{ fontSize: "40px" }}>
+                                                        ₹{plan.price_inr || plan.price}
+                                                    </span>
+                                                )
+                                            })()}
                                             <span className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>/mo</span>
                                         </div>
                                     </div>

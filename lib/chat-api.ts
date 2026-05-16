@@ -1618,6 +1618,39 @@ export function getFeatureIdForEngine(engineName: string): string {
   return map[engineName] || ""
 }
 
+// Strike-off price storage (client-side)
+
+export interface PlanStrikeOff {
+  price_inr: number  // the displayed (new) price
+}
+
+const PLAN_STRIKE_KEY = "rudranex_plan_strike"
+
+export function getPlanStrikeOff(planId: string): PlanStrikeOff | null {
+  if (typeof window === "undefined") return null
+  try {
+    const stored = localStorage.getItem(PLAN_STRIKE_KEY)
+    const map: Record<string, PlanStrikeOff> = stored ? JSON.parse(stored) : {}
+    return map[planId] || null
+  } catch {
+    return null
+  }
+}
+
+export function setPlanStrikeOff(planId: string, data: PlanStrikeOff | null) {
+  if (typeof window === "undefined") return
+  try {
+    const stored = localStorage.getItem(PLAN_STRIKE_KEY)
+    const map: Record<string, PlanStrikeOff> = stored ? JSON.parse(stored) : {}
+    if (data) {
+      map[planId] = data
+    } else {
+      delete map[planId]
+    }
+    localStorage.setItem(PLAN_STRIKE_KEY, JSON.stringify(map))
+  } catch {}
+}
+
 // Web Speech API fallback for transcription
 export function transcribeSpeechFallback(language: string = 'hi-IN'): Promise<TranscriptionResponse> {
   return new Promise((resolve, reject) => {

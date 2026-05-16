@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser, getAdminRequests, declineAdminRequest, AdminRequest, getAdminSchools, getAdminSchoolAdmins, AdminSchool, AdminSchoolAdmin, getFrozenUsers, getAdminSchoolFacultyByCode, SchoolFacultyMember, deleteAdminUser, deleteSchoolFaculty, getAdminActivity, getAvailableFeatures, AvailableFeature, setPlanFeatures, getPlanFeatures } from '@/lib/chat-api';
+import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser, getAdminRequests, declineAdminRequest, AdminRequest, getAdminSchools, getAdminSchoolAdmins, AdminSchool, AdminSchoolAdmin, getFrozenUsers, getAdminSchoolFacultyByCode, SchoolFacultyMember, deleteAdminUser, deleteSchoolFaculty, getAdminActivity, getAvailableFeatures, AvailableFeature, setPlanFeatures, getPlanFeatures, getPlanStrikeOff, setPlanStrikeOff } from '@/lib/chat-api';
 import { isAdminAuthenticated, setAdminKey, removeAdminKey, setApiKey } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -27,7 +27,18 @@ const PlanCard = ({ plan, isDarkMode, onEdit }: { plan: any, isDarkMode: boolean
                 <h3 className={`text-lg font-display font-black ${isDarkMode ? "text-white" : "text-black"}`}>{plan.plan_name || plan.name}</h3>
                 {plan.is_active && <span className="text-[9px] font-mono uppercase tracking-widest text-emerald-400">Active</span>}
             </div>
-            <p className={`text-3xl font-display font-black mb-6 ${isDarkMode ? "text-white" : "text-black"}`}>₹{plan.price_inr || plan.price}</p>
+            {(() => {
+                const strikeOff = getPlanStrikeOff(String(plan.id))
+                if (strikeOff) {
+                    return (
+                        <div className="mb-6">
+                            <p className={`text-2xl font-display font-black line-through ${isDarkMode ? "text-white/40" : "text-black/30"}`}>₹{plan.price_inr || plan.price}</p>
+                            <p className={`text-3xl font-display font-black ${isDarkMode ? "text-white" : "text-black"}`}>₹{strikeOff.price_inr}</p>
+                        </div>
+                    )
+                }
+                return <p className={`text-3xl font-display font-black mb-6 ${isDarkMode ? "text-white" : "text-black"}`}>₹{plan.price_inr || plan.price}</p>
+            })()}
 
             <div className={`space-y-2 mb-6 text-[10px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
                 <div className="flex justify-between">
@@ -144,6 +155,8 @@ const Dashboard = () => {
     const [availableFeatures, setAvailableFeatures] = useState<AvailableFeature[]>([]);
     const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
     const [isFeaturesLoading, setIsFeaturesLoading] = useState(false);
+    const [strikeOffEnabled, setStrikeOffEnabled] = useState(false);
+    const [strikeOffPrice, setStrikeOffPrice] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isPlansLoading, setIsPlansLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -671,8 +684,18 @@ const Dashboard = () => {
                 if (planId && planId !== 'new') {
                     const saved = getPlanFeatures(planId)
                     setSelectedFeatures(saved)
+                    const strikeOff = getPlanStrikeOff(planId)
+                    if (strikeOff) {
+                        setStrikeOffEnabled(true)
+                        setStrikeOffPrice(strikeOff.price_inr)
+                    } else {
+                        setStrikeOffEnabled(false)
+                        setStrikeOffPrice(0)
+                    }
                 } else {
                     setSelectedFeatures([])
+                    setStrikeOffEnabled(false)
+                    setStrikeOffPrice(0)
                 }
             })
             .catch(() => {
@@ -1978,19 +2001,24 @@ const Dashboard = () => {
                                                                     monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
                                                                     daily_tts_limit: Number(formData.get('daily_tts_limit')),
                                                                     daily_stt_limit: Number(formData.get('daily_stt_limit'))
-                                                                }).then((res) => {
-                                                                    const newPlanId = res?.plan?.id?.toString()
-                                                                    if (newPlanId) {
-                                                                        setPlanFeatures(newPlanId, selectedFeatures)
-                                                                    }
-                                                                    toast.success("Plan created successfully");
-                                                                    setEditingPlan(null);
-                                                                    fetchData();
-                                                                }).catch(err => {
-                                                                    toast.error("Error creating plan: " + (err as Error).message);
-                                                                }).finally(() => {
-                                                                    setIsCreatingPlan(false);
-                                                                });
+                                                                 }).then((res) => {
+                                                                        const newPlanId = res?.plan?.id?.toString()
+                                                                        if (newPlanId) {
+                                                                            setPlanFeatures(newPlanId, selectedFeatures)
+                                                                            if (strikeOffEnabled && strikeOffPrice > 0) {
+                                                                                setPlanStrikeOff(newPlanId, { price_inr: strikeOffPrice })
+                                                                            } else {
+                                                                                setPlanStrikeOff(newPlanId, null)
+                                                                            }
+                                                                        }
+                                                                        toast.success("Plan created successfully");
+                                                                        setEditingPlan(null);
+                                                                        fetchData();
+                                                                    }).catch(err => {
+                                                                        toast.error("Error creating plan: " + (err as Error).message);
+                                                                    }).finally(() => {
+                                                                        setIsCreatingPlan(false);
+                                                                    });
                                                             } else {
                                                                 handleUpdatePlan(editingPlan.id?.toString() || '', {
                                                                     plan_name: formData.get('plan_name') as string,
@@ -2004,6 +2032,11 @@ const Dashboard = () => {
                                                                     daily_stt_limit: Number(formData.get('daily_stt_limit'))
                                                                 });
                                                                 setPlanFeatures(editingPlan.id?.toString() || '', selectedFeatures);
+                                                                if (strikeOffEnabled && strikeOffPrice > 0) {
+                                                                    setPlanStrikeOff(editingPlan.id?.toString() || '', { price_inr: strikeOffPrice })
+                                                                } else {
+                                                                    setPlanStrikeOff(editingPlan.id?.toString() || '', null)
+                                                                }
                                                             }
                                                         }} className="space-y-4">
                             <div>
@@ -2146,6 +2179,36 @@ const Dashboard = () => {
                                                 </div>
                                             </label>
                                         ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Strike-off Price */}
+                            <div>
+                                <label className={`flex items-center gap-2 cursor-pointer`}>
+                                    <input
+                                        type="checkbox"
+                                        checked={strikeOffEnabled}
+                                        onChange={(e) => {
+                                            setStrikeOffEnabled(e.target.checked)
+                                            if (!e.target.checked) {
+                                                setStrikeOffPrice(0)
+                                            }
+                                        }}
+                                        className="h-4 w-4 rounded border-gray-300 text-emerald-500 focus:ring-emerald-500"
+                                    />
+                                    <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Strike-off Price</span>
+                                </label>
+                                {strikeOffEnabled && (
+                                    <div className="mt-2">
+                                        <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>New Price (INR)</label>
+                                        <input
+                                            type="number"
+                                            value={strikeOffPrice}
+                                            onChange={(e) => setStrikeOffPrice(Number(e.target.value))}
+                                            placeholder="Enter new price"
+                                            className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                        />
                                     </div>
                                 )}
                             </div>
