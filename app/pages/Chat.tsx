@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Send, Bot, User, LogOut, MessageSquare, Plus, Search,
     ChevronLeft, ChevronRight, Moon, Sun, GraduationCap,
-    Code2, FileText, Calendar, UserCog, Mic, ChevronUp,
+    UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
     Swords
@@ -175,13 +175,11 @@ const Chat = () => {
 
     const engines = [
         { name: "Student Mode", endpoint: "/chat", version: "1.0", icon: GraduationCap },
-        { name: "Coding & GitHub", endpoint: "/tools/coding", version: "2.0", icon: Code2 },
+
         { name: "Interview Prep", endpoint: "/tools/interview", version: "1.0", icon: UserCog },
-        { name: "Resume Audit", endpoint: "/tools/resume", version: "1.0", icon: FileText },
-        { name: "PDF Research", endpoint: "/features/pdf/intel", version: "1.0", icon: Calendar },
         { name: "Mock Paper Generator", endpoint: "/chat", version: "1.0", icon: MockIcon },
         { name: "Persona Mode", endpoint: "/chat", version: "1.0", icon: Sparkles },
-        { name: "Vision Solver", endpoint: "/features/vision/solve", version: "1.0", icon: Mic },
+        { name: "AI Image Lab", endpoint: "/chat", version: "1.0", icon: ImageIcon },
         { name: "Battle Arena", endpoint: "/battle-arena", version: "1.0", icon: Swords },
     ];
 
@@ -248,6 +246,72 @@ const Chat = () => {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
     }, [messages]);
+
+    const [isRecording, setIsRecording] = useState(false);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const [stream, setStream] = useState<MediaStream | null>(null);
+
+    const startRecording = async () => {
+        try {
+            const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            setStream(mediaStream);
+            const mediaRecorder = new MediaRecorder(mediaStream);
+            mediaRecorderRef.current = mediaRecorder;
+            const chunks: Blob[] = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+                
+                // Prevent sending empty/tiny recordings (less than 1KB)
+                if (audioBlob.size < 1000) {
+                    toast.error("Recording too short. Please try again.");
+                    return;
+                }
+
+                try {
+                    toast.promise(
+                        (async () => {
+                            const { transcribeSpeech } = await import("@/lib/chat-api");
+                            const transcript = await transcribeSpeech(audioBlob);
+                            if (transcript) {
+                                setInput(prev => prev + (prev ? " " : "") + transcript);
+                                return "Speech converted to text";
+                            }
+                            throw new Error("No transcript received");
+                        })(),
+                        {
+                            loading: 'Transcribing speech...',
+                            success: (data) => data,
+                            error: (err) => `STT Error: ${err.message}`,
+                        }
+                    );
+                } catch (err: any) {
+                    console.error("STT Process Error:", err);
+                }
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+        } catch (err) {
+            console.error("Recording error:", err);
+            toast.error("Could not access microphone");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                setStream(null);
+            }
+        }
+    };
 
     useEffect(() => {
         if (mcqSession) {
@@ -713,21 +777,9 @@ STRICT RULES:
             setSelectedFile(processed);
 
             if (processed.isImage && !processed.isPdf) {
-                // Regular image → Vision Solver
-                setSelectedEngine("Vision Solver");
-                toast.success(`Image "${processed.name}" ready — Vision Solver selected`);
+                toast.success(`Image "${processed.name}" ready`);
             } else if (processed.isPdf) {
-                if (processed.isImage) {
-                    // Scanned / image-only PDF → PDF Research (will use OCR modality)
-                    setSelectedEngine("PDF Research");
-                    toast.success(`Scanned PDF "${processed.name}" ready — using OCR mode`);
-                } else if (file.name.toLowerCase().includes("resume") || file.name.toLowerCase().includes("cv")) {
-                    setSelectedEngine("Resume Audit");
-                    toast.success(`Resume "${processed.name}" ready — Resume Audit selected`);
-                } else {
-                    setSelectedEngine("PDF Research");
-                    toast.success(`PDF "${processed.name}" ready — PDF Research selected`);
-                }
+                toast.success(`PDF "${processed.name}" ready`);
             } else {
                 toast.success(`File "${processed.name}" ready`);
             }
@@ -773,7 +825,7 @@ STRICT RULES:
             let userContent: any = trimmedInput;
             let displayContent = trimmedInput;
             // Determine request modality — may be overridden for PDF/vision files
-            let requestModality: string = currentEngine.name === "Vision Solver" ? "vision" : "text";
+            let requestModality: string = currentEngine.name === "AI Image Lab" ? "image_gen" : "text";
             // Determine endpoint — PDFs always go to /features/pdf/intel regardless of engine name
             let requestEndpoint: string = currentEngine.endpoint;
 
@@ -787,7 +839,6 @@ STRICT RULES:
                     : `[📎 ${selectedFile.name}]`;
 
                 if (isRegularImage) {
-                    // ── Regular image → Vision Solver ──────────────────────────────
                     userContent = [
                         { type: "text", text: trimmedInput || "Please analyze this image in detail." },
                         { type: "image_url", image_url: { url: selectedFile.content } }
@@ -874,15 +925,22 @@ STRICT RULES:
             // Backend returns { success, model, data: choices_array }
             const firstChoice = data.data?.[0];
             console.log("First choice:", firstChoice);
-            const aiContent = firstChoice?.message?.content
-                || firstChoice?.text
-                || (firstChoice ? JSON.stringify(firstChoice) : null)
-                || "Response received from Rudranex AI.";
-            console.log("AI Content:", aiContent);
+            const isImageGen = selectedEngine === "AI Image Lab";
+
+            let aiContent: string;
+            if (isImageGen) {
+                aiContent = (data as any).response || firstChoice?.message?.content || firstChoice?.text || "";
+            } else {
+                aiContent = firstChoice?.message?.content || firstChoice?.text || "";
+            }
+            if (!aiContent) {
+                aiContent = firstChoice ? JSON.stringify(firstChoice) : "Response received from Rudranex AI.";
+            }
+
+            const isDataUrl = aiContent.startsWith("data:image/");
 
             setShowDots(false);
 
-            // Stream simulation - render text character by character
             const assistantMessage: Message = {
                 role: "assistant",
                 content: "",
@@ -890,17 +948,28 @@ STRICT RULES:
             };
             setMessages((prev) => [...prev, assistantMessage]);
 
-            for (let i = 0; i < aiContent.length; i++) {
-                await new Promise(resolve => setTimeout(resolve, 10)); // 10ms delay per char
-                const currentText = aiContent.slice(0, i + 1);
+            if (isImageGen && isDataUrl) {
                 setMessages((prev) => {
                     const newMessages = [...prev];
                     const lastMsg = newMessages[newMessages.length - 1];
                     if (lastMsg && lastMsg.role === "assistant") {
-                        lastMsg.content = currentText;
+                        lastMsg.content = aiContent;
                     }
                     return newMessages;
                 });
+            } else {
+                for (let i = 0; i < aiContent.length; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                    const currentText = aiContent.slice(0, i + 1);
+                    setMessages((prev) => {
+                        const newMessages = [...prev];
+                        const lastMsg = newMessages[newMessages.length - 1];
+                        if (lastMsg && lastMsg.role === "assistant") {
+                            lastMsg.content = currentText;
+                        }
+                        return newMessages;
+                    });
+                }
             }
             if (currentChatId) {
                 try {
@@ -1013,7 +1082,7 @@ STRICT RULES:
                                 onClick={() => setSidebarTab("history")}
                                 className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${
                                     sidebarTab === "history"
-                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
+                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
                                         : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
                                 }`}
                             >
@@ -1024,7 +1093,7 @@ STRICT RULES:
                                 onClick={() => setSidebarTab("modes")}
                                 className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${
                                     sidebarTab === "modes"
-                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
+                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
                                         : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
                                 }`}
                             >
@@ -1066,7 +1135,11 @@ STRICT RULES:
                                         {!isSessionsLoading && filteredChats.map((chat) => (
                                             <div
                                                 key={chat.id}
-                                                className={`group flex items-center gap-1 pr-2 ${activeChatId === chat.id ? (isDarkMode ? "bg-white/5 border-l border-white" : "bg-black/5 border-l border-black") : ""}`}
+                                                className={`group flex items-center gap-1 pr-2 transition-all duration-300 ${
+                                                    activeChatId === chat.id 
+                                                        ? (isDarkMode ? "bg-[#00DDDD]/10 border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.3)]") 
+                                                        : ""
+                                                }`}
                                             >
                                                 {editingChatId === chat.id ? (
                                                     <div className="flex-1 flex items-center gap-1 p-1.5">
@@ -1088,10 +1161,18 @@ STRICT RULES:
                                                     <button
                                                         onClick={() => void openChat(chat.id)}
                                                         onDoubleClick={() => handleStartEditing(chat)}
-                                                        className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${activeChatId === chat.id ? "" : "hover:bg-white/5"}`}
+                                                        className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${
+                                                            activeChatId === chat.id 
+                                                                ? (isDarkMode ? "text-[#00DDDD]" : "text-white") 
+                                                                : (isDarkMode ? "text-white/60 hover:bg-white/5" : "text-black/60 hover:bg-black/5")
+                                                        }`}
                                                     >
-                                                        <MessageSquare className={`h-3 w-3 flex-shrink-0 ${isDarkMode ? "text-white/20" : "text-black/40"}`} />
-                                                        {sidebarWidth > 120 && <span className="truncate opacity-60 font-sans">{chat.title}</span>}
+                                                        <MessageSquare className={`h-3 w-3 flex-shrink-0 ${
+                                                            activeChatId === chat.id 
+                                                                ? (isDarkMode ? "text-[#00DDDD]" : "text-white") 
+                                                                : (isDarkMode ? "text-white/20" : "text-black/40")
+                                                        }`} />
+                                                        {sidebarWidth > 120 && <span className={`truncate font-sans ${activeChatId === chat.id ? "font-bold" : "opacity-60"}`}>{chat.title}</span>}
                                                     </button>
                                                 )}
                                                 {sidebarWidth > 120 && editingChatId !== chat.id && (
@@ -1142,15 +1223,14 @@ STRICT RULES:
                                             }}
                                             className={`w-full flex items-center gap-3 p-3 text-xs transition-all ${
                                                 selectedEngine === engine.name
-                                                    ? (isDarkMode ? "bg-white/5 text-white border-l border-white" : "bg-black/5 text-black border-l border-black")
+                                                    ? (isDarkMode ? "bg-[#00DDDD]/10 text-[#00DDDD] border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] text-white border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.4)]")
                                                     : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
                                             }`}
                                             >
                                             {(() => {
                                                 const Icon = engine.icon as any;
-                                                const isCalendar = Icon === Calendar;
                                                 return (
-                                                    <Icon className={`h-4 w-4 flex-shrink-0 ${isDarkMode && isCalendar ? 'text-white' : ''}`} />
+                                                    <Icon className={`h-4 w-4 flex-shrink-0 ${isDarkMode ? 'text-white' : ''}`} />
                                                 );
                                             })()}
                                             {sidebarWidth > 120 && (
@@ -1301,6 +1381,12 @@ STRICT RULES:
                                                         <p className={`text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white font-sans" : "text-black font-sans"}`}>
                                                             {msg.content}
                                                         </p>
+                                                    ) : msg.content.startsWith("data:image/") ? (
+                                                        <img
+                                                            src={msg.content}
+                                                            alt="Generated image"
+                                                            className="w-full h-auto rounded-2xl"
+                                                        />
                                                     ) : (
                                                         <MarkdownRenderer content={msg.content} isDarkMode={isDarkMode} />
                                                     )}
@@ -1472,10 +1558,68 @@ STRICT RULES:
                                     className={`flex-1 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} p-4 pl-2 text-base focus:outline-none`}
                                 />
                                 <div className="flex items-center gap-1 pr-2">
+                                    {!input.trim() && !isProcessingFile && (
+                                        <div className="relative flex items-center justify-center mr-1">
+                                            <AnimatePresence>
+                                                {isRecording && (
+                                                    <>
+                                                        {/* Animated Pulse Circles */}
+                                                        <motion.div
+                                                            initial={{ scale: 0.8, opacity: 0 }}
+                                                            animate={{ scale: [1, 2, 2.5], opacity: [0.5, 0.2, 0] }}
+                                                            exit={{ scale: 0.8, opacity: 0 }}
+                                                            transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
+                                                            className="absolute w-8 h-8 rounded-full bg-[#00DDDD]"
+                                                        />
+                                                        <motion.div
+                                                            initial={{ scale: 0.8, opacity: 0 }}
+                                                            animate={{ scale: [1, 1.5, 2], opacity: [0.8, 0.4, 0] }}
+                                                            exit={{ scale: 0.8, opacity: 0 }}
+                                                            transition={{ repeat: Infinity, duration: 1.5, ease: "easeOut" }}
+                                                            className="absolute w-8 h-8 rounded-full bg-[#00DDDD]"
+                                                        />
+                                                        {/* Sound Waves */}
+                                                        <div className="absolute -top-10 flex gap-0.5 items-end justify-center h-8">
+                                                            {[1, 2, 3, 4, 5].map((i) => (
+                                                                <motion.div
+                                                                    key={i}
+                                                                    animate={{ height: [4, 16, 8, 24, 4] }}
+                                                                    transition={{ 
+                                                                        repeat: Infinity, 
+                                                                        duration: 0.4 + (i * 0.1),
+                                                                        ease: "easeInOut"
+                                                                    }}
+                                                                    className="w-1 bg-[#00DDDD] rounded-full shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </AnimatePresence>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    if (isRecording) {
+                                                        stopRecording();
+                                                    } else {
+                                                        startRecording();
+                                                    }
+                                                }}
+                                                className={`p-2 rounded-full transition-all duration-300 relative z-10 ${
+                                                    isRecording 
+                                                        ? "bg-[#00DDDD] text-black scale-125 shadow-[0_0_20px_rgba(0,221,221,0.6)]" 
+                                                        : (isDarkMode ? "text-white/40 hover:text-[#00DDDD] hover:bg-[#00DDDD]/10" : "text-black/40 hover:text-[#00DDDD] hover:bg-[#00DDDD]/10")
+                                                }`}
+                                                title={isRecording ? "Click to stop" : "Click to speak"}
+                                            >
+                                                <Mic className={`h-4 w-4 ${isRecording ? "animate-pulse" : ""}`} />
+                                            </button>
+                                        </div>
+                                    )}
                                     <div className="relative" ref={engineSelectRef}>
                                         <button
                                             onClick={() => setShowEngineSelect(!showEngineSelect)}
-                                            className={`flex items-center gap-2 px-3 py-2 border-2 ${isDarkMode ? "border-white text-white/60 hover:bg-white/5 hover:border-white" : "border-black text-black/60 hover:bg-black/5 hover:border-black"} text-[9px] font-mono uppercase tracking-widest transition-all duration-300 rounded`}
+                                            className={`flex items-center gap-2 px-3 py-2 border-2 ${showEngineSelect ? "border-[#00DDDD] text-[#00DDDD]" : (isDarkMode ? "border-white text-white/60 hover:border-[#00DDDD] hover:text-[#00DDDD]" : "border-black text-black/60 hover:border-[#00DDDD] hover:text-[#00DDDD]")} text-[9px] font-mono uppercase tracking-widest transition-all duration-300 rounded`}
                                         >
                                             <Bot className="h-3 w-3" />
                                             {selectedEngine}
@@ -1532,9 +1676,9 @@ STRICT RULES:
                                     <button
                                         onClick={() => void handleSend()}
                                         disabled={isLoading || isHistoryLoading || isProcessingFile}
-                                        className={`p-2.5 disabled:opacity-50 ${isDarkMode ? "bg-white text-black hover:shadow-[0_0_25px_rgba(255,255,255,0.3)]" : "bg-black text-white hover:shadow-[0_0_25px_rgba(0,0,0,0.3)]"} transition-all hover:scale-105 active:scale-95 relative overflow-hidden group`}
+                                        className={`p-2.5 disabled:opacity-50 bg-[#00DDDD] text-black hover:shadow-[0_0_25px_rgba(0,221,221,0.5)] transition-all hover:scale-105 active:scale-95 relative overflow-hidden group`}
                                     >
-                                        <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${isDarkMode ? "via-black/10" : "via-white/20"} to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000`} />
+                                        <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000`} />
                                         <Send className="h-4 w-4 relative z-10" />
                                     </button>
                                 </div>
@@ -1558,7 +1702,7 @@ STRICT RULES:
                                     <span className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-black bg-white px-2 py-0.5" : "text-white bg-black px-2 py-0.5"} mb-1 pl-4`}>Active Plan</span>
                                     <div className="flex items-stretch gap-2">
                                         <div className={`flex items-center justify-center ${isDarkMode ? "bg-black border-2 border-white" : "bg-white border-2 border-black"} px-2`}>
-                                            <div className={`h-1.5 w-1.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)] ${subscription?.subscription ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                            <div className={`h-1.5 w-1.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(0,221,221,0.5)] ${subscription?.subscription ? 'bg-[#00DDDD]' : 'bg-amber-500'}`} />
                                         </div>
                                         <span className={`flex items-center text-xs font-bold ${isDarkMode ? "text-black bg-white px-2 border-2 border-transparent" : "text-white bg-black px-2 border-2 border-transparent"} tracking-widest uppercase`}>
                                             {isSubscriptionLoading ? "Loading..." : (subscription?.subscription?.plan_name || "Free Trial")}
@@ -1574,10 +1718,10 @@ STRICT RULES:
                             {/* Circular Usage Chart */}
                             <div className="relative w-32 h-32 mx-auto mb-8 flex-shrink-0">
                                 <svg className="w-full h-full rotate-[-90deg]">
-                                    <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "#9ca3af" : "#00000005"} strokeWidth="6" />
+                                    <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "rgba(0, 221, 221, 0.1)" : "rgba(0, 221, 221, 0.05)"} strokeWidth="6" />
                                     <circle
                                         cx="64" cy="64" r="58" fill="none"
-                                        stroke={isDarkMode ? "#10b981" : "black"}
+                                        stroke="#00DDDD"
                                         strokeWidth="6"
                                         strokeDasharray="364"
                                         strokeDashoffset={String(
@@ -1586,7 +1730,7 @@ STRICT RULES:
                                                 : 364 - ((subscription.usage.daily_chats / subscription.subscription.details.daily_chat_limit) * 364)
                                         )}
                                         strokeLinecap="round"
-                                        className="transition-all duration-1000"
+                                        className="transition-all duration-1000 drop-shadow-[0_0_8px_rgba(0,221,221,0.5)]"
                                     />
                                 </svg>
                                 <div className="absolute inset-0 flex items-center justify-center">
@@ -1596,58 +1740,85 @@ STRICT RULES:
 
                             {/* Detailed Metrics */}
                             <div className="space-y-4 mb-8">
-                                <div className={`flex justify-between items-center text-[10px] font-mono ${isDarkMode ? "text-white/70" : "text-black/80"}`}>
-                                    <span className="uppercase tracking-widest">Chats Used</span>
-                                    <span className="font-bold">
-                                        {isSubscriptionLoading ? "..." : (
-                                            subscription?.usage?.daily_chats !== undefined
-                                                ? `${subscription.usage.daily_chats} / ${subscription.subscription?.details?.daily_chat_limit || 0}`
-                                                : "0 / 0"
-                                        )}
-                                    </span>
-                                </div>
-                                <div className={`h-[1px] w-full ${isDarkMode ? "bg-white/30" : "bg-black/30"}`} />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="flex flex-col">
-                                        <span className={`text-[8px] font-mono uppercase ${isDarkMode ? "text-white/40" : "text-black/70"} tracking-widest mb-1`}>Images</span>
-                                        <span className={`text-[10px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>
-                                            {isSubscriptionLoading ? "..." : (
-                                                subscription?.usage?.monthly_images !== undefined
-                                                    ? `${subscription.usage.monthly_images} / ${subscription.subscription?.details?.monthly_image_limit || 0}`
-                                                    : "0 / 0"
-                                            )}
+                                {/* Chats Usage */}
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
+                                        <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Chats Used</span>
+                                        <span className={isDarkMode ? "text-white" : "text-black"}>
+                                            {subscription?.usage?.daily_chats || 0} / {subscription?.subscription?.details?.daily_chat_limit || 1}
                                         </span>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className={`text-[8px] font-mono uppercase ${isDarkMode ? "text-white/40" : "text-black/70"} tracking-widest mb-1`}>Coding</span>
-                                        <span className={`text-[10px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>
-                                            {isSubscriptionLoading ? "..." : (
-                                                subscription?.usage?.daily_codings !== undefined
-                                                    ? `${subscription.usage.daily_codings} / ${subscription.subscription?.details?.daily_coding_limit || 0}`
-                                                    : "0 / 0"
-                                            )}
-                                        </span>
+                                    <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
+                                        <motion.div 
+                                            initial={{ width: 0 }}
+                                            animate={{ 
+                                                width: `${Math.min(100, ((subscription?.usage?.daily_chats || 0) / (subscription?.subscription?.details?.daily_chat_limit || 1)) * 100)}%` 
+                                            }}
+                                            className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                        />
+                                    </div>
+                                </div>
+                                <div className={`h-[1px] w-full ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+                                
+                                {/* Usage Progress Bars */}
+                                <div className="space-y-6">
+                                    {/* Images Usage */}
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
+                                            <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Images Used</span>
+                                            <span className={isDarkMode ? "text-white" : "text-black"}>
+                                                {subscription?.usage?.monthly_images || 0} / {subscription?.subscription?.details?.monthly_image_limit || 1}
+                                            </span>
+                                        </div>
+                                        <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
+                                            <motion.div 
+                                                initial={{ width: 0 }}
+                                                animate={{ 
+                                                    width: `${Math.min(100, ((subscription?.usage?.monthly_images || 0) / (subscription?.subscription?.details?.monthly_image_limit || 1)) * 100)}%` 
+                                                }}
+                                                className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Coding Usage */}
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
+                                            <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Coding Used</span>
+                                            <span className={isDarkMode ? "text-white" : "text-black"}>
+                                                {subscription?.usage?.daily_codings || 0} / {subscription?.subscription?.details?.daily_coding_limit || 1}
+                                            </span>
+                                        </div>
+                                        <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
+                                            <motion.div 
+                                                initial={{ width: 0 }}
+                                                animate={{ 
+                                                    width: `${Math.min(100, ((subscription?.usage?.daily_codings || 0) / (subscription?.subscription?.details?.daily_coding_limit || 1)) * 100)}%` 
+                                                }}
+                                                className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="space-y-2 mb-8">
                                 <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                                    <div className="h-full w-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+                                    <div className="h-full w-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]" />
                                 </div>
                                 <div className="flex justify-between text-[8px] font-mono uppercase opacity-70">
                                     <span>Backend</span>
-                                    <span>Stable</span>
+                                    <span className="text-[#00DDDD]">Stable</span>
                                 </div>
                             </div>
 
                             <div className="space-y-2 mb-8">
                                 <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                                    <div className="h-full w-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.5)]" />
+                                    <div className="h-full w-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]" />
                                 </div>
                                 <div className="flex justify-between text-[8px] font-mono uppercase opacity-70">
                                     <span>Frontend</span>
-                                    <span>Stable</span>
+                                    <span className="text-[#00DDDD]">Stable</span>
                                 </div>
                             </div>
 

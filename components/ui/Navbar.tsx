@@ -3,8 +3,8 @@
 import { useState } from "react"
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { LogOut, Moon, Sun } from "lucide-react"
-import { isAuthenticated, removeApiKey } from "@/lib/auth"
+import { LogOut, Moon, Sun, Menu, X } from "lucide-react"
+import { removeApiKey } from "@/lib/auth"
 import { useTheme } from "@/lib/theme-context"
 
 interface NavbarProps {
@@ -14,6 +14,7 @@ interface NavbarProps {
 const Navbar = ({ onAuthClick }: NavbarProps) => {
     const [authed, setAuthed] = useState(false)
     const { isDarkMode, toggleTheme } = useTheme()
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const handleLogout = () => {
         removeApiKey()
@@ -21,39 +22,70 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
         window.location.href = "/"
     }
 
+    const navLinks = [
+        { label: "Features", href: "/#features", num: "01" },
+        { label: "Pricing", href: "/pricing", num: "02" },
+        { label: "Manifesto", href: "/#manifesto", num: "03" },
+        { label: "Access", href: "/#cta", num: "04" },
+        { label: "Schools", href: "/schools", num: "05" },
+    ];
+
     return (
         <motion.nav
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6 }}
-            className={`fixed top-0 left-0 right-0 z-50 border-b-2 backdrop-blur-2xl ${isDarkMode ? "border-white bg-black/20" : "border-black bg-white/80"}`}
+            initial={{ y: -100 }}
+            animate={{ y: 0 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className={`fixed top-0 left-0 right-0 z-50 px-6 md:px-12 py-4 border-b ${isDarkMode ? "bg-[#0a0a0a]/80 border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]" : "bg-white/80 border-black/5 shadow-sm"} backdrop-blur-md transition-all duration-500`}
         >
-            <div className="w-full px-10 md:px-20 py-6 flex items-center justify-between">
-                <Link href="/" className="flex items-center gap-4">
-                    <div className={`h-[30px] w-[30px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
-                        <svg width="28" height="28" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
+            <div className="max-w-[1400px] mx-auto flex items-center justify-between">
+                {/* Logo — 24px Bold, -0.02em tracking */}
+                <Link href="/" className="flex items-center gap-3 group shrink-0">
+                    <div className={`h-8 w-8 border ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center shrink-0`}>
+                        <svg width="24" height="24" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
                             <polygon points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108" fill="currentColor" />
                         </svg>
                     </div>
-                    <div className="flex items-baseline gap-1.5">
-                        <span className={`font-display font-black text-lg tracking-tighter ${isDarkMode ? "text-white" : "text-black"}`}>RUDRANEX</span>
-                        <span className={`font-serif text-lg ${isDarkMode ? "text-white/40" : "text-black/40"} italic`}>ai</span>
+                    <div className="flex items-baseline gap-1">
+                        <span
+                            className={`font-display font-bold leading-none ${isDarkMode ? "text-white" : "text-black"}`}
+                            style={{ fontSize: "24px", letterSpacing: "-0.02em" }}
+                        >
+                            RUDRANEX
+                        </span>
+                        <span className={`font-serif text-xl italic ${isDarkMode ? "text-white/35" : "text-black/35"} leading-none`}>
+                            ai
+                        </span>
                     </div>
                 </Link>
-                
-                <div className={`hidden md:flex items-center gap-12 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black"} absolute left-1/2 -translate-x-1/2`}>
-                    <a href="/#features" className={`transition-colors duration-300 ${isDarkMode ? "hover:text-white" : "hover:text-gray-400"}`}>01 — Features</a>
-                    <Link href="/pricing" className={`transition-colors duration-300 ${isDarkMode ? "hover:text-white" : "hover:text-gray-400"}`}>02 — Pricing</Link>
-                    <a href="/#manifesto" className={`transition-colors duration-300 ${isDarkMode ? "hover:text-white" : "hover:text-gray-400"}`}>03 — Manifesto</a>
-                    <a href="/#cta" className={`transition-colors duration-300 ${isDarkMode ? "hover:text-white" : "hover:text-gray-400"}`}>04 — Access</a>
-                    <Link href="/schools" className={`transition-colors duration-300 ${isDarkMode ? "hover:text-white" : "hover:text-gray-400"}`}>05 — Schools</Link>
+
+                {/* Desktop Nav Links — 12px Medium, 0.05em tracking */}
+                <div className="hidden lg:flex items-center gap-10">
+                    {navLinks.map((link) => (
+                        <Link
+                            key={link.label}
+                            href={link.href}
+                            className={`group flex items-center gap-2 font-sans font-medium uppercase transition-all duration-300 ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`}
+                            style={{ fontSize: "12px", letterSpacing: "0.05em" }}
+                        >
+                            {/* Technical Label for number */}
+                            <span
+                                className="font-sans font-bold text-[var(--color-cyan)] opacity-70 group-hover:opacity-100 transition-opacity"
+                                style={{ fontSize: "11px", letterSpacing: "0.1em" }}
+                            >
+                                {link.num}
+                            </span>
+                            <span className="opacity-30 group-hover:opacity-60 transition-opacity">—</span>
+                            <span className="group-hover:text-[var(--color-cyan)] transition-colors duration-300">{link.label}</span>
+                        </Link>
+                    ))}
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-5">
                     <button
                         onClick={toggleTheme}
-                        className={`p-2.5 border transition-all duration-300 ${isDarkMode ? "border-white/20 text-white/60 hover:text-white hover:border-white/40 hover:scale-110" : "border-black/20 text-black/60 hover:text-black hover:border-black/40 hover:scale-110"}`}
+                        className={`p-2 transition-all duration-300 ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/35 hover:text-black"}`}
                         title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                        aria-label="Toggle theme"
                     >
                         {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
                     </button>
@@ -61,21 +93,77 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
                     {authed ? (
                         <button
                             onClick={handleLogout}
-                            className="px-6 py-2.5 border border-white/10 text-white text-[10px] font-mono uppercase tracking-widest font-bold hover:bg-white/5 transition-all active:scale-95 flex items-center gap-2"
+                            className={`hidden md:flex items-center gap-2 px-5 py-2.5 font-sans font-semibold uppercase transition-all active:scale-95 ${isDarkMode ? "border border-white/10 text-white hover:bg-white/5" : "border border-black/10 text-black hover:bg-black/5"}`}
+                            style={{ fontSize: "14px", letterSpacing: "0.05em" }}
                         >
                             <LogOut className="h-3.5 w-3.5" />
                             Logout
                         </button>
                     ) : (
+                        /* Button — 14px Semi-Bold, 0.05em tracking */
                         <button
                             onClick={onAuthClick}
-                            className={`px-6 py-2.5 text-[10px] font-mono uppercase tracking-widest font-bold transition-all active:scale-95 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
+                            className={`hidden md:block px-7 py-3 font-sans font-semibold uppercase transition-all duration-300 active:scale-95 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/85"}`}
+                            style={{ fontSize: "14px", letterSpacing: "0.05em" }}
+                            aria-label="Login or Sign Up"
                         >
                             Login / Sign Up
                         </button>
                     )}
+
+                    {/* Mobile Menu Button */}
+                    <button
+                        className={`lg:hidden p-2 ${isDarkMode ? "text-white/60" : "text-black/60"}`}
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+                    >
+                        {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                    </button>
                 </div>
             </div>
+
+            {/* Mobile Menu */}
+            {isMenuOpen && (
+                <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className={`lg:hidden overflow-hidden flex flex-col gap-1 py-6 border-t ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-white border-black/5"}`}
+                >
+                    {navLinks.map((link) => (
+                        <Link
+                            key={link.label}
+                            href={link.href}
+                            className={`flex items-center gap-4 px-6 py-3 font-sans font-medium uppercase transition-colors ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"}`}
+                            style={{ fontSize: "12px", letterSpacing: "0.05em" }}
+                            onClick={() => setIsMenuOpen(false)}
+                        >
+                            <span
+                                className="font-sans font-bold text-[var(--color-cyan)]"
+                                style={{ fontSize: "11px", letterSpacing: "0.1em" }}
+                            >
+                                {link.num}
+                            </span>
+                            <span className="opacity-25">—</span>
+                            {link.label}
+                        </Link>
+                    ))}
+                    {!authed && (
+                        <div className="px-6 mt-4">
+                            <button
+                                onClick={() => {
+                                    onAuthClick?.();
+                                    setIsMenuOpen(false);
+                                }}
+                                className={`w-full py-4 font-sans font-semibold uppercase ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}
+                                style={{ fontSize: "14px", letterSpacing: "0.05em" }}
+                            >
+                                Login / Sign Up
+                            </button>
+                        </div>
+                    )}
+                </motion.div>
+            )}
         </motion.nav>
     );
 };

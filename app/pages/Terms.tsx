@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import Navbar from "@/components/ui/Navbar";
 import Footer from "@/components/ui/Footer";
 import { useTheme } from "@/lib/theme-context";
 import { getPublicSiteSettings } from "@/lib/chat-api";
+import { ArrowLeft } from "lucide-react";
 
 const DEFAULT_SECTIONS: { title: string; content: string }[] = [
   { title: "1. Acceptance of Terms", content: "By accessing or using Rudranex AI, you agree to be bound by these Terms of Service. If you do not agree, do not use our services." },
@@ -44,39 +45,74 @@ export default function Terms() {
     }, []);
 
     return (
-        <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black`}>
+        <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white`}>
             <Navbar />
 
-            <div className="pt-40 pb-32 px-6 md:px-20 max-w-4xl mx-auto">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8 }}
-                >
-                    <span className={`text-[10px] font-mono tracking-[0.3em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>§ 03</span>
-                    <h1 className="text-5xl md:text-7xl font-display font-black tracking-tighter mt-6 mb-8">
-                        Terms of <span className="font-serif italic font-normal">Service</span>
-                    </h1>
-                    <div className={`h-px w-full ${isDarkMode ? "bg-white/10" : "bg-black/10"} mb-12`} />
+            <section className="pt-48 pb-32 px-6 md:px-12">
+                <div className="container mx-auto">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8 }}
+                        className="max-w-4xl"
+                    >
+                        {/* Technical Label */}
+                        <span 
+                            className={`font-sans font-bold uppercase ${isDarkMode ? "text-white/20" : "text-black/30"} block mb-8`}
+                            style={{ fontSize: "11px", letterSpacing: "0.1em" }}
+                        >
+                            § 03 — LEGAL
+                        </span>
 
-                    <p className={`text-sm font-mono mb-10 ${isDarkMode ? "text-white/40" : "text-black/50"}`}>Last updated: {data.lastUpdated}</p>
+                        {/* Hero Headline */}
+                        <h1 
+                            className="font-display font-bold leading-none mb-12"
+                            style={{ fontSize: "clamp(3.5rem, 8vw, 72px)", letterSpacing: "-0.04em" }}
+                        >
+                            Terms of <br />
+                            <span className="italic text-[var(--color-cyan)]">Service.</span>
+                        </h1>
 
-                    <div className={`space-y-10 text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white/70" : "text-black/70"}`}>
-                        {(data.sections || []).map((s, i) => (
-                            <div key={i}>
-                                <h2 className={`text-lg font-display font-bold tracking-tight mb-4 ${isDarkMode ? "text-white" : "text-black"}`}>{s.title}</h2>
-                                <p>{s.content}</p>
-                            </div>
-                        ))}
-                    </div>
+                        <div className={`h-px w-full ${isDarkMode ? "bg-white/10" : "bg-black/10"} mb-12`} />
 
-                    <div className="mt-16">
-                        <Link to="/" className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}>
-                            ← Back to Home
-                        </Link>
-                    </div>
-                </motion.div>
-            </div>
+                        <p 
+                            className={`font-sans font-bold uppercase mb-16 ${isDarkMode ? "text-white/30" : "text-black/40"}`}
+                            style={{ fontSize: "11px", letterSpacing: "0.1em" }}
+                        >
+                            Last updated: {data.lastUpdated}
+                        </p>
+
+                        <div className="space-y-16">
+                            {(data.sections || []).map((s, i) => (
+                                <div key={i} className="max-w-2xl">
+                                    <h2 
+                                        className="font-display font-bold mb-6 tracking-tight uppercase"
+                                        style={{ fontSize: "20px", letterSpacing: "0.05em" }}
+                                    >
+                                        {s.title}
+                                    </h2>
+                                    <p 
+                                        className={`font-sans font-normal leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/60"}`}
+                                        style={{ fontSize: "16px" }}
+                                    >
+                                        {s.content}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-24">
+                            <Link 
+                                href="/" 
+                                className={`font-sans font-bold uppercase tracking-widest flex items-center gap-2 transition-all hover:gap-4 ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`}
+                                style={{ fontSize: "11px" }}
+                            >
+                                <ArrowLeft className="h-3 w-3" /> Back to Home
+                            </Link>
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
 
             <Footer />
         </div>

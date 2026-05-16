@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    Bot, GraduationCap, Code2, FileText, UserCog, Mic, Calendar, ChevronLeft, ChevronRight
+    Bot, GraduationCap, UserCog, ChevronLeft, ChevronRight
 } from "lucide-react";
 import ChatLoader from "@/components/ui/ChatLoader";
 
@@ -23,13 +23,7 @@ const allCards: FeatureCardData[] = [
         category: "Text",
         engine: "Student Mode",
     },
-    {
-        icon: Code2,
-        title: "Code & GitHub",
-        description: "Write, debug, and review code with intelligent AI assistance.",
-        category: "Text",
-        engine: "Coding & GitHub",
-    },
+
     {
         icon: GraduationCap,
         title: "Mock Paper Generator",
@@ -43,27 +37,6 @@ const allCards: FeatureCardData[] = [
         description: "Practice technical and HR interviews with AI-driven mock sessions.",
         category: "Text",
         engine: "Interview Prep",
-    },
-    {
-        icon: Mic,
-        title: "Vision Solver",
-        description: "Upload images to analyze, explain diagrams, or solve visual problems.",
-        category: "Image",
-        engine: "Vision Solver",
-    },
-    {
-        icon: Calendar,
-        title: "PDF Research",
-        description: "Extract insights and answers from any PDF document with AI.",
-        category: "PDF",
-        engine: "PDF Research",
-    },
-    {
-        icon: FileText,
-        title: "Resume Audit",
-        description: "Get detailed AI feedback to optimize your resume for any role.",
-        category: "PDF",
-        engine: "Resume Audit",
     },
 ];
 
@@ -180,8 +153,8 @@ const WelcomeBox = ({ isDarkMode, onSelectEngine, onOpenMockPaper, onOpenIntervi
                                              <Icon
                                                  className={`h-5 w-5 flex-shrink-0 transition-colors duration-300 ${
                                                      isDarkMode
-                                                         ? (Icon === Calendar ? 'text-white' : 'text-emerald-500/60 group-hover:text-emerald-400')
-                                                         : 'text-emerald-600/60 group-hover:text-emerald-500'
+                                                    ? 'text-emerald-500/60 group-hover:text-emerald-400'
+                                                    : 'text-emerald-600/60 group-hover:text-emerald-500'
                                                  }`}
                                              />
                                              <h3 className={`text-xs font-bold tracking-wide ${isDarkMode ? "text-white" : "text-black"

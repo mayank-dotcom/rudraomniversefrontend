@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser, getAdminRequests, declineAdminRequest, AdminRequest, getAdminSchools, getAdminSchoolAdmins, AdminSchool, AdminSchoolAdmin, getFrozenUsers, getAdminSchoolFacultyByCode, SchoolFacultyMember, deleteAdminUser, deleteSchoolFaculty } from '@/lib/chat-api';
+import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser, getAdminRequests, declineAdminRequest, AdminRequest, getAdminSchools, getAdminSchoolAdmins, AdminSchool, AdminSchoolAdmin, getFrozenUsers, getAdminSchoolFacultyByCode, SchoolFacultyMember, deleteAdminUser, deleteSchoolFaculty, getAdminActivity } from '@/lib/chat-api';
 import { isAdminAuthenticated, setAdminKey, removeAdminKey, setApiKey } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -143,6 +143,7 @@ const Dashboard = () => {
     const [isRequestsLoading, setIsRequestsLoading] = useState(false);
     const [decliningRequestId, setDecliningRequestId] = useState<number | null>(null);
     const [copied, setCopied] = useState(false);
+    const [platformActivity, setPlatformActivity] = useState<any[]>([]);
 
     // Schools view state
     const [schools, setSchools] = useState<AdminSchool[]>([]);
@@ -202,10 +203,41 @@ const Dashboard = () => {
         setIsLoading(true);
         setIsRefreshing(true);
         try {
-            const [usersRes, plansRes, settingsRes] = await Promise.all([getAdminUsers(), getPlansList(), getSiteSettings()]);
-            if (usersRes.success) setUsers(usersRes.users || []);
+            const [usersRes, plansRes, settingsRes, activityRes] = await Promise.all([
+                getAdminUsers(), 
+                getPlansList(), 
+                getSiteSettings(),
+                getAdminActivity().catch(() => ({ success: true, activity: [] }))
+            ]);
             if (plansRes.success) setPlans(plansRes.plans || []);
             if (settingsRes.success) setSiteSettings(settingsRes.settings || []);
+            if (activityRes.success) setPlatformActivity(activityRes.activity || []);
+            if (usersRes.success) {
+                const planMap = new Map((plansRes.plans || []).map(p => [p.plan_name, p]));
+                const enriched = (usersRes.users || []).map(u => {
+                    const plan = planMap.get(u.subscription.plan) || planMap.get(u.plan_name);
+                    if (plan) {
+                        return {
+                            ...u,
+                            subscription: {
+                                ...u.subscription,
+                                daily_chat_limit: plan.daily_chat_limit || 0,
+                                daily_coding_limit: plan.daily_coding_limit || 0,
+                                daily_vision_limit: plan.daily_vision_limit || 0,
+                                daily_tts_limit: plan.daily_tts_limit || 0,
+                                daily_stt_limit: plan.daily_stt_limit || 0,
+                                monthly_image_limit: plan.monthly_image_limit || 0,
+                                monthly_flux_limit: plan.monthly_flux_limit || 0,
+                                tokens_limit: plan.daily_chat_limit || 100,
+                                images_limit: plan.monthly_image_limit || 50,
+                                personas_limit: (plan.daily_coding_limit || 10) + (plan.daily_vision_limit || 10),
+                            }
+                        };
+                    }
+                    return u;
+                });
+                setUsers(enriched);
+            }
         } catch (e) { toast.error("Failed to fetch data"); }
         finally { setIsRefreshing(false); setIsLoading(false); }
     };
@@ -621,8 +653,8 @@ const Dashboard = () => {
     };
 
     const handleExportCSV = () => {
-        const headers = ["ID", "Name", "Email", "Plan", "Status", "Tokens", "Images", "Personas", "Latency"];
-        const rows = users.map(u => [u.id, u.name, u.email, u.subscription.plan, u.subscription.status, u.subscription.tokens_used + "/" + u.subscription.tokens_limit, u.subscription.images_used + "/" + u.subscription.images_limit, u.subscription.personas_used + "/" + u.subscription.personas_limit, u.subscription.latency_ms]);
+        const headers = ["ID", "Name", "Email", "Plan", "Status", "Chats", "Coding", "Vision", "Images", "Flux", "TTS", "STT"];
+        const rows = users.map(u => [u.id, u.name, u.email, u.subscription.plan, u.subscription.status, u.subscription.daily_chats, u.subscription.daily_codings, u.subscription.daily_visions, u.subscription.monthly_images, u.subscription.monthly_flux, u.subscription.daily_tts, u.subscription.daily_stt]);
         const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
         const blob = new Blob([csv], { type: "text/csv" });
         const url = URL.createObjectURL(blob);
@@ -724,31 +756,31 @@ const Dashboard = () => {
                     <div className="hidden lg:flex items-center gap-8">
                         <button
                             onClick={() => setView('visual')}
-                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'visual' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'visual' ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
                         >
                             <LayoutDashboard className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Dashboard
                         </button>
                         <button
                             onClick={() => setView('table')}
-                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'table' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'table' ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
                         >
                             <TableIcon className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Tabular
                         </button>
                         <button
                             onClick={() => setView('plans')}
-                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'plans' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'plans' ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
                         >
                             <Zap className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Plans
                         </button>
                         <button
                             onClick={() => { setView('schools'); fetchSchoolsData(); }}
-                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'schools' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'schools' ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
                         >
                             <Users className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Schools
                         </button>
                         <button
                             onClick={() => setView('sites')}
-                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'sites' ? "text-emerald-400 font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'sites' ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
                         >
                             <FileText className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Sites
                         </button>
@@ -958,27 +990,27 @@ const Dashboard = () => {
                                                 isDarkMode={isDarkMode}
                                             />
                                             <StatCard
-                                                title="System Latency"
-                                                value={selectedUser.subscription.latency_ms}
+                                                title="Audio Intelligence"
+                                                value={selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt}
                                                 icon={Activity}
-                                                color="#3b82f6"
-                                                subtext="ms"
+                                                color="#00DDDD"
+                                                subtext="TTS + STT"
                                                 isDarkMode={isDarkMode}
                                             />
                                             <StatCard
-                                                title="Total Personas"
-                                                value={selectedUser.subscription.personas_used}
-                                                icon={Users}
+                                                title="Intelligence Suite"
+                                                value={selectedUser.subscription.daily_codings + selectedUser.subscription.daily_visions}
+                                                icon={Cpu}
                                                 color="#f59e0b"
-                                                subtext={`/ ${selectedUser.subscription.personas_limit}`}
+                                                subtext="Code + Vision"
                                                 isDarkMode={isDarkMode}
                                             />
                                             <StatCard
-                                                title="Image Generation"
-                                                value={selectedUser.subscription.images_used}
+                                                title="Creative Suite"
+                                                value={selectedUser.subscription.monthly_images + selectedUser.subscription.monthly_flux}
                                                 icon={PieChart}
                                                 color="#8b5cf6"
-                                                subtext={`/ ${selectedUser.subscription.images_limit}`}
+                                                subtext="Img + Flux"
                                                 isDarkMode={isDarkMode}
                                             />
                                         </div>
@@ -1004,23 +1036,23 @@ const Dashboard = () => {
 
                                                 <div className="flex flex-wrap justify-center gap-16 lg:justify-between px-6">
                                                     <ProgressCircle
-                                                        value={selectedUser.subscription.tokens_used}
+                                                        value={selectedUser.subscription.daily_chats}
                                                         limit={selectedUser.subscription.tokens_limit}
-                                                        label="Token Delta"
+                                                        label="Daily Chat"
                                                         color="#10b981"
                                                         isDarkMode={isDarkMode}
                                                     />
                                                     <ProgressCircle
-                                                        value={selectedUser.subscription.images_used}
+                                                        value={selectedUser.subscription.monthly_images + selectedUser.subscription.monthly_flux}
                                                         limit={selectedUser.subscription.images_limit}
-                                                        label="Image Buffer"
+                                                        label="Image Lab"
                                                         color="#8b5cf6"
                                                         isDarkMode={isDarkMode}
                                                     />
                                                     <ProgressCircle
-                                                        value={selectedUser.subscription.personas_used}
-                                                        limit={selectedUser.subscription.personas_limit}
-                                                        label="Persona Load"
+                                                        value={selectedUser.subscription.daily_codings + selectedUser.subscription.daily_visions}
+                                                        limit={Math.max(selectedUser.subscription.daily_coding_limit + selectedUser.subscription.daily_vision_limit, 1)}
+                                                        label="AI Engine Load"
                                                         color="#f59e0b"
                                                         isDarkMode={isDarkMode}
                                                     />
@@ -1037,7 +1069,7 @@ const Dashboard = () => {
                                                         <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>User Efficiency</h3>
                                                     </div>
                                                     <p className={`text-[10px] font-mono uppercase leading-relaxed tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                                        Current user is operating at <b>{(100 - (selectedUser.subscription.tokens_used / selectedUser.subscription.tokens_limit * 100)).toFixed(1)}%</b> headroom. Latency is optimal for region.
+                                                        Chat usage: <b>{selectedUser.subscription.daily_chats}/{selectedUser.subscription.tokens_limit}</b> daily • {selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt > 0 ? `Audio: ${selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt} uses • ` : ''}Images: {selectedUser.subscription.monthly_images + selectedUser.subscription.monthly_flux}/{selectedUser.subscription.images_limit} monthly
                                                     </p>
                                                 </div>
 
@@ -1057,12 +1089,48 @@ const Dashboard = () => {
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* Activity Log Section */}
+                                        <div className={`mt-8 border border-zinc-800/50 p-10 rounded-[3rem] overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"}`}>
+                                            <div className="flex items-center justify-between mb-8">
+                                                <div className="flex items-center gap-3">
+                                                    <Activity className={`h-5 w-5 ${isDarkMode ? "text-cyan-400" : "text-cyan-600"}`} />
+                                                    <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>Neural Interaction Log</h3>
+                                                </div>
+                                                <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Live Uplink • Selected User</span>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {platformActivity.filter(a => a.user_name === selectedUser.name).slice(0, 5).map((log, i) => (
+                                                    <div key={i} className={`flex items-center justify-between p-4 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"}`}>
+                                                        <div className="flex items-center gap-4">
+                                                            <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isDarkMode ? "bg-cyan-500/10 text-cyan-400" : "bg-cyan-500/10 text-cyan-600"}`}>
+                                                                <MessageSquare className="h-4 w-4" />
+                                                            </div>
+                                                            <div>
+                                                                <p className={`text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-white" : "text-black"}`}>{log.activity_type.replace('_', ' ')}</p>
+                                                                <p className={`text-[9px] font-mono uppercase tracking-widest mt-0.5 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{log.institution}</p>
+                                                            </div>
+                                                        </div>
+                                                        <span className={`text-[9px] font-mono ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                                            {new Date(log.created_at).toLocaleTimeString()}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                                {platformActivity.filter(a => a.user_name === selectedUser.name).length === 0 && (
+                                                    <div className="py-8 text-center opacity-30">
+                                                        <p className="text-[10px] font-mono uppercase tracking-[0.2em]">No recent neural spikes detected</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </>
                                 ) : (
-                                    <div className="h-[600px] flex items-center justify-center flex-col text-center opacity-20">
-                                        <Cpu className="h-24 w-24 mb-6" />
-                                        <h2 className="text-2xl font-display font-black uppercase tracking-[0.5em]">Syncing Neural Net...</h2>
-                                        <p className="text-xs font-mono uppercase tracking-[0.3em] mt-4">Select a user node to initialize data </p>
+                                    <div>
+                                        <div className="flex flex-col justify-center h-[600px] text-center opacity-20">
+                                            <Cpu className="h-24 w-24 mb-6 mx-auto" />
+                                            <h2 className="text-2xl font-display font-black uppercase tracking-[0.5em]">Syncing Neural Net...</h2>
+                                            <p className="text-xs font-mono uppercase tracking-[0.3em] mt-4">Select a user node to initialize data </p>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -1125,7 +1193,7 @@ const Dashboard = () => {
                                             <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Resources</th>
                                             <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
                                                 <button onClick={() => toggleSort("latency")} className="flex items-center gap-1 hover:opacity-80 transition-all">
-                                                    Uptime / Latency {sortField === "latency" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                    Chat / Usage {sortField === "latency" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                                                 </button>
                                             </th>
                                             <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>Administrative</th>
@@ -1182,10 +1250,15 @@ const Dashboard = () => {
                                                         </div>
                                                     </td>
                                                     <td className="p-8">
-                                                        <div className="flex items-center gap-2">
-                                                            <Activity className="h-3 w-3 text-emerald-500/50" />
-                                                            <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{user.subscription.latency_ms}</span>
-                                                            <span className={`text-[9px] ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>MS</span>
+                                                        <div className="flex flex-col gap-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <MessageSquare className="h-3 w-3 text-blue-500/50" />
+                                                                <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{user.subscription.daily_chats}</span>
+                                                                <span className={`text-[9px] ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>/ {user.subscription.tokens_limit} chats</span>
+                                                            </div>
+                                                            <span className={`text-[8px] font-mono ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>
+                                                                {user.subscription.daily_codings}C · {user.subscription.daily_visions}V · {user.subscription.monthly_images}I
+                                                            </span>
                                                         </div>
                                                     </td>
                                                      <td className="p-8 text-right">

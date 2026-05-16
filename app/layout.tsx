@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Instrument_Serif, Orbitron } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Serif, Orbitron, Hanken_Grotesk } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
+
+const hankenGrotesk = Hanken_Grotesk({
+  variable: "--font-hanken",
+  subsets: ["latin"],
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,7 +31,7 @@ const orbitron = Orbitron({
 
 export const metadata: Metadata = {
   title: "Rudranex AI",
-  description: "Rudranex AI: Student Mode, Coding, Interview Prep, Resume Audit, PDF Research, and Vision Solver — all in one.",
+  description: "Rudranex AI: Student Mode, Coding, Interview Prep, and more — all in one.",
 };
 
 export default function RootLayout({
@@ -37,7 +42,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} ${orbitron.variable} h-full antialiased`}
+      className={`${hankenGrotesk.variable} ${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} ${orbitron.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}

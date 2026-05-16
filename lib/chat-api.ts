@@ -293,9 +293,18 @@ export interface AdminUser {
   name: string
   email: string
   is_frozen: boolean
+  plan_name: string
+  created_at: string
   subscription: {
     plan: string
     status: string
+    daily_chats: number
+    daily_codings: number
+    daily_visions: number
+    daily_tts: number
+    daily_stt: number
+    monthly_images: number
+    monthly_flux: number
     tokens_used: number
     tokens_limit: number
     images_used: number
@@ -303,6 +312,13 @@ export interface AdminUser {
     personas_used: number
     personas_limit: number
     latency_ms: number
+    daily_chat_limit: number
+    daily_coding_limit: number
+    daily_vision_limit: number
+    daily_tts_limit: number
+    daily_stt_limit: number
+    monthly_image_limit: number
+    monthly_flux_limit: number
   }
 }
 
@@ -360,16 +376,32 @@ export async function getAdminUsers() {
       name: u.name,
       email: u.email,
       is_frozen: isFrozen,
+      plan_name: u.plan_name || "Free Trial",
+      created_at: u.created_at,
       subscription: {
         plan: isFrozen ? "Frozen" : (u.plan_name || "Free Trial"),
         status: isFrozen ? "frozen" : "active",
+        daily_chats: u.daily_chats || 0,
+        daily_codings: u.daily_codings || 0,
+        daily_visions: u.daily_visions || 0,
+        daily_tts: u.daily_tts || 0,
+        daily_stt: u.daily_stt || 0,
+        monthly_images: u.monthly_images || 0,
+        monthly_flux: u.monthly_flux || 0,
         tokens_used: u.daily_chats || 0,
         tokens_limit: 1000,
         images_used: u.monthly_images || 0,
         images_limit: 100,
-        personas_used: 0,
+        personas_used: (u.daily_codings || 0) + (u.daily_visions || 0),
         personas_limit: 10,
-        latency_ms: "24"
+        latency_ms: 24,
+        daily_chat_limit: 0,
+        daily_coding_limit: 0,
+        daily_vision_limit: 0,
+        daily_tts_limit: 0,
+        daily_stt_limit: 0,
+        monthly_image_limit: 0,
+        monthly_flux_limit: 0,
       }
     }})
   }
@@ -1315,8 +1347,13 @@ export async function transcribeSpeech(audioBlob: Blob, language: string = 'hi-I
       return transcript
       
     } catch (error: any) {
+      const isLimitReached = error.message?.includes("Limit Reached") || error.message?.includes("429");
       console.error(`[transcribeSpeech] Attempt ${attempt + 1} failed:`, error.message)
-      if (attempt === MAX_RETRIES) {
+      
+      if (attempt === MAX_RETRIES || isLimitReached) {
+        if (isLimitReached) {
+          throw new Error("Speech Limit Reached: You have exhausted your daily speech-to-text limit. Please try again tomorrow or upgrade your plan.")
+        }
         throw new Error("Transcription failed: " + error.message)
       }
       await new Promise(resolve => setTimeout(resolve, 1000))

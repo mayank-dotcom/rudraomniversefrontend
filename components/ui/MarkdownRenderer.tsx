@@ -18,10 +18,31 @@ function CodeBlock({ code, language, isDarkMode }: { code: string; language: str
   const [copied, setCopied] = React.useState(false)
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+    const trimmedCode = code.trim();
+    if (!trimmedCode) return;
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(trimmedCode);
+      } else {
+        // Fallback for non-secure contexts
+        const textArea = document.createElement("textarea");
+        textArea.value = trimmedCode;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy code:", err);
+    }
+  };
 
   return (
     <div className="my-4 rounded-lg overflow-hidden" style={{
@@ -38,6 +59,7 @@ function CodeBlock({ code, language, isDarkMode }: { code: string; language: str
           {language || "code"}
         </span>
         <button
+          type="button"
           onClick={handleCopy}
           className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md transition-all hover:bg-white/15 active:scale-90 border border-white/10"
           title="Copy code"

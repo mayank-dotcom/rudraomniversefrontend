@@ -1,87 +1,133 @@
 @import "tailwindcss";
-@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-display: var(--font-hanken), "Inter", sans-serif;
+  --font-sans: var(--font-hanken), "Inter", sans-serif;
+  --font-serif: var(--font-instrument-serif), serif;
+  --font-mono: var(--font-geist-mono), monospace;
+  --color-cyan: #00DDDD;
+}
 
 :root {
-  --background: #fef9f3;
-  --foreground: #171717;
+  --background: #fdfdfd;
+  --foreground: #000000;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-geist-sans);
-  --font-serif: var(--font-serif);
-  --font-orbitron: var(--font-orbitron);
-
-
-
-  --animate-infinite-scroll: infinite-scroll 40s linear infinite;
-
-  @keyframes infinite-scroll {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --border: #ffffff20;
-    --muted-foreground: #a1a1aa;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ffffff;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans);
+  transition: background-color 0.5s ease, color 0.5s ease;
 }
 
-.noise {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.9'/%3E%3C/svg%3E");
-  background-repeat: repeat;
+/* ═══════════════════════════════════════
+   PREMIUM DARK MODE UTILITIES
+   ═══════════════════════════════════════ */
+
+/* Deep Mesh Gradient */
+.bg-mesh {
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(180, 100%, 50%, 0.03) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(180, 100%, 50%, 0.02) 0px, transparent 50%);
 }
 
- /* Scrollbar Styling - Invisible */
-.custom-scrollbar::-webkit-scrollbar,
-.light-scrollbar::-webkit-scrollbar {
-  width: 0px;
-  height: 0px;
+.dark .bg-mesh {
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(180, 100%, 50%, 0.07) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(180, 100%, 50%, 0.04) 0px, transparent 50%);
+  background-color: #121212;
+}
+
+/* Glass Panels */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dark .glass-panel {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* Cyber Glows */
+.cyan-glow {
+  box-shadow: 0 0 20px rgba(0, 221, 221, 0.15);
+}
+
+.dark .cyan-glow {
+  box-shadow: 0 0 40px rgba(0, 221, 221, 0.2);
+}
+
+/* Infinite Scroll Ticker */
+@keyframes infinite-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-infinite-scroll {
+  animation: infinite-scroll 40s linear infinite;
+}
+
+/* Diagonal Lines */
+.diagonal-lines {
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(0, 0, 0, 0.03) 20px, rgba(0, 0, 0, 0.03) 21px);
+}
+
+.dark .diagonal-lines {
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255, 255, 255, 0.03) 20px, rgba(255, 255, 255, 0.03) 21px);
+}
+
+/* Typography Overrides */
+.tracking-tight-hero { letter-spacing: -0.04em; }
+.tracking-tight-section { letter-spacing: -0.02em; }
+.tracking-wide-label { letter-spacing: 0.1em; }
+.tracking-wide-nav { letter-spacing: 0.05em; }
+
+/* Selection */
+::selection {
+  background: #00DDDD;
+  color: white;
+}
+
+/* Scrollbars */
+.scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
-.custom-scrollbar::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.light-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
 .light-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
-
-.custom-scrollbar::-webkit-scrollbar-thumb,
 .light-scrollbar::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.1);
 }
-
-/* Global scrollbar for Firefox - Invisible */
-* {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+.light-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
-
-.dark-scrollbar,
-.light-scrollbar {
-  scrollbar-color: transparent transparent;
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
 /* Upgrade Button Bubble Animation */
 .upgrade-btn {
   position: relative;
@@ -237,67 +283,4 @@ body {
   50% { transform: translate(50%, 50%); }
   75% { transform: translate(-50%, -50%); }
   100% { transform: translate(0, 0); }
-}
-
-.shine-animate {
-  position: relative;
-  overflow: hidden;
-}
-
-.shine-animate::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 60%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
-  transform: skewX(-20deg);
-  animation: shine-sweep 4s cubic-bezier(0.33, 1, 0.68, 1) infinite;
-}
-
-@keyframes shine-sweep {
-  0% { left: -100%; }
-  100% { left: 150%; }
-}
-
-.chat-shell {
-  font-family: var(--font-chat-body), sans-serif;
-}
-
-.chat-shell button,
-.chat-shell h1,
-.chat-shell h2,
-.chat-shell h3,
-.chat-shell h4,
-.chat-shell h5,
-.chat-shell h6,
-.chat-shell .chat-heading,
-.chat-shell .font-display {
-  font-family: var(--font-chat-heading), sans-serif !important;
-}
-
-.chat-shell p,
-.chat-shell li,
-.chat-shell input,
-.chat-shell textarea,
-.chat-shell .chat-body {
-  font-family: var(--font-chat-body), sans-serif !important;
-}
-
-.chat-shell .font-mono,
-.chat-shell .chat-accent,
-.chat-shell code:not(pre code),
-.chat-shell .chat-markdown code:not(pre code) {
-  font-family: var(--font-chat-accent), sans-serif !important;
-}
-
-.chat-shell .chat-markdown,
-.chat-shell .chat-markdown :is(p, li, blockquote, td, th) {
-  font-family: var(--font-chat-body), sans-serif !important;
-  font-style: normal !important;
-}
-
-.chat-shell .chat-markdown :is(h1, h2, h3, h4, h5, h6, strong) {
-  font-family: var(--font-chat-heading), sans-serif !important;
 }

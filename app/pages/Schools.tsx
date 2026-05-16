@@ -4,7 +4,7 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Navbar from "@/components/ui/Navbar"
 import Footer from "@/components/ui/Footer"
-import { Building2, GraduationCap, Users, CheckCircle, ArrowRight, Sparkles, Send, ArrowLeft } from "lucide-react"
+import { Building2, GraduationCap, Users, CheckCircle, Send, ArrowLeft } from "lucide-react"
 import { useTheme } from "@/lib/theme-context"
 
 const API_BASE = process.env.NEXT_PUBLIC_BASE_URL!
@@ -47,98 +47,86 @@ export default function Schools() {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black overflow-x-hidden`}>
-      <div className="absolute inset-0 noise opacity-[0.02] pointer-events-none" />
-
-      {/* Background Effects */}
-      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-emerald-500/5 blur-[150px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-500/5 blur-[120px] rounded-full pointer-events-none" />
-
+    <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white overflow-x-hidden`}>
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative pt-40 pb-20 px-6 md:px-20">
-        <div className="max-w-7xl mx-auto">
+      <section className="relative pt-48 pb-20 px-6 md:px-12 bg-mesh">
+        <div className="container mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="text-center mb-20"
+            transition={{ duration: 0.8 }}
+            className="flex flex-col items-center text-center mb-32"
           >
-            <div className="flex items-center justify-center gap-2 mb-6">
-              <Sparkles className="h-4 w-4 text-emerald-400" />
-              <span className="text-[9px] font-mono uppercase tracking-[0.4em] text-white/40">School Onboarding</span>
-              <Sparkles className="h-4 w-4 text-emerald-400" />
-            </div>
-            <h1 className="flex flex-col items-center leading-[0.85] tracking-[-0.04em] select-none">
-              <span className={`text-[5rem] md:text-[10rem] font-black font-display ${isDarkMode ? "text-white" : "text-black"}`}>
-                BRING YOUR
-              </span>
-              <span className={`text-[5rem] md:text-[10rem] font-black font-display -mt-6 md:-mt-10 ${isDarkMode ? "text-white/10" : "text-black/10"}`}>
-                SCHOOL TO
-              </span>
-              <span className="flex items-baseline gap-4 -mt-6 md:-mt-10">
-                <span className={`text-[6rem] md:text-[12rem] font-black font-display ${isDarkMode ? "text-white" : "text-black"}`}>RU
-                  <span className={isDarkMode ? "text-white" : "text-white [-webkit-text-stroke:2px_black]"}>DRA</span>
-                </span>
-                <span className={`text-[3rem] md:text-[6rem] font-serif italic ${isDarkMode ? "text-white/80" : "text-black/80"} -ml-2`}>nex</span>
-              </span>
+            {/* Technical Label */}
+            <span 
+                className={`font-sans font-bold uppercase ${isDarkMode ? "text-white/20" : "text-black/30"} block mb-12`}
+                style={{ fontSize: "11px", letterSpacing: "0.1em" }}
+            >
+                § SCHOOL ONBOARDING
+            </span>
+
+            {/* Hero Headline — 72px Bold, -0.04em */}
+            <h1 
+                className="font-display font-bold leading-[0.9] mb-12"
+                style={{ fontSize: "clamp(3.5rem, 9vw, 72px)", letterSpacing: "-0.04em" }}
+            >
+                Empower your <br />
+                <span className="italic text-[var(--color-cyan)]">Institution.</span>
             </h1>
-            <p className={`text-sm md:text-base max-w-2xl mx-auto mt-8 leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-              Empower your institution with AI-powered learning. From personalized tutoring to automated assessments — bring the future of education to your classrooms.
+
+            {/* Body Copy — 16px Regular */}
+            <p 
+                className={`text-base md:text-lg max-w-2xl leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                style={{ fontSize: "16px" }}
+            >
+              From personalized tutoring to automated assessments — bring the future of education to your classrooms with Rudranex AI.
             </p>
           </motion.div>
 
           {/* Features Grid */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20"
-          >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-white/5 mb-32 overflow-hidden bg-black/20">
             {[
               {
                 icon: GraduationCap,
                 title: "AI Tutoring",
                 desc: "Personalized learning paths for every student powered by advanced AI models.",
-                color: "emerald",
+                num: "01"
               },
               {
                 icon: Users,
                 title: "Admin Dashboard",
                 desc: "Full control over faculty, students, and curriculum with real-time analytics.",
-                color: "blue",
+                num: "02"
               },
               {
                 icon: Building2,
-                title: "Institution Branding",
-                desc: "Custom onboarding with your school code, faculty management, and student roll numbers.",
-                color: "purple",
+                title: "Branding",
+                desc: "Custom onboarding with your school code, faculty management, and roll numbers.",
+                num: "03"
               },
             ].map((feature, i) => (
               <div
                 key={i}
-                className={`relative border rounded-[2.5rem] p-10 overflow-hidden group transition-all duration-500 hover:scale-[1.02] ${
-                  isDarkMode
-                    ? "border-white/5 bg-gradient-to-br from-white/[0.04] to-transparent hover:from-white/[0.08]"
-                    : "border-black bg-gradient-to-br from-black/[0.02] to-transparent hover:from-black/[0.04]"
-                }`}
+                className="p-12 border-r last:border-r-0 border-white/5 bg-[#0d0d0d] hover:bg-[#111] transition-all duration-500 group"
               >
-                <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none" />
-                <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                <feature.icon className={`h-8 w-8 mb-6 ${isDarkMode ? "text-white/40" : "text-black"} group-hover:scale-110 transition-transform duration-500`} />
-                <h3 className={`text-xl font-display font-black mb-3 ${isDarkMode ? "text-white" : "text-black"}`}>{feature.title}</h3>
-                <p className={`text-xs leading-relaxed ${isDarkMode ? "text-white/40" : "text-black"}`}>{feature.desc}</p>
+                <div className="flex justify-between items-center mb-12">
+                    <feature.icon className="h-6 w-6 text-white/30 group-hover:text-[var(--color-cyan)] transition-colors" />
+                    <span className="font-sans font-bold text-[11px] text-white/10 group-hover:text-white/20" style={{ letterSpacing: "0.1em" }}>{feature.num}</span>
+                </div>
+                <h3 className="font-display font-semibold text-white text-xl mb-4 uppercase tracking-tight group-hover:text-[var(--color-cyan)] transition-colors">{feature.title}</h3>
+                <p className="font-sans font-normal text-white/35 text-[14px] leading-relaxed group-hover:text-white/50 transition-colors">{feature.desc}</p>
               </div>
             ))}
-          </motion.div>
+          </div>
 
           {/* Request Form */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="max-w-2xl mx-auto"
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="max-w-xl mx-auto"
           >
             <AnimatePresence mode="wait">
               {success ? (
@@ -146,149 +134,108 @@ export default function Schools() {
                   key="success"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className={`relative border rounded-[3rem] p-14 text-center overflow-hidden ${
-                    isDarkMode
-                      ? "border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent"
-                      : "border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent"
-                  }`}
+                  className={`border p-12 text-center ${isDarkMode ? "bg-black/40 border-white/10" : "bg-white border-black/10"}`}
                 >
-                  <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none" />
-                  <div className="h-20 w-20 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto mb-6">
-                    <CheckCircle className="h-10 w-10 text-emerald-400" />
+                  <div className="h-16 w-16 rounded-full bg-[var(--color-cyan)]/10 flex items-center justify-center mx-auto mb-8">
+                    <CheckCircle className="h-8 w-8 text-[var(--color-cyan)]" />
                   </div>
-                  <h2 className={`text-3xl font-display font-black mb-4 ${isDarkMode ? "text-white" : "text-black"}`}>Request Submitted</h2>
-                  <p className={`text-sm max-w-md mx-auto leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-                    Your school onboarding request has been received. Our team will review it and reach out to <span className="font-bold text-emerald-400">{adminEmail}</span> with next steps.
+                  <h2 className="text-2xl font-display font-bold mb-4 tracking-tighter">Request Received</h2>
+                  <p className={`text-[14px] mb-10 leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                    Our team will review your application and reach out to <span className="text-[var(--color-cyan)]">{adminEmail}</span> with next steps.
                   </p>
-                  <div className="flex items-center justify-center gap-6 mt-10">
-                    <a
-                      href="/"
-                      className={`px-8 py-4 bg-white text-black text-[10px] font-mono uppercase tracking-[0.2em] font-black rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3`}
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5" /> Back Home
-                    </a>
+                  <div className="flex flex-col gap-4">
                     <button
                       onClick={() => { setSuccess(false); setSchoolName(""); setAdminName(""); setAdminEmail(""); setAdminPassword("") }}
-                      className={`px-8 py-4 border text-[10px] font-mono uppercase tracking-[0.2em] font-bold rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3 ${
-                        isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"
-                      }`}
+                      className={`w-full py-4 font-sans font-semibold uppercase tracking-widest text-[11px] transition-all active:scale-95 ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}
                     >
-                      <Send className="h-3.5 w-3.5" /> Submit Another
+                      Submit Another Request
                     </button>
+                    <a
+                      href="/"
+                      className={`w-full py-4 border font-sans font-semibold uppercase tracking-widest text-[11px] transition-all active:scale-95 flex items-center justify-center gap-2 ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
+                    >
+                      <ArrowLeft className="h-3 w-3" /> Back Home
+                    </a>
                   </div>
                 </motion.div>
               ) : (
-                <motion.div
-                  key="form"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className={`relative border rounded-[3rem] p-10 md:p-14 overflow-hidden ${
-                    isDarkMode
-                      ? "border-white/5 bg-gradient-to-br from-white/[0.04] to-transparent"
-                      : "border-black bg-gradient-to-br from-black/[0.02] to-transparent"
-                  }`}
-                >
-                  <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none" />
-                  <div className="absolute -top-20 -right-20 w-40 h-40 bg-emerald-500/10 blur-[80px] rounded-full" />
-
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Send className="h-5 w-5 text-emerald-400" />
-                      <h2 className={`text-2xl font-display font-black tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>Request School Onboarding</h2>
-                    </div>
-                    <p className={`text-xs mb-10 max-w-lg ${isDarkMode ? "text-white/40" : "text-black"}`}>
-                      Fill in the details below and our team will review your request to bring your school onto the Rudranex AI platform.
+                <div className={`p-10 md:p-14 border ${isDarkMode ? "bg-black/40 border-white/10" : "bg-white border-black/10"}`}>
+                    <h2 className="text-2xl font-display font-bold mb-2 tracking-tighter uppercase">School Request</h2>
+                    <p className={`text-[11px] font-sans font-bold uppercase tracking-[0.1em] mb-10 ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                      Institutional Onboarding Form
                     </p>
 
                     {error && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs font-mono text-center"
-                      >
+                      <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] font-sans font-bold uppercase tracking-widest">
                         {error}
-                      </motion.div>
+                      </div>
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
-                      <div className="relative group">
-                        <Building2 className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors ${isDarkMode ? "text-white/20 group-focus-within:text-emerald-400" : "text-black/20 group-focus-within:text-emerald-500"}`} />
+                      <div className="space-y-1">
+                        <label className={`text-[10px] font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>School Name</label>
                         <input
                           type="text"
-                          placeholder="School Name"
                           value={schoolName}
                           onChange={(e) => setSchoolName(e.target.value)}
                           required
-                          className={`w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest border rounded-2xl focus:outline-none focus:border-emerald-500/50 transition-all ${
-                            isDarkMode ? "bg-white/5 border-white/5 text-white placeholder:text-white/20" : "bg-black/5 border-black text-black placeholder:text-black/60"
+                          className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${
+                            isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"
                           }`}
                         />
                       </div>
-                      <div className="relative group">
-                        <Users className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors ${isDarkMode ? "text-white/20 group-focus-within:text-emerald-400" : "text-black/20 group-focus-within:text-emerald-500"}`} />
+                      <div className="space-y-1">
+                        <label className={`text-[10px] font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Admin Name</label>
                         <input
                           type="text"
-                          placeholder="Your Name"
                           value={adminName}
                           onChange={(e) => setAdminName(e.target.value)}
                           required
-                          className={`w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest border rounded-2xl focus:outline-none focus:border-emerald-500/50 transition-all ${
-                            isDarkMode ? "bg-white/5 border-white/5 text-white placeholder:text-white/20" : "bg-black/5 border-black text-black placeholder:text-black/60"
+                          className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${
+                            isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"
                           }`}
                         />
                       </div>
-                      <div className="relative group">
-                        <svg className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors ${isDarkMode ? "text-white/20 group-focus-within:text-emerald-400" : "text-black/20 group-focus-within:text-emerald-500"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="2" y="4" width="20" height="16" rx="2" />
-                          <path d="M22 7l-10 7L2 7" />
-                        </svg>
+                      <div className="space-y-1">
+                        <label className={`text-[10px] font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Official Email</label>
                         <input
                           type="email"
-                          placeholder="Email Address"
                           value={adminEmail}
                           onChange={(e) => setAdminEmail(e.target.value)}
                           required
-                          className={`w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest border rounded-2xl focus:outline-none focus:border-emerald-500/50 transition-all ${
-                            isDarkMode ? "bg-white/5 border-white/5 text-white placeholder:text-white/20" : "bg-black/5 border-black text-black placeholder:text-black/60"
+                          className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${
+                            isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"
                           }`}
                         />
                       </div>
-                      <div className="relative group">
-                        <svg className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors ${isDarkMode ? "text-white/20 group-focus-within:text-emerald-400" : "text-black/20 group-focus-within:text-emerald-500"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                          <path d="M7 11V7a5 5 0 0110 0v4" />
-                        </svg>
+                      <div className="space-y-1">
+                        <label className={`text-[10px] font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Password</label>
                         <input
                           type="password"
-                          placeholder="Password"
                           value={adminPassword}
                           onChange={(e) => setAdminPassword(e.target.value)}
                           required
                           minLength={6}
-                          className={`w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest border rounded-2xl focus:outline-none focus:border-emerald-500/50 transition-all ${
-                            isDarkMode ? "bg-white/5 border-white/5 text-white placeholder:text-white/20" : "bg-black/5 border-black text-black placeholder:text-black/60"
+                          className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${
+                            isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"
                           }`}
                         />
                       </div>
+                      
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-4 bg-white text-black text-[10px] font-mono uppercase tracking-[0.3em] font-black hover:scale-[1.02] active:scale-[0.98] transition-all rounded-2xl shadow-xl disabled:opacity-50 flex items-center justify-center gap-3"
+                        className={`w-full py-5 font-sans font-bold uppercase tracking-[0.2em] text-[11px] transition-all active:scale-95 disabled:opacity-50 mt-4 ${
+                            isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"
+                        }`}
                       >
-                        {loading ? (
-                          <>SUBMITTING...</>
-                        ) : (
-                          <><Send className="h-4 w-4" /> Submit Request</>
-                        )}
+                        {loading ? "SUBMITTING..." : "SUBMIT REQUEST"}
                       </button>
                     </form>
-                  </div>
-                </motion.div>
+                </div>
               )}
             </AnimatePresence>
           </motion.div>
-
         </div>
       </section>
 

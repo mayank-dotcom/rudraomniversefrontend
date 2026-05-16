@@ -351,7 +351,7 @@ function ArenaContent() {
                     )}
                 </header>
 
-                <main className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                <main className="flex-1 overflow-y-auto scrollbar-hide p-6">
                     {error && (
                         <div className="max-w-xl mx-auto mt-20 p-6 border border-red-500/30 bg-red-500/10 text-center">
                             <X className="h-8 w-8 mx-auto mb-4 text-red-400" />
@@ -788,7 +788,7 @@ function ArenaContent() {
                                 <button
                                     onClick={() => setTab("leaderboard")}
                                     className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "leaderboard"
-                                        ? `${isDarkMode ? "bg-white text-black" : "bg-black text-white"} font-bold`
+                                        ? `${isDarkMode ? "bg-white text-black" : "bg-[#00DDDD] text-white"} font-bold`
                                         : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`
                                         }`}
                                 >
@@ -798,7 +798,7 @@ function ArenaContent() {
                                 <button
                                     onClick={() => setTab("analysis")}
                                     className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "analysis"
-                                        ? `${isDarkMode ? "bg-white text-black" : "bg-black text-white"} font-bold`
+                                        ? `${isDarkMode ? "bg-white text-black" : "bg-[#00DDDD] text-white"} font-bold`
                                         : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`
                                         }`}
                                 >
