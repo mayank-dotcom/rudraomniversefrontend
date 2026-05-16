@@ -60,12 +60,12 @@ function PageContent() {
 
     const bg = isDarkMode ? "bg-[#0a0a0a]" : "bg-white";
     const text = isDarkMode ? "text-white" : "text-black";
-    const border = isDarkMode ? "border-2 border-white" : "border-2 border-black";
+    const border = isDarkMode ? "border-2 border-white" : "border-2 border-[#00DDDD]";
     const borderLight = isDarkMode ? "border border-white" : "border border-black";
     const muted = isDarkMode ? "text-white/40" : "text-black/40";
     const cardBg = isDarkMode ? "bg-[#0d0d0d]" : "bg-gray-50";
-    const hoverBg = isDarkMode ? "hover:bg-white/10" : "hover:bg-black/10";
-    const activeBg = isDarkMode ? "bg-white/20" : "bg-black/20";
+    const hoverBg = isDarkMode ? "hover:bg-white/10" : "hover:bg-[#00DDDD]/10";
+    const activeBg = isDarkMode ? "bg-white/20" : "bg-[#00DDDD]/20";
     const sidebarBg = isDarkMode ? "bg-[#0d0d0d] border-r-2 border-white" : "bg-gray-50 border-r-2 border-black";
     const gridLine = isDarkMode ? "#ffffff05" : "#00000008";
 

@@ -1557,6 +1557,67 @@ export async function updateSiteSetting(key: string, value: string) {
   return data
 }
 
+// Plan Features Mapping (stored client-side since backend plan table doesn't store features)
+
+export interface AvailableFeature {
+  id: string
+  name: string
+  description: string
+}
+
+export interface AvailableFeaturesResponse {
+  success: boolean
+  features?: AvailableFeature[]
+  error?: string
+}
+
+export async function getAvailableFeatures() {
+  const res = await fetch(`${API_BASE}/admin/available-features`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<AvailableFeaturesResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to fetch available features")
+  }
+  return data
+}
+
+const PLAN_FEATURES_KEY = "rudranex_plan_features"
+
+export function getPlanFeaturesMap(): Record<string, string[]> {
+  if (typeof window === "undefined") return {}
+  try {
+    const stored = localStorage.getItem(PLAN_FEATURES_KEY)
+    return stored ? JSON.parse(stored) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function setPlanFeatures(planId: string, features: string[]) {
+  if (typeof window === "undefined") return
+  const map = getPlanFeaturesMap()
+  map[planId] = features
+  localStorage.setItem(PLAN_FEATURES_KEY, JSON.stringify(map))
+}
+
+export function getPlanFeatures(planId: string): string[] {
+  return getPlanFeaturesMap()[planId] || []
+}
+
+export function getFeatureIdForEngine(engineName: string): string {
+  const map: Record<string, string> = {
+    "Student Mode": "student_mode",
+    "Interview Prep": "interview_prep",
+    "Mock Paper Generator": "mock_paper_generator",
+    "Persona Mode": "persona_mode",
+    "AI Image Lab": "ai_image_lab",
+    "Battle Arena": "battle_arena",
+  }
+  return map[engineName] || ""
+}
+
 // Web Speech API fallback for transcription
 export function transcribeSpeechFallback(language: string = 'hi-IN'): Promise<TranscriptionResponse> {
   return new Promise((resolve, reject) => {

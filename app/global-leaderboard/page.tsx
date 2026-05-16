@@ -88,13 +88,13 @@ function PageContent() {
 
     const bg = isDarkMode ? "bg-[#0a0a0a]" : "bg-white";
     const text = isDarkMode ? "text-white" : "text-black";
-    const border = isDarkMode ? "border-2 border-white" : "border-2 border-black";
+    const border = isDarkMode ? "border-2 border-white" : "border-2 border-[#00DDDD]";
     const borderLight = isDarkMode ? "border border-white" : "border border-black";
     const muted = isDarkMode ? "text-white/50" : "text-black/50";
     const cardBg = isDarkMode ? "bg-[#0d0d0d]" : "bg-gray-50";
-    const hoverBg = isDarkMode ? "hover:bg-white/10" : "hover:bg-black/10";
+    const hoverBg = isDarkMode ? "hover:bg-white/10" : "hover:bg-[#00DDDD]/10";
     const rowBg = isDarkMode ? "bg-white/5" : "bg-black/5";
-    const activeBg = isDarkMode ? "bg-white/20" : "bg-black/20";
+    const activeBg = isDarkMode ? "bg-white/20" : "bg-[#00DDDD]/20";
     const sidebarBg = isDarkMode ? "bg-[#0d0d0d] border-r-2 border-white" : "bg-gray-50 border-r-2 border-black";
 
     return (
@@ -306,7 +306,7 @@ function PageContent() {
                                                             .map((p, i, arr) => (
                                                                 <span key={p} className="flex items-center">
                                                                     {i > 0 && arr[i - 1] !== p - 1 && <span className={`px-1 text-[9px] ${muted}`}>...</span>}
-                                                                    <button onClick={() => setCurrentPage(p)} className={`h-9 w-9 text-[10px] font-mono rounded-xl transition-all ${currentPage === p ? (isDarkMode ? "bg-white text-black font-black" : "bg-black text-white font-black") : `${hoverBg} opacity-60`}`}>{p}</button>
+                                                                    <button onClick={() => setCurrentPage(p)} className={`h-9 w-9 text-[10px] font-mono rounded-xl transition-all ${currentPage === p ? (isDarkMode ? "bg-white text-black font-black" : "bg-[#00DDDD] text-white font-black") : `${hoverBg} opacity-60`}`}>{p}</button>
                                                                 </span>
                                                             ))}
                                                         <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className={`p-2 border ${border} rounded-xl disabled:opacity-20 ${hoverBg} transition-all`}>

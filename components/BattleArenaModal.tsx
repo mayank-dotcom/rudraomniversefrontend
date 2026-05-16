@@ -87,7 +87,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                     <p className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"} uppercase tracking-[0.2em]`}>Real-time multiplayer quiz battle</p>
                                 </div>
                             </div>
-                            <button onClick={onClose} className={`p-2 rounded-full transition-colors ${isDarkMode ? "hover:bg-white/10 text-white/40 hover:text-white" : "hover:bg-black/10 text-black/40 hover:text-black"}`}>
+                            <button onClick={onClose} className={`p-2 rounded-full transition-colors ${isDarkMode ? "hover:bg-white/10 text-white/40 hover:text-white" : "hover:bg-[#00DDDD]/10 text-[#00DDDD]/40 hover:text-[#00DDDD]"}`}>
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
@@ -97,7 +97,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                             <Link
                                 href="/arena-history"
                                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[8px] font-mono uppercase tracking-wider transition-all ${
-                                    isDarkMode ? "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white" : "bg-black/5 text-black/50 hover:bg-black/10 hover:text-black"
+                                    isDarkMode ? "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white" : "bg-[#00DDDD]/5 text-[#00DDDD]/50 hover:bg-[#00DDDD]/10 hover:text-[#00DDDD]"
                                 }`}
                             >
                                 <History className="h-3 w-3" />
@@ -106,7 +106,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                             <Link
                                 href="/global-leaderboard"
                                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[8px] font-mono uppercase tracking-wider transition-all ${
-                                    isDarkMode ? "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white" : "bg-black/5 text-black/50 hover:bg-black/10 hover:text-black"
+                                    isDarkMode ? "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white" : "bg-[#00DDDD]/5 text-[#00DDDD]/50 hover:bg-[#00DDDD]/10 hover:text-[#00DDDD]"
                                 }`}
                             >
                                 <Trophy className="h-3 w-3" />
@@ -115,7 +115,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                             <Link
                                 href="/user-analytics"
                                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[8px] font-mono uppercase tracking-wider transition-all ${
-                                    isDarkMode ? "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white" : "bg-black/5 text-black/50 hover:bg-black/10 hover:text-black"
+                                    isDarkMode ? "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white" : "bg-[#00DDDD]/5 text-[#00DDDD]/50 hover:bg-[#00DDDD]/10 hover:text-[#00DDDD]"
                                 }`}
                             >
                                 <TrendingUp className="h-3 w-3" />
@@ -129,8 +129,8 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                 onClick={() => setTab("host")}
                                 className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${
                                     tab === "host"
-                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
-                                        : (isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black")
+                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold")
+                                        : (isDarkMode ? "text-white/40 hover:text-white" : "text-[#00DDDD]/40 hover:text-[#00DDDD]")
                                 }`}
                             >
                                 <Swords className="h-3 w-3 inline mr-1.5 -mt-0.5" />
@@ -140,8 +140,8 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                 onClick={() => setTab("join")}
                                 className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${
                                     tab === "join"
-                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
-                                        : (isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black")
+                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold")
+                                        : (isDarkMode ? "text-white/40 hover:text-white" : "text-[#00DDDD]/40 hover:text-[#00DDDD]")
                                 }`}
                             >
                                 <Key className="h-3 w-3 inline mr-1.5 -mt-0.5" />
@@ -224,7 +224,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                         }
                                     }}
                                     disabled={!hostConfig.adminName.trim() || !hostConfig.topic.trim()}
-                                    className={`w-full py-5 ${isDarkMode ? "bg-white text-black shadow-xl shadow-white/10" : "bg-black text-white shadow-xl shadow-black/10"} text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30`}
+                                    className={`w-full py-5 ${isDarkMode ? "bg-white text-black shadow-xl shadow-white/10" : "bg-[#00DDDD] text-white shadow-xl shadow-[#00DDDD]/10"} text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30`}
                                 >
                                     <Swords className="h-4 w-4 inline mr-2 -mt-0.5" />
                                     Host Arena
@@ -271,7 +271,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                         }
                                     }}
                                     disabled={!joinConfig.lobbyCode.trim() || !joinConfig.participantName.trim()}
-                                    className={`w-full py-5 ${isDarkMode ? "bg-white text-black shadow-xl shadow-white/10" : "bg-black text-white shadow-xl shadow-black/10"} text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30`}
+                                    className={`w-full py-5 ${isDarkMode ? "bg-white text-black shadow-xl shadow-white/10" : "bg-[#00DDDD] text-white shadow-xl shadow-[#00DDDD]/10"} text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30`}
                                 >
                                     <Key className="h-4 w-4 inline mr-2 -mt-0.5" />
                                     Join Arena

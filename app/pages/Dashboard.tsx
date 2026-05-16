@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser, getAdminRequests, declineAdminRequest, AdminRequest, getAdminSchools, getAdminSchoolAdmins, AdminSchool, AdminSchoolAdmin, getFrozenUsers, getAdminSchoolFacultyByCode, SchoolFacultyMember, deleteAdminUser, deleteSchoolFaculty, getAdminActivity } from '@/lib/chat-api';
+import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser, getAdminRequests, declineAdminRequest, AdminRequest, getAdminSchools, getAdminSchoolAdmins, AdminSchool, AdminSchoolAdmin, getFrozenUsers, getAdminSchoolFacultyByCode, SchoolFacultyMember, deleteAdminUser, deleteSchoolFaculty, getAdminActivity, getAvailableFeatures, AvailableFeature, setPlanFeatures, getPlanFeatures } from '@/lib/chat-api';
 import { isAdminAuthenticated, setAdminKey, removeAdminKey, setApiKey } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -59,6 +59,33 @@ const PlanCard = ({ plan, isDarkMode, onEdit }: { plan: any, isDarkMode: boolean
                     <span className="font-bold">{plan.daily_stt_limit || 0}</span>
                 </div>
             </div>
+
+            {(() => {
+                const planFeatures = getPlanFeatures(String(plan.id))
+                if (planFeatures.length > 0) {
+                    const featureNames: Record<string, string> = {
+                        student_mode: "Student Mode",
+                        interview_prep: "Interview Prep",
+                        mock_paper_generator: "Mock Paper",
+                        persona_mode: "Persona Mode",
+                        ai_image_lab: "AI Image Lab",
+                        battle_arena: "Battle Arena",
+                    }
+                    return (
+                        <div className="mb-6">
+                            <span className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Modes</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                                {planFeatures.map(fid => (
+                                    <span key={fid} className={`text-[8px] font-mono px-1.5 py-0.5 rounded ${isDarkMode ? "bg-emerald-500/10 text-emerald-400" : "bg-emerald-500/10 text-emerald-600"}`}>
+                                        {featureNames[fid] || fid}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )
+                }
+                return null
+            })()}
 
             <button onClick={() => onEdit(plan)} className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`}>Edit Plan</button>
         </div>
@@ -114,6 +141,9 @@ const Dashboard = () => {
     const [isUnfreezing, setIsUnfreezing] = useState(false);
     const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
     const [isCreatingPlan, setIsCreatingPlan] = useState(false);
+    const [availableFeatures, setAvailableFeatures] = useState<AvailableFeature[]>([]);
+    const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+    const [isFeaturesLoading, setIsFeaturesLoading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isPlansLoading, setIsPlansLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -630,6 +660,27 @@ const Dashboard = () => {
             setIsUnfreezing(false);
         }
     };
+
+    useEffect(() => {
+        if (!editingPlan) return
+        setIsFeaturesLoading(true)
+        getAvailableFeatures()
+            .then(res => {
+                setAvailableFeatures(res.features || [])
+                const planId = editingPlan.id?.toString()
+                if (planId && planId !== 'new') {
+                    const saved = getPlanFeatures(planId)
+                    setSelectedFeatures(saved)
+                } else {
+                    setSelectedFeatures([])
+                }
+            })
+            .catch(() => {
+                setAvailableFeatures([])
+                setSelectedFeatures([])
+            })
+            .finally(() => setIsFeaturesLoading(false))
+    }, [editingPlan?.id])
 
     const handleUpdatePlan = async (planId: string, data: Partial<Plan>) => {
         setIsUpdatingPlan(true);
@@ -1912,44 +1963,49 @@ const Dashboard = () => {
                             {editingPlan.id === 'new' ? 'Create New Plan' : 'Edit Plan'}
                         </h2>
 
-                        <form onSubmit={(e) => {
-                            e.preventDefault();
-                            const formData = new FormData(e.target as HTMLFormElement);
-                            if (editingPlan.id === 'new') {
-                                setIsCreatingPlan(true);
-                                createPlan({
-                                    plan_name: formData.get('plan_name') as string,
-                                    price_inr: Number(formData.get('price_inr')),
-                                    daily_chat_limit: Number(formData.get('daily_chat_limit')),
-                                    daily_coding_limit: Number(formData.get('daily_coding_limit')),
-                                    daily_vision_limit: Number(formData.get('daily_vision_limit')),
-                                    monthly_image_limit: Number(formData.get('monthly_image_limit')),
-                                    monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
-                                    daily_tts_limit: Number(formData.get('daily_tts_limit')),
-                                    daily_stt_limit: Number(formData.get('daily_stt_limit'))
-                                }).then(() => {
-                                    toast.success("Plan created successfully");
-                                    setEditingPlan(null);
-                                    fetchData();
-                                }).catch(err => {
-                                    toast.error("Error creating plan: " + (err as Error).message);
-                                }).finally(() => {
-                                    setIsCreatingPlan(false);
-                                });
-                            } else {
-                                handleUpdatePlan(editingPlan.id?.toString() || '', {
-                                    plan_name: formData.get('plan_name') as string,
-                                    price_inr: Number(formData.get('price_inr')),
-                                    daily_chat_limit: Number(formData.get('daily_chat_limit')),
-                                    daily_coding_limit: Number(formData.get('daily_coding_limit')),
-                                    daily_vision_limit: Number(formData.get('daily_vision_limit')),
-                                    monthly_image_limit: Number(formData.get('monthly_image_limit')),
-                                    monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
-                                    daily_tts_limit: Number(formData.get('daily_tts_limit')),
-                                    daily_stt_limit: Number(formData.get('daily_stt_limit'))
-                                });
-                            }
-                        }} className="space-y-4">
+                                                    <form onSubmit={(e) => {
+                                                            e.preventDefault();
+                                                            const formData = new FormData(e.target as HTMLFormElement);
+                                                            if (editingPlan.id === 'new') {
+                                                                setIsCreatingPlan(true);
+                                                                createPlan({
+                                                                    plan_name: formData.get('plan_name') as string,
+                                                                    price_inr: Number(formData.get('price_inr')),
+                                                                    daily_chat_limit: Number(formData.get('daily_chat_limit')),
+                                                                    daily_coding_limit: Number(formData.get('daily_coding_limit')),
+                                                                    daily_vision_limit: Number(formData.get('daily_vision_limit')),
+                                                                    monthly_image_limit: Number(formData.get('monthly_image_limit')),
+                                                                    monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
+                                                                    daily_tts_limit: Number(formData.get('daily_tts_limit')),
+                                                                    daily_stt_limit: Number(formData.get('daily_stt_limit'))
+                                                                }).then((res) => {
+                                                                    const newPlanId = res?.plan?.id?.toString()
+                                                                    if (newPlanId) {
+                                                                        setPlanFeatures(newPlanId, selectedFeatures)
+                                                                    }
+                                                                    toast.success("Plan created successfully");
+                                                                    setEditingPlan(null);
+                                                                    fetchData();
+                                                                }).catch(err => {
+                                                                    toast.error("Error creating plan: " + (err as Error).message);
+                                                                }).finally(() => {
+                                                                    setIsCreatingPlan(false);
+                                                                });
+                                                            } else {
+                                                                handleUpdatePlan(editingPlan.id?.toString() || '', {
+                                                                    plan_name: formData.get('plan_name') as string,
+                                                                    price_inr: Number(formData.get('price_inr')),
+                                                                    daily_chat_limit: Number(formData.get('daily_chat_limit')),
+                                                                    daily_coding_limit: Number(formData.get('daily_coding_limit')),
+                                                                    daily_vision_limit: Number(formData.get('daily_vision_limit')),
+                                                                    monthly_image_limit: Number(formData.get('monthly_image_limit')),
+                                                                    monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
+                                                                    daily_tts_limit: Number(formData.get('daily_tts_limit')),
+                                                                    daily_stt_limit: Number(formData.get('daily_stt_limit'))
+                                                                });
+                                                                setPlanFeatures(editingPlan.id?.toString() || '', selectedFeatures);
+                                                            }
+                                                        }} className="space-y-4">
                             <div>
                                 <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Plan Name</label>
                                 <input
@@ -2052,6 +2108,46 @@ const Dashboard = () => {
                                             }`}
                                     />
                                 </div>
+                            </div>
+
+                            {/* Available Modes / Features */}
+                            <div>
+                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Available Modes / Features</label>
+                                {isFeaturesLoading ? (
+                                    <div className={`mt-2 text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Loading modes...</div>
+                                ) : availableFeatures.length === 0 ? (
+                                    <div className={`mt-2 text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>No modes available</div>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-2 mt-2">
+                                        {availableFeatures.map((feature) => (
+                                            <label
+                                                key={feature.id}
+                                                className={`flex items-center gap-2 p-2 rounded-xl cursor-pointer transition-all ${
+                                                    selectedFeatures.includes(feature.id)
+                                                        ? (isDarkMode ? "bg-emerald-500/10 border border-emerald-500/30" : "bg-emerald-500/10 border border-emerald-500/30")
+                                                        : (isDarkMode ? "bg-white/5 border border-white/10 hover:bg-white/10" : "bg-black/5 border border-black/10 hover:bg-black/10")
+                                                }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedFeatures.includes(feature.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedFeatures(prev => [...prev, feature.id])
+                                                        } else {
+                                                            setSelectedFeatures(prev => prev.filter(id => id !== feature.id))
+                                                        }
+                                                    }}
+                                                    className="h-4 w-4 rounded border-gray-300 text-emerald-500 focus:ring-emerald-500"
+                                                />
+                                                <div className="flex flex-col">
+                                                    <span className={`text-[10px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{feature.name}</span>
+                                                    <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{feature.description}</span>
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             <button

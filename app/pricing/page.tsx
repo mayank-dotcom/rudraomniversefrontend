@@ -108,7 +108,7 @@ const PricingContent = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border-l border-t border-black/5 dark:border-white/5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border-l border-t border-blue-500 dark:border-white/20">
                         {plans.map((plan, i) => {
                             const Icon = getPlanIcon(plan.plan_name || '');
                             const tag = getPlanTag(plan.plan_name || '');
@@ -120,7 +120,7 @@ const PricingContent = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.8, delay: i * 0.1 }}
-                                    className={`relative p-10 flex flex-col border-r border-b border-black/5 dark:border-white/5 group transition-all duration-500 ${isPro ? (isDarkMode ? "bg-[#0d0d0d]" : "bg-white") : (isDarkMode ? "bg-transparent" : "bg-transparent")}`}
+                                    className={`relative p-10 flex flex-col border-r border-b border-blue-500 dark:border-white/20 group transition-all duration-500 ${isPro ? (isDarkMode ? "bg-[#0d0d0d]" : "bg-white") : (isDarkMode ? "bg-transparent" : "bg-transparent")}`}
                                 >
                                     {/* Plan Tag — Technical Label style */}
                                     <div className="flex justify-between items-center mb-16">

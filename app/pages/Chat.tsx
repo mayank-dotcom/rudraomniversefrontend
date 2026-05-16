@@ -8,7 +8,7 @@ import {
     UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
-    Swords
+    Swords, CheckCircle, XCircle
 } from "lucide-react";
 import Link from "next/link";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
@@ -26,7 +26,9 @@ import {
     sendAiRequest,
     sendAiRequestStream,
     sendMessageFeedback,
-    getSubscriptionStatus
+    getSubscriptionStatus,
+    getPlanFeatures,
+    getFeatureIdForEngine
 } from "@/lib/chat-api";
 import { processFile, ProcessedFile } from "@/lib/file-processor";
 import { toast } from "sonner";
@@ -172,6 +174,7 @@ const Chat = () => {
 
     const [subscription, setSubscription] = useState<any>(null);
     const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
+    const [planFeatures, setPlanFeaturesState] = useState<string[]>([]);
 
     const engines = [
         { name: "Student Mode", endpoint: "/chat", version: "1.0", icon: GraduationCap },
@@ -490,6 +493,11 @@ const Chat = () => {
                 console.log("Subscription API response:", data);
                 if (data.success) {
                     setSubscription(data);
+                    const pid = data.subscription?.plan_id
+                    if (pid) {
+                        const features = getPlanFeatures(String(pid))
+                        setPlanFeaturesState(features)
+                    }
                 }
             })
             .catch(err => {
@@ -1205,10 +1213,17 @@ STRICT RULES:
                             {sidebarTab === "modes" && (
                                 <div className="space-y-1 px-1">
                                     {sidebarWidth > 120 && <span className={`px-2 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black/40"}`}>AI Engines</span>}
-                                    {engines.map((engine) => (
+                                    {engines.map((engine) => {
+                                        const featureId = getFeatureIdForEngine(engine.name)
+                                        const isAvailable = planFeatures.length === 0 || planFeatures.includes(featureId)
+                                        return (
                                         <button
                                             key={engine.name}
                                             onClick={() => {
+                                                if (!isAvailable) {
+                                                    window.location.href = "/pricing"
+                                                    return
+                                                }
                                                 if (engine.name === "Interview Prep") {
                                                     setIsInterviewModalOpen(true);
                                                 } else if (engine.name === "Mock Paper Generator") {
@@ -1236,11 +1251,19 @@ STRICT RULES:
                                             {sidebarWidth > 120 && (
                                                 <div className="flex items-center justify-between w-full min-w-0">
                                                     <span className="truncate">{engine.name}</span>
-                                                    <span className={`text-[8px] font-mono ml-2 flex-shrink-0 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>{engine.version}</span>
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        {isAvailable ? (
+                                                            <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
+                                                        ) : (
+                                                            <XCircle className="h-3.5 w-3.5 text-red-400" />
+                                                        )}
+                                                        <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>{engine.version}</span>
+                                                    </div>
                                                 </div>
                                             )}
                                         </button>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -1638,10 +1661,18 @@ STRICT RULES:
                                                         <span className={`px-2 py-0.5 ${isDarkMode ? "bg-white/10 text-white" : "bg-black/5 text-black/60"} text-[8px] font-mono rounded`}>FREE</span>
                                                     </div>
                                                     <div className="space-y-1">
-                                                        {engines.map((engine) => (
+                                                        {engines.map((engine) => {
+                                                            const featureId = getFeatureIdForEngine(engine.name)
+                                                            const isAvailable = planFeatures.length === 0 || planFeatures.includes(featureId)
+                                                            return (
                                                             <button
                                                                 key={engine.name}
                                                                 onClick={() => {
+                                                                    if (!isAvailable) {
+                                                                        setShowEngineSelect(false);
+                                                                        window.location.href = "/pricing"
+                                                                        return
+                                                                    }
                                                                     if (engine.name === "Interview Prep") {
                                                                         setShowEngineSelect(false);
                                                                         setIsInterviewModalOpen(true);
@@ -1665,9 +1696,17 @@ STRICT RULES:
                                                                     <engine.icon className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black/60"} group-hover:rotate-12 transition-transform`} />
                                                                     <span className={`text-xs font-medium ${isDarkMode ? "text-white" : "text-black"}`}>{engine.name}</span>
                                                                 </div>
-                                                                <span className={`text-[10px] font-mono font-bold ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{engine.version}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    {isAvailable ? (
+                                                                        <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
+                                                                    ) : (
+                                                                        <XCircle className="h-3.5 w-3.5 text-red-400" />
+                                                                    )}
+                                                                    <span className={`text-[10px] font-mono font-bold ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{engine.version}</span>
+                                                                </div>
                                                             </button>
-                                                        ))}
+                                                            )
+                                                        })}
                                                     </div>
                                                 </motion.div>
                                             )}

@@ -293,7 +293,7 @@ function ArenaContent() {
                     <div className="flex items-center gap-4">
                         <button
                             onClick={toggleTheme}
-                            className={`p-2 border transition-all duration-300 group ${isDarkMode ? "border-white/20 text-white/60 hover:text-white hover:border-white/40 hover:scale-110" : "border-black text-black/60 hover:text-black hover:border-black hover:scale-110"}`}
+                            className={`p-2 border transition-all duration-300 group ${isDarkMode ? "border-white/20 text-white/60 hover:text-white hover:border-white/40 hover:scale-110" : "border-[#00DDDD] text-[#00DDDD]/60 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:scale-110"}`}
                             title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
                         >
                             <div className="group-hover:rotate-180 transition-transform duration-500">
@@ -302,7 +302,7 @@ function ArenaContent() {
                         </button>
                         <button
                             onClick={() => setShowQuitConfirm(true)}
-                            className={`p-2 border transition-all text-[10px] font-mono uppercase tracking-wider font-bold ${isDarkMode ? "border-white/20 text-white/60 hover:bg-red-500 hover:text-white hover:border-red-500" : "border-black text-black/60 hover:bg-red-500 hover:text-white hover:border-red-500"}`}
+                            className={`p-2 border transition-all text-[10px] font-mono uppercase tracking-wider font-bold ${isDarkMode ? "border-white/20 text-white/60 hover:bg-red-500 hover:text-white hover:border-red-500" : "border-[#00DDDD] text-[#00DDDD]/60 hover:bg-red-500 hover:text-white hover:border-red-500"}`}
                         >
                             Exit
                         </button>
@@ -319,7 +319,7 @@ function ArenaContent() {
                             <span className="text-lg font-black tracking-[0.3em]">{lobbyCode}</span>
                             <button
                                 onClick={handleCopyCode}
-                                className={`p-2 border transition-all ${isDarkMode ? "border-white/20 hover:border-white/50 text-white/60 hover:text-white" : "border-black/20 hover:border-black/50 text-black/60 hover:text-black"}`}
+                                className={`p-2 border transition-all ${isDarkMode ? "border-white/20 hover:border-white/50 text-white/60 hover:text-white" : "border-[#00DDDD]/20 hover:border-[#00DDDD]/50 text-[#00DDDD]/60 hover:text-[#00DDDD]"}`}
                             >
                                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             </button>
@@ -395,7 +395,7 @@ function ArenaContent() {
                                                 <span className="text-4xl font-black tracking-[0.4em]">{lobbyCode}</span>
                                                 <button
                                                     onClick={handleCopyCode}
-                                                    className={`p-3 border transition-all rounded-xl ${isDarkMode ? "bg-white/10 hover:bg-white/20 border-white/20" : "bg-black/10 hover:bg-black/20 border-black/20"}`}
+                                                    className={`p-3 border transition-all rounded-xl ${isDarkMode ? "bg-white/10 hover:bg-white/20 border-white/20" : "bg-[#00DDDD]/10 hover:bg-[#00DDDD]/20 border-[#00DDDD]/20"}`}
                                                 >
                                                     {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
                                                 </button>
@@ -456,7 +456,7 @@ function ArenaContent() {
                                         <button
                                             onClick={handleStart}
                                             disabled={participants.length < 1 || isStarting}
-                                            className={`w-full py-5 text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 flex items-center justify-center gap-3 ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}
+                                            className={`w-full py-5 text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 flex items-center justify-center gap-3 ${isDarkMode ? "bg-white text-black" : "bg-[#00DDDD] text-white"}`}
                                         >
                                             {isStarting ? (
                                                 <>
@@ -534,7 +534,7 @@ function ArenaContent() {
                                             const isSelected = selectedAnswer === i;
                                             const isCorrect = questions[currentQuestionIndex]?.correctOptionIndex === i;
                                             const showResult = selectedAnswer !== null;
-                                            let optionClass = isDarkMode ? "bg-white/5 border-white/10 hover:border-white/30 hover:bg-white/10" : "bg-black/5 border-black/10 hover:border-black/30 hover:bg-black/10";
+                                            let optionClass = isDarkMode ? "bg-white/5 border-white/10 hover:border-white/30 hover:bg-white/10" : "bg-[#00DDDD]/5 border-[#00DDDD]/10 hover:border-[#00DDDD]/30 hover:bg-[#00DDDD]/10";
 
                                             if (showResult) {
                                                 if (isCorrect) {
@@ -542,10 +542,10 @@ function ArenaContent() {
                                                 } else if (isSelected && !isCorrect) {
                                                     optionClass = "bg-red-500/20 border-red-500 text-red-400";
                                                 } else {
-                                                    optionClass = isDarkMode ? "bg-white/5 border-white/10 text-white/40" : "bg-black/5 border-black/10 text-black/40";
+                                                    optionClass = isDarkMode ? "bg-white/5 border-white/10 text-white/40" : "bg-[#00DDDD]/5 border-[#00DDDD]/10 text-[#00DDDD]/40";
                                                 }
                                             } else if (isSelected) {
-                                                optionClass = `${isDarkMode ? "bg-white/10 border-white" : "bg-black/10 border-black"}`;
+                                                optionClass = `${isDarkMode ? "bg-white/10 border-white" : "bg-[#00DDDD]/10 border-[#00DDDD]"}`;
                                             }
 
                                             const optionLabels = ["A", "B", "C", "D", "E", "F"];
@@ -558,8 +558,8 @@ function ArenaContent() {
                                                     className={`w-full text-left p-4 border rounded-2xl text-sm transition-all flex items-center gap-3 ${optionClass}`}
                                                 >
                                                     <span className={`h-7 w-7 flex items-center justify-center rounded-full text-xs font-mono border flex-shrink-0 ${isSelected
-                                                        ? `${isDarkMode ? "border-white bg-white text-black" : "border-black bg-black text-white"}`
-                                                        : `${isDarkMode ? "border-white/20" : "border-black/20"}`
+                                                        ? `${isDarkMode ? "border-white bg-white text-black" : "border-[#00DDDD] bg-[#00DDDD] text-white"}`
+                                                        : `${isDarkMode ? "border-white/20" : "border-[#00DDDD]/20"}`
                                                         }`}>
                                                         {optionLabels[i]}
                                                     </span>
@@ -787,20 +787,20 @@ function ArenaContent() {
                             <div className={`flex mb-6 border-b ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
                                 <button
                                     onClick={() => setTab("leaderboard")}
-                                    className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "leaderboard"
-                                        ? `${isDarkMode ? "bg-white text-black" : "bg-[#00DDDD] text-white"} font-bold`
-                                        : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`
-                                        }`}
-                                >
-                                    <Trophy className="h-3 w-3 inline mr-1.5 -mt-0.5" />
-                                    Leaderboard
-                                </button>
-                                <button
-                                    onClick={() => setTab("analysis")}
-                                    className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "analysis"
-                                        ? `${isDarkMode ? "bg-white text-black" : "bg-[#00DDDD] text-white"} font-bold`
-                                        : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`
-                                        }`}
+className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "leaderboard"
+                                                        ? `${isDarkMode ? "bg-white text-black" : "bg-[#00DDDD] text-white"} font-bold`
+                                                        : `${isDarkMode ? "text-white/40 hover:text-white" : "text-[#00DDDD]/40 hover:text-[#00DDDD]"}`
+                                                        }`}
+                                            >
+                                                <Trophy className="h-3 w-3 inline mr-1.5 -mt-0.5" />
+                                                Leaderboard
+                                            </button>
+                                            <button
+                                                onClick={() => setTab("analysis")}
+                                                className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "analysis"
+                                                        ? `${isDarkMode ? "bg-white text-black" : "bg-[#00DDDD] text-white"} font-bold`
+                                                        : `${isDarkMode ? "text-white/40 hover:text-white" : "text-[#00DDDD]/40 hover:text-[#00DDDD]"}`
+                                                        }`}
                                 >
                                     <BarChart3 className="h-3 w-3 inline mr-1.5 -mt-0.5" />
                                     Analysis
@@ -1001,7 +1001,7 @@ function ArenaContent() {
                                         </button>
                                         <button
                                             onClick={() => router.push(`/?arena=host&topic=${encodeURIComponent(topic)}&difficulty=${difficulty}&count=${questionCount}`)}
-                                            className={`px-8 py-5 border text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] transition-all flex items-center gap-2 ${isDarkMode ? "border-white/20 text-white hover:bg-white/10 hover:border-white/40" : "border-black/20 text-black hover:bg-black/10 hover:border-black/40"}`}
+                                            className={`px-8 py-5 border text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] transition-all flex items-center gap-2 ${isDarkMode ? "border-white/20 text-white hover:bg-white/10 hover:border-white/40" : "border-[#00DDDD]/20 text-[#00DDDD] hover:bg-[#00DDDD]/10 hover:border-[#00DDDD]/40"}`}
                                         >
                                             <RefreshCw className="h-4 w-4" />
                                             Rematch
@@ -1039,7 +1039,7 @@ function ArenaContent() {
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowQuitConfirm(false)}
-                                className={`flex-1 py-3 border text-[10px] font-mono font-black uppercase tracking-[0.2em] rounded-[2rem] transition-all ${isDarkMode ? "border-white/20 text-white/80 hover:bg-white/10" : "border-black/20 text-black/80 hover:bg-black/10"}`}
+                                className={`flex-1 py-3 border text-[10px] font-mono font-black uppercase tracking-[0.2em] rounded-[2rem] transition-all ${isDarkMode ? "border-white/20 text-white/80 hover:bg-white/10" : "border-[#00DDDD]/20 text-[#00DDDD]/80 hover:bg-[#00DDDD]/10"}`}
                             >
                                 Cancel
                             </button>
