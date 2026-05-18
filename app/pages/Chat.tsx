@@ -1249,14 +1249,14 @@ STRICT RULES:
                                                     <>
                                                         <button
                                                             onClick={() => handleStartEditing(chat)}
-                                                            className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-white hover:scale-110" : "text-black hover:scale-110"}`}
+                                                            className={`${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-white hover:scale-110" : "text-black hover:scale-110"}`}
                                                             aria-label={`Rename ${chat.title}`}
                                                         >
                                                             <Edit3 className="h-3 w-3" />
                                                         </button>
                                                         <button
                                                             onClick={() => void handleDeleteChat(chat.id)}
-                                                            className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-red-400 hover:scale-110" : "text-black hover:text-red-600 hover:scale-110"}`}
+                                                            className={`${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-red-400 hover:scale-110" : "text-black hover:text-red-600 hover:scale-110"}`}
                                                             aria-label={`Delete ${chat.id}`}
                                                         >
                                                             <Trash2 className="h-3.5 w-3.5" />
@@ -1715,7 +1715,7 @@ STRICT RULES:
 
                 {/* Input Bar */}
                 <div className={`absolute bottom-0 left-0 right-0 z-50 p-4 md:p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}>
-                    <div className="w-full max-w-4xl relative">
+                    <div className="w-full max-w-4xl relative mb-4 md:mb-0">
                         <div className="relative">
                             {/* File Preview */}
                             <AnimatePresence>
@@ -1778,38 +1778,41 @@ STRICT RULES:
                                 )
                             })()}
 
-                            <div className={`relative flex items-center border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
-                                <div className="flex items-center gap-2 pl-3">
-                                    <button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        disabled={isLoading || isProcessingFile}
-                                        className={`p-2 ${isDarkMode ? "text-white/30 hover:text-[#D4AF37]" : "text-black/30 hover:text-[#B8962E]"} transition-all active:scale-95`}
-                                        title="Attach File"
-                                    >
-                                        {isProcessingFile ? (
-                                            <div className="h-4 w-4 border-2 border-[#D4AF37] border-t-transparent animate-spin rounded-full" />
-                                        ) : (
-                                            <Paperclip className="h-4 w-4" />
-                                        )}
-                                    </button>
+                            <div className={`relative flex flex-col md:flex-row md:items-center border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
+                                <div className="flex-1 flex items-center w-full">
+                                    <div className="flex items-center gap-2 pl-3">
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={isLoading || isProcessingFile}
+                                            className={`p-2 ${isDarkMode ? "text-white/30 hover:text-[#D4AF37]" : "text-black/30 hover:text-[#B8962E]"} transition-all active:scale-95`}
+                                            title="Attach File"
+                                        >
+                                            {isProcessingFile ? (
+                                                <div className="h-4 w-4 border-2 border-[#D4AF37] border-t-transparent animate-spin rounded-full" />
+                                            ) : (
+                                                <Paperclip className="h-4 w-4" />
+                                            )}
+                                        </button>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleFileChange}
+                                            className="hidden"
+                                            accept="image/*,application/pdf,text/plain,.md"
+                                        />
+                                    </div>
+
                                     <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleFileChange}
-                                        className="hidden"
-                                        accept="image/*,application/pdf,text/plain,.md"
+                                        type="text"
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && !isProcessingFile && void handleSend()}
+                                        placeholder={isProcessingFile ? "Processing file..." : typedPlaceholder}
+                                        className={`flex-1 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} p-4 pl-2 text-base focus:outline-none`}
                                     />
                                 </div>
 
-                                <input
-                                    type="text"
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && !isProcessingFile && void handleSend()}
-                                    placeholder={isProcessingFile ? "Processing file..." : typedPlaceholder}
-                                    className={`flex-1 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} p-4 pl-2 text-base focus:outline-none`}
-                                />
-                                <div className="flex items-center gap-1 pr-2">
+                                <div className={`flex items-center justify-end gap-2 pr-2 pb-2 md:pb-0 ${isMobile ? "w-full border-t border-white/10 pt-2" : ""}`}>
                                     {!input.trim() && !isProcessingFile && (
                                         <div className="relative flex items-center justify-center mr-1">
                                             <AnimatePresence>
