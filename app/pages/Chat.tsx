@@ -8,7 +8,7 @@ import {
     UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
-    Swords, CheckCircle, XCircle
+    Swords, CheckCircle, XCircle, Code
 } from "lucide-react";
 import Link from "next/link";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
@@ -423,6 +423,29 @@ const Chat = () => {
             </html>
         `);
         printWindow.document.close();
+    };
+
+    const handleDownloadImage = async (url: string, filename: string = "rudranex-ai-image.png") => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = blobUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            const link = document.createElement("a");
+            link.href = url;
+            link.target = "_blank";
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     };
 
     const hydrateMessages = (items: Array<{ role: "user" | "assistant" | "system"; content: string; created_at?: string; id?: string; feedback?: number }>) => {
@@ -1070,10 +1093,10 @@ STRICT RULES:
             <div className={`absolute inset-0 noise opacity-[0.02] pointer-events-none ${isDarkMode ? "invert-0" : "invert"}`} />
 
             <aside
-                style={{ width: isSidebarCollapsed ? "0px" : `${sidebarWidth}px` }}
+                style={{ width: isSidebarCollapsed ? "72px" : `${sidebarWidth}px` }}
                 className={`h-full border-r-2 ${isDarkMode ? "border-white bg-[#0a0a0a]" : "border-black bg-[#fcfcfc]"} flex flex-col relative z-20 transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
             >
-                {!isSidebarCollapsed && (
+                {!isSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
                         <div className={`p-6 border-b-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-between`}>
                             <Link href="/" className="flex items-center gap-3">
@@ -1322,6 +1345,89 @@ STRICT RULES:
                             </button>
                         </div>
                     </div>
+                ) : (
+                    <div className="flex flex-col h-full items-center py-6 justify-between overflow-hidden w-full">
+                        {/* Top: Logo and New Chat */}
+                        <div className="flex flex-col items-center gap-6 w-full">
+                            <Link href="/" className="flex items-center justify-center">
+                                <div className={`h-10 w-10 border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
+                                    <svg width="28" height="28" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
+                                        <polygon
+                                            points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108"
+                                            fill="currentColor"
+                                        />
+                                    </svg>
+                                </div>
+                            </Link>
+                            <div className={`h-[1px] w-8 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
+                            <button
+                                onClick={handleCreateChat}
+                                disabled={isCreatingChat}
+                                title="New Chat"
+                                className={`p-3 transition-all duration-300 border-2 disabled:opacity-50 ${isDarkMode ? "bg-white border-white hover:bg-gray-200 hover:scale-110" : "bg-white border-black hover:bg-gray-50 hover:scale-110"}`}
+                            >
+                                <Plus className="h-4 w-4 text-black" />
+                            </button>
+                        </div>
+
+                        {/* Middle: History & Modes Tab Selectors */}
+                        <div className="flex flex-col items-center gap-4 w-full">
+                            <button
+                                onClick={() => {
+                                    setSidebarTab("history");
+                                    setIsSidebarCollapsed(false);
+                                }}
+                                title="History"
+                                className={`p-3 transition-all duration-300 border-2 ${
+                                    sidebarTab === "history"
+                                        ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-[#00DDDD] border-black text-white font-bold")
+                                        : (isDarkMode ? "border-transparent text-white/60 hover:text-white" : "border-transparent text-black/60 hover:text-black")
+                                }`}
+                            >
+                                <Clock className="h-5 w-5" />
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setSidebarTab("modes");
+                                    setIsSidebarCollapsed(false);
+                                }}
+                                title="Modes"
+                                className={`p-3 transition-all duration-300 border-2 ${
+                                    sidebarTab === "modes"
+                                        ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-[#00DDDD] border-black text-white font-bold")
+                                        : (isDarkMode ? "border-transparent text-white/60 hover:text-white" : "border-transparent text-black/60 hover:text-black")
+                                }`}
+                            >
+                                <Bot className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Bottom: Theme & Logout */}
+                        <div className="flex flex-col items-center gap-4 w-full px-2">
+                            <button
+                                onClick={toggleTheme}
+                                className={`p-3 border-2 transition-all duration-300 ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110" : "border-black bg-white hover:bg-gray-50 hover:scale-110"}`}
+                                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                            >
+                                {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    removeApiKey();
+                                    removeUserInfo();
+                                    setStoredActiveChatId(null);
+                                    setAuthed(false);
+                                    setUserName("");
+                                    setUserEmail("");
+                                    window.location.href = "/";
+                                }}
+                                title="Logout"
+                                className={`p-3 border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500" : "border-black bg-white text-black hover:bg-red-500 hover:text-white hover:border-red-500"}`}
+                            >
+                                <LogOut className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
                 )}
 
                 {/* Resize Handle */}
@@ -1417,11 +1523,21 @@ STRICT RULES:
                                                             {msg.content}
                                                         </p>
                                                     ) : isImageContent(msg.content) ? (
-                                                        <img
-                                                            src={msg.content}
-                                                            alt="Generated image"
-                                                            className="w-full h-auto rounded-2xl"
-                                                        />
+                                                        <div className="relative group/img-wrapper max-w-full">
+                                                            <img
+                                                                src={msg.content}
+                                                                alt="Generated image"
+                                                                className="w-full h-auto rounded-2xl border border-white/10 shadow-2xl transition-transform duration-300 group-hover/img-wrapper:scale-[1.01]"
+                                                            />
+                                                            <button
+                                                                onClick={() => handleDownloadImage(msg.content)}
+                                                                title="Download Image"
+                                                                className="absolute bottom-4 right-4 p-3 rounded-full bg-black/80 hover:bg-black text-white hover:text-[#00DDDD] border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1.5 hover:scale-105 active:scale-95"
+                                                            >
+                                                                <FileDown className="h-4 w-4" />
+                                                                <span className="text-[10px] font-mono uppercase tracking-wider font-bold pr-1">Download</span>
+                                                            </button>
+                                                        </div>
                                                     ) : (
                                                         <MarkdownRenderer content={msg.content} isDarkMode={isDarkMode} />
                                                     )}
@@ -1479,9 +1595,15 @@ STRICT RULES:
                                                             <button onClick={() => retryMessage(i)} title="Regenerate" className={`p-2 ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
                                                                 <RotateCcw className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-2 ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
-                                                                <FileDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                                                            </button>
+                                                            {isImageContent(msg.content) ? (
+                                                                <button onClick={() => handleDownloadImage(msg.content)} title="Download Image" className={`p-2 ${isDarkMode ? "text-[#00DDDD]/80 hover:text-[#00DDDD]" : "text-[#00DDDD] hover:text-[#00c2c2]"} hover:scale-105 transition-all duration-300 group`}>
+                                                                    <FileDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                                </button>
+                                                            ) : (
+                                                                <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-2 ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
+                                                                    <FileDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                                </button>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>
@@ -1741,10 +1863,10 @@ STRICT RULES:
 
             {/* Right Sidebar */}
             <aside
-                style={{ width: isRightSidebarCollapsed ? "0px" : `${rightSidebarWidth}px` }}
+                style={{ width: isRightSidebarCollapsed ? "72px" : `${rightSidebarWidth}px` }}
                 className={`h-full border-l-2 ${isDarkMode ? "border-white bg-[#0a0a0a]" : "border-black bg-[#fcfcfc]"} flex flex-col relative z-20 transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
             >
-                {!isRightSidebarCollapsed && (
+                {!isRightSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
                         <div className={`p-8 border-b-2 ${isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
                             {/* Plan Badge */}
@@ -1888,6 +2010,77 @@ STRICT RULES:
                         </div>
 
                         <div className={`flex-1 p-8 space-y-12 overflow-y-auto ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col h-full items-center py-6 justify-between overflow-hidden w-full">
+                        {/* Top: Plan Indicator */}
+                        <div className="flex flex-col items-center gap-6 w-full">
+                            <div 
+                                title={`Active Plan: ${isSubscriptionLoading ? "Loading..." : (subscription?.subscription?.plan_name || "Free Trial")}`}
+                                className={`h-12 w-12 rounded-full border-2 ${
+                                    isDarkMode ? "border-[#00DDDD] bg-[#00DDDD]/10" : "border-[#00DDDD] bg-[#00DDDD]/5"
+                                } flex items-center justify-center animate-pulse cursor-help`}
+                            >
+                                <Sparkles className="h-5 w-5 text-[#00DDDD]" />
+                            </div>
+                            
+                            <div className={`h-[1px] w-8 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
+                        </div>
+
+                        {/* Middle: Usage Metrics as Icons */}
+                        <div className="flex flex-col items-center gap-6 w-full">
+                            {/* Chats Metric */}
+                            <div 
+                                title={`Chats Used: ${subscription?.usage?.daily_chats || 0} / ${subscription?.subscription?.details?.daily_chat_limit || 1}`}
+                                className="flex flex-col items-center gap-1 group cursor-help"
+                            >
+                                <div className={`p-3 border-2 rounded-xl transition-all duration-300 ${
+                                    isDarkMode ? "border-white/10 hover:border-[#00DDDD] hover:bg-white/5" : "border-black/10 hover:border-[#00DDDD] hover:bg-black/5"
+                                } flex items-center justify-center`}>
+                                    <MessageSquare className="h-5 w-5 text-[#00DDDD]" />
+                                </div>
+                                <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                                    {subscription?.usage?.daily_chats || 0}
+                                </span>
+                            </div>
+
+                            {/* Images Metric */}
+                            <div 
+                                title={`Images Used: ${subscription?.usage?.monthly_images || 0} / ${subscription?.subscription?.details?.monthly_image_limit || 1}`}
+                                className="flex flex-col items-center gap-1 group cursor-help"
+                            >
+                                <div className={`p-3 border-2 rounded-xl transition-all duration-300 ${
+                                    isDarkMode ? "border-white/10 hover:border-[#00DDDD] hover:bg-white/5" : "border-black/10 hover:border-[#00DDDD] hover:bg-black/5"
+                                } flex items-center justify-center`}>
+                                    <ImageIcon className="h-5 w-5 text-[#00DDDD]" />
+                                </div>
+                                <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                                    {subscription?.usage?.monthly_images || 0}
+                                </span>
+                            </div>
+
+                            {/* Coding Metric */}
+                            <div 
+                                title={`Coding Used: ${subscription?.usage?.daily_codings || 0} / ${subscription?.subscription?.details?.daily_coding_limit || 1}`}
+                                className="flex flex-col items-center gap-1 group cursor-help"
+                            >
+                                <div className={`p-3 border-2 rounded-xl transition-all duration-300 ${
+                                    isDarkMode ? "border-white/10 hover:border-[#00DDDD] hover:bg-white/5" : "border-black/10 hover:border-[#00DDDD] hover:bg-black/5"
+                                } flex items-center justify-center`}>
+                                    <Code className="h-5 w-5 text-[#00DDDD]" />
+                                </div>
+                                <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                                    {subscription?.usage?.daily_codings || 0}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Bottom: Status Indicator */}
+                        <div className="w-full flex items-center justify-center">
+                            <div className={`h-8 w-8 rounded-full border border-dashed ${isDarkMode ? "border-white/20" : "border-black/20"} flex items-center justify-center`}>
+                                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                            </div>
                         </div>
                     </div>
                 )}
