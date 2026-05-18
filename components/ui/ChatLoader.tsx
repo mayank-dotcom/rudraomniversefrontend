@@ -2,56 +2,66 @@
 
 import { useEffect, useId, useRef } from "react";
 import { animate } from "animejs";
+import { useTheme } from "@/lib/theme-context";
 
 interface ChatLoaderProps {
     isDarkMode?: boolean;
 }
 
-export default function ChatLoader({ isDarkMode = true }: ChatLoaderProps) {
+export default function ChatLoader({ isDarkMode }: ChatLoaderProps) {
     const svgRef = useRef<SVGSVGElement>(null);
     const filterId = `displacementFilter-${useId().replace(/:/g, "")}`;
+    const { isDarkMode: globalDarkMode } = useTheme();
+    const activeDarkMode = isDarkMode ?? globalDarkMode;
+    const logoSrc = activeDarkMode ? "/dark.png" : "/light.png";
 
     useEffect(() => {
         if (!svgRef.current) return;
 
         const feTurbulence = svgRef.current.querySelector('feTurbulence');
         const feDisplacementMap = svgRef.current.querySelector('feDisplacementMap');
-        const polygon = svgRef.current.querySelector('polygon');
+        const image = svgRef.current.querySelector('image');
 
-        if (!feTurbulence || !feDisplacementMap || !polygon) return;
+        if (!feTurbulence || !feDisplacementMap || !image) return;
 
         const anim1 = animate([feTurbulence, feDisplacementMap], {
             baseFrequency: 0.05,
             scale: 15,
             alternate: true,
             loop: true,
-        });
-
-        const anim2 = animate(polygon, {
-            points: '18,22 90,18 82,58 60,52 54,38 38,44 44,58 38,72 108,104 76,112 48,70 44,76 38,104 18,112',
-            alternate: true,
-            loop: true,
+            duration: 4000,
+            easing: 'easeInOutQuad'
         });
 
         return () => {
             anim1.pause();
-            anim2.pause();
         };
     }, []);
 
     return (
-        <div className="flex items-center justify-center py-4">
+        <div className="flex items-center justify-center py-4 select-none">
+            <style dangerouslySetInnerHTML={{__html: `
+                @keyframes pixelGlow {
+                    0%, 100% { filter: drop-shadow(0 0 2px rgba(0,221,221,0.2)) contrast(1.1); }
+                    50% { filter: drop-shadow(0 0 12px rgba(0,221,221,0.7)) contrast(1.4); }
+                }
+                .pixelated-logo-loader {
+                    animation: pixelGlow 2s infinite ease-in-out;
+                    image-rendering: pixelated;
+                }
+            `}} />
             <svg
                 ref={svgRef}
                 width="64"
                 height="64"
                 viewBox="0 0 128 128"
-                className={isDarkMode ? "text-white/80" : "text-black/80"}
+                className="pixelated-logo-loader"
+                style={{ overflow: 'visible' }}
             >
                 <filter id={filterId}>
                     <feTurbulence
                         type="turbulence"
-                        numOctaves={2}
+                        numOctaves={3}
                         baseFrequency={0}
                         result="turbulence"
                     />
@@ -63,10 +73,14 @@ export default function ChatLoader({ isDarkMode = true }: ChatLoaderProps) {
                         yChannelSelector="G"
                     />
                 </filter>
-                <polygon
-                    points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108"
-                    fill="currentColor"
+                <image
+                    href={logoSrc}
+                    x="0"
+                    y="0"
+                    width="128"
+                    height="128"
                     filter={`url(#${filterId})`}
+                    style={{ transformOrigin: 'center', transform: activeDarkMode ? 'scale(1.485)' : 'none', transition: 'transform 0.3s ease' }}
                 />
             </svg>
         </div>

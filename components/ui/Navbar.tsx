@@ -40,21 +40,20 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
             <div className="max-w-[1400px] mx-auto flex items-center justify-between">
                 {/* Logo — 24px Bold, -0.02em tracking */}
                 <Link href="/" className="flex items-center gap-3 group shrink-0">
-                    <div className={`h-8 w-8 border ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center shrink-0`}>
-                        <svg width="24" height="24" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
-                            <polygon points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108" fill="currentColor" />
-                        </svg>
+                    <div className="h-8 w-8 flex items-center justify-center shrink-0 overflow-hidden">
+                        <img 
+                            src={isDarkMode ? "/dark.png" : "/light.png"} 
+                            alt="Logo" 
+                            className="h-full w-full object-contain transition-transform duration-300"
+                            style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
+                        />
                     </div>
-                    <div className="flex items-baseline gap-1">
-                        <span
-                            className={`font-display font-bold leading-none ${isDarkMode ? "text-white" : "text-black"}`}
-                            style={{ fontSize: "24px", letterSpacing: "-0.02em" }}
-                        >
-                            RUDRANEX
-                        </span>
-                        <span className={`font-serif text-xl italic ${isDarkMode ? "text-white/35" : "text-black/35"} leading-none`}>
-                            ai
-                        </span>
+                    <div className="h-6 flex items-center shrink-0 overflow-hidden ml-1">
+                        <img 
+                            src={isDarkMode ? "/dark_text.png" : "/light_text.png"} 
+                            alt="Rudranex" 
+                            className="h-full object-contain"
+                        />
                     </div>
                 </Link>
 

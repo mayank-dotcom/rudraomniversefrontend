@@ -102,15 +102,21 @@ function PageContent() {
             {/* Left Sidebar */}
             <div className={`h-full flex flex-col ${sidebarBg} transition-all duration-300 ${collapsed ? "w-16" : "w-56"} flex-shrink-0`}>
                 <Link href="/chat" className={`flex items-center gap-3 px-4 h-16 flex-shrink-0 ${collapsed ? "justify-center" : ""}`}>
-                    <div className={`h-[26px] w-[26px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center flex-shrink-0`}>
-                        <svg width="22" height="22" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
-                            <polygon points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108" fill="currentColor" />
-                        </svg>
+                    <div className="h-[26px] w-[26px] flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <img 
+                            src={isDarkMode ? "/dark.png" : "/light.png"} 
+                            alt="Logo" 
+                            className="h-full w-full object-contain transition-transform duration-300"
+                            style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
+                        />
                     </div>
                     {!collapsed && (
-                        <div className="flex items-baseline gap-1">
-                            <span className={`font-display font-black text-sm tracking-tighter ${isDarkMode ? "text-white" : "text-black"}`}>RUDRANEX</span>
-                            <span className={`font-serif text-xs italic ${isDarkMode ? "text-white/70" : "text-black/70"}`}>ai</span>
+                        <div className="h-3.5 flex items-center shrink-0 overflow-hidden ml-1">
+                            <img 
+                                src={isDarkMode ? "/dark_text.png" : "/light_text.png"} 
+                                alt="Rudranex" 
+                                className="h-full object-contain"
+                            />
                         </div>
                     )}
                 </Link>
@@ -166,10 +172,13 @@ function PageContent() {
                                     <circle cx="32" cy="32" r="28" fill="none" stroke={isDarkMode ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"} strokeWidth="3" />
                                     <circle cx="32" cy="32" r="28" fill="none" stroke={isDarkMode ? "white" : "black"} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 28 * 0.75} ${2 * Math.PI * 28 * 0.25}`} strokeDashoffset="0" />
                                 </svg>
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <svg width="28" height="28" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
-                                        <polygon points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108" fill="currentColor" />
-                                    </svg>
+                                <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                                    <img 
+                                        src={isDarkMode ? "/dark.png" : "/light.png"} 
+                                        alt="Logo" 
+                                        className="h-7 w-7 object-contain transition-transform duration-300"
+                                        style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
+                                    />
                                 </div>
                             </div>
                         </div>

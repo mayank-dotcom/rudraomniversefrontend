@@ -8,7 +8,7 @@ import {
     UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
-    Swords, CheckCircle, XCircle, Code
+    Swords, CheckCircle, XCircle, Code, Zap
 } from "lucide-react";
 import Link from "next/link";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
@@ -123,6 +123,17 @@ const setStoredActiveChatId = (chatId: string | null) => {
 };
 
 const Chat = () => {
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        handleResize();
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
     const [authed, setAuthed] = useState<boolean | null>(null);
     const [userName, setUserName] = useState<string>("");
     const [userEmail, setUserEmail] = useState<string>("");
@@ -130,8 +141,8 @@ const Chat = () => {
     const [input, setInput] = useState("");
     const [sidebarWidth, setSidebarWidth] = useState(260);
     const [rightSidebarWidth, setRightSidebarWidth] = useState(260);
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+    const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(true);
     const [isResizingLeft, setIsResizingLeft] = useState(false);
     const [isResizingRight, setIsResizingRight] = useState(false);
     const { isDarkMode, toggleTheme } = useTheme();
@@ -1090,23 +1101,39 @@ STRICT RULES:
 
     return (
         <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black flex overflow-hidden transition-colors duration-500 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+            <style dangerouslySetInnerHTML={{__html: `
+                @keyframes bounceArrowLeft {
+                    0%, 100% { transform: translateY(-50%) translateX(0) scale(1.1); }
+                    50% { transform: translateY(-50%) translateX(4px) scale(1.1); }
+                }
+                @keyframes bounceArrowRight {
+                    0%, 100% { transform: translateY(-50%) translateX(0) scale(1.1); }
+                    50% { transform: translateY(-50%) translateX(-4px) scale(1.1); }
+                }
+                .toggle-btn-left {
+                    animation: bounceArrowLeft 2s infinite ease-in-out;
+                }
+                .toggle-btn-right {
+                    animation: bounceArrowRight 2s infinite ease-in-out;
+                }
+            `}} />
             <div className={`absolute inset-0 noise opacity-[0.02] pointer-events-none ${isDarkMode ? "invert-0" : "invert"}`} />
 
             <aside
-                style={{ width: isSidebarCollapsed ? "72px" : `${sidebarWidth}px` }}
-                className={`h-full border-r-2 ${isDarkMode ? "border-white bg-[#0a0a0a]" : "border-black bg-[#fcfcfc]"} flex flex-col relative z-20 transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
+                style={{ width: isSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${sidebarWidth}px`) }}
+                className={`h-full border-r-2 ${isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "absolute left-0 top-0 h-full z-40 shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
             >
                 {!isSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
                         <div className={`p-6 border-b-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-between`}>
                             <Link href="/" className="flex items-center gap-3">
-                                <div className={`h-[44px] w-[44px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
-                                    <svg width="42" height="42" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
-                                        <polygon
-                                            points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108"
-                                            fill="currentColor"
-                                        />
-                                    </svg>
+                                <div className="h-[44px] w-[44px] flex items-center justify-center overflow-hidden">
+                                    <img 
+                                        src={isDarkMode ? "/dark.png" : "/light.png"} 
+                                        alt="Logo" 
+                                        className="h-full w-full object-contain transition-transform duration-300"
+                                        style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
+                                    />
                                 </div>
                             </Link>
                             <button
@@ -1126,7 +1153,7 @@ STRICT RULES:
                                 className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${
                                     sidebarTab === "history"
                                         ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
-                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
                                 }`}
                             >
                                 <Clock className="h-3 w-3 inline mr-1.5 -mt-0.5" />
@@ -1137,7 +1164,7 @@ STRICT RULES:
                                 className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${
                                     sidebarTab === "modes"
                                         ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
-                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
                                 }`}
                             >
                                 <Bot className="h-3 w-3 inline mr-1.5 -mt-0.5" />
@@ -1157,21 +1184,21 @@ STRICT RULES:
                                                     placeholder="Search sessions..."
                                                     value={searchQuery}
                                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                                    className={`w-full ${isDarkMode ? "bg-white/5 border-white placeholder:text-white/30" : "bg-white border-black placeholder:text-black/50"} border p-2 pl-9 text-[10px] font-mono uppercase tracking-widest focus:outline-none focus:border-white transition-all ${isDarkMode ? "text-white" : "text-black"}`}
+                                                    className={`w-full ${isDarkMode ? "bg-white/5 border-white placeholder:text-white/30" : "bg-white border-black placeholder:text-black"} border p-2 pl-9 text-[10px] font-mono uppercase tracking-widest focus:outline-none focus:border-white transition-all ${isDarkMode ? "text-white" : "text-black"}`}
                                                 />
                                             </div>
                                         </div>
                                     )}
 
                                     <div className="space-y-1">
-                                        {sidebarWidth > 120 && <span className={`px-2 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black/40"}`}>Recent Sessions</span>}
+                                        {sidebarWidth > 120 && <span className={`px-2 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black"}`}>Recent Sessions</span>}
                                         {isSessionsLoading && (
-                                            <div className={`px-3 py-4 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                                            <div className={`px-3 py-4 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black"}`}>
                                                 Loading sessions...
                                             </div>
                                         )}
                                         {!isSessionsLoading && filteredChats.length === 0 && (
-                                            <div className={`px-3 py-4 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                                            <div className={`px-3 py-4 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black"}`}>
                                                 {searchQuery ? "No matching sessions" : "No chats yet"}
                                             </div>
                                         )}
@@ -1207,29 +1234,29 @@ STRICT RULES:
                                                         className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${
                                                             activeChatId === chat.id 
                                                                 ? (isDarkMode ? "text-[#00DDDD]" : "text-white") 
-                                                                : (isDarkMode ? "text-white/60 hover:bg-white/5" : "text-black/60 hover:bg-black/5")
+                                                                : (isDarkMode ? "text-white/60 hover:bg-white/5" : "text-black hover:bg-black/5")
                                                         }`}
                                                     >
                                                         <MessageSquare className={`h-3 w-3 flex-shrink-0 ${
                                                             activeChatId === chat.id 
                                                                 ? (isDarkMode ? "text-[#00DDDD]" : "text-white") 
-                                                                : (isDarkMode ? "text-white/20" : "text-black/40")
+                                                                : (isDarkMode ? "text-white/20" : "text-black")
                                                         }`} />
-                                                        {sidebarWidth > 120 && <span className={`truncate font-sans ${activeChatId === chat.id ? "font-bold" : "opacity-60"}`}>{chat.title}</span>}
+                                                        {sidebarWidth > 120 && <span className={`truncate font-sans ${activeChatId === chat.id ? "font-bold" : (isDarkMode ? "opacity-60" : "text-black")}`}>{chat.title}</span>}
                                                     </button>
                                                 )}
                                                 {sidebarWidth > 120 && editingChatId !== chat.id && (
                                                     <>
                                                         <button
                                                             onClick={() => handleStartEditing(chat)}
-                                                            className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-white hover:scale-110" : "text-black/40 hover:text-black hover:scale-110"}`}
+                                                            className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-white hover:scale-110" : "text-black hover:scale-110"}`}
                                                             aria-label={`Rename ${chat.title}`}
                                                         >
                                                             <Edit3 className="h-3 w-3" />
                                                         </button>
                                                         <button
                                                             onClick={() => void handleDeleteChat(chat.id)}
-                                                            className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-red-400 hover:scale-110" : "text-black/40 hover:text-red-600 hover:scale-110"}`}
+                                                            className={`opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-red-400 hover:scale-110" : "text-black hover:text-red-600 hover:scale-110"}`}
                                                             aria-label={`Delete ${chat.id}`}
                                                         >
                                                             <Trash2 className="h-3.5 w-3.5" />
@@ -1247,7 +1274,7 @@ STRICT RULES:
 
                             {sidebarTab === "modes" && (
                                 <div className="space-y-1 px-1">
-                                    {sidebarWidth > 120 && <span className={`px-2 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black/40"}`}>AI Engines</span>}
+                                    {sidebarWidth > 120 && <span className={`px-2 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black"}`}>AI Engines</span>}
                                     {engines.map((engine) => {
                                         const featureId = getFeatureIdForEngine(engine.name)
                                         const isAvailable = planFeatures.length === 0 || planFeatures.includes(featureId)
@@ -1274,13 +1301,13 @@ STRICT RULES:
                                             className={`w-full flex items-center gap-3 p-3 text-xs transition-all ${
                                                 selectedEngine === engine.name
                                                     ? (isDarkMode ? "bg-[#00DDDD]/10 text-[#00DDDD] border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] text-white border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.4)]")
-                                                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                                                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
                                             }`}
                                             >
                                             {(() => {
                                                 const Icon = engine.icon as any;
                                                 return (
-                                                    <Icon className={`h-4 w-4 flex-shrink-0 ${isDarkMode ? 'text-white' : ''}`} />
+                                                    <Icon className={`h-4 w-4 flex-shrink-0 ${isDarkMode ? 'text-white' : (selectedEngine === engine.name ? 'text-white' : 'text-black')}`} />
                                                 );
                                             })()}
                                             {sidebarWidth > 120 && (
@@ -1292,7 +1319,7 @@ STRICT RULES:
                                                         ) : (
                                                             <XCircle className="h-3.5 w-3.5 text-red-400" />
                                                         )}
-                                                        <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>{engine.version}</span>
+                                                        <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/30" : "text-black"}`}>{engine.version}</span>
                                                     </div>
                                                 </div>
                                             )}
@@ -1347,70 +1374,81 @@ STRICT RULES:
                     </div>
                 ) : (
                     <div className="flex flex-col h-full items-center py-6 justify-between overflow-hidden w-full">
-                        {/* Top: Logo and New Chat */}
-                        <div className="flex flex-col items-center gap-6 w-full">
-                            <Link href="/" className="flex items-center justify-center">
-                                <div className={`h-10 w-10 border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
-                                    <svg width="28" height="28" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
-                                        <polygon
-                                            points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108"
-                                            fill="currentColor"
-                                        />
-                                    </svg>
+                        {/* Top: Logo */}
+                        <div className="flex flex-col items-center w-full">
+                            <Link href="/" className="flex items-center justify-center mb-4">
+                                <div className="h-10 w-10 flex items-center justify-center overflow-hidden">
+                                    <img 
+                                        src={isDarkMode ? "/dark.png" : "/light.png"} 
+                                        alt="Logo" 
+                                        className="h-full w-full object-contain transition-transform duration-300"
+                                        style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
+                                    />
                                 </div>
                             </Link>
                             <div className={`h-[1px] w-8 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
+                        </div>
+
+                        {/* Middle Group: All active icons tightly stacked with identical sizes */}
+                        <div className="flex flex-col items-center gap-3 w-full my-auto py-4">
                             <button
                                 onClick={handleCreateChat}
                                 disabled={isCreatingChat}
                                 title="New Chat"
-                                className={`p-3 transition-all duration-300 border-2 disabled:opacity-50 ${isDarkMode ? "bg-white border-white hover:bg-gray-200 hover:scale-110" : "bg-white border-black hover:bg-gray-50 hover:scale-110"}`}
+                                className={`h-11 w-11 flex items-center justify-center border-2 disabled:opacity-50 transition-all duration-300 ${
+                                    isDarkMode 
+                                        ? "bg-white border-white text-black hover:bg-gray-200 hover:scale-110" 
+                                        : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110"
+                                }`}
                             >
-                                <Plus className="h-4 w-4 text-black" />
+                                <Plus className="h-4 w-4 text-black font-bold" />
                             </button>
-                        </div>
-
-                        {/* Middle: History & Modes Tab Selectors */}
-                        <div className="flex flex-col items-center gap-4 w-full">
+                            
                             <button
                                 onClick={() => {
                                     setSidebarTab("history");
                                     setIsSidebarCollapsed(false);
                                 }}
                                 title="History"
-                                className={`p-3 transition-all duration-300 border-2 ${
+                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${
                                     sidebarTab === "history"
                                         ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-[#00DDDD] border-black text-white font-bold")
-                                        : (isDarkMode ? "border-transparent text-white/60 hover:text-white" : "border-transparent text-black/60 hover:text-black")
+                                        : (isDarkMode ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5" : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110")
                                 }`}
                             >
-                                <Clock className="h-5 w-5" />
+                                <Clock className="h-4 w-4" />
                             </button>
+                            
                             <button
                                 onClick={() => {
                                     setSidebarTab("modes");
                                     setIsSidebarCollapsed(false);
                                 }}
                                 title="Modes"
-                                className={`p-3 transition-all duration-300 border-2 ${
+                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${
                                     sidebarTab === "modes"
-                                        ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-[#00DDDD] border-black text-white font-bold")
-                                        : (isDarkMode ? "border-transparent text-white/60 hover:text-white" : "border-transparent text-black/60 hover:text-black")
+                                        ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-black border-black text-white font-bold")
+                                        : (isDarkMode ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5" : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110")
                                 }`}
                             >
-                                <Bot className="h-5 w-5" />
+                                <Bot className="h-4 w-4" />
                             </button>
-                        </div>
 
-                        {/* Bottom: Theme & Logout */}
-                        <div className="flex flex-col items-center gap-4 w-full px-2">
                             <button
                                 onClick={toggleTheme}
-                                className={`p-3 border-2 transition-all duration-300 ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110" : "border-black bg-white hover:bg-gray-50 hover:scale-110"}`}
                                 title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${
+                                    isDarkMode 
+                                        ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5" 
+                                        : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110"
+                                }`}
                             >
                                 {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
                             </button>
+                        </div>
+
+                        {/* Bottom: Logout with identical size */}
+                        <div className="flex flex-col items-center w-full px-2">
                             <button
                                 onClick={() => {
                                     removeApiKey();
@@ -1422,7 +1460,11 @@ STRICT RULES:
                                     window.location.href = "/";
                                 }}
                                 title="Logout"
-                                className={`p-3 border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500" : "border-black bg-white text-black hover:bg-red-500 hover:text-white hover:border-red-500"}`}
+                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${
+                                    isDarkMode 
+                                        ? "border-white/20 bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500" 
+                                        : "bg-white border-black text-black hover:bg-red-500 hover:text-white hover:border-red-500"
+                                }`}
                             >
                                 <LogOut className="h-4 w-4" />
                             </button>
@@ -1433,16 +1475,16 @@ STRICT RULES:
                 {/* Resize Handle */}
                 <div
                     onMouseDown={startResizingLeft}
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-white/20 transition-colors z-30"
+                    className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-white/20 transition-colors z-30 ${isMobile ? "hidden" : ""}`}
                 />
 
                 {/* Left Toggle Button */}
                 <button
                     onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    className={`absolute top-1/2 -translate-y-1/2 z-50 p-1 bg-[#0a0a0a] border-2 border-white/30 text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20`}
-                    style={{ right: isSidebarCollapsed ? "-2rem" : "-0.75rem" }}
+                    className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border-2 border-white/30 text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-left`}
+                    style={{ right: isSidebarCollapsed ? (isMobile ? "-3.2rem" : "-2.2rem") : "-0.95rem" }}
                 >
-                    {isSidebarCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+                    {isSidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
                 </button>
             </aside>
 
@@ -1451,14 +1493,20 @@ STRICT RULES:
                 {/* Fixed Header / Navbar */}
                 <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-10 relative z-30`}>
                     <div className="flex items-center gap-4">
-                        <div className={`h-[44px] w-[44px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
-                            <svg width="42" height="42" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
-                                <polygon points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108" fill="currentColor" />
-                            </svg>
+                        <div className="h-[44px] w-[44px] flex items-center justify-center overflow-hidden">
+                            <img 
+                                src={isDarkMode ? "/dark.png" : "/light.png"} 
+                                alt="Logo" 
+                                className="h-full w-full object-contain transition-transform duration-300"
+                                style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
+                            />
                         </div>
-                        <div className="flex items-baseline gap-1.5">
-                            <span className={`font-display font-black text-lg tracking-tighter ${isDarkMode ? "text-white" : "text-black"}`}>RUDRANEX</span>
-                            <span className={`font-serif text-lg ${isDarkMode ? "text-white/40" : "text-black/40"} italic`}>ai</span>
+                        <div className="h-5 flex items-center shrink-0 overflow-hidden ml-1">
+                            <img 
+                                src={isDarkMode ? "/dark_text.png" : "/light_text.png"} 
+                                alt="Rudranex" 
+                                className="h-full object-contain"
+                            />
                         </div>
 
                     </div>
@@ -1595,15 +1643,9 @@ STRICT RULES:
                                                             <button onClick={() => retryMessage(i)} title="Regenerate" className={`p-2 ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
                                                                 <RotateCcw className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            {isImageContent(msg.content) ? (
-                                                                <button onClick={() => handleDownloadImage(msg.content)} title="Download Image" className={`p-2 ${isDarkMode ? "text-[#00DDDD]/80 hover:text-[#00DDDD]" : "text-[#00DDDD] hover:text-[#00c2c2]"} hover:scale-105 transition-all duration-300 group`}>
-                                                                    <FileDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                                                                </button>
-                                                            ) : (
-                                                                <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-2 ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
-                                                                    <FileDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                                                                </button>
-                                                            )}
+                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-2 ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
+                                                                <FileDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                            </button>
                                                         </>
                                                     )}
                                                 </div>
@@ -1863,8 +1905,8 @@ STRICT RULES:
 
             {/* Right Sidebar */}
             <aside
-                style={{ width: isRightSidebarCollapsed ? "72px" : `${rightSidebarWidth}px` }}
-                className={`h-full border-l-2 ${isDarkMode ? "border-white bg-[#0a0a0a]" : "border-black bg-[#fcfcfc]"} flex flex-col relative z-20 transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
+                style={{ width: isRightSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${rightSidebarWidth}px`) }}
+                className={`h-full border-l-2 ${isRightSidebarCollapsed && isMobile ? "border-l-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "absolute right-0 top-0 h-full z-40 shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
             >
                 {!isRightSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
@@ -2014,73 +2056,100 @@ STRICT RULES:
                     </div>
                 ) : (
                     <div className="flex flex-col h-full items-center py-6 justify-between overflow-hidden w-full">
-                        {/* Top: Plan Indicator */}
-                        <div className="flex flex-col items-center gap-6 w-full">
+                        {/* Top: Plan Indicator using Clock icon from the Plan Badge */}
+                        <div className="flex flex-col items-center gap-6 w-full px-2">
                             <div 
                                 title={`Active Plan: ${isSubscriptionLoading ? "Loading..." : (subscription?.subscription?.plan_name || "Free Trial")}`}
-                                className={`h-12 w-12 rounded-full border-2 ${
-                                    isDarkMode ? "border-[#00DDDD] bg-[#00DDDD]/10" : "border-[#00DDDD] bg-[#00DDDD]/5"
-                                } flex items-center justify-center animate-pulse cursor-help`}
+                                className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative cursor-help`}
                             >
-                                <Sparkles className="h-5 w-5 text-[#00DDDD]" />
+                                <Clock className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
+                                <div className={`absolute inset-0 rounded-sm border ${isDarkMode ? 'border-white' : 'border-black'} pointer-events-none`} />
                             </div>
                             
                             <div className={`h-[1px] w-8 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
                         </div>
 
-                        {/* Middle: Usage Metrics as Icons */}
+                        {/* Middle: Live Usage Progress Circle using ChatLoader */}
                         <div className="flex flex-col items-center gap-6 w-full">
-                            {/* Chats Metric */}
+                            <div 
+                                title="Live Chat Usage"
+                                className="relative w-12 h-12 flex items-center justify-center cursor-help"
+                            >
+                                <svg className="w-full h-full rotate-[-90deg] absolute">
+                                    <circle cx="24" cy="24" r="20" fill="none" stroke={isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"} strokeWidth="3" />
+                                    <circle
+                                        cx="24" cy="24" r="20" fill="none"
+                                        stroke="#00DDDD"
+                                        strokeWidth="3"
+                                        strokeDasharray="125.6"
+                                        strokeDashoffset={String(
+                                            isSubscriptionLoading || !subscription?.usage || !subscription?.subscription?.details?.daily_chat_limit
+                                                ? 125.6
+                                                : 125.6 - ((subscription.usage.daily_chats / subscription.subscription.details.daily_chat_limit) * 125.6)
+                                        )}
+                                        strokeLinecap="round"
+                                        className="transition-all duration-1000 drop-shadow-[0_0_4px_rgba(0,221,221,0.5)]"
+                                    />
+                                </svg>
+                                <div className="scale-[0.6] flex items-center justify-center">
+                                    <ChatLoader isDarkMode={isDarkMode} />
+                                </div>
+                            </div>
+
+                            {/* CHT (Chats Used) Metric */}
                             <div 
                                 title={`Chats Used: ${subscription?.usage?.daily_chats || 0} / ${subscription?.subscription?.details?.daily_chat_limit || 1}`}
-                                className="flex flex-col items-center gap-1 group cursor-help"
+                                className="flex flex-col items-center gap-0.5 cursor-help"
                             >
-                                <div className={`p-3 border-2 rounded-xl transition-all duration-300 ${
-                                    isDarkMode ? "border-white/10 hover:border-[#00DDDD] hover:bg-white/5" : "border-black/10 hover:border-[#00DDDD] hover:bg-black/5"
-                                } flex items-center justify-center`}>
-                                    <MessageSquare className="h-5 w-5 text-[#00DDDD]" />
-                                </div>
-                                <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                                <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                    CHT
+                                </span>
+                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
                                     {subscription?.usage?.daily_chats || 0}
                                 </span>
                             </div>
 
-                            {/* Images Metric */}
+                            {/* IMG (Images Used) Metric */}
                             <div 
                                 title={`Images Used: ${subscription?.usage?.monthly_images || 0} / ${subscription?.subscription?.details?.monthly_image_limit || 1}`}
-                                className="flex flex-col items-center gap-1 group cursor-help"
+                                className="flex flex-col items-center gap-0.5 cursor-help"
                             >
-                                <div className={`p-3 border-2 rounded-xl transition-all duration-300 ${
-                                    isDarkMode ? "border-white/10 hover:border-[#00DDDD] hover:bg-white/5" : "border-black/10 hover:border-[#00DDDD] hover:bg-black/5"
-                                } flex items-center justify-center`}>
-                                    <ImageIcon className="h-5 w-5 text-[#00DDDD]" />
-                                </div>
-                                <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                                <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                    IMG
+                                </span>
+                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
                                     {subscription?.usage?.monthly_images || 0}
                                 </span>
                             </div>
 
-                            {/* Coding Metric */}
+                            {/* COD (Coding Used) Metric */}
                             <div 
                                 title={`Coding Used: ${subscription?.usage?.daily_codings || 0} / ${subscription?.subscription?.details?.daily_coding_limit || 1}`}
-                                className="flex flex-col items-center gap-1 group cursor-help"
+                                className="flex flex-col items-center gap-0.5 cursor-help"
                             >
-                                <div className={`p-3 border-2 rounded-xl transition-all duration-300 ${
-                                    isDarkMode ? "border-white/10 hover:border-[#00DDDD] hover:bg-white/5" : "border-black/10 hover:border-[#00DDDD] hover:bg-black/5"
-                                } flex items-center justify-center`}>
-                                    <Code className="h-5 w-5 text-[#00DDDD]" />
-                                </div>
-                                <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                                <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                    COD
+                                </span>
+                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
                                     {subscription?.usage?.daily_codings || 0}
                                 </span>
                             </div>
                         </div>
 
-                        {/* Bottom: Status Indicator */}
-                        <div className="w-full flex items-center justify-center">
-                            <div className={`h-8 w-8 rounded-full border border-dashed ${isDarkMode ? "border-white/20" : "border-black/20"} flex items-center justify-center`}>
-                                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                            </div>
+                        {/* Bottom: Mini Gold Upgrade Button */}
+                        <div className="w-full flex items-center justify-center px-2 pb-10">
+                            <Link href="/pricing" title="Upgrade Now" className="block cursor-pointer">
+                                <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-amber-500/20`}>
+                                    <div className="bubble-layer bubble-1"></div>
+                                    <div className="bubble-layer bubble-2"></div>
+                                    <div className="bubble-layer bubble-3"></div>
+                                    <div className="bubble-layer bubble-4"></div>
+                                    <div className="bubble-layer bubble-5"></div>
+                                    <div className="bubble-layer bubble-6"></div>
+                                    <div className="bubble-layer bubble-7"></div>
+                                    <Zap className="h-5 w-5 text-black relative z-10 fill-black" />
+                                </button>
+                            </Link>
                         </div>
                     </div>
                 )}
@@ -2088,16 +2157,16 @@ STRICT RULES:
                 {/* Right Resize Handle */}
                 <div
                     onMouseDown={startResizingRight}
-                    className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-white/20 transition-colors z-30"
+                    className={`absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-white/20 transition-colors z-30 ${isMobile ? "hidden" : ""}`}
                 />
 
                 {/* Right Toggle Button */}
                 <button
                     onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
-                    className={`absolute top-1/2 -translate-y-1/2 z-50 p-1 bg-[#0a0a0a] border border-white text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20`}
-                    style={{ left: isRightSidebarCollapsed ? "-2rem" : "-0.75rem" }}
+                    className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border border-white text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-right`}
+                    style={{ left: isRightSidebarCollapsed ? (isMobile ? "-3.2rem" : "-2.2rem") : "-0.95rem" }}
                 >
-                    {isRightSidebarCollapsed ? <ChevronLeft className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    {isRightSidebarCollapsed ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                 </button>
             </aside>
 

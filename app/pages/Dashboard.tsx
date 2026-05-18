@@ -816,13 +816,22 @@ const Dashboard = () => {
             <nav className={`h-20 flex items-center justify-between px-10 border-b ${isDarkMode ? "border-white bg-black/80" : "border-black bg-white/80"} backdrop-blur-2xl sticky top-0 z-[100]`}>
                 <div className="flex items-center gap-12">
                     <Link href="/" className="flex items-center gap-4 group">
-                        <div className={`h-[30px] w-[30px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center transition-transform group-hover:rotate-45`}>
-                            <svg width="28" height="28" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
-                                <polygon points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108" fill="currentColor" />
-                            </svg>
+                        <div className="h-[30px] w-[30px] flex items-center justify-center transition-transform group-hover:rotate-45 overflow-hidden">
+                            <img 
+                                src={isDarkMode ? "/dark.png" : "/light.png"} 
+                                alt="Logo" 
+                                className="h-full w-full object-contain transition-transform duration-300"
+                                style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
+                            />
                         </div>
-                        <div className="flex items-baseline gap-1">
-                            <span className={`font-display font-black tracking-tighter text-xl ${isDarkMode ? "text-white" : "text-black"}`}>RUDRANEX</span>
+                        <div className="flex items-center gap-2">
+                            <div className="h-5 flex items-center shrink-0 overflow-hidden">
+                                <img 
+                                    src={isDarkMode ? "/dark_text.png" : "/light_text.png"} 
+                                    alt="Rudranex" 
+                                    className="h-full object-contain"
+                                />
+                            </div>
                             <span className={`font-serif italic text-xl tracking-tighter ${isDarkMode ? "text-white/40" : "text-black/40"}`}>admin</span>
                         </div>
                     </Link>
