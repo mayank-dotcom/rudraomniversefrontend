@@ -1331,46 +1331,48 @@ STRICT RULES:
                         </div>
 
                         {/* User Profile */}
-                        <div className={`p-6 border-t-2 ${isDarkMode ? "border-white bg-black/40" : "border-black bg-white"}`}>
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-3">
-                                    <div className={`h-10 w-10 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative group`}>
-                                        <User className={`h-5 w-5 ${isDarkMode ? "text-white" : "text-black"}`} />
-                                        <div className={`absolute top-0 left-0 w-1 h-1 border-t border-l ${isDarkMode ? "border-white" : "border-black"}`} />
-                                    </div>
-                                    {sidebarWidth > 120 && (
-                                        <div className="flex flex-col">
-                                            <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
-                                            <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black"}`}>Pro Member</span>
+                        {!isMobile && (
+                            <div className={`p-6 border-t-2 ${isDarkMode ? "border-white bg-black/40" : "border-black bg-white"}`}>
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`h-10 w-10 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative group`}>
+                                            <User className={`h-5 w-5 ${isDarkMode ? "text-white" : "text-black"}`} />
+                                            <div className={`absolute top-0 left-0 w-1 h-1 border-t border-l ${isDarkMode ? "border-white" : "border-black"}`} />
                                         </div>
-                                    )}
+                                        {sidebarWidth > 120 && (
+                                            <div className="flex flex-col">
+                                                <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
+                                                <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black"}`}>Pro Member</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={toggleTheme}
+                                        className={`p-2 border transition-all duration-300 group ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black bg-white hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
+                                        title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                                    >
+                                        <div className="group-hover:rotate-180 transition-transform duration-500">
+                                            {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
+                                        </div>
+                                    </button>
                                 </div>
                                 <button
-                                    onClick={toggleTheme}
-                                    className={`p-2 border transition-all duration-300 group ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black bg-white hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
-                                    title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                                    onClick={() => {
+                                        removeApiKey();
+                                        removeUserInfo();
+                                        setStoredActiveChatId(null);
+                                        setAuthed(false);
+                                        setUserName("");
+                                        setUserEmail("");
+                                        window.location.href = "/";
+                                    }}
+                                    title="Logout"
+                                    className={`w-full flex items-center justify-center gap-3 p-3 border-2 ${isDarkMode ? "border-white bg-white/5 text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-white" : "border-black bg-white text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-black"}`}
                                 >
-                                    <div className="group-hover:rotate-180 transition-transform duration-500">
-                                        {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
-                                    </div>
+                                    <LogOut className={`h-3 w-3 ${isDarkMode ? "text-white" : "text-black"}`} /> {sidebarWidth > 120 && "Logout session"}
                                 </button>
                             </div>
-                            <button
-                                onClick={() => {
-                                    removeApiKey();
-                                    removeUserInfo();
-                                    setStoredActiveChatId(null);
-                                    setAuthed(false);
-                                    setUserName("");
-                                    setUserEmail("");
-                                    window.location.href = "/";
-                                }}
-                                title="Logout"
-                                className={`w-full flex items-center justify-center gap-3 p-3 border-2 ${isDarkMode ? "border-white bg-white/5 text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-white" : "border-black bg-white text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-black"}`}
-                            >
-                                <LogOut className={`h-3 w-3 ${isDarkMode ? "text-white" : "text-black"}`} /> {sidebarWidth > 120 && "Logout session"}
-                            </button>
-                        </div>
+                        )}
                     </div>
                 ) : (
                     <div className="flex flex-col h-full items-center py-6 justify-between overflow-hidden w-full">
@@ -1448,27 +1450,30 @@ STRICT RULES:
                         </div>
 
                         {/* Bottom: Logout with identical size */}
-                        <div className="flex flex-col items-center w-full px-2">
-                            <button
-                                onClick={() => {
-                                    removeApiKey();
-                                    removeUserInfo();
-                                    setStoredActiveChatId(null);
-                                    setAuthed(false);
-                                    setUserName("");
-                                    setUserEmail("");
-                                    window.location.href = "/";
-                                }}
-                                title="Logout"
-                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${
-                                    isDarkMode 
-                                        ? "border-white/20 bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500" 
-                                        : "bg-white border-black text-black hover:bg-red-500 hover:text-white hover:border-red-500"
-                                }`}
-                            >
-                                <LogOut className="h-4 w-4" />
-                            </button>
-                        </div>
+                        {/* Bottom: Logout with identical size */}
+                        {!isMobile && (
+                            <div className="flex flex-col items-center w-full px-2">
+                                <button
+                                    onClick={() => {
+                                        removeApiKey();
+                                        removeUserInfo();
+                                        setStoredActiveChatId(null);
+                                        setAuthed(false);
+                                        setUserName("");
+                                        setUserEmail("");
+                                        window.location.href = "/";
+                                    }}
+                                    title="Logout"
+                                    className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${
+                                        isDarkMode 
+                                            ? "border-white/20 bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500" 
+                                            : "bg-white border-black text-black hover:bg-red-500 hover:text-white hover:border-red-500"
+                                    }`}
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -1480,7 +1485,13 @@ STRICT RULES:
 
                 {/* Left Toggle Button */}
                 <button
-                    onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    onClick={() => {
+                        const newCollapsed = !isSidebarCollapsed;
+                        setIsSidebarCollapsed(newCollapsed);
+                        if (!newCollapsed) {
+                            setIsRightSidebarCollapsed(true);
+                        }
+                    }}
                     className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border-2 border-white/30 text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-left`}
                     style={{ right: isSidebarCollapsed ? (isMobile ? "-3.2rem" : "-2.2rem") : "-0.95rem" }}
                 >
@@ -1491,7 +1502,7 @@ STRICT RULES:
             {/* Main Chat Area */}
             <div className="flex-1 flex flex-col relative h-full overflow-hidden">
                 {/* Fixed Header / Navbar */}
-                <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-10 relative z-30`}>
+                <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-4 md:px-10 relative z-30`}>
                     <div className="flex items-center gap-4">
                         <div className="h-[44px] w-[44px] flex items-center justify-center overflow-hidden">
                             <img 
@@ -1501,25 +1512,67 @@ STRICT RULES:
                                 style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
                             />
                         </div>
-                        <div className="h-5 flex items-center shrink-0 overflow-hidden ml-1">
-                            <img 
-                                src={isDarkMode ? "/dark_text.png" : "/light_text.png"} 
-                                alt="Rudranex" 
-                                className="h-full object-contain"
-                            />
-                        </div>
-
-                    </div>
-                    <div className="hidden md:flex flex-col items-end gap-0.5">
-                        <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>Current Session</span>
-                        <div className="flex items-center gap-2">
-                            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${isDarkMode ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-500/10 border border-emerald-500/20"}`}>
-                                <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                <span className="text-[8px] font-mono text-emerald-500 uppercase tracking-widest">Active</span>
+                        {!isMobile && (
+                            <div className="h-5 flex items-center shrink-0 overflow-hidden ml-1">
+                                <img 
+                                    src={isDarkMode ? "/dark_text.png" : "/light_text.png"} 
+                                    alt="Rudranex" 
+                                    className="h-full object-contain"
+                                />
                             </div>
-                            <span className={`text-xs ${isDarkMode ? "text-white/70" : "text-black/70"}`}>{activeChat?.title || "Unsaved chat"}</span>
-                        </div>
+                        )}
                     </div>
+                    {isMobile ? (
+                        <div className="flex items-center gap-2">
+                            {/* Theme Toggler */}
+                            <button
+                                onClick={toggleTheme}
+                                className={`p-2 border transition-all duration-300 ${isDarkMode ? "border-white/20 hover:bg-white/5 text-white" : "border-black bg-white text-black hover:bg-gray-50"}`}
+                                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                            >
+                                {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
+                            </button>
+
+                            {/* User details */}
+                            <div className="flex items-center gap-1">
+                                <div className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative`}>
+                                    <User className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
+                                </div>
+                            </div>
+
+                            {/* Logout button */}
+                            <button
+                                onClick={() => {
+                                    removeApiKey();
+                                    removeUserInfo();
+                                    setStoredActiveChatId(null);
+                                    setAuthed(false);
+                                    setUserName("");
+                                    setUserEmail("");
+                                    window.location.href = "/";
+                                }}
+                                title="Logout"
+                                className={`p-2 border-2 transition-all active:scale-95 ${
+                                    isDarkMode 
+                                        ? "border-white bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500" 
+                                        : "border-black bg-white text-black hover:bg-red-500 hover:text-white hover:border-red-500"
+                                }`}
+                            >
+                                <LogOut className="h-4 w-4" />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="hidden md:flex flex-col items-end gap-0.5">
+                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>Current Session</span>
+                            <div className="flex items-center gap-2">
+                                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${isDarkMode ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-500/10 border border-emerald-500/20"}`}>
+                                    <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                    <span className="text-[8px] font-mono text-emerald-500 uppercase tracking-widest">Active</span>
+                                </div>
+                                <span className={`text-xs ${isDarkMode ? "text-white/70" : "text-black/70"}`}>{activeChat?.title || "Unsaved chat"}</span>
+                            </div>
+                        </div>
+                    )}
                 </header>
 
                 <main className={`flex-1 ${isChatEmpty ? "overflow-y-hidden flex flex-col justify-center pt-32 pb-16" : "overflow-y-auto block pt-10 pb-44"} px-6 md:px-20 relative z-10 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
@@ -1552,9 +1605,9 @@ STRICT RULES:
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                                            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                                            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} w-full`}
                                         >
-                                            <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[85%]" : "items-start max-w-[68%]"}`}>
+                                            <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[90%] md:max-w-[85%]" : "items-start max-w-[90%] md:max-w-[68%]"}`}>
                                                 <div className="flex items-center gap-3 mb-4">
                                                     <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/60"}`}>
                                                         {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
@@ -1661,7 +1714,7 @@ STRICT RULES:
                 </main>
 
                 {/* Input Bar */}
-                <div className={`absolute bottom-0 left-0 right-0 z-50 p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}>
+                <div className={`absolute bottom-0 left-0 right-0 z-50 p-4 md:p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}>
                     <div className="w-full max-w-4xl relative">
                         <div className="relative">
                             {/* File Preview */}
@@ -1820,8 +1873,8 @@ STRICT RULES:
                                             onClick={() => setShowEngineSelect(!showEngineSelect)}
                                             className={`flex items-center gap-2 px-3 py-2 border-2 ${showEngineSelect ? "border-[#00DDDD] text-[#00DDDD]" : (isDarkMode ? "border-white text-white/60 hover:border-[#00DDDD] hover:text-[#00DDDD]" : "border-black text-black/60 hover:border-[#00DDDD] hover:text-[#00DDDD]")} text-[9px] font-mono uppercase tracking-widest transition-all duration-300 rounded`}
                                         >
-                                            <Bot className="h-3 w-3" />
-                                            {selectedEngine}
+                                            <Bot className="h-3.5 w-3.5" />
+                                            {!isMobile && selectedEngine}
                                         </button>
 
                                         <AnimatePresence>
@@ -1910,7 +1963,7 @@ STRICT RULES:
             >
                 {!isRightSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
-                        <div className={`p-8 border-b-2 ${isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+                        <div className={`p-8 ${isMobile ? "border-b-0" : `border-b-2 ${isDarkMode ? "border-white" : "border-black"}`} ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
                             {/* Plan Badge */}
                             <div className="flex items-start mb-8">
                                 <div className="flex flex-col">
@@ -2037,7 +2090,7 @@ STRICT RULES:
                                 </div>
                             </div>
 
-                            <Link href="/pricing" className="block w-full">
+                            <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : ""}`}>
                                 <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all duration-300">
                                     <div className="bubble-layer bubble-1"></div>
                                     <div className="bubble-layer bubble-2"></div>
@@ -2162,7 +2215,13 @@ STRICT RULES:
 
                 {/* Right Toggle Button */}
                 <button
-                    onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
+                    onClick={() => {
+                        const newCollapsed = !isRightSidebarCollapsed;
+                        setIsRightSidebarCollapsed(newCollapsed);
+                        if (!newCollapsed) {
+                            setIsSidebarCollapsed(true);
+                        }
+                    }}
                     className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border border-white text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-right`}
                     style={{ left: isRightSidebarCollapsed ? (isMobile ? "-3.2rem" : "-2.2rem") : "-0.95rem" }}
                 >
