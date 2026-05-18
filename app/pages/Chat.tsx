@@ -88,6 +88,18 @@ const getWelcomeMessages = (): Message[] => [
 const formatTimestamp = (value?: string) =>
     new Date(value || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+const isImageContent = (content: string): boolean => {
+    if (!content) return false;
+    const trimmed = content.trim();
+    if (trimmed.startsWith("data:image/")) return true;
+    if (/^https?:\/\/[^\s]+$/i.test(trimmed)) {
+        if (trimmed.includes("pollinations.ai") || /\.(png|jpe?g|gif|webp|svg|bmp)(\?.*)?$/i.test(trimmed)) {
+            return true;
+        }
+    }
+    return false;
+};
+
 const buildChatTitle = (value: string) => {
     const normalized = value.trim().replace(/\s+/g, " ");
     if (!normalized) return "New Chat";
@@ -945,7 +957,7 @@ STRICT RULES:
                 aiContent = firstChoice ? JSON.stringify(firstChoice) : "Response received from Rudranex AI.";
             }
 
-            const isDataUrl = aiContent.startsWith("data:image/");
+            const isImage = isImageGen || isImageContent(aiContent);
 
             setShowDots(false);
 
@@ -956,7 +968,7 @@ STRICT RULES:
             };
             setMessages((prev) => [...prev, assistantMessage]);
 
-            if (isImageGen && isDataUrl) {
+            if (isImage) {
                 setMessages((prev) => {
                     const newMessages = [...prev];
                     const lastMsg = newMessages[newMessages.length - 1];
@@ -1404,7 +1416,7 @@ STRICT RULES:
                                                         <p className={`text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white font-sans" : "text-black font-sans"}`}>
                                                             {msg.content}
                                                         </p>
-                                                    ) : msg.content.startsWith("data:image/") ? (
+                                                    ) : isImageContent(msg.content) ? (
                                                         <img
                                                             src={msg.content}
                                                             alt="Generated image"
