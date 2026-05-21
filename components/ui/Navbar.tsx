@@ -23,11 +23,11 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
     }
 
     const navLinks = [
-        { label: "Features", href: "/#features", num: "01" },
-        { label: "Pricing", href: "/pricing", num: "02" },
-        { label: "Manifesto", href: "/#manifesto", num: "03" },
-        { label: "Access", href: "/#cta", num: "04" },
-        { label: "Schools", href: "/schools", num: "05" },
+        { label: "Features", href: "/#features" },
+        { label: "Pricing", href: "/pricing" },
+        { label: "Manifesto", href: "/#manifesto" },
+        { label: "Access", href: "/#cta" },
+        { label: "Schools", href: "/schools" },
     ];
 
     return (
@@ -66,14 +66,6 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
                             className={`group flex items-center gap-2 font-sans font-medium uppercase transition-all duration-300 ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`}
                             style={{ fontSize: "12px", letterSpacing: "0.05em" }}
                         >
-                            {/* Technical Label for number */}
-                            <span
-                                className="font-sans font-bold text-[var(--color-cyan)] opacity-70 group-hover:opacity-100 transition-opacity"
-                                style={{ fontSize: "11px", letterSpacing: "0.1em" }}
-                            >
-                                {link.num}
-                            </span>
-                            <span className="opacity-30 group-hover:opacity-60 transition-opacity">—</span>
                             <span className="group-hover:text-[var(--color-cyan)] transition-colors duration-300">{link.label}</span>
                         </Link>
                     ))}
@@ -137,13 +129,6 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
                             style={{ fontSize: "12px", letterSpacing: "0.05em" }}
                             onClick={() => setIsMenuOpen(false)}
                         >
-                            <span
-                                className="font-sans font-bold text-[var(--color-cyan)]"
-                                style={{ fontSize: "11px", letterSpacing: "0.1em" }}
-                            >
-                                {link.num}
-                            </span>
-                            <span className="opacity-25">—</span>
                             {link.label}
                         </Link>
                     ))}

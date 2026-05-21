@@ -18,14 +18,14 @@ const Index = () => {
     ];
 
     const features = [
-        { number: "01", title: "Tech Interview Simulator", tag: "INTERVIEW", description: "Practice live tech interviews with an AI that adapts in real time. DSA, system design, behavioural — all simulated with structured, instant feedback." },
-        { number: "02", title: "Resume Analyzer", tag: "CAREER", description: "Upload your resume. Get pinpoint feedback — ATS score, missing keywords, role-specific rewrites for engineering and management tracks." },
-        { number: "03", title: "Career Predictor", tag: "SILENT", description: "Discover the career paths that fit you best — backed by deep ML on skills, projects and interviews." },
-        { number: "04", title: "PDF Intelligence", tag: "READING", description: "Stop reading 100-page textbooks. Chat with them. Extract summaries, ask questions, find exact answers — instantly." },
-        { number: "05", title: "Mock Tests", tag: "PRACTICE", description: "Generate adaptive MCQs from any topic or file. Quizzes that actually adjust to your weak spots." },
-        { number: "06", title: "Code & GitHub", tag: "CODE", description: "Paste a GitHub link. We pull the raw code and help you debug, explain, refactor or rewrite — line by line." },
-        { number: "07", title: "Vision AI & Generation", tag: "VISION", description: "Snap handwritten math for step-by-step solutions, or describe an idea and let AI render stunning visuals for your projects." },
-        { number: "08", title: "Personalised Learning", tag: "MEMORY", description: "Your AI study companion remembers what you struggle with — and crafts custom plans that actually move the needle." },
+        { title: "Tech Interview Simulator", tag: "INTERVIEW", description: "Practice live tech interviews with an AI that adapts in real time. DSA, system design, behavioural — all simulated with structured, instant feedback." },
+        { title: "Resume Analyzer", tag: "CAREER", description: "Upload your resume. Get pinpoint feedback — ATS score, missing keywords, role-specific rewrites for engineering and management tracks." },
+        { title: "Career Predictor", tag: "SILENT", description: "Discover the career paths that fit you best — backed by deep ML on skills, projects and interviews." },
+        { title: "PDF Intelligence", tag: "READING", description: "Stop reading 100-page textbooks. Chat with them. Extract summaries, ask questions, find exact answers — instantly." },
+        { title: "Mock Tests", tag: "PRACTICE", description: "Generate adaptive MCQs from any topic or file. Quizzes that actually adjust to your weak spots." },
+        { title: "Code & GitHub", tag: "CODE", description: "Paste a GitHub link. We pull the raw code and help you debug, explain, refactor or rewrite — line by line." },
+        { title: "Vision AI & Generation", tag: "VISION", description: "Snap handwritten math for step-by-step solutions, or describe an idea and let AI render stunning visuals for your projects." },
+        { title: "Personalised Learning", tag: "MEMORY", description: "Your AI study companion remembers what you struggle with — and crafts custom plans that actually move the needle." },
     ];
 
     return (
@@ -62,7 +62,7 @@ const Index = () => {
                             className={`font-sans font-bold uppercase ${isDarkMode ? "text-white/50" : "text-black/30"} mb-12`}
                             style={{ fontSize: "11px", letterSpacing: "0.1em" }}
                         >
-                            EST • 2026 • INDIA
+                            EST • INDIA
                         </p>
 
                         {/* Hero Headline — 72px Bold, -0.04em tracking */}
@@ -78,12 +78,12 @@ const Index = () => {
 
                         </motion.h1>
 
-                        {/* Taglines - Technical Labels for num, Body Copy for text */}
+                        {/* Taglines - Technical Labels, Body Copy for text */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-20 w-full max-w-5xl mb-20">
                             {[
-                                { num: "01", label: "INTELLIGENCE", text: "Systems that integrate seamlessly into the human experience." },
-                                { num: "02", label: "PRECISION", text: "Clinical efficiency meets sophisticated AI architecture." },
-                                { num: "03", label: "IMPACT", text: "High-performance tools for the world's leading minds." },
+                                { label: "INTELLIGENCE", text: "Systems that integrate seamlessly into the human experience." },
+                                { label: "PRECISION", text: "Clinical efficiency meets sophisticated AI architecture." },
+                                { label: "IMPACT", text: "High-performance tools for the world's leading minds." },
                             ].map((tag, i) => (
                                 <div key={i} className="flex flex-col gap-4">
                                     {/* Technical Label — 11px Bold, 0.1em */}
@@ -91,7 +91,7 @@ const Index = () => {
                                         className="font-sans font-bold uppercase text-[var(--color-cyan)]"
                                         style={{ fontSize: "11px", letterSpacing: "0.1em" }}
                                     >
-                                        {tag.num} — {tag.label}
+                                        {tag.label}
                                     </span>
                                     {/* Body Copy — 16px Regular */}
                                     <p
@@ -299,7 +299,7 @@ const Index = () => {
                                 className={`font-sans font-bold uppercase ${isDarkMode ? "text-white/20" : "text-black/30"}`}
                                 style={{ fontSize: "11px", letterSpacing: "0.1em" }}
                             >
-                                § 04
+                                § Access
                             </span>
                             <h3
                                 className={`font-sans font-bold uppercase leading-relaxed mt-8 ${isDarkMode ? "text-white/25" : "text-black/40"}`}

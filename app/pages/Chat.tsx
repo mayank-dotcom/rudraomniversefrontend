@@ -8,7 +8,7 @@ import {
     UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
-    Swords, CheckCircle, XCircle, Code, Zap
+    Swords, CheckCircle, XCircle, Code, Zap, Pause
 } from "lucide-react";
 import Link from "next/link";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
@@ -186,7 +186,6 @@ const Chat = () => {
     ], []);
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
     const [typedPlaceholder, setTypedPlaceholder] = useState(PLACEHOLDER_TEXTS[0]);
-    const [placeholderCharPos, setPlaceholderCharPos] = useState(PLACEHOLDER_TEXTS[0].length);
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState("");
     const editingInputRef = useRef<HTMLInputElement>(null);
@@ -194,6 +193,7 @@ const Chat = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const requestStartTime = useRef<number>(0);
     const engineSelectRef = useRef<HTMLDivElement>(null);
+    const stopGenerationRef = useRef(false);
 
     const [subscription, setSubscription] = useState<any>(null);
     const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
@@ -347,25 +347,27 @@ const Chat = () => {
 
     useEffect(() => {
         if (isProcessingFile) return;
-        const interval = setInterval(() => {
-            setPlaceholderIndex(prev => (prev + 1) % PLACEHOLDER_TEXTS.length);
-            setPlaceholderCharPos(0);
-        }, 4000);
+        let charPos = 0;
+        let interval: ReturnType<typeof setInterval>;
+        const startTyping = () => {
+            const text = PLACEHOLDER_TEXTS[placeholderIndex];
+            charPos = 0;
+            interval = setInterval(() => {
+                charPos++;
+                if (charPos <= text.length) {
+                    setTypedPlaceholder(text.slice(0, charPos));
+                }
+                if (charPos >= text.length) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        setPlaceholderIndex(prev => (prev + 1) % PLACEHOLDER_TEXTS.length);
+                    }, 2000);
+                }
+            }, 20);
+        };
+        startTyping();
         return () => clearInterval(interval);
-    }, [PLACEHOLDER_TEXTS.length, isProcessingFile]);
-
-    useEffect(() => {
-        if (isProcessingFile) return;
-        const currentText = PLACEHOLDER_TEXTS[placeholderIndex];
-        if (placeholderCharPos < currentText.length) {
-            const timeout = setTimeout(() => {
-                const nextPos = Math.min(placeholderCharPos + 1, currentText.length);
-                setTypedPlaceholder(currentText.slice(0, nextPos));
-                setPlaceholderCharPos(nextPos);
-            }, 30);
-            return () => clearTimeout(timeout);
-        }
-    }, [placeholderCharPos, placeholderIndex, PLACEHOLDER_TEXTS, isProcessingFile]);
+    }, [placeholderIndex, PLACEHOLDER_TEXTS, isProcessingFile]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -1012,17 +1014,25 @@ STRICT RULES:
                     return newMessages;
                 });
             } else {
-                for (let i = 0; i < aiContent.length; i++) {
-                    await new Promise(resolve => setTimeout(resolve, 10));
-                    const currentText = aiContent.slice(0, i + 1);
-                    setMessages((prev) => {
-                        const newMessages = [...prev];
-                        const lastMsg = newMessages[newMessages.length - 1];
-                        if (lastMsg && lastMsg.role === "assistant") {
-                            lastMsg.content = currentText;
-                        }
-                        return newMessages;
-                    });
+                const words = aiContent.split(/(?<=\s)/);
+                let currentText = "";
+                for (let i = 0; i < words.length; i++) {
+                    if (stopGenerationRef.current) {
+                        aiContent = currentText;
+                        break;
+                    }
+                    currentText += words[i];
+                    if (i % 3 === 0 || i === words.length - 1) {
+                        setMessages((prev) => {
+                            const newMessages = [...prev];
+                            const lastMsg = newMessages[newMessages.length - 1];
+                            if (lastMsg && lastMsg.role === "assistant") {
+                                lastMsg.content = currentText;
+                            }
+                            return newMessages;
+                        });
+                        await new Promise(resolve => setTimeout(resolve, 5));
+                    }
                 }
             }
             if (currentChatId) {
@@ -1081,7 +1091,14 @@ STRICT RULES:
         } finally {
             setShowDots(false);
             setIsLoading(false);
+            stopGenerationRef.current = false;
         }
+    };
+
+    const handleStopGeneration = () => {
+        stopGenerationRef.current = true;
+        setIsLoading(false);
+        setShowDots(false);
     };
 
     if (authed === null) {
@@ -1944,14 +1961,24 @@ STRICT RULES:
                                             )}
                                         </AnimatePresence>
                                     </div>
-                                    <button
-                                        onClick={() => void handleSend()}
-                                        disabled={isLoading || isHistoryLoading || isProcessingFile}
-                                        className={`p-2.5 disabled:opacity-50 bg-[#00DDDD] text-black hover:shadow-[0_0_25px_rgba(0,221,221,0.5)] transition-all hover:scale-105 active:scale-95 relative overflow-hidden group`}
-                                    >
-                                        <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000`} />
-                                        <Send className="h-4 w-4 relative z-10" />
-                                    </button>
+                                    {isLoading ? (
+                                        <button
+                                            onClick={handleStopGeneration}
+                                            className="p-2.5 bg-[#00DDDD] hover:bg-[#00c5c5] transition-all hover:scale-105 active:scale-95 relative overflow-hidden group flex items-center justify-center"
+                                            title="Pause generation"
+                                        >
+                                            <Pause className="h-3 w-3 text-black fill-black" />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => void handleSend()}
+                                            disabled={isHistoryLoading || isProcessingFile}
+                                            className="p-2.5 bg-[#00DDDD] text-black hover:shadow-[0_0_25px_rgba(0,221,221,0.5)] transition-all hover:scale-105 active:scale-95 relative overflow-hidden group"
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                                            <Send className="h-4 w-4 relative z-10" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>

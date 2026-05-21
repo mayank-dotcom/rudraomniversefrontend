@@ -5,14 +5,13 @@ import { ArrowUpRight } from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
 
 interface FeatureCardProps {
-    number: string;
     title: string;
     description: string;
     index: number;
     tag: string;
 }
 
-const FeatureCard = ({ number, title, description, index, tag }: FeatureCardProps) => {
+const FeatureCard = ({ title, description, index, tag }: FeatureCardProps) => {
     const { isDarkMode } = useTheme();
 
     return (
@@ -24,13 +23,7 @@ const FeatureCard = ({ number, title, description, index, tag }: FeatureCardProp
             className={`group relative flex flex-col p-8 md:p-9 h-full transition-all duration-500 ${isDarkMode ? "bg-[#0d0d0d] hover:bg-[#111]" : "bg-white hover:bg-gray-50"}`}
         >
             {/* Top Bar — Technical Labels (11px Bold, 0.1em) */}
-            <div className="flex items-center justify-between mb-14">
-                <span
-                    className={`font-sans font-bold uppercase ${isDarkMode ? "text-white/20" : "text-black/20"}`}
-                    style={{ fontSize: "11px", letterSpacing: "0.1em" }}
-                >
-                    {number}
-                </span>
+            <div className="flex items-center justify-end mb-14">
                 <span
                     className={`font-sans font-bold uppercase border px-3 py-1 ${isDarkMode ? "text-white/25 border-white/10" : "text-black/25 border-black/10"}`}
                     style={{ fontSize: "11px", letterSpacing: "0.1em" }}
