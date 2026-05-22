@@ -1138,7 +1138,7 @@ STRICT RULES:
 
             <aside
                 style={{ width: isSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${sidebarWidth}px`) }}
-                className={`h-full border-r-2 ${isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "absolute left-0 top-0 h-full z-40 shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
+                className={`h-full border-r-2 ${isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "absolute left-0 top-0 h-full z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
             >
                 {!isSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
@@ -1592,7 +1592,7 @@ STRICT RULES:
                     )}
                 </header>
 
-                <main className={`flex-1 ${isChatEmpty ? "overflow-y-hidden flex flex-col justify-center pt-32 pb-16" : "overflow-y-auto block pt-10 pb-44"} px-6 md:px-20 relative z-10 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+                <main className={`flex-1 ${isChatEmpty ? "overflow-y-hidden flex flex-col justify-center pt-32 pb-16" : isMobile ? "overflow-hidden flex flex-col pt-10" : "overflow-y-auto block pt-10 pb-44"} px-6 md:px-20 relative z-10 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
                     <div className={`${isChatEmpty ? "w-full" : "max-w-3xl w-full"} mx-auto`}>
                         {/* Error Display */}
                         {chatError && (
@@ -1731,7 +1731,7 @@ STRICT RULES:
                 </main>
 
                 {/* Input Bar */}
-                <div className={`absolute bottom-0 left-0 right-0 z-50 p-4 md:p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}>
+                <div className={`absolute ${isMobile ? "bottom-[5px]" : "bottom-0"} left-0 right-0 z-50 p-4 md:p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}>
                     <div className="w-full max-w-4xl relative mb-4 md:mb-0">
                         <div className="relative">
                             {/* File Preview */}
@@ -1989,7 +1989,7 @@ STRICT RULES:
             {/* Right Sidebar */}
             <aside
                 style={{ width: isRightSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${rightSidebarWidth}px`) }}
-                className={`h-full border-l-2 ${isRightSidebarCollapsed && isMobile ? "border-l-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "absolute right-0 top-0 h-full z-40 shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
+                className={`h-full border-l-2 ${isRightSidebarCollapsed && isMobile ? "border-l-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "absolute right-0 top-0 h-full z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
             >
                 {!isRightSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
