@@ -1593,7 +1593,7 @@ STRICT RULES:
                 </header>
 
                 <main className={`flex-1 ${isChatEmpty ? "overflow-y-hidden flex flex-col justify-center pt-32 pb-16" : "overflow-y-auto block pt-10 pb-44"} px-6 md:px-20 relative z-10 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
-                    <div className={`${isChatEmpty ? "w-full" : "max-w-4xl w-full"} mx-auto`}>
+                    <div className={`${isChatEmpty ? "w-full" : "max-w-3xl w-full"} mx-auto`}>
                         {/* Error Display */}
                         {chatError && (
                             <div className="mb-4 p-4 border border-red-500/20 bg-red-500/10 text-red-400 text-sm">
@@ -1624,7 +1624,7 @@ STRICT RULES:
                                             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                                             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} w-full`}
                                         >
-                                            <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[90%] md:max-w-[85%]" : "items-start max-w-[90%] md:max-w-[68%]"}`}>
+                                            <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[90%] md:max-w-[80%]" : "items-start max-w-[90%] md:max-w-[60%]"}`}>
                                                 <div className="flex items-center gap-3 mb-4">
                                                     <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/60"}`}>
                                                         {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
@@ -1632,7 +1632,7 @@ STRICT RULES:
                                                     <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/20" : "text-black/60"}`}>{msg.timestamp}</span>
                                                 </div>
 
-                                                <div className={`p-8 ${msg.role === "user"
+                                                <div className={`py-1.5 px-4 md:py-2 md:px-5 ${msg.role === "user"
                                                     ? (isDarkMode ? "bg-black border border-white/20 rounded-[18px_4px_18px_4px]" : "bg-transparent border-2 border-black rounded-[18px_4px_18px_4px]")
                                                     : (isDarkMode ? "bg-transparent rounded-[2.5rem]" : "bg-transparent rounded-[2.5rem]")
                                                     } relative group`}>
@@ -1825,7 +1825,7 @@ STRICT RULES:
                                         onChange={(e) => setInput(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && !isProcessingFile && void handleSend()}
                                         placeholder={isProcessingFile ? "Processing file..." : typedPlaceholder}
-                                        className={`flex-1 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} p-4 pl-2 text-base focus:outline-none`}
+                                        className={`flex-1 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} py-2.5 pl-2 text-base focus:outline-none`}
                                     />
                                 </div>
 
