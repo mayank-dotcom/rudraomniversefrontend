@@ -1834,8 +1834,8 @@ STRICT RULES:
                             })()}
 
                             <div className={`relative flex flex-row items-center border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
-                                <div className="flex-1 flex items-center w-full">
-                                    <div className="flex items-center gap-2 pl-3">
+                                <div className="flex-1 min-w-0 flex items-center">
+                                    <div className="flex items-center gap-1 md:gap-2 pl-1.5 md:pl-3">
                                         <button
                                             onClick={() => fileInputRef.current?.click()}
                                             disabled={isLoading || isProcessingFile}
@@ -1863,11 +1863,11 @@ STRICT RULES:
                                         onChange={(e) => setInput(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && !isProcessingFile && void handleSend()}
                                         placeholder={isProcessingFile ? "Processing file..." : typedPlaceholder}
-                                        className={`flex-1 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} py-2.5 pl-2 text-base focus:outline-none`}
+                                        className={`flex-1 min-w-0 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} py-2.5 pl-2 text-base focus:outline-none`}
                                     />
                                 </div>
 
-                                <div className="flex items-center justify-end gap-1.5 pr-2 flex-shrink-0">
+                                <div className="flex items-center justify-end gap-1 md:gap-1.5 pr-1 md:pr-2 flex-shrink-0">
                                     {!input.trim() && !isProcessingFile && (
                                         <div className="relative flex items-center justify-center mr-1">
                                             <AnimatePresence>
@@ -1929,7 +1929,7 @@ STRICT RULES:
                                     <div className="relative" ref={engineSelectRef}>
                                         <button
                                             onClick={() => setShowEngineSelect(!showEngineSelect)}
-                                            className={`flex items-center gap-2 px-3 py-2 border-2 ${showEngineSelect ? "border-[#00DDDD] text-[#00DDDD]" : (isDarkMode ? "border-white text-white/60 hover:border-[#00DDDD] hover:text-[#00DDDD]" : "border-black text-black/60 hover:border-[#00DDDD] hover:text-[#00DDDD]")} text-[9px] font-mono uppercase tracking-widest transition-all duration-300 rounded`}
+                                            className={`flex items-center gap-2 ${isMobile ? "p-2" : "px-3 py-2"} border-2 ${showEngineSelect ? "border-[#00DDDD] text-[#00DDDD]" : (isDarkMode ? "border-white text-white/60 hover:border-[#00DDDD] hover:text-[#00DDDD]" : "border-black text-black/60 hover:border-[#00DDDD] hover:text-[#00DDDD]")} text-[9px] font-mono uppercase tracking-widest transition-all duration-300 rounded`}
                                         >
                                             <Bot className="h-3.5 w-3.5" />
                                             {!isMobile && selectedEngine}
@@ -2002,7 +2002,7 @@ STRICT RULES:
                                     {isLoading ? (
                                         <button
                                             onClick={handleStopGeneration}
-                                            className="p-2.5 bg-[#00DDDD] hover:bg-[#00c5c5] transition-all hover:scale-105 active:scale-95 relative overflow-hidden group flex items-center justify-center"
+                                            className="p-2 md:p-2.5 bg-[#00DDDD] hover:bg-[#00c5c5] transition-all hover:scale-105 active:scale-95 relative overflow-hidden group flex items-center justify-center"
                                             title="Pause generation"
                                         >
                                             <Pause className="h-3 w-3 text-black fill-black" />
@@ -2011,7 +2011,7 @@ STRICT RULES:
                                         <button
                                             onClick={() => void handleSend()}
                                             disabled={isHistoryLoading || isProcessingFile}
-                                            className="p-2.5 bg-[#00DDDD] text-black hover:shadow-[0_0_25px_rgba(0,221,221,0.5)] transition-all hover:scale-105 active:scale-95 relative overflow-hidden group"
+                                            className="p-2 md:p-2.5 bg-[#00DDDD] text-black hover:shadow-[0_0_25px_rgba(0,221,221,0.5)] transition-all hover:scale-105 active:scale-95 relative overflow-hidden group"
                                         >
                                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                                             <Send className="h-4 w-4 relative z-10" />
