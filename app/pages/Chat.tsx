@@ -1535,18 +1535,6 @@ STRICT RULES:
                 {/* Fixed Header / Navbar */}
                 <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-4 md:px-10 relative z-30`}>
                     <div className="flex items-center gap-4">
-                        {isMobile && (
-                            <button
-                                onClick={() => {
-                                    setIsSidebarCollapsed(!isSidebarCollapsed);
-                                    setIsRightSidebarCollapsed(true);
-                                }}
-                                className={`p-2 border transition-all duration-300 ${isDarkMode ? "border-white/20 hover:bg-white/5 text-white" : "border-black bg-white text-black hover:bg-gray-50"}`}
-                                title="Toggle Sessions History"
-                            >
-                                <MessageSquare className="h-4 w-4" />
-                            </button>
-                        )}
                         <div className="h-[44px] w-[44px] flex items-center justify-center overflow-hidden">
                             <img 
                                 src={isDarkMode ? "/dark.png" : "/light.png"} 
@@ -1567,6 +1555,18 @@ STRICT RULES:
                     </div>
                     {isMobile ? (
                         <div className="flex items-center gap-2">
+                            {/* Chat Sidebar Toggler */}
+                            <button
+                                onClick={() => {
+                                    setIsSidebarCollapsed(!isSidebarCollapsed);
+                                    setIsRightSidebarCollapsed(true);
+                                }}
+                                className={`p-2 border transition-all duration-300 ${isDarkMode ? "border-white/20 hover:bg-white/5 text-white" : "border-black bg-white text-black hover:bg-gray-50"}`}
+                                title="Toggle Sessions History"
+                            >
+                                <MessageSquare className="h-4 w-4" />
+                            </button>
+
                             {/* Right Sidebar Toggler */}
                             <button
                                 onClick={() => {
@@ -1587,13 +1587,6 @@ STRICT RULES:
                             >
                                 {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
                             </button>
-
-                            {/* User details */}
-                            <div className="flex items-center gap-1">
-                                <div className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative`}>
-                                    <User className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
-                                </div>
-                            </div>
 
                             {/* Logout button */}
                             <button
