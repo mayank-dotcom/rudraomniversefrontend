@@ -1136,6 +1136,20 @@ STRICT RULES:
             `}} />
             <div className={`absolute inset-0 noise opacity-[0.02] pointer-events-none ${isDarkMode ? "invert-0" : "invert"}`} />
 
+            {/* Mobile Sidebar Overlays */}
+            {isMobile && !isSidebarCollapsed && (
+                <div 
+                    className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 transition-opacity duration-300"
+                    onClick={() => setIsSidebarCollapsed(true)}
+                />
+            )}
+            {isMobile && !isRightSidebarCollapsed && (
+                <div 
+                    className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 transition-opacity duration-300"
+                    onClick={() => setIsRightSidebarCollapsed(true)}
+                />
+            )}
+
             <aside
                 style={{ width: isSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${sidebarWidth}px`) }}
                 className={`h-full border-r-2 ${isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "fixed left-0 top-0 h-full z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
@@ -1509,7 +1523,7 @@ STRICT RULES:
                             setIsRightSidebarCollapsed(true);
                         }
                     }}
-                    className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border-2 border-white/30 text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-left`}
+                    className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border-2 border-white/30 text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-left ${isMobile ? "hidden" : ""}`}
                     style={isMobile && isSidebarCollapsed ? { left: "0.8rem" } : { right: isSidebarCollapsed ? "-2.2rem" : "-0.95rem" }}
                 >
                     {isSidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
@@ -1521,6 +1535,18 @@ STRICT RULES:
                 {/* Fixed Header / Navbar */}
                 <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-4 md:px-10 relative z-30`}>
                     <div className="flex items-center gap-4">
+                        {isMobile && (
+                            <button
+                                onClick={() => {
+                                    setIsSidebarCollapsed(!isSidebarCollapsed);
+                                    setIsRightSidebarCollapsed(true);
+                                }}
+                                className={`p-2 border transition-all duration-300 ${isDarkMode ? "border-white/20 hover:bg-white/5 text-white" : "border-black bg-white text-black hover:bg-gray-50"}`}
+                                title="Toggle Sessions History"
+                            >
+                                <MessageSquare className="h-4 w-4" />
+                            </button>
+                        )}
                         <div className="h-[44px] w-[44px] flex items-center justify-center overflow-hidden">
                             <img 
                                 src={isDarkMode ? "/dark.png" : "/light.png"} 
@@ -1541,6 +1567,18 @@ STRICT RULES:
                     </div>
                     {isMobile ? (
                         <div className="flex items-center gap-2">
+                            {/* Right Sidebar Toggler */}
+                            <button
+                                onClick={() => {
+                                    setIsRightSidebarCollapsed(!isRightSidebarCollapsed);
+                                    setIsSidebarCollapsed(true);
+                                }}
+                                className={`p-2 border transition-all duration-300 ${isDarkMode ? "border-white/20 hover:bg-white/5 text-white" : "border-black bg-white text-black hover:bg-gray-50"}`}
+                                title="Toggle Plan Details"
+                            >
+                                <UserCog className="h-4 w-4" />
+                            </button>
+
                             {/* Theme Toggler */}
                             <button
                                 onClick={toggleTheme}
@@ -1795,7 +1833,7 @@ STRICT RULES:
                                 )
                             })()}
 
-                            <div className={`relative flex flex-col md:flex-row md:items-center border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
+                            <div className={`relative flex flex-row items-center border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
                                 <div className="flex-1 flex items-center w-full">
                                     <div className="flex items-center gap-2 pl-3">
                                         <button
@@ -1829,7 +1867,7 @@ STRICT RULES:
                                     />
                                 </div>
 
-                                <div className={`flex items-center justify-end gap-2 pr-2 pb-2 md:pb-0 ${isMobile ? "w-full border-t border-white/10 pt-2" : ""}`}>
+                                <div className="flex items-center justify-end gap-1.5 pr-2 flex-shrink-0">
                                     {!input.trim() && !isProcessingFile && (
                                         <div className="relative flex items-center justify-center mr-1">
                                             <AnimatePresence>
@@ -2249,7 +2287,7 @@ STRICT RULES:
                             setIsSidebarCollapsed(true);
                         }
                     }}
-                    className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border border-white text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-right`}
+                    className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border border-white text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-right ${isMobile ? "hidden" : ""}`}
                     style={isMobile && isRightSidebarCollapsed ? { right: "0.8rem" } : { left: isRightSidebarCollapsed ? "-2.2rem" : "-0.95rem" }}
                 >
                     {isRightSidebarCollapsed ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
