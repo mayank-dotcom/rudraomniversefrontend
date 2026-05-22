@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { LogOut, Moon, Sun, Menu, X } from "lucide-react"
-import { removeApiKey } from "@/lib/auth"
+import { removeApiKey, isAuthenticated } from "@/lib/auth"
 import { useTheme } from "@/lib/theme-context"
 
 interface NavbarProps {
@@ -15,6 +15,10 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
     const [authed, setAuthed] = useState(false)
     const { isDarkMode, toggleTheme } = useTheme()
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    useEffect(() => {
+        setAuthed(isAuthenticated());
+    }, []);
 
     const handleLogout = () => {
         removeApiKey()

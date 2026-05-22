@@ -7,10 +7,19 @@ import FeatureCard from "@/components/ui/FeatureCard";
 import AuthModal from "@/components/ui/AuthModal";
 import Footer from "@/components/ui/Footer";
 import { useTheme } from "@/lib/theme-context";
+import { isAuthenticated } from "@/lib/auth";
 
 const Index = () => {
     const { isDarkMode } = useTheme();
     const [showAuth, setShowAuth] = useState(false);
+
+    const handleStartFree = () => {
+        if (isAuthenticated()) {
+            window.location.href = "/chat";
+        } else {
+            setShowAuth(true);
+        }
+    };
 
     const tickerItems = [
         "Privacy First", "Adaptive Practice", "PDF Intelligence",
@@ -107,7 +116,7 @@ const Index = () => {
                         {/* CTA Buttons — 14px Semi-Bold */}
                         <div className="flex flex-col sm:flex-row items-center gap-4 mb-24">
                             <button
-                                onClick={() => setShowAuth(true)}
+                                onClick={handleStartFree}
                                 className={`px-12 py-4 font-sans font-semibold uppercase transition-all active:scale-95 flex items-center gap-3 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
                                 style={{ fontSize: "14px", letterSpacing: "0.05em" }}
                             >
@@ -333,7 +342,7 @@ const Index = () => {
                             </p>
                             {/* Button — 14px Semi-Bold */}
                             <button
-                                onClick={() => setShowAuth(true)}
+                                onClick={handleStartFree}
                                 className={`px-12 py-4 font-sans font-semibold uppercase transition-all active:scale-95 flex items-center gap-3 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
                                 style={{ fontSize: "14px", letterSpacing: "0.05em" }}
                             >

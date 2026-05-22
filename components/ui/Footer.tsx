@@ -11,10 +11,13 @@ export default function Footer() {
                 <div className="flex flex-col lg:flex-row justify-between gap-20 mb-32">
                     <div className="flex flex-col gap-6">
                         <div className="flex items-center gap-3">
-                            <div className={`h-8 w-8 border ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center shrink-0`}>
-                                <svg width="24" height="24" viewBox="0 0 128 128" className={isDarkMode ? "text-white" : "text-black"}>
-                                    <polygon points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108" fill="currentColor" />
-                                </svg>
+                            <div className="h-8 w-8 flex items-center justify-center shrink-0 overflow-hidden">
+                                <img 
+                                    src={isDarkMode ? "/dark.png" : "/light.png"} 
+                                    alt="Logo" 
+                                    className="h-full w-full object-contain transition-transform duration-300"
+                                    style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
+                                />
                             </div>
                             <div className="flex items-baseline gap-1">
                                 <span

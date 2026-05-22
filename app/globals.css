@@ -187,20 +187,20 @@ body {
 }
 
 .bubble-1 {
-  background: #D4AF37;
+  background: #00DDDD;
   top: -20%;
   left: -10%;
   animation: moveUpRight 6s ease-in-out infinite;
 }
 .bubble-2 {
-  background: #B8962E;
+  background: #00A3A3;
   top: 0%;
   left: 10%;
   animation: moveDownLeft 5s ease-in-out infinite;
   animation-delay: 1s;
 }
 .bubble-3 {
-  background: #F5E6A3;
+  background: #A6FFFF;
   top: 20%;
   left: 50%;
   animation: moveRight 4s ease-in-out infinite;
@@ -214,21 +214,21 @@ body {
   animation-delay: 3s;
 }
 .bubble-5 {
-  background: #D4AF37;
+  background: #00DDDD;
   top: 30%;
   left: -10%;
   animation: moveDownRight 3s ease-in-out infinite;
   animation-delay: 4s;
 }
 .bubble-6 {
-  background: #B8962E;
+  background: #00A3A3;
   top: -10%;
   left: 30%;
   animation: moveLeft 8s ease-in-out infinite;
   animation-delay: 0.5s;
 }
 .bubble-7 {
-  background: #F5E6A3;
+  background: #A6FFFF;
   top: 40%;
   left: 60%;
   animation: moveUp 6s ease-in-out infinite;

@@ -1993,7 +1993,7 @@ STRICT RULES:
             >
                 {!isRightSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
-                        <div className={`p-8 ${isMobile ? "border-b-0" : `border-b-2 ${isDarkMode ? "border-white" : "border-black"}`} ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+                        <div className={`flex-1 p-8 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"} overflow-y-auto`}>
                             {/* Plan Badge */}
                             <div className="flex items-start mb-8">
                                 <div className="flex flex-col">
@@ -2121,7 +2121,7 @@ STRICT RULES:
                             </div>
 
                             <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : ""}`}>
-                                <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all duration-300">
+                                <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(0,221,221,0.5)] transition-all duration-300">
                                     <div className="bubble-layer bubble-1"></div>
                                     <div className="bubble-layer bubble-2"></div>
                                     <div className="bubble-layer bubble-3"></div>
@@ -2132,9 +2132,6 @@ STRICT RULES:
                                     <span>Upgrade Now</span>
                                 </button>
                             </Link>
-                        </div>
-
-                        <div className={`flex-1 p-8 space-y-12 overflow-y-auto ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
                         </div>
                     </div>
                 ) : (
@@ -2219,10 +2216,10 @@ STRICT RULES:
                             </div>
                         </div>
 
-                        {/* Bottom: Mini Gold Upgrade Button */}
+                        {/* Bottom: Mini Cyan Upgrade Button */}
                         <div className="w-full flex items-center justify-center px-2 pb-10">
                             <Link href="/pricing" title="Upgrade Now" className="block cursor-pointer">
-                                <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-amber-500/20`}>
+                                <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-[rgba(0,221,221,0.2)]`}>
                                     <div className="bubble-layer bubble-1"></div>
                                     <div className="bubble-layer bubble-2"></div>
                                     <div className="bubble-layer bubble-3"></div>

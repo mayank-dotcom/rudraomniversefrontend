@@ -41,7 +41,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className={`relative w-full max-w-md max-h-[92vh] ${isDarkMode ? "bg-[#0a0a0a] border border-white/10" : "bg-white border border-black/10"} rounded-[2rem] p-8`}
+            className={`relative w-full max-w-md max-h-[92vh] overflow-y-auto ${isDarkMode ? "bg-[#0a0a0a] border border-white/10 custom-scrollbar" : "bg-white border border-black/10 light-scrollbar"} rounded-[2rem] p-6 sm:p-8`}
           >
             {/* Close */}
             <button
@@ -53,12 +53,13 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
             {/* Header */}
             <div className="text-center mb-8">
-              <div className={`h-14 w-14 rounded-2xl ${isDarkMode ? "bg-white/5 border border-white/10" : "bg-black/5 border border-black/10"} flex items-center justify-center mx-auto mb-4`}>
-                <div className={`h-[30px] w-[30px] border-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-center`}>
-                  <svg width="28" height="28" viewBox="0 0 128 128" className={`${isDarkMode ? "text-white" : "text-black"}`}>
-                    <polygon points="20,20 86,20 86,55 58,55 58,40 42,40 42,55 42,68 104,108 78,108 50,72 42,72 42,108 20,108" fill="currentColor" />
-                  </svg>
-                </div>
+              <div className={`h-14 w-14 rounded-2xl ${isDarkMode ? "bg-white/5 border border-white/10" : "bg-black/5 border border-black/10"} flex items-center justify-center mx-auto mb-4 overflow-hidden p-2`}>
+                <img
+                  src={isDarkMode ? "/dark.png" : "/light.png"}
+                  alt="Logo"
+                  className="h-full w-full object-contain transition-transform duration-300"
+                  style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
+                />
               </div>
               <h2 className={`font-display font-black text-2xl tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>Get Started</h2>
               <p className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/40" : "text-black/40"} mt-2`}>Sign in to Rudranex AI</p>
@@ -293,30 +294,42 @@ function RegularUserAuth({ onSuccess, isDarkMode }: { onSuccess: () => void; isD
         </motion.div>
       )}
 
-      {/* Social Login Buttons */}
-      <div className="space-y-3 mb-6">
-        <button
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          className="w-full py-3.5 rounded-2xl text-[10px] font-mono uppercase tracking-[0.15em] font-bold transition-all flex items-center justify-center gap-3 disabled:opacity-50 bg-[#4285F4] text-white hover:bg-[#3367D6] border border-[#4285F4]"
-        >
-          <Mail className="h-4 w-4" /> Sign in with Google
-        </button>
-        <button
-          onClick={handleGithubLogin}
-          disabled={loading}
-          className="w-full py-3.5 rounded-2xl text-[10px] font-mono uppercase tracking-[0.15em] font-bold transition-all flex items-center justify-center gap-3 disabled:opacity-50 bg-[#24292e] text-white hover:bg-[#1b1f23] border border-[#24292e]"
-        >
-          <GitBranch className="h-4 w-4" /> Sign in with GitHub
-        </button>
-      </div>
+      <AnimatePresence>
+        {!phone.trim() && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            {/* Social Login Buttons */}
+            <div className="space-y-3 mb-6">
+              <button
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="w-full py-3.5 rounded-2xl text-[10px] font-mono uppercase tracking-[0.15em] font-bold transition-all flex items-center justify-center gap-3 disabled:opacity-50 bg-[#4285F4] text-white hover:bg-[#3367D6] border border-[#4285F4]"
+              >
+                <Mail className="h-4 w-4" /> Sign in with Google
+              </button>
+              <button
+                onClick={handleGithubLogin}
+                disabled={loading}
+                className="w-full py-3.5 rounded-2xl text-[10px] font-mono uppercase tracking-[0.15em] font-bold transition-all flex items-center justify-center gap-3 disabled:opacity-50 bg-[#24292e] text-white hover:bg-[#1b1f23] border border-[#24292e]"
+              >
+                <GitBranch className="h-4 w-4" /> Sign in with GitHub
+              </button>
+            </div>
 
-      {/* Divider */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className={`flex-1 h-[1px] ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
-        <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Or continue with phone</span>
-        <div className={`flex-1 h-[1px] ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
-      </div>
+            {/* Divider */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className={`flex-1 h-[1px] ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
+              <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Or continue with phone</span>
+              <div className={`flex-1 h-[1px] ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Phone OTP */}
       {step === "phone" && (
