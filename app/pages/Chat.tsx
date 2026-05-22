@@ -1510,7 +1510,7 @@ STRICT RULES:
                         }
                     }}
                     className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border-2 border-white/30 text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-left`}
-                    style={{ right: isSidebarCollapsed ? (isMobile ? "-3.2rem" : "-2.2rem") : "-0.95rem" }}
+                    style={isMobile && isSidebarCollapsed ? { left: "0.8rem" } : { right: isSidebarCollapsed ? "-2.2rem" : "-0.95rem" }}
                 >
                     {isSidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
                 </button>
@@ -1519,7 +1519,7 @@ STRICT RULES:
             {/* Main Chat Area */}
             <div className="flex-1 flex flex-col relative h-full overflow-hidden">
                 {/* Fixed Header / Navbar */}
-                <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-4 md:px-10 ${isMobile ? "fixed top-0 left-0 right-0 z-30" : "relative z-30"}`}>
+                <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-4 md:px-10 relative z-30`}>
                     <div className="flex items-center gap-4">
                         <div className="h-[44px] w-[44px] flex items-center justify-center overflow-hidden">
                             <img 
@@ -2250,7 +2250,7 @@ STRICT RULES:
                         }
                     }}
                     className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border border-white text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-right`}
-                    style={{ left: isRightSidebarCollapsed ? (isMobile ? "-3.2rem" : "-2.2rem") : "-0.95rem" }}
+                    style={isMobile && isRightSidebarCollapsed ? { right: "0.8rem" } : { left: isRightSidebarCollapsed ? "-2.2rem" : "-0.95rem" }}
                 >
                     {isRightSidebarCollapsed ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                 </button>
