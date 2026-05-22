@@ -32,6 +32,11 @@ const orbitron = Orbitron({
 export const metadata: Metadata = {
   title: "Rudranex AI",
   description: "Rudranex AI: Student Mode, Coding, Interview Prep, and more — all in one.",
+  icons: {
+    icon: "/dark.svg",
+    shortcut: "/dark.svg",
+    apple: "/dark.svg",
+  },
 };
 
 export default function RootLayout({
