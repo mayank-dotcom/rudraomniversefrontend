@@ -1138,7 +1138,7 @@ STRICT RULES:
 
             <aside
                 style={{ width: isSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${sidebarWidth}px`) }}
-                className={`h-full border-r-2 ${isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "absolute left-0 top-0 h-full z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
+                className={`h-full border-r-2 ${isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "fixed left-0 top-0 h-full z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
             >
                 {!isSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
@@ -1519,7 +1519,7 @@ STRICT RULES:
             {/* Main Chat Area */}
             <div className="flex-1 flex flex-col relative h-full overflow-hidden">
                 {/* Fixed Header / Navbar */}
-                <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-4 md:px-10 relative z-30`}>
+                <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-4 md:px-10 ${isMobile ? "fixed top-0 left-0 right-0 z-30" : "relative z-30"}`}>
                     <div className="flex items-center gap-4">
                         <div className="h-[44px] w-[44px] flex items-center justify-center overflow-hidden">
                             <img 
@@ -1989,7 +1989,7 @@ STRICT RULES:
             {/* Right Sidebar */}
             <aside
                 style={{ width: isRightSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${rightSidebarWidth}px`) }}
-                className={`h-full border-l-2 ${isRightSidebarCollapsed && isMobile ? "border-l-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "absolute right-0 top-0 h-full z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
+                className={`h-full border-l-2 ${isRightSidebarCollapsed && isMobile ? "border-l-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "fixed right-0 top-0 h-full z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
             >
                 {!isRightSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
