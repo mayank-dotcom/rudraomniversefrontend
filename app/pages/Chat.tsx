@@ -1592,7 +1592,7 @@ STRICT RULES:
                     )}
                 </header>
 
-                <main className={`flex-1 ${isChatEmpty ? "overflow-y-hidden flex flex-col justify-center pt-32 pb-16" : isMobile ? "overflow-hidden flex flex-col pt-10" : "overflow-y-auto block pt-10 pb-44"} px-6 md:px-20 relative z-10 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+                <main className={`flex-1 ${isChatEmpty ? "overflow-y-hidden flex flex-col justify-center pt-32 pb-16" : "overflow-y-auto block pt-10 pb-36"} px-6 md:px-20 relative z-10 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
                     <div className={`${isChatEmpty ? "w-full" : "max-w-3xl w-full"} mx-auto`}>
                         {/* Error Display */}
                         {chatError && (
@@ -1731,7 +1731,7 @@ STRICT RULES:
                 </main>
 
                 {/* Input Bar */}
-                <div className={`absolute ${isMobile ? "bottom-[5px]" : "bottom-0"} left-0 right-0 z-50 p-4 md:p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}>
+                <div className={`absolute ${isMobile ? "bottom-[10px]" : "bottom-0"} left-0 right-0 z-50 p-4 md:p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}>
                     <div className="w-full max-w-4xl relative mb-4 md:mb-0">
                         <div className="relative">
                             {/* File Preview */}
