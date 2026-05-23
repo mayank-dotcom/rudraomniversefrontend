@@ -784,11 +784,22 @@ const Chat = () => {
 
     const scrollStyleCards = (direction: "left" | "right") => {
         if (styleCardsScrollRef.current) {
-            const scrollAmount = 340;
-            styleCardsScrollRef.current.scrollBy({
-                left: direction === "left" ? -scrollAmount : scrollAmount,
-                behavior: "smooth"
-            });
+            const container = styleCardsScrollRef.current;
+            const firstCard = container.firstElementChild as HTMLElement;
+            if (firstCard) {
+                const cardWidth = firstCard.offsetWidth;
+                const gap = 20;
+                const scrollAmount = cardWidth + gap;
+                container.scrollBy({
+                    left: direction === "left" ? -scrollAmount : scrollAmount,
+                    behavior: "smooth"
+                });
+            } else {
+                container.scrollBy({
+                    left: direction === "left" ? -340 : 340,
+                    behavior: "smooth"
+                });
+            }
         }
     };
 

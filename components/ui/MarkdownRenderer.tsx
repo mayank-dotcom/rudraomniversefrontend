@@ -8,6 +8,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "katex/dist/katex.min.css";
 import { Copy, Check } from "lucide-react";
+import MermaidDiagram from "./MermaidDiagram";
 
 interface MarkdownRendererProps {
     content: string;
@@ -151,10 +152,16 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                             );
                         }
 
+                        const lang = match?.[1] || "";
+
+                        if (lang === "mermaid") {
+                            return <MermaidDiagram code={String(children)} isDarkMode={isDarkMode} />;
+                        }
+
                         return (
                             <CodeBlock
                                 code={String(children)}
-                                language={match?.[1] || ""}
+                                language={lang}
                                 isDarkMode={isDarkMode}
                             />
                         );
