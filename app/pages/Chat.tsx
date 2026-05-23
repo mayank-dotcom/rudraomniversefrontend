@@ -2135,8 +2135,8 @@ STRICT RULES:
                             })()}
 
                             {selectedEngine === "AI Image Lab" && (
-                                <div className="mb-4 w-full overflow-hidden">
-                                    <div className="flex flex-row flex-nowrap gap-2 overflow-x-auto no-scrollbar w-full pb-1 scroll-smooth">
+                                <div className="mb-3 w-full">
+                                    <div className="flex flex-row flex-nowrap gap-1.5 md:gap-2 overflow-x-auto no-scrollbar w-full pb-1 scroll-smooth px-0.5 md:px-1">
                                         {IMAGE_STYLES.map((style) => {
                                             const isSelected = selectedImageStyle === style.id;
                                             return (
@@ -2152,7 +2152,7 @@ STRICT RULES:
                                                         }
                                                         toast.success(`Active Style: ${style.label}`);
                                                     }}
-                                                    className={`group flex items-center gap-2 px-3 py-1.5 text-xs font-sans font-medium tracking-wide rounded-full border-2 transition-all duration-300 ${
+                                                    className={`group flex items-center gap-1.5 md:gap-2 px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-sans font-medium tracking-wide rounded-full border-2 transition-all duration-300 flex-shrink-0 ${
                                                         isSelected
                                                             ? "bg-[#00DDDD] text-black border-[#00DDDD] shadow-[0_0_15px_rgba(0,221,221,0.45)] scale-[1.04] font-bold"
                                                             : isDarkMode
@@ -2163,12 +2163,12 @@ STRICT RULES:
                                                     <img
                                                         src={style.sample}
                                                         alt=""
-                                                        className={`w-5 h-5 rounded-full object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-110 border ${
+                                                        className={`w-4 h-4 md:w-5 md:h-5 rounded-full object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-110 border ${
                                                             isSelected ? "border-black/20" : "border-white/10"
                                                         }`}
                                                         loading="lazy"
                                                     />
-                                                    <span>{style.label}</span>
+                                                    <span className="whitespace-nowrap">{style.label}</span>
                                                 </button>
                                             );
                                         })}
