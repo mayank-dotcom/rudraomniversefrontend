@@ -386,7 +386,7 @@ const Chat = () => {
 
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-                
+
                 // Prevent sending empty/tiny recordings (less than 1KB)
                 if (audioBlob.size < 1000) {
                     toast.error("Recording too short. Please try again.");
@@ -491,8 +491,8 @@ const Chat = () => {
                 .replace(/>/g, "&gt;")
                 .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;margin:12px 0;border-radius:8px;">')
                 .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#3b82f6;">$1</a>')
-                .replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, '<pre style="background:'+(isDark?'#1a1a1a':'#f5f5f5')+';padding:16px;border-radius:8px;overflow-x:auto;white-space:pre-wrap;font-size:13px;margin:12px 0;"><code>$2</code></pre>')
-                .replace(/`([^`]+)`/g, '<code style="background:'+(isDark?'#1a1a1a':'#f5f5f5')+';padding:2px 6px;border-radius:4px;font-size:13px;">$1</code>')
+                .replace(/`{3}(\w*)\n?([\s\S]*?)`{3}/g, '<pre style="background:' + (isDark ? '#1a1a1a' : '#f5f5f5') + ';padding:16px;border-radius:8px;overflow-x:auto;white-space:pre-wrap;font-size:13px;margin:12px 0;"><code>$2</code></pre>')
+                .replace(/`([^`]+)`/g, '<code style="background:' + (isDark ? '#1a1a1a' : '#f5f5f5') + ';padding:2px 6px;border-radius:4px;font-size:13px;">$1</code>')
                 .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
                 .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.+?)\*/g, '<em>$1</em>')
@@ -1247,7 +1247,8 @@ STRICT RULES:
 
     return (
         <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black flex overflow-hidden transition-colors duration-500 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
-            <style dangerouslySetInnerHTML={{__html: `
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 @keyframes bounceArrowLeft {
                     0%, 100% { transform: translateY(-50%) translateX(0) scale(1.1); }
                     50% { transform: translateY(-50%) translateX(4px) scale(1.1); }
@@ -1294,13 +1295,13 @@ STRICT RULES:
 
             {/* Mobile Sidebar Overlays */}
             {isMobile && !isSidebarCollapsed && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 transition-opacity duration-300"
                     onClick={() => setIsSidebarCollapsed(true)}
                 />
             )}
             {isMobile && !isRightSidebarCollapsed && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 transition-opacity duration-300"
                     onClick={() => setIsRightSidebarCollapsed(true)}
                 />
@@ -1315,9 +1316,9 @@ STRICT RULES:
                         <div className={`p-6 border-b-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-between`}>
                             <Link href="/" className="flex items-center gap-3">
                                 <div className="h-[44px] w-[44px] flex items-center justify-center overflow-hidden">
-                                    <img 
-                                        src={isDarkMode ? "/dark.png" : "/light.png"} 
-                                        alt="Logo" 
+                                    <img
+                                        src={isDarkMode ? "/dark.png" : "/light.png"}
+                                        alt="Logo"
                                         className="h-full w-full object-contain transition-transform duration-300"
                                         style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
                                     />
@@ -1337,22 +1338,20 @@ STRICT RULES:
                         <div className={`flex ${isDarkMode ? "border-white" : "border-black"} border-b-2`}>
                             <button
                                 onClick={() => setSidebarTab("history")}
-                                className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${
-                                    sidebarTab === "history"
+                                className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${sidebarTab === "history"
                                         ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
                                         : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
-                                }`}
+                                    }`}
                             >
                                 <Clock className="h-3 w-3 inline mr-1.5 -mt-0.5" />
                                 History
                             </button>
                             <button
                                 onClick={() => setSidebarTab("modes")}
-                                className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${
-                                    sidebarTab === "modes"
+                                className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${sidebarTab === "modes"
                                         ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
                                         : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
-                                }`}
+                                    }`}
                             >
                                 <Bot className="h-3 w-3 inline mr-1.5 -mt-0.5" />
                                 Modes
@@ -1392,11 +1391,10 @@ STRICT RULES:
                                         {!isSessionsLoading && filteredChats.map((chat) => (
                                             <div
                                                 key={chat.id}
-                                                className={`group flex items-center gap-1 pr-2 transition-all duration-300 ${
-                                                    activeChatId === chat.id 
-                                                        ? (isDarkMode ? "bg-[#00DDDD]/10 border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.3)]") 
+                                                className={`group flex items-center gap-1 pr-2 transition-all duration-300 ${activeChatId === chat.id
+                                                        ? (isDarkMode ? "bg-[#00DDDD]/10 border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.3)]")
                                                         : ""
-                                                }`}
+                                                    }`}
                                             >
                                                 {editingChatId === chat.id ? (
                                                     <div className="flex-1 flex items-center gap-1 p-1.5">
@@ -1418,17 +1416,15 @@ STRICT RULES:
                                                     <button
                                                         onClick={() => void openChat(chat.id)}
                                                         onDoubleClick={() => handleStartEditing(chat)}
-                                                        className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${
-                                                            activeChatId === chat.id 
-                                                                ? (isDarkMode ? "text-[#00DDDD]" : "text-white") 
+                                                        className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${activeChatId === chat.id
+                                                                ? (isDarkMode ? "text-[#00DDDD]" : "text-white")
                                                                 : (isDarkMode ? "text-white/60 hover:bg-white/5" : "text-black hover:bg-black/5")
-                                                        }`}
+                                                            }`}
                                                     >
-                                                        <MessageSquare className={`h-3 w-3 flex-shrink-0 ${
-                                                            activeChatId === chat.id 
-                                                                ? (isDarkMode ? "text-[#00DDDD]" : "text-white") 
+                                                        <MessageSquare className={`h-3 w-3 flex-shrink-0 ${activeChatId === chat.id
+                                                                ? (isDarkMode ? "text-[#00DDDD]" : "text-white")
                                                                 : (isDarkMode ? "text-white/20" : "text-black")
-                                                        }`} />
+                                                            }`} />
                                                         {sidebarWidth > 120 && <span className={`truncate font-sans ${activeChatId === chat.id ? "font-bold" : (isDarkMode ? "opacity-60" : "text-black")}`}>{chat.title}</span>}
                                                     </button>
                                                 )}
@@ -1466,51 +1462,50 @@ STRICT RULES:
                                         const featureId = getFeatureIdForEngine(engine.name)
                                         const isAvailable = planFeatures.length === 0 || planFeatures.includes(featureId)
                                         return (
-                                        <button
-                                            key={engine.name}
-                                            onClick={() => {
-                                                if (!isAvailable) {
-                                                    window.location.href = "/pricing"
-                                                    return
-                                                }
-                                                if (engine.name === "Interview Prep") {
-                                                    setIsInterviewModalOpen(true);
-                                                } else if (engine.name === "Mock Paper Generator") {
-                                                    setIsMockPaperModalOpen(true);
-                                                } else if (engine.name === "Persona Mode") {
-                                                    setIsPersonaModalOpen(true);
-                                                } else if (engine.name === "Battle Arena") {
-                                                    setIsBattleArenaModalOpen(true);
-                                                } else {
-                                                    setSelectedEngine(engine.name);
-                                                }
-                                            }}
-                                            className={`w-full flex items-center gap-3 p-3 text-xs transition-all ${
-                                                selectedEngine === engine.name
-                                                    ? (isDarkMode ? "bg-[#00DDDD]/10 text-[#00DDDD] border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] text-white border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.4)]")
-                                                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
-                                            }`}
+                                            <button
+                                                key={engine.name}
+                                                onClick={() => {
+                                                    if (!isAvailable) {
+                                                        window.location.href = "/pricing"
+                                                        return
+                                                    }
+                                                    if (engine.name === "Interview Prep") {
+                                                        setIsInterviewModalOpen(true);
+                                                    } else if (engine.name === "Mock Paper Generator") {
+                                                        setIsMockPaperModalOpen(true);
+                                                    } else if (engine.name === "Persona Mode") {
+                                                        setIsPersonaModalOpen(true);
+                                                    } else if (engine.name === "Battle Arena") {
+                                                        setIsBattleArenaModalOpen(true);
+                                                    } else {
+                                                        setSelectedEngine(engine.name);
+                                                    }
+                                                }}
+                                                className={`w-full flex items-center gap-3 p-3 text-xs transition-all ${selectedEngine === engine.name
+                                                        ? (isDarkMode ? "bg-[#00DDDD]/10 text-[#00DDDD] border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] text-white border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.4)]")
+                                                        : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
+                                                    }`}
                                             >
-                                            {(() => {
-                                                const Icon = engine.icon as any;
-                                                return (
-                                                    <Icon className={`h-4 w-4 flex-shrink-0 ${isDarkMode ? 'text-white' : (selectedEngine === engine.name ? 'text-white' : 'text-black')}`} />
-                                                );
-                                            })()}
-                                            {sidebarWidth > 120 && (
-                                                <div className="flex items-center justify-between w-full min-w-0">
-                                                    <span className="truncate">{engine.name}</span>
-                                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                                        {isAvailable ? (
-                                                            <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
-                                                        ) : (
-                                                            <XCircle className="h-3.5 w-3.5 text-red-400" />
-                                                        )}
-                                                        <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/30" : "text-black"}`}>{engine.version}</span>
+                                                {(() => {
+                                                    const Icon = engine.icon as any;
+                                                    return (
+                                                        <Icon className={`h-4 w-4 flex-shrink-0 ${isDarkMode ? 'text-white' : (selectedEngine === engine.name ? 'text-white' : 'text-black')}`} />
+                                                    );
+                                                })()}
+                                                {sidebarWidth > 120 && (
+                                                    <div className="flex items-center justify-between w-full min-w-0">
+                                                        <span className="truncate">{engine.name}</span>
+                                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                                            {isAvailable ? (
+                                                                <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
+                                                            ) : (
+                                                                <XCircle className="h-3.5 w-3.5 text-red-400" />
+                                                            )}
+                                                            <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/30" : "text-black"}`}>{engine.version}</span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                        </button>
+                                                )}
+                                            </button>
                                         )
                                     })}
                                 </div>
@@ -1567,9 +1562,9 @@ STRICT RULES:
                         <div className="flex flex-col items-center w-full">
                             <Link href="/" className="flex items-center justify-center mb-4">
                                 <div className="h-10 w-10 flex items-center justify-center overflow-hidden">
-                                    <img 
-                                        src={isDarkMode ? "/dark.png" : "/light.png"} 
-                                        alt="Logo" 
+                                    <img
+                                        src={isDarkMode ? "/dark.png" : "/light.png"}
+                                        alt="Logo"
                                         className="h-full w-full object-contain transition-transform duration-300"
                                         style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
                                     />
@@ -1584,41 +1579,38 @@ STRICT RULES:
                                 onClick={handleCreateChat}
                                 disabled={isCreatingChat}
                                 title="New Chat"
-                                className={`h-11 w-11 flex items-center justify-center border-2 disabled:opacity-50 transition-all duration-300 ${
-                                    isDarkMode 
-                                        ? "bg-white border-white text-black hover:bg-gray-200 hover:scale-110" 
+                                className={`h-11 w-11 flex items-center justify-center border-2 disabled:opacity-50 transition-all duration-300 ${isDarkMode
+                                        ? "bg-white border-white text-black hover:bg-gray-200 hover:scale-110"
                                         : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110"
-                                }`}
+                                    }`}
                             >
                                 <Plus className="h-4 w-4 text-black font-bold" />
                             </button>
-                            
+
                             <button
                                 onClick={() => {
                                     setSidebarTab("history");
                                     setIsSidebarCollapsed(false);
                                 }}
                                 title="History"
-                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${
-                                    sidebarTab === "history"
+                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${sidebarTab === "history"
                                         ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-[#00DDDD] border-black text-white font-bold")
                                         : (isDarkMode ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5" : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110")
-                                }`}
+                                    }`}
                             >
                                 <Clock className="h-4 w-4" />
                             </button>
-                            
+
                             <button
                                 onClick={() => {
                                     setSidebarTab("modes");
                                     setIsSidebarCollapsed(false);
                                 }}
                                 title="Modes"
-                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${
-                                    sidebarTab === "modes"
+                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${sidebarTab === "modes"
                                         ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-black border-black text-white font-bold")
                                         : (isDarkMode ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5" : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110")
-                                }`}
+                                    }`}
                             >
                                 <Bot className="h-4 w-4" />
                             </button>
@@ -1626,11 +1618,10 @@ STRICT RULES:
                             <button
                                 onClick={toggleTheme}
                                 title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${
-                                    isDarkMode 
-                                        ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5" 
+                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${isDarkMode
+                                        ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5"
                                         : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110"
-                                }`}
+                                    }`}
                             >
                                 {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
                             </button>
@@ -1651,11 +1642,10 @@ STRICT RULES:
                                         window.location.href = "/";
                                     }}
                                     title="Logout"
-                                    className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${
-                                        isDarkMode 
-                                            ? "border-white/20 bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500" 
+                                    className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${isDarkMode
+                                            ? "border-white/20 bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500"
                                             : "bg-white border-black text-black hover:bg-red-500 hover:text-white hover:border-red-500"
-                                    }`}
+                                        }`}
                                 >
                                     <LogOut className="h-4 w-4" />
                                 </button>
@@ -1692,18 +1682,18 @@ STRICT RULES:
                 <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-4 md:px-10 relative z-30`}>
                     <div className="flex items-center gap-4">
                         <div className="h-[44px] w-[44px] flex items-center justify-center overflow-hidden">
-                            <img 
-                                src={isDarkMode ? "/dark.png" : "/light.png"} 
-                                alt="Logo" 
+                            <img
+                                src={isDarkMode ? "/dark.png" : "/light.png"}
+                                alt="Logo"
                                 className="h-full w-full object-contain transition-transform duration-300"
                                 style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
                             />
                         </div>
                         {!isMobile && (
                             <div className="h-5 flex items-center shrink-0 overflow-hidden ml-1">
-                                <img 
-                                    src={isDarkMode ? "/dark_text.png" : "/light_text.png"} 
-                                    alt="Rudranex" 
+                                <img
+                                    src={isDarkMode ? "/dark_text.png" : "/light_text.png"}
+                                    alt="Rudranex"
                                     className="h-full object-contain"
                                 />
                             </div>
@@ -1756,11 +1746,10 @@ STRICT RULES:
                                     window.location.href = "/";
                                 }}
                                 title="Logout"
-                                className={`p-2 border-2 transition-all active:scale-95 ${
-                                    isDarkMode 
-                                        ? "border-white bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500" 
+                                className={`p-2 border-2 transition-all active:scale-95 ${isDarkMode
+                                        ? "border-white bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500"
                                         : "border-black bg-white text-black hover:bg-red-500 hover:text-white hover:border-red-500"
-                                }`}
+                                    }`}
                             >
                                 <LogOut className="h-4 w-4" />
                             </button>
@@ -1810,11 +1799,10 @@ STRICT RULES:
                                                     initial={{ opacity: 0, y: -10 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ duration: 0.5, delay: 0.1 }}
-                                                    className={`text-3xl md:text-5xl font-sans font-extrabold tracking-tight mb-4 ${
-                                                        isDarkMode 
-                                                            ? "bg-gradient-to-r from-white via-white to-white/60 text-transparent bg-clip-text" 
+                                                    className={`text-3xl md:text-5xl font-sans font-extrabold tracking-tight mb-4 ${isDarkMode
+                                                            ? "bg-gradient-to-r from-white via-white to-white/60 text-transparent bg-clip-text"
                                                             : "text-black"
-                                                    }`}
+                                                        }`}
                                                 >
                                                     Choose Your Visual Style
                                                 </motion.h1>
@@ -1822,11 +1810,10 @@ STRICT RULES:
                                                     initial={{ opacity: 0, y: 10 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ duration: 0.5, delay: 0.2 }}
-                                                    className={`text-sm md:text-base font-sans max-w-lg mx-auto ${
-                                                        isDarkMode ? "text-white/50" : "text-black/60"
-                                                    }`}
+                                                    className={`text-sm md:text-base font-sans max-w-lg mx-auto ${isDarkMode ? "text-white/50" : "text-black/60"
+                                                        }`}
                                                 >
-                                                    Select a highly curated style template below, type your descriptive details, and let your imagination come to life.
+                                                    Select a highly curated style template and let your imagination come to life.
                                                 </motion.p>
                                             </div>
 
@@ -1835,11 +1822,10 @@ STRICT RULES:
                                                 {/* Left Arrow Button */}
                                                 <button
                                                     onClick={() => scrollStyleCards("left")}
-                                                    className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-2xl active:scale-90 ${
-                                                        isDarkMode
+                                                    className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-2xl active:scale-90 ${isDarkMode
                                                             ? "bg-black/90 border-white/15 text-white/95 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.5)]"
                                                             : "bg-white/95 border-black/15 text-black hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.3)]"
-                                                    }`}
+                                                        }`}
                                                     title="Scroll Left"
                                                 >
                                                     <ChevronLeft className="h-6 w-6 stroke-[2.5]" />
@@ -1848,11 +1834,10 @@ STRICT RULES:
                                                 {/* Right Arrow Button */}
                                                 <button
                                                     onClick={() => scrollStyleCards("right")}
-                                                    className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-2xl active:scale-90 ${
-                                                        isDarkMode
+                                                    className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-2xl active:scale-90 ${isDarkMode
                                                             ? "bg-black/90 border-white/15 text-white/95 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.5)]"
                                                             : "bg-white/95 border-black/15 text-black hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.3)]"
-                                                    }`}
+                                                        }`}
                                                     title="Scroll Right"
                                                 >
                                                     <ChevronRight className="h-6 w-6 stroke-[2.5]" />
@@ -1881,9 +1866,9 @@ STRICT RULES:
                                                                 key={style.id}
                                                                 variants={{
                                                                     hidden: { opacity: 0, x: 30, scale: 0.95 },
-                                                                    show: { 
-                                                                        opacity: 1, 
-                                                                        x: 0, 
+                                                                    show: {
+                                                                        opacity: 1,
+                                                                        x: 0,
                                                                         scale: 1,
                                                                         transition: {
                                                                             type: "spring",
@@ -1905,13 +1890,12 @@ STRICT RULES:
                                                                     }
                                                                     toast.success(`Active Style: ${style.label}`);
                                                                 }}
-                                                                className={`group relative w-full sm:w-[calc((100%-20px)/2)] md:w-[calc((100%-40px)/3)] flex-shrink-0 aspect-[16/10] overflow-hidden rounded-[2.2rem] cursor-pointer border-2 transition-all duration-300 ${
-                                                                    isSelected
+                                                                className={`group relative w-full sm:w-[calc((100%-20px)/2)] md:w-[calc((100%-40px)/3)] flex-shrink-0 aspect-[16/10] overflow-hidden rounded-[2.2rem] cursor-pointer border-2 transition-all duration-300 ${isSelected
                                                                         ? "border-[#00DDDD] shadow-[0_0_25px_rgba(0,221,221,0.4)]"
-                                                                        : isDarkMode 
+                                                                        : isDarkMode
                                                                             ? "border-white/5 hover:border-white/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.5)]"
                                                                             : "border-black/5 hover:border-black/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.15)]"
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 {/* Background image preview */}
                                                                 <img
@@ -1920,10 +1904,10 @@ STRICT RULES:
                                                                     className="absolute inset-0 w-full h-full object-cover select-none transition-transform duration-500 ease-out group-hover:scale-105"
                                                                     loading="lazy"
                                                                 />
-                                                                
+
                                                                 {/* Linear overlay */}
                                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent transition-opacity duration-300 group-hover:opacity-90" />
-                                                                
+
                                                                 {/* Selected Check Indicator */}
                                                                 {isSelected && (
                                                                     <div className="absolute top-4 right-4 h-6 w-6 rounded-full bg-[#00DDDD] text-black flex items-center justify-center shadow-[0_0_12px_rgba(0,221,221,0.6)] z-20">
@@ -2117,13 +2101,12 @@ STRICT RULES:
                                                         key={oi}
                                                         onClick={() => handleMcqOptionClick(oi)}
                                                         disabled={hasAnswered}
-                                                        className={`p-4 rounded-xl border text-xs font-mono text-left transition-all ${
-                                                            isSelected
+                                                        className={`p-4 rounded-xl border text-xs font-mono text-left transition-all ${isSelected
                                                                 ? `${isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"} font-bold scale-[1.02]`
                                                                 : hasAnswered
                                                                     ? `${isDarkMode ? "border-white/10 text-white/30" : "border-black/20 text-black/30"}`
                                                                     : `${isDarkMode ? "border-white/20 text-white/70 hover:border-white/50 hover:bg-white/5" : "border-black/20 text-black/70 hover:border-black/50 hover:bg-black/5"}`
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {opt}
                                                     </button>
@@ -2152,20 +2135,18 @@ STRICT RULES:
                                                         }
                                                         toast.success(`Active Style: ${style.label}`);
                                                     }}
-                                                    className={`group flex items-center gap-1.5 md:gap-2 px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-sans font-medium tracking-wide rounded-full border-2 transition-all duration-300 flex-shrink-0 ${
-                                                        isSelected
+                                                    className={`group flex items-center gap-1.5 md:gap-2 px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-sans font-medium tracking-wide rounded-full border-2 transition-all duration-300 flex-shrink-0 ${isSelected
                                                             ? "bg-[#00DDDD] text-black border-[#00DDDD] shadow-[0_0_15px_rgba(0,221,221,0.45)] scale-[1.04] font-bold"
                                                             : isDarkMode
                                                                 ? "bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white hover:border-white/20 hover:scale-[1.02]"
                                                                 : "bg-black/5 text-black/70 border-black/10 hover:bg-black/10 hover:text-black hover:border-black/20 hover:scale-[1.02]"
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <img
                                                         src={style.sample}
                                                         alt=""
-                                                        className={`w-4 h-4 md:w-5 md:h-5 rounded-full object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-110 border ${
-                                                            isSelected ? "border-black/20" : "border-white/10"
-                                                        }`}
+                                                        className={`w-4 h-4 md:w-5 md:h-5 rounded-full object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-110 border ${isSelected ? "border-black/20" : "border-white/10"
+                                                            }`}
                                                         loading="lazy"
                                                     />
                                                     <span className="whitespace-nowrap">{style.label}</span>
@@ -2236,8 +2217,8 @@ STRICT RULES:
                                                                 <motion.div
                                                                     key={i}
                                                                     animate={{ height: [4, 16, 8, 24, 4] }}
-                                                                    transition={{ 
-                                                                        repeat: Infinity, 
+                                                                    transition={{
+                                                                        repeat: Infinity,
                                                                         duration: 0.4 + (i * 0.1),
                                                                         ease: "easeInOut"
                                                                     }}
@@ -2257,11 +2238,10 @@ STRICT RULES:
                                                         startRecording();
                                                     }
                                                 }}
-                                                className={`p-2 rounded-full transition-all duration-300 relative z-10 ${
-                                                    isRecording 
-                                                        ? "bg-[#00DDDD] text-black scale-125 shadow-[0_0_20px_rgba(0,221,221,0.6)]" 
+                                                className={`p-2 rounded-full transition-all duration-300 relative z-10 ${isRecording
+                                                        ? "bg-[#00DDDD] text-black scale-125 shadow-[0_0_20px_rgba(0,221,221,0.6)]"
                                                         : (isDarkMode ? "text-white hover:text-[#00DDDD] hover:bg-[#00DDDD]/10" : "text-black hover:text-[#00DDDD] hover:bg-[#00DDDD]/10")
-                                                }`}
+                                                    }`}
                                                 title={isRecording ? "Click to stop" : "Click to speak"}
                                             >
                                                 <Mic className={`h-4 w-4 ${isRecording ? "animate-pulse" : ""}`} />
@@ -2294,46 +2274,46 @@ STRICT RULES:
                                                             const featureId = getFeatureIdForEngine(engine.name)
                                                             const isAvailable = planFeatures.length === 0 || planFeatures.includes(featureId)
                                                             return (
-                                                            <button
-                                                                key={engine.name}
-                                                                onClick={() => {
-                                                                    if (!isAvailable) {
-                                                                        setShowEngineSelect(false);
-                                                                        window.location.href = "/pricing"
-                                                                        return
-                                                                    }
-                                                                    if (engine.name === "Interview Prep") {
-                                                                        setShowEngineSelect(false);
-                                                                        setIsInterviewModalOpen(true);
-                                                                    } else if (engine.name === "Mock Paper Generator") {
-                                                                        setShowEngineSelect(false);
-                                                                        setIsMockPaperModalOpen(true);
-                                                                    } else if (engine.name === "Persona Mode") {
-                                                                        setShowEngineSelect(false);
-                                                                        setIsPersonaModalOpen(true);
-                                                                    } else if (engine.name === "Battle Arena") {
-                                                                        setShowEngineSelect(false);
-                                                                        setIsBattleArenaModalOpen(true);
-                                                                    } else {
-                                                                        setSelectedEngine(engine.name);
-                                                                        setShowEngineSelect(false);
-                                                                    }
-                                                                }}
-                                                                className={`w-full flex items-center justify-between p-3 transition-all duration-300 ${selectedEngine === engine.name ? (isDarkMode ? "bg-white/5 text-white scale-102" : "bg-black/5 text-black scale-102") : (isDarkMode ? "hover:bg-white/5 text-white hover:scale-105" : "hover:bg-black/5 text-black hover:scale-105")}`}
-                                                            >
-                                                                <div className="flex items-center gap-4">
-                                                                    <engine.icon className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black/60"} group-hover:rotate-12 transition-transform`} />
-                                                                    <span className={`text-xs font-medium ${isDarkMode ? "text-white" : "text-black"}`}>{engine.name}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    {isAvailable ? (
-                                                                        <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
-                                                                    ) : (
-                                                                        <XCircle className="h-3.5 w-3.5 text-red-400" />
-                                                                    )}
-                                                                    <span className={`text-[10px] font-mono font-bold ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{engine.version}</span>
-                                                                </div>
-                                                            </button>
+                                                                <button
+                                                                    key={engine.name}
+                                                                    onClick={() => {
+                                                                        if (!isAvailable) {
+                                                                            setShowEngineSelect(false);
+                                                                            window.location.href = "/pricing"
+                                                                            return
+                                                                        }
+                                                                        if (engine.name === "Interview Prep") {
+                                                                            setShowEngineSelect(false);
+                                                                            setIsInterviewModalOpen(true);
+                                                                        } else if (engine.name === "Mock Paper Generator") {
+                                                                            setShowEngineSelect(false);
+                                                                            setIsMockPaperModalOpen(true);
+                                                                        } else if (engine.name === "Persona Mode") {
+                                                                            setShowEngineSelect(false);
+                                                                            setIsPersonaModalOpen(true);
+                                                                        } else if (engine.name === "Battle Arena") {
+                                                                            setShowEngineSelect(false);
+                                                                            setIsBattleArenaModalOpen(true);
+                                                                        } else {
+                                                                            setSelectedEngine(engine.name);
+                                                                            setShowEngineSelect(false);
+                                                                        }
+                                                                    }}
+                                                                    className={`w-full flex items-center justify-between p-3 transition-all duration-300 ${selectedEngine === engine.name ? (isDarkMode ? "bg-white/5 text-white scale-102" : "bg-black/5 text-black scale-102") : (isDarkMode ? "hover:bg-white/5 text-white hover:scale-105" : "hover:bg-black/5 text-black hover:scale-105")}`}
+                                                                >
+                                                                    <div className="flex items-center gap-4">
+                                                                        <engine.icon className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black/60"} group-hover:rotate-12 transition-transform`} />
+                                                                        <span className={`text-xs font-medium ${isDarkMode ? "text-white" : "text-black"}`}>{engine.name}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        {isAvailable ? (
+                                                                            <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
+                                                                        ) : (
+                                                                            <XCircle className="h-3.5 w-3.5 text-red-400" />
+                                                                        )}
+                                                                        <span className={`text-[10px] font-mono font-bold ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{engine.version}</span>
+                                                                    </div>
+                                                                </button>
                                                             )
                                                         })}
                                                     </div>
@@ -2427,17 +2407,17 @@ STRICT RULES:
                                         </span>
                                     </div>
                                     <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                        <motion.div 
+                                        <motion.div
                                             initial={{ width: 0 }}
-                                            animate={{ 
-                                                width: `${Math.min(100, ((subscription?.usage?.daily_chats || 0) / (subscription?.subscription?.details?.daily_chat_limit || 1)) * 100)}%` 
+                                            animate={{
+                                                width: `${Math.min(100, ((subscription?.usage?.daily_chats || 0) / (subscription?.subscription?.details?.daily_chat_limit || 1)) * 100)}%`
                                             }}
                                             className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
                                         />
                                     </div>
                                 </div>
                                 <div className={`h-[1px] w-full ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-                                
+
                                 {/* Usage Progress Bars */}
                                 <div className="space-y-6">
                                     {/* Images Usage */}
@@ -2449,10 +2429,10 @@ STRICT RULES:
                                             </span>
                                         </div>
                                         <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                            <motion.div 
+                                            <motion.div
                                                 initial={{ width: 0 }}
-                                                animate={{ 
-                                                    width: `${Math.min(100, ((subscription?.usage?.monthly_images || 0) / (subscription?.subscription?.details?.monthly_image_limit || 1)) * 100)}%` 
+                                                animate={{
+                                                    width: `${Math.min(100, ((subscription?.usage?.monthly_images || 0) / (subscription?.subscription?.details?.monthly_image_limit || 1)) * 100)}%`
                                                 }}
                                                 className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
                                             />
@@ -2468,10 +2448,10 @@ STRICT RULES:
                                             </span>
                                         </div>
                                         <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                            <motion.div 
+                                            <motion.div
                                                 initial={{ width: 0 }}
-                                                animate={{ 
-                                                    width: `${Math.min(100, ((subscription?.usage?.daily_codings || 0) / (subscription?.subscription?.details?.daily_coding_limit || 1)) * 100)}%` 
+                                                animate={{
+                                                    width: `${Math.min(100, ((subscription?.usage?.daily_codings || 0) / (subscription?.subscription?.details?.daily_coding_limit || 1)) * 100)}%`
                                                 }}
                                                 className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
                                             />
@@ -2518,20 +2498,20 @@ STRICT RULES:
                     <div className="flex flex-col h-full items-center py-6 justify-between overflow-hidden w-full">
                         {/* Top: Plan Indicator using Clock icon from the Plan Badge */}
                         <div className="flex flex-col items-center gap-6 w-full px-2">
-                            <div 
+                            <div
                                 title={`Active Plan: ${isSubscriptionLoading ? "Loading..." : (subscription?.subscription?.plan_name || "Free Trial")}`}
                                 className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative cursor-help`}
                             >
                                 <Clock className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
                                 <div className={`absolute inset-0 rounded-sm border ${isDarkMode ? 'border-white' : 'border-black'} pointer-events-none`} />
                             </div>
-                            
+
                             <div className={`h-[1px] w-8 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
                         </div>
 
                         {/* Middle: Live Usage Progress Circle using ChatLoader */}
                         <div className="flex flex-col items-center gap-6 w-full">
-                            <div 
+                            <div
                                 title="Live Chat Usage"
                                 className="relative w-12 h-12 flex items-center justify-center cursor-help"
                             >
@@ -2557,7 +2537,7 @@ STRICT RULES:
                             </div>
 
                             {/* CHT (Chats Used) Metric */}
-                            <div 
+                            <div
                                 title={`Chats Used: ${subscription?.usage?.daily_chats || 0} / ${subscription?.subscription?.details?.daily_chat_limit || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
@@ -2570,7 +2550,7 @@ STRICT RULES:
                             </div>
 
                             {/* IMG (Images Used) Metric */}
-                            <div 
+                            <div
                                 title={`Images Used: ${subscription?.usage?.monthly_images || 0} / ${subscription?.subscription?.details?.monthly_image_limit || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
@@ -2583,7 +2563,7 @@ STRICT RULES:
                             </div>
 
                             {/* COD (Coding Used) Metric */}
-                            <div 
+                            <div
                                 title={`Coding Used: ${subscription?.usage?.daily_codings || 0} / ${subscription?.subscription?.details?.daily_coding_limit || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
@@ -2657,9 +2637,9 @@ STRICT RULES:
                                     const heights = [260, 360, 220, 400, 280, 340, 240, 380];
                                     const h = heights[index % heights.length];
                                     return (
-                                        <div 
-                                            key={`col1-${index}`} 
-                                            style={{ height: `${h}px` }} 
+                                        <div
+                                            key={`col1-${index}`}
+                                            style={{ height: `${h}px` }}
                                             className="w-full relative bg-[#0a0a0a]"
                                         >
                                             <img src={url} alt="" className="w-full h-full object-cover select-none" loading="lazy" />
@@ -2675,9 +2655,9 @@ STRICT RULES:
                                     const heights = [320, 200, 380, 270, 340, 250, 360, 300];
                                     const h = heights[index % heights.length];
                                     return (
-                                        <div 
-                                            key={`col2-${index}`} 
-                                            style={{ height: `${h}px` }} 
+                                        <div
+                                            key={`col2-${index}`}
+                                            style={{ height: `${h}px` }}
                                             className="w-full relative bg-[#0a0a0a]"
                                         >
                                             <img src={url} alt="" className="w-full h-full object-cover select-none" loading="lazy" />
@@ -2693,9 +2673,9 @@ STRICT RULES:
                                     const heights = [240, 350, 210, 390, 300, 270, 330, 370];
                                     const h = heights[index % heights.length];
                                     return (
-                                        <div 
-                                            key={`col3-${index}`} 
-                                            style={{ height: `${h}px` }} 
+                                        <div
+                                            key={`col3-${index}`}
+                                            style={{ height: `${h}px` }}
                                             className="w-full relative bg-[#0a0a0a]"
                                         >
                                             <img src={url} alt="" className="w-full h-full object-cover select-none" loading="lazy" />
@@ -2711,9 +2691,9 @@ STRICT RULES:
                                     const heights = [300, 230, 370, 250, 330, 310, 260, 350];
                                     const h = heights[index % heights.length];
                                     return (
-                                        <div 
-                                            key={`col4-${index}`} 
-                                            style={{ height: `${h}px` }} 
+                                        <div
+                                            key={`col4-${index}`}
+                                            style={{ height: `${h}px` }}
                                             className="w-full relative bg-[#0a0a0a]"
                                         >
                                             <img src={url} alt="" className="w-full h-full object-cover select-none" loading="lazy" />

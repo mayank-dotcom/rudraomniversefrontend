@@ -117,7 +117,13 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
         });
 
         // Filter out literal placeholder images like ![...](image_url) to avoid showing broken images
-        processed = processed.replace(/!\[.*?\]\(image_url\)/g, '');
+        processed = processed.replace(/!\[.*?\]\((?:image_url|placeholder)\)/g, '');
+        
+        // Also strip any remaining image references with clearly fake URLs
+        processed = processed.replace(/!\[.*?\]\(\)/g, '');
+        
+        // Remove any bare image URLs that are clearly placeholders
+        processed = processed.replace(/\]\((?:image_url|placeholder)\)/g, ']()');
         
         return processed;
     }, [content]);
@@ -152,7 +158,9 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                 components={{
                     img(props) {
                         const { src, alt, ...rest } = props;
-                        if (src && typeof src === "string" && src.includes("mermaid.svg?code=")) {
+                        if (!src || typeof src !== "string") return null;
+                        if (src === "image_url" || src === "placeholder" || src === "") return null;
+                        if (src.includes("mermaid.svg?code=")) {
                             try {
                                 const absoluteUrl = src.startsWith("http") ? src : `https://dummy.com${src.startsWith("/") ? "" : "/"}${src}`;
                                 const url = new URL(absoluteUrl);
