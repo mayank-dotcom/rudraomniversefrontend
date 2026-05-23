@@ -145,14 +145,14 @@ const setStoredActiveChatId = (chatId: string | null) => {
 };
 
 const IMAGE_STYLES = [
-    { id: "realistic", label: "Realistic", prompt: "Create a highly realistic photograph with natural lighting, detailed textures, and lifelike colors. ", sample: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" },
-    { id: "anime", label: "Anime", prompt: "Create an anime-style digital illustration with cel-shading, vibrant colors, and characteristic Japanese animation aesthetics. ", sample: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=100&q=80" },
-    { id: "oil-painting", label: "Oil Painting", prompt: "Create an oil painting style image with rich brush strokes, visible canvas texture, impasto technique, and artistic depth. ", sample: "https://images.unsplash.com/photo-1515405295579-ba7b454bb62b?auto=format&fit=crop&w=100&q=80" },
-    { id: "watercolor", label: "Watercolor", prompt: "Create a watercolor painting with soft edges, color bleeding effects, visible paper grain texture, and fluid washes. ", sample: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=100&q=80" },
-    { id: "cyberpunk", label: "Cyberpunk", prompt: "Create a cyberpunk style image with neon lighting, dark rainy atmosphere, futuristic cityscape, and high contrast. ", sample: "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=100&q=80" },
-    { id: "sketch", label: "Sketch", prompt: "Create a pencil sketch style image with cross-hatching, line art, grayscale monochrome tones, and hand-drawn feel. ", sample: "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?auto=format&fit=crop&w=100&q=80" },
-    { id: "3d-render", label: "3D Render", prompt: "Create a photorealistic 3D rendered image with ray-traced lighting, global illumination, and CGI-quality materials. ", sample: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80" },
-    { id: "pixel-art", label: "Pixel Art", prompt: "Create pixel art style with blocky pixels, retro game aesthetics, limited color palette, and 8-bit or 16-bit style. ", sample: "https://images.unsplash.com/photo-1559825481-12a05cc00344?auto=format&fit=crop&w=100&q=80" },
+    { id: "monochrome", label: "Monochrome", prompt: "Create a highly dramatic, high-contrast monochrome fine-art photograph with strong studio shadows, detailed textures, and timeless grayscale tones. ", sample: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80" },
+    { id: "colour-block", label: "Colour block", prompt: "Create a minimalist color block digital artwork with bold contrasting solid colors, geometric shapes, and a highly aesthetic clean composition. ", sample: "https://images.unsplash.com/photo-1500462906766-dbb91038157f?auto=format&fit=crop&w=600&q=80" },
+    { id: "runway", label: "Runway", prompt: "Create a high-fashion runway editorial photograph featuring a model walking under dramatic moody spotlighting, rich ambient mist, and highly saturated vintage color-grading. ", sample: "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=600&q=80" },
+    { id: "risograph", label: "Risograph", prompt: "Create an authentic risograph print illustration with granular organic textures, slightly misaligned ink layers, soft halftone dots, and a vibrant neon duo-tone palette. ", sample: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=600&q=80" },
+    { id: "technicolour", label: "Technicolour", prompt: "Create a saturated technicolor vintage 70s film style photograph, featuring warm ambient light projections, rich golden sunset shadows, and a dreamy nostalgic glow. ", sample: "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=600&q=80" },
+    { id: "gothic-clay", label: "Gothic clay", prompt: "Create a stop-motion style gothic claymation scene, featuring detailed whimsical clay textures, a miniature gothic room with warm candlelight, and a dark cozy fairy tale mood. ", sample: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80" },
+    { id: "cyberpunk", label: "Cyberpunk", prompt: "Create a cyberpunk digital artwork featuring a glowing neon city alleyway at night under light rain, reflections on wet asphalt, and deep high contrast colors. ", sample: "https://images.unsplash.com/photo-1515621061946-eff1c2a352bd?auto=format&fit=crop&w=600&q=80" },
+    { id: "anime", label: "Anime", prompt: "Create a beautiful modern anime-style digital illustration with soft cel-shading, vibrant magical colors, highly detailed atmospheric lighting, and high-fidelity scenery. ", sample: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80" },
 ];
 
 const LAB_IMAGES_COL_1 = [
@@ -1141,7 +1141,8 @@ STRICT RULES:
             }
             if (isImageGenMode) {
                 saveImageToHistory(userMessage, { role: "assistant", content: aiContent, timestamp: formatTimestamp() });
-            } else if (currentChatId) {
+            }
+            if (currentChatId) {
                 try {
                     const [savedUser, savedAssistant] = await Promise.all([
                         saveChatMessage(currentChatId, "user", displayContent),
@@ -1179,7 +1180,7 @@ STRICT RULES:
             setChatError(message);
             toast.error(message);
 
-            if (!isImageGenMode && currentChatId) {
+            if (currentChatId) {
                 try {
                     await saveChatMessage(currentChatId, "user", trimmedInput || "File Upload");
                     await saveChatMessage(currentChatId, "assistant", `Request failed: ${message}`);
@@ -1764,14 +1765,124 @@ STRICT RULES:
                             <AnimatePresence initial={false}>
                                 {messages.length === 0 || messages.every((msg) => msg.localOnly) ? (
                                     selectedEngine === "AI Image Lab" ? (
-                                        <div className="flex flex-col items-center justify-center h-full min-h-[60vh]">
-                                            <div className={`text-center ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
-                                                <div className="text-5xl mb-6">🎨</div>
-                                                <p className="text-sm font-mono tracking-wider uppercase">AI Image Lab</p>
-                                                <p className={`text-[10px] font-mono mt-2 ${isDarkMode ? "text-white/20" : "text-black/30"}`}>
-                                                    Select a style above and describe your vision
-                                                </p>
+                                        <div className="w-full max-w-4xl mx-auto py-8 px-4 md:px-0">
+                                            {/* Redesigned AI Image Lab Header */}
+                                            <div className="text-center mb-10">
+                                                <motion.div
+                                                    initial={{ opacity: 0, scale: 0.9 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    transition={{ duration: 0.5 }}
+                                                    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#00DDDD]/30 bg-[#00DDDD]/10 text-[#00DDDD] text-xs font-mono uppercase tracking-[0.25em] mb-4 shadow-[0_0_15px_rgba(0,221,221,0.15)]"
+                                                >
+                                                    <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                                                    AI Image Lab
+                                                </motion.div>
+                                                <motion.h1
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ duration: 0.5, delay: 0.1 }}
+                                                    className={`text-3xl md:text-5xl font-sans font-extrabold tracking-tight mb-4 ${
+                                                        isDarkMode 
+                                                            ? "bg-gradient-to-r from-white via-white to-white/60 text-transparent bg-clip-text" 
+                                                            : "text-black"
+                                                    }`}
+                                                >
+                                                    Choose Your Visual Style
+                                                </motion.h1>
+                                                <motion.p
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ duration: 0.5, delay: 0.2 }}
+                                                    className={`text-sm md:text-base font-sans max-w-lg mx-auto ${
+                                                        isDarkMode ? "text-white/50" : "text-black/60"
+                                                    }`}
+                                                >
+                                                    Select a highly curated style template below, type your descriptive details, and let your imagination come to life.
+                                                </motion.p>
                                             </div>
+
+                                            {/* Style Cards Grid */}
+                                            <motion.div
+                                                variants={{
+                                                    hidden: { opacity: 0 },
+                                                    show: {
+                                                        opacity: 1,
+                                                        transition: {
+                                                            staggerChildren: 0.05
+                                                        }
+                                                    }
+                                                }}
+                                                initial="hidden"
+                                                animate="show"
+                                                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6"
+                                            >
+                                                {IMAGE_STYLES.map((style) => {
+                                                    const isSelected = selectedImageStyle === style.id;
+                                                    return (
+                                                        <motion.div
+                                                            key={style.id}
+                                                            variants={{
+                                                                hidden: { opacity: 0, y: 20, scale: 0.95 },
+                                                                show: { 
+                                                                    opacity: 1, 
+                                                                    y: 0, 
+                                                                    scale: 1,
+                                                                    transition: {
+                                                                        type: "spring",
+                                                                        stiffness: 100,
+                                                                        damping: 15
+                                                                    }
+                                                                }
+                                                            }}
+                                                            whileHover={{ scale: 1.03, y: -2 }}
+                                                            whileTap={{ scale: 0.98 }}
+                                                            onClick={() => {
+                                                                setSelectedImageStyle(style.id);
+                                                                // Find if input already starts with another style's prompt
+                                                                const currentStyle = IMAGE_STYLES.find(s => input.startsWith(s.prompt));
+                                                                if (currentStyle) {
+                                                                    setInput(input.replace(currentStyle.prompt, style.prompt));
+                                                                } else {
+                                                                    setInput(style.prompt + input);
+                                                                }
+                                                                toast.success(`Active Style: ${style.label}`);
+                                                            }}
+                                                            className={`group relative aspect-[16/10] overflow-hidden rounded-[2.2rem] cursor-pointer border-2 transition-all duration-300 ${
+                                                                isSelected
+                                                                    ? "border-[#00DDDD] shadow-[0_0_25px_rgba(0,221,221,0.4)]"
+                                                                    : isDarkMode 
+                                                                        ? "border-white/5 hover:border-white/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.5)]"
+                                                                        : "border-black/5 hover:border-black/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.15)]"
+                                                            }`}
+                                                        >
+                                                            {/* Background image preview */}
+                                                            <img
+                                                                src={style.sample}
+                                                                alt={style.label}
+                                                                className="absolute inset-0 w-full h-full object-cover select-none transition-transform duration-500 ease-out group-hover:scale-105"
+                                                                loading="lazy"
+                                                            />
+                                                            
+                                                            {/* Linear overlay */}
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent transition-opacity duration-300 group-hover:opacity-90" />
+                                                            
+                                                            {/* Selected Check Indicator */}
+                                                            {isSelected && (
+                                                                <div className="absolute top-4 right-4 h-6 w-6 rounded-full bg-[#00DDDD] text-black flex items-center justify-center shadow-[0_0_12px_rgba(0,221,221,0.6)] z-20">
+                                                                    <CheckCircle className="h-4 w-4 stroke-[3]" />
+                                                                </div>
+                                                            )}
+
+                                                            {/* Label text */}
+                                                            <div className="absolute bottom-5 left-5 right-5 text-left z-10">
+                                                                <span className="text-white text-base md:text-lg font-sans font-semibold tracking-tight leading-tight block group-hover:text-[#00DDDD] transition-colors duration-200">
+                                                                    {style.label}
+                                                                </span>
+                                                            </div>
+                                                        </motion.div>
+                                                    );
+                                                })}
+                                            </motion.div>
                                         </div>
                                     ) : (
                                         <WelcomeBox
@@ -1965,39 +2076,43 @@ STRICT RULES:
                             })()}
 
                             {selectedEngine === "AI Image Lab" && (
-                                <div className="mb-3">
-                                    <div className="flex flex-wrap gap-1.5 md:gap-2">
-                                        {IMAGE_STYLES.map((style) => (
-                                            <button
-                                                key={style.id}
-                                                onClick={() => {
-                                                    setSelectedImageStyle(style.id);
-                                                    const currentStyle = IMAGE_STYLES.find(s => input.startsWith(s.prompt));
-                                                    if (currentStyle) {
-                                                        setInput(input.replace(currentStyle.prompt, style.prompt));
-                                                    } else {
-                                                        setInput(style.prompt + input);
-                                                    }
-                                                }}
-                                                className={`flex items-center gap-1.5 px-2 py-1 text-[10px] md:text-[11px] font-mono tracking-wider rounded transition-all duration-200 ${
-                                                    selectedImageStyle === style.id
-                                                        ? isDarkMode
-                                                            ? "bg-white text-black border border-white shadow-[0_0_12px_rgba(255,255,255,0.15)]"
-                                                            : "bg-black text-white border border-black shadow-[0_0_12px_rgba(0,0,0,0.1)]"
-                                                        : isDarkMode
-                                                            ? "bg-transparent text-white/50 border border-white/20 hover:text-white hover:border-white/50"
-                                                            : "bg-transparent text-black/50 border border-black/20 hover:text-black hover:border-black/50"
-                                                }`}
-                                            >
-                                                <img
-                                                    src={style.sample}
-                                                    alt=""
-                                                    className="w-5 h-5 rounded object-cover flex-shrink-0"
-                                                    loading="lazy"
-                                                />
-                                                {style.label}
-                                            </button>
-                                        ))}
+                                <div className="mb-4">
+                                    <div className="flex flex-wrap gap-2">
+                                        {IMAGE_STYLES.map((style) => {
+                                            const isSelected = selectedImageStyle === style.id;
+                                            return (
+                                                <button
+                                                    key={style.id}
+                                                    onClick={() => {
+                                                        setSelectedImageStyle(style.id);
+                                                        const currentStyle = IMAGE_STYLES.find(s => input.startsWith(s.prompt));
+                                                        if (currentStyle) {
+                                                            setInput(input.replace(currentStyle.prompt, style.prompt));
+                                                        } else {
+                                                            setInput(style.prompt + input);
+                                                        }
+                                                        toast.success(`Active Style: ${style.label}`);
+                                                    }}
+                                                    className={`group flex items-center gap-2 px-3 py-1.5 text-xs font-sans font-medium tracking-wide rounded-full border-2 transition-all duration-300 ${
+                                                        isSelected
+                                                            ? "bg-[#00DDDD] text-black border-[#00DDDD] shadow-[0_0_15px_rgba(0,221,221,0.45)] scale-[1.04] font-bold"
+                                                            : isDarkMode
+                                                                ? "bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white hover:border-white/20 hover:scale-[1.02]"
+                                                                : "bg-black/5 text-black/70 border-black/10 hover:bg-black/10 hover:text-black hover:border-black/20 hover:scale-[1.02]"
+                                                    }`}
+                                                >
+                                                    <img
+                                                        src={style.sample}
+                                                        alt=""
+                                                        className={`w-5 h-5 rounded-full object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-110 border ${
+                                                            isSelected ? "border-black/20" : "border-white/10"
+                                                        }`}
+                                                        loading="lazy"
+                                                    />
+                                                    <span>{style.label}</span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
