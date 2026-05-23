@@ -122,6 +122,30 @@ const setStoredActiveChatId = (chatId: string | null) => {
     window.localStorage.removeItem(ACTIVE_CHAT_STORAGE_KEY);
 };
 
+const LAB_IMAGES_COL_1 = [
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1614741118887-7a4ee193a5fa?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=600&q=80",
+];
+
+const LAB_IMAGES_COL_2 = [
+    "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&w=600&q=80",
+];
+
+const LAB_IMAGES_COL_3 = [
+    "https://images.unsplash.com/photo-1618005198143-e52834643034?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1500485035595-cbe6f645feb1?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1544377193-33dcf4d68fb5?auto=format&fit=crop&w=600&q=80",
+];
+
 const Chat = () => {
     const [isMobile, setIsMobile] = useState(false);
 
@@ -1132,6 +1156,26 @@ STRICT RULES:
                 }
                 .toggle-btn-right {
                     animation: bounceArrowRight 2s infinite ease-in-out;
+                }
+                @keyframes scrollUp {
+                    0% { transform: translateY(0); }
+                    100% { transform: translateY(-50%); }
+                }
+                @keyframes scrollDown {
+                    0% { transform: translateY(-50%); }
+                    100% { transform: translateY(0); }
+                }
+                .animate-scroll-up {
+                    animation: scrollUp 35s linear infinite;
+                }
+                .animate-scroll-down {
+                    animation: scrollDown 45s linear infinite;
+                }
+                .animate-scroll-up-slow {
+                    animation: scrollUp 50s linear infinite;
+                }
+                .animate-scroll-down-slow {
+                    animation: scrollDown 40s linear infinite;
                 }
             `}} />
             <div className={`absolute inset-0 noise opacity-[0.02] pointer-events-none ${isDarkMode ? "invert-0" : "invert"}`} />
@@ -2288,12 +2332,94 @@ STRICT RULES:
             </aside>
 
             {/* Ambient Background Grid */}
-            <div className={`fixed inset-0 z-0 pointer-events-none overflow-hidden opacity-10 ${isDarkMode ? "invert-0" : "invert"}`}>
-                <div className="absolute inset-0" style={{
-                    backgroundImage: `linear-gradient(to right, #ffffff05 1px, transparent 1px), linear-gradient(to bottom, #ffffff05 1px, transparent 1px)`,
-                    backgroundSize: '100px 100px'
-                }} />
-            </div>
+            {selectedEngine !== "AI Image Lab" && (
+                <div className={`fixed inset-0 z-0 pointer-events-none overflow-hidden opacity-10 ${isDarkMode ? "invert-0" : "invert"}`}>
+                    <div className="absolute inset-0" style={{
+                        backgroundImage: `linear-gradient(to right, #ffffff05 1px, transparent 1px), linear-gradient(to bottom, #ffffff05 1px, transparent 1px)`,
+                        backgroundSize: '100px 100px'
+                    }} />
+                </div>
+            )}
+
+            {/* AI Image Lab Mode Background Flowing Grids */}
+            {selectedEngine === "AI Image Lab" && (
+                <div className={`fixed inset-0 z-0 pointer-events-none overflow-hidden transition-opacity duration-1000 ${isDarkMode ? "opacity-[0.25]" : "opacity-[0.18]"}`}>
+                    <div className="absolute inset-0 flex gap-4 p-4 md:gap-6 md:p-6 justify-center">
+                        {/* Column 1 */}
+                        <div className="flex-1 max-w-[240px] flex flex-col gap-4 md:gap-6 overflow-hidden">
+                            <div className="flex flex-col gap-4 md:gap-6 animate-scroll-up">
+                                {[...LAB_IMAGES_COL_1, ...LAB_IMAGES_COL_1].map((url, index) => {
+                                    const heights = [260, 360, 220, 400, 280];
+                                    const h = heights[index % heights.length];
+                                    return (
+                                        <div 
+                                            key={`col1-${index}`} 
+                                            style={{ height: `${h}px` }} 
+                                            className={`w-full relative rounded-2xl overflow-hidden border-2 ${isDarkMode ? "border-white/10" : "border-black/10"} bg-[#0d0d0d]`}
+                                        >
+                                            <img src={url} alt="" className="w-full h-full object-cover select-none" loading="lazy" />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        {/* Column 2 */}
+                        <div className="flex-1 max-w-[240px] flex flex-col gap-4 md:gap-6 overflow-hidden">
+                            <div className="flex flex-col gap-4 md:gap-6 animate-scroll-down">
+                                {[...LAB_IMAGES_COL_2, ...LAB_IMAGES_COL_2].map((url, index) => {
+                                    const heights = [320, 200, 380, 270, 340];
+                                    const h = heights[index % heights.length];
+                                    return (
+                                        <div 
+                                            key={`col2-${index}`} 
+                                            style={{ height: `${h}px` }} 
+                                            className={`w-full relative rounded-2xl overflow-hidden border-2 ${isDarkMode ? "border-white/10" : "border-black/10"} bg-[#0d0d0d]`}
+                                        >
+                                            <img src={url} alt="" className="w-full h-full object-cover select-none" loading="lazy" />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        {/* Column 3 */}
+                        <div className="flex-1 max-w-[240px] flex flex-col gap-4 md:gap-6 overflow-hidden">
+                            <div className="flex flex-col gap-4 md:gap-6 animate-scroll-up-slow">
+                                {[...LAB_IMAGES_COL_3, ...LAB_IMAGES_COL_3].map((url, index) => {
+                                    const heights = [240, 350, 210, 390, 300];
+                                    const h = heights[index % heights.length];
+                                    return (
+                                        <div 
+                                            key={`col3-${index}`} 
+                                            style={{ height: `${h}px` }} 
+                                            className={`w-full relative rounded-2xl overflow-hidden border-2 ${isDarkMode ? "border-white/10" : "border-black/10"} bg-[#0d0d0d]`}
+                                        >
+                                            <img src={url} alt="" className="w-full h-full object-cover select-none" loading="lazy" />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        {/* Column 4 - hidden on mobile/small screens */}
+                        <div className="hidden lg:flex flex-1 max-w-[240px] flex-col gap-4 md:gap-6 overflow-hidden">
+                            <div className="flex flex-col gap-4 md:gap-6 animate-scroll-down-slow">
+                                {[...LAB_IMAGES_COL_1, ...LAB_IMAGES_COL_1].reverse().map((url, index) => {
+                                    const heights = [300, 230, 370, 250, 330];
+                                    const h = heights[index % heights.length];
+                                    return (
+                                        <div 
+                                            key={`col4-${index}`} 
+                                            style={{ height: `${h}px` }} 
+                                            className={`w-full relative rounded-2xl overflow-hidden border-2 ${isDarkMode ? "border-white/10" : "border-black/10"} bg-[#0d0d0d]`}
+                                        >
+                                            <img src={url} alt="" className="w-full h-full object-cover select-none" loading="lazy" />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Mock Paper Generation Overlay */}
             {isGeneratingPaper && (
