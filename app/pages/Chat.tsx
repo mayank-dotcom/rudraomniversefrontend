@@ -145,14 +145,14 @@ const setStoredActiveChatId = (chatId: string | null) => {
 };
 
 const IMAGE_STYLES = [
-    { id: "realistic", label: "Realistic", prompt: "Create a highly realistic photograph with natural lighting, detailed textures, and lifelike colors. " },
-    { id: "anime", label: "Anime", prompt: "Create an anime-style digital illustration with cel-shading, vibrant colors, and characteristic Japanese animation aesthetics. " },
-    { id: "oil-painting", label: "Oil Painting", prompt: "Create an oil painting style image with rich brush strokes, visible canvas texture, impasto technique, and artistic depth. " },
-    { id: "watercolor", label: "Watercolor", prompt: "Create a watercolor painting with soft edges, color bleeding effects, visible paper grain texture, and fluid washes. " },
-    { id: "cyberpunk", label: "Cyberpunk", prompt: "Create a cyberpunk style image with neon lighting, dark rainy atmosphere, futuristic cityscape, and high contrast. " },
-    { id: "sketch", label: "Sketch", prompt: "Create a pencil sketch style image with cross-hatching, line art, grayscale monochrome tones, and hand-drawn feel. " },
-    { id: "3d-render", label: "3D Render", prompt: "Create a photorealistic 3D rendered image with ray-traced lighting, global illumination, and CGI-quality materials. " },
-    { id: "pixel-art", label: "Pixel Art", prompt: "Create pixel art style with blocky pixels, retro game aesthetics, limited color palette, and 8-bit or 16-bit style. " },
+    { id: "realistic", label: "Realistic", prompt: "Create a highly realistic photograph with natural lighting, detailed textures, and lifelike colors. ", sample: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" },
+    { id: "anime", label: "Anime", prompt: "Create an anime-style digital illustration with cel-shading, vibrant colors, and characteristic Japanese animation aesthetics. ", sample: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=100&q=80" },
+    { id: "oil-painting", label: "Oil Painting", prompt: "Create an oil painting style image with rich brush strokes, visible canvas texture, impasto technique, and artistic depth. ", sample: "https://images.unsplash.com/photo-1515405295579-ba7b454bb62b?auto=format&fit=crop&w=100&q=80" },
+    { id: "watercolor", label: "Watercolor", prompt: "Create a watercolor painting with soft edges, color bleeding effects, visible paper grain texture, and fluid washes. ", sample: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=100&q=80" },
+    { id: "cyberpunk", label: "Cyberpunk", prompt: "Create a cyberpunk style image with neon lighting, dark rainy atmosphere, futuristic cityscape, and high contrast. ", sample: "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=100&q=80" },
+    { id: "sketch", label: "Sketch", prompt: "Create a pencil sketch style image with cross-hatching, line art, grayscale monochrome tones, and hand-drawn feel. ", sample: "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?auto=format&fit=crop&w=100&q=80" },
+    { id: "3d-render", label: "3D Render", prompt: "Create a photorealistic 3D rendered image with ray-traced lighting, global illumination, and CGI-quality materials. ", sample: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80" },
+    { id: "pixel-art", label: "Pixel Art", prompt: "Create pixel art style with blocky pixels, retro game aesthetics, limited color palette, and 8-bit or 16-bit style. ", sample: "https://images.unsplash.com/photo-1559825481-12a05cc00344?auto=format&fit=crop&w=100&q=80" },
 ];
 
 const LAB_IMAGES_COL_1 = [
@@ -1041,7 +1041,7 @@ STRICT RULES:
 
             if (isImageGenMode && !selectedFile) {
                 const style = IMAGE_STYLES.find(s => s.id === selectedImageStyle);
-                if (style) {
+                if (style && !trimmedInput.startsWith(style.prompt)) {
                     userContent = style.prompt + (trimmedInput || "");
                 }
             }
@@ -1763,15 +1763,27 @@ STRICT RULES:
                             {isHistoryLoading && <ChatLoader isDarkMode={isDarkMode} />}
                             <AnimatePresence initial={false}>
                                 {messages.length === 0 || messages.every((msg) => msg.localOnly) ? (
-                                    <WelcomeBox
-                                        isDarkMode={isDarkMode}
-                                        onSelectEngine={(engine) => {
-                                            setSelectedEngine(engine);
-                                            setShowEngineSelect(false);
-                                        }}
-                                        onOpenMockPaper={() => setIsMockPaperModalOpen(true)}
-                                        onOpenInterview={() => setIsInterviewModalOpen(true)}
-                                    />
+                                    selectedEngine === "AI Image Lab" ? (
+                                        <div className="flex flex-col items-center justify-center h-full min-h-[60vh]">
+                                            <div className={`text-center ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                                                <div className="text-5xl mb-6">🎨</div>
+                                                <p className="text-sm font-mono tracking-wider uppercase">AI Image Lab</p>
+                                                <p className={`text-[10px] font-mono mt-2 ${isDarkMode ? "text-white/20" : "text-black/30"}`}>
+                                                    Select a style above and describe your vision
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <WelcomeBox
+                                            isDarkMode={isDarkMode}
+                                            onSelectEngine={(engine) => {
+                                                setSelectedEngine(engine);
+                                                setShowEngineSelect(false);
+                                            }}
+                                            onOpenMockPaper={() => setIsMockPaperModalOpen(true)}
+                                            onOpenInterview={() => setIsInterviewModalOpen(true)}
+                                        />
+                                    )
                                 ) : (
                                     messages.map((msg, i) => (
                                         <motion.div
@@ -1958,8 +1970,16 @@ STRICT RULES:
                                         {IMAGE_STYLES.map((style) => (
                                             <button
                                                 key={style.id}
-                                                onClick={() => setSelectedImageStyle(style.id)}
-                                                className={`px-2.5 py-1 text-[10px] md:text-[11px] font-mono tracking-wider rounded transition-all duration-200 ${
+                                                onClick={() => {
+                                                    setSelectedImageStyle(style.id);
+                                                    const currentStyle = IMAGE_STYLES.find(s => input.startsWith(s.prompt));
+                                                    if (currentStyle) {
+                                                        setInput(input.replace(currentStyle.prompt, style.prompt));
+                                                    } else {
+                                                        setInput(style.prompt + input);
+                                                    }
+                                                }}
+                                                className={`flex items-center gap-1.5 px-2 py-1 text-[10px] md:text-[11px] font-mono tracking-wider rounded transition-all duration-200 ${
                                                     selectedImageStyle === style.id
                                                         ? isDarkMode
                                                             ? "bg-white text-black border border-white shadow-[0_0_12px_rgba(255,255,255,0.15)]"
@@ -1969,6 +1989,12 @@ STRICT RULES:
                                                             : "bg-transparent text-black/50 border border-black/20 hover:text-black hover:border-black/50"
                                                 }`}
                                             >
+                                                <img
+                                                    src={style.sample}
+                                                    alt=""
+                                                    className="w-5 h-5 rounded object-cover flex-shrink-0"
+                                                    loading="lazy"
+                                                />
                                                 {style.label}
                                             </button>
                                         ))}
