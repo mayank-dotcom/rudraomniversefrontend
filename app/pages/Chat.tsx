@@ -128,6 +128,9 @@ const LAB_IMAGES_COL_1 = [
     "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=600&q=80", // Scenery mountains mist
     "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80", // Portrait classic face
     "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80", // Anime art
+    "https://images.unsplash.com/photo-1522391692407-3e7f91e1b7a4?auto=format&fit=crop&w=600&q=80", // Anime character
+    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=600&q=80", // Scenery mountain stars
+    "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&w=600&q=80", // Anime art girl
 ];
 
 const LAB_IMAGES_COL_2 = [
@@ -136,6 +139,9 @@ const LAB_IMAGES_COL_2 = [
     "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80", // Portrait man close-up
     "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=600&q=80", // Vaporwave/synthwave dark neon
     "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80", // Light abstract shape
+    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=600&q=80", // Scenery waterfall forest
+    "https://images.unsplash.com/photo-1618336753974-aae8e04506aa?auto=format&fit=crop&w=600&q=80", // Anime style art
+    "https://images.unsplash.com/photo-1518173946687-a36f968b86fc?auto=format&fit=crop&w=600&q=80", // Scenery aurora sky
 ];
 
 const LAB_IMAGES_COL_3 = [
@@ -144,6 +150,9 @@ const LAB_IMAGES_COL_3 = [
     "https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=600&q=80", // Scenery lush valley hills
     "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?auto=format&fit=crop&w=600&q=80", // Dark aesthetic sneaker neon
     "https://images.unsplash.com/photo-1554151228-14d9def656e4?auto=format&fit=crop&w=600&q=80", // Portrait creative art face
+    "https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?auto=format&fit=crop&w=600&q=80", // Anime illustration
+    "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=600&q=80", // Scenery mountain lake
+    "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=600&q=80", // Scenery cityscape dusk
 ];
 
 const Chat = () => {
@@ -2349,7 +2358,7 @@ STRICT RULES:
                         <div className="flex-1 max-w-[25%] flex flex-col gap-0 overflow-hidden">
                             <div className="flex flex-col gap-0 animate-scroll-up">
                                 {[...LAB_IMAGES_COL_1, ...LAB_IMAGES_COL_1].map((url, index) => {
-                                    const heights = [260, 360, 220, 400, 280];
+                                    const heights = [260, 360, 220, 400, 280, 340, 240, 380];
                                     const h = heights[index % heights.length];
                                     return (
                                         <div 
@@ -2367,7 +2376,7 @@ STRICT RULES:
                         <div className="flex-1 max-w-[25%] flex flex-col gap-0 overflow-hidden">
                             <div className="flex flex-col gap-0 animate-scroll-down">
                                 {[...LAB_IMAGES_COL_2, ...LAB_IMAGES_COL_2].map((url, index) => {
-                                    const heights = [320, 200, 380, 270, 340];
+                                    const heights = [320, 200, 380, 270, 340, 250, 360, 300];
                                     const h = heights[index % heights.length];
                                     return (
                                         <div 
@@ -2385,7 +2394,7 @@ STRICT RULES:
                         <div className="flex-1 max-w-[25%] flex flex-col gap-0 overflow-hidden">
                             <div className="flex flex-col gap-0 animate-scroll-up-slow">
                                 {[...LAB_IMAGES_COL_3, ...LAB_IMAGES_COL_3].map((url, index) => {
-                                    const heights = [240, 350, 210, 390, 300];
+                                    const heights = [240, 350, 210, 390, 300, 270, 330, 370];
                                     const h = heights[index % heights.length];
                                     return (
                                         <div 
@@ -2403,7 +2412,7 @@ STRICT RULES:
                         <div className="hidden lg:flex flex-1 max-w-[25%] flex-col gap-0 overflow-hidden">
                             <div className="flex flex-col gap-0 animate-scroll-down-slow">
                                 {[...LAB_IMAGES_COL_1, ...LAB_IMAGES_COL_1].reverse().map((url, index) => {
-                                    const heights = [300, 230, 370, 250, 330];
+                                    const heights = [300, 230, 370, 250, 330, 310, 260, 350];
                                     const h = heights[index % heights.length];
                                     return (
                                         <div 
@@ -2418,8 +2427,7 @@ STRICT RULES:
                             </div>
                         </div>
                     </div>
-                    {/* Dynamic backdrop shade (no blur) to keep chat text completely readable over clear imagery */}
-                    <div className={`absolute inset-0 z-10 ${isDarkMode ? "bg-black/35" : "bg-white/45"}`} />
+
                 </div>
             )}
 
