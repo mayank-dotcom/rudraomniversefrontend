@@ -57,6 +57,28 @@ interface Message {
 
 const WELCOME_CONTENT = "Welcome to Rudranex AI. I am your study-pilot. How can I assist your learning journey today?";
 const ACTIVE_CHAT_STORAGE_KEY = "rudranex_active_chat_id";
+const IMAGE_HISTORY_KEY = "rudranex_image_history";
+const MAX_IMAGE_HISTORY = 30;
+
+const getImageHistory = (): Message[] => {
+    if (typeof window === "undefined") return [];
+    try {
+        const raw = window.localStorage.getItem(IMAGE_HISTORY_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+};
+
+const saveImageToHistory = (userMsg: Message, assistantMsg: Message) => {
+    if (typeof window === "undefined") return;
+    try {
+        const history = getImageHistory();
+        history.push(userMsg, assistantMsg);
+        if (history.length > MAX_IMAGE_HISTORY * 2) {
+            history.splice(0, history.length - MAX_IMAGE_HISTORY * 2);
+        }
+        window.localStorage.setItem(IMAGE_HISTORY_KEY, JSON.stringify(history));
+    } catch { /* ignore storage errors */ }
+};
 
 const chatHeadingFont = Poppins({
     subsets: ["latin"],
@@ -305,6 +327,33 @@ const Chat = () => {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
     }, [messages]);
+
+    useEffect(() => {
+        if (selectedEngine === "AI Image Lab") {
+            const imageHistory = getImageHistory();
+            if (imageHistory.length > 0) {
+                setMessages(imageHistory);
+            }
+        }
+    }, [selectedEngine]);
+
+    useEffect(() => {
+        if (selectedEngine !== "AI Image Lab") return;
+        const interval = setInterval(() => {
+            const history = getImageHistory();
+            const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+            const filtered = history.filter((m) => {
+                const t = new Date(m.timestamp).getTime();
+                return !isNaN(t) && t > cutoff;
+            });
+            if (filtered.length !== history.length) {
+                try {
+                    window.localStorage.setItem(IMAGE_HISTORY_KEY, JSON.stringify(filtered));
+                } catch { /* ignore */ }
+            }
+        }, 3600000);
+        return () => clearInterval(interval);
+    }, [selectedEngine]);
 
     const [isRecording, setIsRecording] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -901,6 +950,7 @@ STRICT RULES:
 
         let currentChatId = activeChatId;
         const currentEngine = engines.find(e => e.name === selectedEngine) || engines[0];
+        const isImageGenMode = selectedEngine === "AI Image Lab";
 
         try {
             if (!currentChatId) {
@@ -914,7 +964,7 @@ STRICT RULES:
             let userContent: any = trimmedInput;
             let displayContent = trimmedInput;
             // Determine request modality — may be overridden for PDF/vision files
-            let requestModality: string = currentEngine.name === "AI Image Lab" ? "image_gen" : "text";
+            let requestModality: string = isImageGenMode ? "image_gen" : "text";
             // Determine endpoint — PDFs always go to /features/pdf/intel regardless of engine name
             let requestEndpoint: string = currentEngine.endpoint;
 
@@ -983,21 +1033,23 @@ STRICT RULES:
                 timestamp: formatTimestamp()
             };
 
-            const conversationHistory = [
-                ...(selectedPersona && selectedEngine === "Persona Mode"
-                    ? [{ role: "system" as const, content: selectedPersona.systemPrompt }]
-                    : []),
-                ...messages
-                    .filter((message) => !message.localOnly && message.content.trim())
-                    .map((message) => ({
-                        role: message.role as "user" | "assistant" | "system",
-                        content: message.content
-                    })),
-                {
-                    role: "user" as const,
-                    content: userContent
-                }
-            ];
+            const conversationHistory = isImageGenMode
+                ? [{ role: "user" as const, content: userContent }]
+                : [
+                    ...(selectedPersona && selectedEngine === "Persona Mode"
+                        ? [{ role: "system" as const, content: selectedPersona.systemPrompt }]
+                        : []),
+                    ...messages
+                        .filter((message) => !message.localOnly && message.content.trim())
+                        .map((message) => ({
+                            role: message.role as "user" | "assistant" | "system",
+                            content: message.content
+                        })),
+                    {
+                        role: "user" as const,
+                        content: userContent
+                    }
+                ];
 
             setMessages((prev) => [...prev.filter((message) => !message.localOnly), userMessage]);
             setInput("");
@@ -1014,7 +1066,7 @@ STRICT RULES:
             // Backend returns { success, model, data: choices_array }
             const firstChoice = data.data?.[0];
             console.log("First choice:", firstChoice);
-            const isImageGen = selectedEngine === "AI Image Lab";
+            const isImageGen = isImageGenMode;
 
             let aiContent: string;
             if (isImageGen) {
@@ -1068,7 +1120,9 @@ STRICT RULES:
                     }
                 }
             }
-            if (currentChatId) {
+            if (isImageGenMode) {
+                saveImageToHistory(userMessage, { role: "assistant", content: aiContent, timestamp: formatTimestamp() });
+            } else if (currentChatId) {
                 try {
                     const [savedUser, savedAssistant] = await Promise.all([
                         saveChatMessage(currentChatId, "user", displayContent),
@@ -1106,7 +1160,7 @@ STRICT RULES:
             setChatError(message);
             toast.error(message);
 
-            if (currentChatId) {
+            if (!isImageGenMode && currentChatId) {
                 try {
                     await saveChatMessage(currentChatId, "user", trimmedInput || "File Upload");
                     await saveChatMessage(currentChatId, "assistant", `Request failed: ${message}`);
@@ -1885,7 +1939,7 @@ STRICT RULES:
                                         <button
                                             onClick={() => fileInputRef.current?.click()}
                                             disabled={isLoading || isProcessingFile}
-                                            className={`p-2 ${isDarkMode ? "text-white/30 hover:text-[#D4AF37]" : "text-black/30 hover:text-[#B8962E]"} transition-all active:scale-95`}
+                                            className={`p-2 ${isDarkMode ? "text-white hover:text-[#D4AF37]" : "text-black hover:text-[#B8962E]"} transition-all active:scale-95`}
                                             title="Attach File"
                                         >
                                             {isProcessingFile ? (
@@ -1964,7 +2018,7 @@ STRICT RULES:
                                                 className={`p-2 rounded-full transition-all duration-300 relative z-10 ${
                                                     isRecording 
                                                         ? "bg-[#00DDDD] text-black scale-125 shadow-[0_0_20px_rgba(0,221,221,0.6)]" 
-                                                        : (isDarkMode ? "text-white/40 hover:text-[#00DDDD] hover:bg-[#00DDDD]/10" : "text-black/40 hover:text-[#00DDDD] hover:bg-[#00DDDD]/10")
+                                                        : (isDarkMode ? "text-white hover:text-[#00DDDD] hover:bg-[#00DDDD]/10" : "text-black hover:text-[#00DDDD] hover:bg-[#00DDDD]/10")
                                                 }`}
                                                 title={isRecording ? "Click to stop" : "Click to speak"}
                                             >
@@ -1975,7 +2029,7 @@ STRICT RULES:
                                     <div className="relative" ref={engineSelectRef}>
                                         <button
                                             onClick={() => setShowEngineSelect(!showEngineSelect)}
-                                            className={`flex items-center gap-2 ${isMobile ? "p-2" : "px-3 py-2"} border-2 ${showEngineSelect ? "border-[#00DDDD] text-[#00DDDD]" : (isDarkMode ? "border-white text-white/60 hover:border-[#00DDDD] hover:text-[#00DDDD]" : "border-black text-black/60 hover:border-[#00DDDD] hover:text-[#00DDDD]")} text-[9px] font-mono uppercase tracking-widest transition-all duration-300 rounded`}
+                                            className={`flex items-center gap-2 ${isMobile ? "p-2" : "px-3 py-2"} border-2 ${showEngineSelect ? "border-[#00DDDD] text-[#00DDDD]" : (isDarkMode ? "border-white text-white hover:border-[#00DDDD] hover:text-[#00DDDD]" : "border-black text-black hover:border-[#00DDDD] hover:text-[#00DDDD]")} text-[9px] font-mono uppercase tracking-widest transition-all duration-300 rounded`}
                                         >
                                             <Bot className="h-3.5 w-3.5" />
                                             {!isMobile && selectedEngine}
