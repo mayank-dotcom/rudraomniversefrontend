@@ -1339,8 +1339,8 @@ STRICT RULES:
                             <button
                                 onClick={() => setSidebarTab("history")}
                                 className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${sidebarTab === "history"
-                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
-                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
+                                    ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
+                                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
                                     }`}
                             >
                                 <Clock className="h-3 w-3 inline mr-1.5 -mt-0.5" />
@@ -1349,8 +1349,8 @@ STRICT RULES:
                             <button
                                 onClick={() => setSidebarTab("modes")}
                                 className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${sidebarTab === "modes"
-                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
-                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
+                                    ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
+                                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
                                     }`}
                             >
                                 <Bot className="h-3 w-3 inline mr-1.5 -mt-0.5" />
@@ -1392,8 +1392,8 @@ STRICT RULES:
                                             <div
                                                 key={chat.id}
                                                 className={`group flex items-center gap-1 pr-2 transition-all duration-300 ${activeChatId === chat.id
-                                                        ? (isDarkMode ? "bg-[#00DDDD]/10 border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.3)]")
-                                                        : ""
+                                                    ? (isDarkMode ? "bg-[#00DDDD]/10 border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.3)]")
+                                                    : ""
                                                     }`}
                                             >
                                                 {editingChatId === chat.id ? (
@@ -1417,13 +1417,13 @@ STRICT RULES:
                                                         onClick={() => void openChat(chat.id)}
                                                         onDoubleClick={() => handleStartEditing(chat)}
                                                         className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${activeChatId === chat.id
-                                                                ? (isDarkMode ? "text-[#00DDDD]" : "text-white")
-                                                                : (isDarkMode ? "text-white/60 hover:bg-white/5" : "text-black hover:bg-black/5")
+                                                            ? (isDarkMode ? "text-[#00DDDD]" : "text-white")
+                                                            : (isDarkMode ? "text-white/60 hover:bg-white/5" : "text-black hover:bg-black/5")
                                                             }`}
                                                     >
                                                         <MessageSquare className={`h-3 w-3 flex-shrink-0 ${activeChatId === chat.id
-                                                                ? (isDarkMode ? "text-[#00DDDD]" : "text-white")
-                                                                : (isDarkMode ? "text-white/20" : "text-black")
+                                                            ? (isDarkMode ? "text-[#00DDDD]" : "text-white")
+                                                            : (isDarkMode ? "text-white/20" : "text-black")
                                                             }`} />
                                                         {sidebarWidth > 120 && <span className={`truncate font-sans ${activeChatId === chat.id ? "font-bold" : (isDarkMode ? "opacity-60" : "text-black")}`}>{chat.title}</span>}
                                                     </button>
@@ -1482,8 +1482,8 @@ STRICT RULES:
                                                     }
                                                 }}
                                                 className={`w-full flex items-center gap-3 p-3 text-xs transition-all ${selectedEngine === engine.name
-                                                        ? (isDarkMode ? "bg-[#00DDDD]/10 text-[#00DDDD] border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] text-white border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.4)]")
-                                                        : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
+                                                    ? (isDarkMode ? "bg-[#00DDDD]/10 text-[#00DDDD] border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] text-white border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.4)]")
+                                                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
                                                     }`}
                                             >
                                                 {(() => {
@@ -1580,8 +1580,8 @@ STRICT RULES:
                                 disabled={isCreatingChat}
                                 title="New Chat"
                                 className={`h-11 w-11 flex items-center justify-center border-2 disabled:opacity-50 transition-all duration-300 ${isDarkMode
-                                        ? "bg-white border-white text-black hover:bg-gray-200 hover:scale-110"
-                                        : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110"
+                                    ? "bg-white border-white text-black hover:bg-gray-200 hover:scale-110"
+                                    : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110"
                                     }`}
                             >
                                 <Plus className="h-4 w-4 text-black font-bold" />
@@ -1594,8 +1594,8 @@ STRICT RULES:
                                 }}
                                 title="History"
                                 className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${sidebarTab === "history"
-                                        ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-[#00DDDD] border-black text-white font-bold")
-                                        : (isDarkMode ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5" : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110")
+                                    ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-[#00DDDD] border-black text-white font-bold")
+                                    : (isDarkMode ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5" : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110")
                                     }`}
                             >
                                 <Clock className="h-4 w-4" />
@@ -1608,8 +1608,8 @@ STRICT RULES:
                                 }}
                                 title="Modes"
                                 className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${sidebarTab === "modes"
-                                        ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-black border-black text-white font-bold")
-                                        : (isDarkMode ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5" : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110")
+                                    ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-black border-black text-white font-bold")
+                                    : (isDarkMode ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5" : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110")
                                     }`}
                             >
                                 <Bot className="h-4 w-4" />
@@ -1619,8 +1619,8 @@ STRICT RULES:
                                 onClick={toggleTheme}
                                 title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
                                 className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${isDarkMode
-                                        ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5"
-                                        : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110"
+                                    ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5"
+                                    : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110"
                                     }`}
                             >
                                 {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
@@ -1643,8 +1643,8 @@ STRICT RULES:
                                     }}
                                     title="Logout"
                                     className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${isDarkMode
-                                            ? "border-white/20 bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500"
-                                            : "bg-white border-black text-black hover:bg-red-500 hover:text-white hover:border-red-500"
+                                        ? "border-white/20 bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500"
+                                        : "bg-white border-black text-black hover:bg-red-500 hover:text-white hover:border-red-500"
                                         }`}
                                 >
                                     <LogOut className="h-4 w-4" />
@@ -1747,8 +1747,8 @@ STRICT RULES:
                                 }}
                                 title="Logout"
                                 className={`p-2 border-2 transition-all active:scale-95 ${isDarkMode
-                                        ? "border-white bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500"
-                                        : "border-black bg-white text-black hover:bg-red-500 hover:text-white hover:border-red-500"
+                                    ? "border-white bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500"
+                                    : "border-black bg-white text-black hover:bg-red-500 hover:text-white hover:border-red-500"
                                     }`}
                             >
                                 <LogOut className="h-4 w-4" />
@@ -1792,16 +1792,15 @@ STRICT RULES:
                                                     transition={{ duration: 0.5 }}
                                                     className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#00DDDD]/30 bg-[#00DDDD]/10 text-[#00DDDD] text-xs font-mono uppercase tracking-[0.25em] mb-4 shadow-[0_0_15px_rgba(0,221,221,0.15)]"
                                                 >
-                                                    <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-                                                    AI Image Lab
+
                                                 </motion.div>
                                                 <motion.h1
                                                     initial={{ opacity: 0, y: -10 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ duration: 0.5, delay: 0.1 }}
                                                     className={`text-3xl md:text-5xl font-sans font-extrabold tracking-tight mb-4 ${isDarkMode
-                                                            ? "bg-gradient-to-r from-white via-white to-white/60 text-transparent bg-clip-text"
-                                                            : "text-black"
+                                                        ? "bg-gradient-to-r from-white via-white to-white/60 text-transparent bg-clip-text"
+                                                        : "text-black"
                                                         }`}
                                                 >
                                                     Choose Your Visual Style
@@ -1823,8 +1822,8 @@ STRICT RULES:
                                                 <button
                                                     onClick={() => scrollStyleCards("left")}
                                                     className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-2xl active:scale-90 ${isDarkMode
-                                                            ? "bg-black/90 border-white/15 text-white/95 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.5)]"
-                                                            : "bg-white/95 border-black/15 text-black hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.3)]"
+                                                        ? "bg-black/90 border-white/15 text-white/95 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.5)]"
+                                                        : "bg-white/95 border-black/15 text-black hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.3)]"
                                                         }`}
                                                     title="Scroll Left"
                                                 >
@@ -1835,8 +1834,8 @@ STRICT RULES:
                                                 <button
                                                     onClick={() => scrollStyleCards("right")}
                                                     className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-2xl active:scale-90 ${isDarkMode
-                                                            ? "bg-black/90 border-white/15 text-white/95 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.5)]"
-                                                            : "bg-white/95 border-black/15 text-black hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.3)]"
+                                                        ? "bg-black/90 border-white/15 text-white/95 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.5)]"
+                                                        : "bg-white/95 border-black/15 text-black hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.3)]"
                                                         }`}
                                                     title="Scroll Right"
                                                 >
@@ -1891,10 +1890,10 @@ STRICT RULES:
                                                                     toast.success(`Active Style: ${style.label}`);
                                                                 }}
                                                                 className={`group relative w-full sm:w-[calc((100%-20px)/2)] md:w-[calc((100%-40px)/3)] flex-shrink-0 aspect-[16/10] overflow-hidden rounded-[2.2rem] cursor-pointer border-2 transition-all duration-300 ${isSelected
-                                                                        ? "border-[#00DDDD] shadow-[0_0_25px_rgba(0,221,221,0.4)]"
-                                                                        : isDarkMode
-                                                                            ? "border-white/5 hover:border-white/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.5)]"
-                                                                            : "border-black/5 hover:border-black/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.15)]"
+                                                                    ? "border-[#00DDDD] shadow-[0_0_25px_rgba(0,221,221,0.4)]"
+                                                                    : isDarkMode
+                                                                        ? "border-white/5 hover:border-white/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.5)]"
+                                                                        : "border-black/5 hover:border-black/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.15)]"
                                                                     }`}
                                                             >
                                                                 {/* Background image preview */}
@@ -2102,10 +2101,10 @@ STRICT RULES:
                                                         onClick={() => handleMcqOptionClick(oi)}
                                                         disabled={hasAnswered}
                                                         className={`p-4 rounded-xl border text-xs font-mono text-left transition-all ${isSelected
-                                                                ? `${isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"} font-bold scale-[1.02]`
-                                                                : hasAnswered
-                                                                    ? `${isDarkMode ? "border-white/10 text-white/30" : "border-black/20 text-black/30"}`
-                                                                    : `${isDarkMode ? "border-white/20 text-white/70 hover:border-white/50 hover:bg-white/5" : "border-black/20 text-black/70 hover:border-black/50 hover:bg-black/5"}`
+                                                            ? `${isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"} font-bold scale-[1.02]`
+                                                            : hasAnswered
+                                                                ? `${isDarkMode ? "border-white/10 text-white/30" : "border-black/20 text-black/30"}`
+                                                                : `${isDarkMode ? "border-white/20 text-white/70 hover:border-white/50 hover:bg-white/5" : "border-black/20 text-black/70 hover:border-black/50 hover:bg-black/5"}`
                                                             }`}
                                                     >
                                                         {opt}
@@ -2136,10 +2135,10 @@ STRICT RULES:
                                                         toast.success(`Active Style: ${style.label}`);
                                                     }}
                                                     className={`group flex items-center gap-1.5 md:gap-2 px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-sans font-medium tracking-wide rounded-full border-2 transition-all duration-300 flex-shrink-0 ${isSelected
-                                                            ? "bg-[#00DDDD] text-black border-[#00DDDD] shadow-[0_0_15px_rgba(0,221,221,0.45)] scale-[1.04] font-bold"
-                                                            : isDarkMode
-                                                                ? "bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white hover:border-white/20 hover:scale-[1.02]"
-                                                                : "bg-black/5 text-black/70 border-black/10 hover:bg-black/10 hover:text-black hover:border-black/20 hover:scale-[1.02]"
+                                                        ? "bg-[#00DDDD] text-black border-[#00DDDD] shadow-[0_0_15px_rgba(0,221,221,0.45)] scale-[1.04] font-bold"
+                                                        : isDarkMode
+                                                            ? "bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white hover:border-white/20 hover:scale-[1.02]"
+                                                            : "bg-black/5 text-black/70 border-black/10 hover:bg-black/10 hover:text-black hover:border-black/20 hover:scale-[1.02]"
                                                         }`}
                                                 >
                                                     <img
@@ -2239,8 +2238,8 @@ STRICT RULES:
                                                     }
                                                 }}
                                                 className={`p-2 rounded-full transition-all duration-300 relative z-10 ${isRecording
-                                                        ? "bg-[#00DDDD] text-black scale-125 shadow-[0_0_20px_rgba(0,221,221,0.6)]"
-                                                        : (isDarkMode ? "text-white hover:text-[#00DDDD] hover:bg-[#00DDDD]/10" : "text-black hover:text-[#00DDDD] hover:bg-[#00DDDD]/10")
+                                                    ? "bg-[#00DDDD] text-black scale-125 shadow-[0_0_20px_rgba(0,221,221,0.6)]"
+                                                    : (isDarkMode ? "text-white hover:text-[#00DDDD] hover:bg-[#00DDDD]/10" : "text-black hover:text-[#00DDDD] hover:bg-[#00DDDD]/10")
                                                     }`}
                                                 title={isRecording ? "Click to stop" : "Click to speak"}
                                             >
