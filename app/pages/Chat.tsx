@@ -144,6 +144,17 @@ const setStoredActiveChatId = (chatId: string | null) => {
     window.localStorage.removeItem(ACTIVE_CHAT_STORAGE_KEY);
 };
 
+const IMAGE_STYLES = [
+    { id: "realistic", label: "Realistic", prompt: "Create a highly realistic photograph with natural lighting, detailed textures, and lifelike colors. " },
+    { id: "anime", label: "Anime", prompt: "Create an anime-style digital illustration with cel-shading, vibrant colors, and characteristic Japanese animation aesthetics. " },
+    { id: "oil-painting", label: "Oil Painting", prompt: "Create an oil painting style image with rich brush strokes, visible canvas texture, impasto technique, and artistic depth. " },
+    { id: "watercolor", label: "Watercolor", prompt: "Create a watercolor painting with soft edges, color bleeding effects, visible paper grain texture, and fluid washes. " },
+    { id: "cyberpunk", label: "Cyberpunk", prompt: "Create a cyberpunk style image with neon lighting, dark rainy atmosphere, futuristic cityscape, and high contrast. " },
+    { id: "sketch", label: "Sketch", prompt: "Create a pencil sketch style image with cross-hatching, line art, grayscale monochrome tones, and hand-drawn feel. " },
+    { id: "3d-render", label: "3D Render", prompt: "Create a photorealistic 3D rendered image with ray-traced lighting, global illumination, and CGI-quality materials. " },
+    { id: "pixel-art", label: "Pixel Art", prompt: "Create pixel art style with blocky pixels, retro game aesthetics, limited color palette, and 8-bit or 16-bit style. " },
+];
+
 const LAB_IMAGES_COL_1 = [
     "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80", // Portrait (Woman)
     "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80", // Anime alley neon
@@ -203,6 +214,7 @@ const Chat = () => {
     const { isDarkMode, toggleTheme } = useTheme();
     const [showEngineSelect, setShowEngineSelect] = useState(false);
     const [selectedEngine, setSelectedEngine] = useState("Student Mode");
+    const [selectedImageStyle, setSelectedImageStyle] = useState("realistic");
     const [isLoading, setIsLoading] = useState(false);
     const [chats, setChats] = useState<ChatSummary[]>([]);
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -1024,6 +1036,13 @@ STRICT RULES:
                     userContent = trimmedInput
                         ? `File: "${selectedFile.name}"\n\n${truncated}\n\n---\nUser's request: ${trimmedInput}`
                         : `File: "${selectedFile.name}"\n\n${truncated}\n\n---\nPlease analyze and respond to the above content.`;
+                }
+            }
+
+            if (isImageGenMode && !selectedFile) {
+                const style = IMAGE_STYLES.find(s => s.id === selectedImageStyle);
+                if (style) {
+                    userContent = style.prompt + (trimmedInput || "");
                 }
             }
 
@@ -1933,6 +1952,29 @@ STRICT RULES:
                                 )
                             })()}
 
+                            {selectedEngine === "AI Image Lab" && (
+                                <div className="mb-3">
+                                    <div className="flex flex-wrap gap-1.5 md:gap-2">
+                                        {IMAGE_STYLES.map((style) => (
+                                            <button
+                                                key={style.id}
+                                                onClick={() => setSelectedImageStyle(style.id)}
+                                                className={`px-2.5 py-1 text-[10px] md:text-[11px] font-mono tracking-wider rounded transition-all duration-200 ${
+                                                    selectedImageStyle === style.id
+                                                        ? isDarkMode
+                                                            ? "bg-white text-black border border-white shadow-[0_0_12px_rgba(255,255,255,0.15)]"
+                                                            : "bg-black text-white border border-black shadow-[0_0_12px_rgba(0,0,0,0.1)]"
+                                                        : isDarkMode
+                                                            ? "bg-transparent text-white/50 border border-white/20 hover:text-white hover:border-white/50"
+                                                            : "bg-transparent text-black/50 border border-black/20 hover:text-black hover:border-black/50"
+                                                }`}
+                                            >
+                                                {style.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                             <div className={`relative flex flex-row items-center border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
                                 <div className="flex-1 min-w-0 flex items-center">
                                     <div className="flex items-center gap-1 md:gap-2 pl-1.5 md:pl-3">
