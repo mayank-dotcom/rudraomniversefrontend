@@ -146,7 +146,7 @@ const setStoredActiveChatId = (chatId: string | null) => {
 
 const IMAGE_STYLES = [
     { id: "monochrome", label: "Monochrome", prompt: "Create a highly dramatic, high-contrast monochrome fine-art photograph with strong studio shadows, detailed textures, and timeless grayscale tones. ", sample: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80" },
-    { id: "colour-block", label: "Colour block", prompt: "Create a minimalist color block digital artwork with bold contrasting solid colors, geometric shapes, and a highly aesthetic clean composition. ", sample: "https://images.unsplash.com/photo-1500462906766-dbb91038157f?auto=format&fit=crop&w=600&q=80" },
+    { id: "colour-block", label: "Colour block", prompt: "Create a minimalist color block digital artwork with bold contrasting solid colors, geometric shapes, and a highly aesthetic clean composition. ", sample: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=600&q=80" },
     { id: "runway", label: "Runway", prompt: "Create a high-fashion runway editorial photograph featuring a model walking under dramatic moody spotlighting, rich ambient mist, and highly saturated vintage color-grading. ", sample: "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=600&q=80" },
     { id: "risograph", label: "Risograph", prompt: "Create an authentic risograph print illustration with granular organic textures, slightly misaligned ink layers, soft halftone dots, and a vibrant neon duo-tone palette. ", sample: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=600&q=80" },
     { id: "technicolour", label: "Technicolour", prompt: "Create a saturated technicolor vintage 70s film style photograph, featuring warm ambient light projections, rich golden sunset shadows, and a dreamy nostalgic glow. ", sample: "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=600&q=80" },
@@ -1831,31 +1831,31 @@ STRICT RULES:
                                             </div>
 
                                             {/* Style Cards Horizontally Scrollable Slider */}
-                                            <div className="relative w-full px-2">
+                                            <div className="relative w-full px-12">
                                                 {/* Left Arrow Button */}
                                                 <button
                                                     onClick={() => scrollStyleCards("left")}
-                                                    className={`absolute left-[-24px] top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-xl active:scale-90 ${
+                                                    className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-2xl active:scale-90 ${
                                                         isDarkMode
-                                                            ? "bg-black/80 border-white/15 text-white/80 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_15px_rgba(0,221,221,0.4)]"
-                                                            : "bg-white/80 border-black/15 text-black/80 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_15px_rgba(0,221,221,0.2)]"
+                                                            ? "bg-black/90 border-white/15 text-white/95 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.5)]"
+                                                            : "bg-white/95 border-black/15 text-black hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.3)]"
                                                     }`}
                                                     title="Scroll Left"
                                                 >
-                                                    <ChevronLeft className="h-5 w-5 stroke-[2.5]" />
+                                                    <ChevronLeft className="h-6 w-6 stroke-[2.5]" />
                                                 </button>
 
                                                 {/* Right Arrow Button */}
                                                 <button
                                                     onClick={() => scrollStyleCards("right")}
-                                                    className={`absolute right-[-24px] top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-xl active:scale-90 ${
+                                                    className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-2xl active:scale-90 ${
                                                         isDarkMode
-                                                            ? "bg-black/80 border-white/15 text-white/80 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_15px_rgba(0,221,221,0.4)]"
-                                                            : "bg-white/80 border-black/15 text-black/80 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_15px_rgba(0,221,221,0.2)]"
+                                                            ? "bg-black/90 border-white/15 text-white/95 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.5)]"
+                                                            : "bg-white/95 border-black/15 text-black hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.3)]"
                                                     }`}
                                                     title="Scroll Right"
                                                 >
-                                                    <ChevronRight className="h-5 w-5 stroke-[2.5]" />
+                                                    <ChevronRight className="h-6 w-6 stroke-[2.5]" />
                                                 </button>
 
                                                 {/* Scrollable Container */}
@@ -1905,7 +1905,7 @@ STRICT RULES:
                                                                     }
                                                                     toast.success(`Active Style: ${style.label}`);
                                                                 }}
-                                                                className={`group relative w-[240px] sm:w-[280px] flex-shrink-0 aspect-[16/10] overflow-hidden rounded-[2.2rem] cursor-pointer border-2 transition-all duration-300 ${
+                                                                className={`group relative w-full sm:w-[calc((100%-20px)/2)] md:w-[calc((100%-40px)/3)] flex-shrink-0 aspect-[16/10] overflow-hidden rounded-[2.2rem] cursor-pointer border-2 transition-all duration-300 ${
                                                                     isSelected
                                                                         ? "border-[#00DDDD] shadow-[0_0_25px_rgba(0,221,221,0.4)]"
                                                                         : isDarkMode 

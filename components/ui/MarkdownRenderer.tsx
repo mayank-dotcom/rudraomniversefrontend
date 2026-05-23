@@ -136,6 +136,23 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                 remarkPlugins={[[remarkMath, { singleDollar: true, doubleDollar: true }]]}
                 rehypePlugins={[[rehypeKatex, { trust: true, strict: false }]]}
                 components={{
+                    img(props) {
+                        const { src, alt, ...rest } = props;
+                        if (src && typeof src === "string" && src.includes("mermaid.svg?code=")) {
+                            try {
+                                const absoluteUrl = src.startsWith("http") ? src : `https://dummy.com${src.startsWith("/") ? "" : "/"}${src}`;
+                                const url = new URL(absoluteUrl);
+                                const codeParam = url.searchParams.get("code");
+                                if (codeParam) {
+                                    const decodedCode = decodeURIComponent(codeParam);
+                                    return <MermaidDiagram code={decodedCode} isDarkMode={isDarkMode} />;
+                                }
+                            } catch (e) {
+                                console.error("Failed to parse or render mermaid URL:", e);
+                            }
+                        }
+                        return <img src={src} alt={alt} {...rest} />;
+                    },
                     code(props) {
                         const { children, className, ...rest } = props;
                         const match = /language-(\w+)/.exec(className || "");
