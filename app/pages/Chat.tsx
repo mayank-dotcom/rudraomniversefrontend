@@ -123,27 +123,27 @@ const setStoredActiveChatId = (chatId: string | null) => {
 };
 
 const LAB_IMAGES_COL_1 = [
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1614741118887-7a4ee193a5fa?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80", // Portrait (Woman)
+    "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80", // Anime alley neon
+    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=600&q=80", // Scenery mountains mist
+    "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80", // Portrait classic face
+    "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80", // Anime art
 ];
 
 const LAB_IMAGES_COL_2 = [
-    "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1515260268569-9271009adfdb?auto=format&fit=crop&w=600&q=80", // Light scenery pastel pink sky
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80", // Scenery Yosemite valley river
+    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80", // Portrait man close-up
+    "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=600&q=80", // Vaporwave/synthwave dark neon
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80", // Light abstract shape
 ];
 
 const LAB_IMAGES_COL_3 = [
-    "https://images.unsplash.com/photo-1618005198143-e52834643034?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1500485035595-cbe6f645feb1?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1544377193-33dcf4d68fb5?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=600&q=80", // Scenery forest sunrays
+    "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80", // Anime cyberpunk neon cityscape
+    "https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=600&q=80", // Scenery lush valley hills
+    "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?auto=format&fit=crop&w=600&q=80", // Dark aesthetic sneaker neon
+    "https://images.unsplash.com/photo-1554151228-14d9def656e4?auto=format&fit=crop&w=600&q=80", // Portrait creative art face
 ];
 
 const Chat = () => {
@@ -2343,11 +2343,11 @@ STRICT RULES:
 
             {/* AI Image Lab Mode Background Flowing Grids */}
             {selectedEngine === "AI Image Lab" && (
-                <div className={`fixed inset-0 z-0 pointer-events-none overflow-hidden transition-opacity duration-1000 ${isDarkMode ? "opacity-[0.25]" : "opacity-[0.18]"}`}>
-                    <div className="absolute inset-0 flex gap-4 p-4 md:gap-6 md:p-6 justify-center">
+                <div className={`fixed inset-0 z-0 pointer-events-none overflow-hidden transition-opacity duration-1000 ${isDarkMode ? "opacity-[0.88]" : "opacity-[0.80]"}`}>
+                    <div className="absolute inset-0 flex gap-0 justify-center w-full h-full">
                         {/* Column 1 */}
-                        <div className="flex-1 max-w-[240px] flex flex-col gap-4 md:gap-6 overflow-hidden">
-                            <div className="flex flex-col gap-4 md:gap-6 animate-scroll-up">
+                        <div className="flex-1 max-w-[25%] flex flex-col gap-0 overflow-hidden">
+                            <div className="flex flex-col gap-0 animate-scroll-up">
                                 {[...LAB_IMAGES_COL_1, ...LAB_IMAGES_COL_1].map((url, index) => {
                                     const heights = [260, 360, 220, 400, 280];
                                     const h = heights[index % heights.length];
@@ -2355,7 +2355,7 @@ STRICT RULES:
                                         <div 
                                             key={`col1-${index}`} 
                                             style={{ height: `${h}px` }} 
-                                            className={`w-full relative rounded-2xl overflow-hidden border-2 ${isDarkMode ? "border-white/10" : "border-black/10"} bg-[#0d0d0d]`}
+                                            className="w-full relative bg-[#0a0a0a]"
                                         >
                                             <img src={url} alt="" className="w-full h-full object-cover select-none" loading="lazy" />
                                         </div>
@@ -2364,8 +2364,8 @@ STRICT RULES:
                             </div>
                         </div>
                         {/* Column 2 */}
-                        <div className="flex-1 max-w-[240px] flex flex-col gap-4 md:gap-6 overflow-hidden">
-                            <div className="flex flex-col gap-4 md:gap-6 animate-scroll-down">
+                        <div className="flex-1 max-w-[25%] flex flex-col gap-0 overflow-hidden">
+                            <div className="flex flex-col gap-0 animate-scroll-down">
                                 {[...LAB_IMAGES_COL_2, ...LAB_IMAGES_COL_2].map((url, index) => {
                                     const heights = [320, 200, 380, 270, 340];
                                     const h = heights[index % heights.length];
@@ -2373,7 +2373,7 @@ STRICT RULES:
                                         <div 
                                             key={`col2-${index}`} 
                                             style={{ height: `${h}px` }} 
-                                            className={`w-full relative rounded-2xl overflow-hidden border-2 ${isDarkMode ? "border-white/10" : "border-black/10"} bg-[#0d0d0d]`}
+                                            className="w-full relative bg-[#0a0a0a]"
                                         >
                                             <img src={url} alt="" className="w-full h-full object-cover select-none" loading="lazy" />
                                         </div>
@@ -2382,8 +2382,8 @@ STRICT RULES:
                             </div>
                         </div>
                         {/* Column 3 */}
-                        <div className="flex-1 max-w-[240px] flex flex-col gap-4 md:gap-6 overflow-hidden">
-                            <div className="flex flex-col gap-4 md:gap-6 animate-scroll-up-slow">
+                        <div className="flex-1 max-w-[25%] flex flex-col gap-0 overflow-hidden">
+                            <div className="flex flex-col gap-0 animate-scroll-up-slow">
                                 {[...LAB_IMAGES_COL_3, ...LAB_IMAGES_COL_3].map((url, index) => {
                                     const heights = [240, 350, 210, 390, 300];
                                     const h = heights[index % heights.length];
@@ -2391,7 +2391,7 @@ STRICT RULES:
                                         <div 
                                             key={`col3-${index}`} 
                                             style={{ height: `${h}px` }} 
-                                            className={`w-full relative rounded-2xl overflow-hidden border-2 ${isDarkMode ? "border-white/10" : "border-black/10"} bg-[#0d0d0d]`}
+                                            className="w-full relative bg-[#0a0a0a]"
                                         >
                                             <img src={url} alt="" className="w-full h-full object-cover select-none" loading="lazy" />
                                         </div>
@@ -2399,9 +2399,9 @@ STRICT RULES:
                                 })}
                             </div>
                         </div>
-                        {/* Column 4 - hidden on mobile/small screens */}
-                        <div className="hidden lg:flex flex-1 max-w-[240px] flex-col gap-4 md:gap-6 overflow-hidden">
-                            <div className="flex flex-col gap-4 md:gap-6 animate-scroll-down-slow">
+                        {/* Column 4 - hidden on mobile/small screens, but shown on lg screens */}
+                        <div className="hidden lg:flex flex-1 max-w-[25%] flex-col gap-0 overflow-hidden">
+                            <div className="flex flex-col gap-0 animate-scroll-down-slow">
                                 {[...LAB_IMAGES_COL_1, ...LAB_IMAGES_COL_1].reverse().map((url, index) => {
                                     const heights = [300, 230, 370, 250, 330];
                                     const h = heights[index % heights.length];
@@ -2409,7 +2409,7 @@ STRICT RULES:
                                         <div 
                                             key={`col4-${index}`} 
                                             style={{ height: `${h}px` }} 
-                                            className={`w-full relative rounded-2xl overflow-hidden border-2 ${isDarkMode ? "border-white/10" : "border-black/10"} bg-[#0d0d0d]`}
+                                            className="w-full relative bg-[#0a0a0a]"
                                         >
                                             <img src={url} alt="" className="w-full h-full object-cover select-none" loading="lazy" />
                                         </div>
@@ -2418,6 +2418,8 @@ STRICT RULES:
                             </div>
                         </div>
                     </div>
+                    {/* Dynamic backdrop shade (no blur) to keep chat text completely readable over clear imagery */}
+                    <div className={`absolute inset-0 z-10 ${isDarkMode ? "bg-black/35" : "bg-white/45"}`} />
                 </div>
             )}
 
