@@ -261,6 +261,7 @@ const Chat = () => {
     const requestStartTime = useRef<number>(0);
     const engineSelectRef = useRef<HTMLDivElement>(null);
     const stopGenerationRef = useRef(false);
+    const styleCardsScrollRef = useRef<HTMLDivElement>(null);
 
     const [subscription, setSubscription] = useState<any>(null);
     const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
@@ -781,6 +782,16 @@ const Chat = () => {
         setSelectedEngine("Persona Mode");
     };
 
+    const scrollStyleCards = (direction: "left" | "right") => {
+        if (styleCardsScrollRef.current) {
+            const scrollAmount = 340;
+            styleCardsScrollRef.current.scrollBy({
+                left: direction === "left" ? -scrollAmount : scrollAmount,
+                behavior: "smooth"
+            });
+        }
+    };
+
     const handleBattleArenaHost = (config: { adminName: string; topic: string; difficulty: string; questionCount: number }) => {
         setIsBattleArenaModalOpen(false);
         window.location.href = `/battle-arena?host=true&name=${encodeURIComponent(config.adminName)}&topic=${encodeURIComponent(config.topic)}&difficulty=${config.difficulty}&count=${config.questionCount}`;
@@ -1259,6 +1270,13 @@ STRICT RULES:
                 }
                 .animate-scroll-down-slow {
                     animation: scrollDown 40s linear infinite;
+                }
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none !important;
+                }
+                .no-scrollbar {
+                    -ms-overflow-style: none !important;
+                    scrollbar-width: none !important;
                 }
             `}} />
             <div className={`absolute inset-0 noise opacity-[0.02] pointer-events-none ${isDarkMode ? "invert-0" : "invert"}`} />
@@ -1801,88 +1819,118 @@ STRICT RULES:
                                                 </motion.p>
                                             </div>
 
-                                            {/* Style Cards Grid */}
-                                            <motion.div
-                                                variants={{
-                                                    hidden: { opacity: 0 },
-                                                    show: {
-                                                        opacity: 1,
-                                                        transition: {
-                                                            staggerChildren: 0.05
-                                                        }
-                                                    }
-                                                }}
-                                                initial="hidden"
-                                                animate="show"
-                                                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6"
-                                            >
-                                                {IMAGE_STYLES.map((style) => {
-                                                    const isSelected = selectedImageStyle === style.id;
-                                                    return (
-                                                        <motion.div
-                                                            key={style.id}
-                                                            variants={{
-                                                                hidden: { opacity: 0, y: 20, scale: 0.95 },
-                                                                show: { 
-                                                                    opacity: 1, 
-                                                                    y: 0, 
-                                                                    scale: 1,
-                                                                    transition: {
-                                                                        type: "spring",
-                                                                        stiffness: 100,
-                                                                        damping: 15
-                                                                    }
-                                                                }
-                                                            }}
-                                                            whileHover={{ scale: 1.03, y: -2 }}
-                                                            whileTap={{ scale: 0.98 }}
-                                                            onClick={() => {
-                                                                setSelectedImageStyle(style.id);
-                                                                // Find if input already starts with another style's prompt
-                                                                const currentStyle = IMAGE_STYLES.find(s => input.startsWith(s.prompt));
-                                                                if (currentStyle) {
-                                                                    setInput(input.replace(currentStyle.prompt, style.prompt));
-                                                                } else {
-                                                                    setInput(style.prompt + input);
-                                                                }
-                                                                toast.success(`Active Style: ${style.label}`);
-                                                            }}
-                                                            className={`group relative aspect-[16/10] overflow-hidden rounded-[2.2rem] cursor-pointer border-2 transition-all duration-300 ${
-                                                                isSelected
-                                                                    ? "border-[#00DDDD] shadow-[0_0_25px_rgba(0,221,221,0.4)]"
-                                                                    : isDarkMode 
-                                                                        ? "border-white/5 hover:border-white/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.5)]"
-                                                                        : "border-black/5 hover:border-black/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.15)]"
-                                                            }`}
-                                                        >
-                                                            {/* Background image preview */}
-                                                            <img
-                                                                src={style.sample}
-                                                                alt={style.label}
-                                                                className="absolute inset-0 w-full h-full object-cover select-none transition-transform duration-500 ease-out group-hover:scale-105"
-                                                                loading="lazy"
-                                                            />
-                                                            
-                                                            {/* Linear overlay */}
-                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent transition-opacity duration-300 group-hover:opacity-90" />
-                                                            
-                                                            {/* Selected Check Indicator */}
-                                                            {isSelected && (
-                                                                <div className="absolute top-4 right-4 h-6 w-6 rounded-full bg-[#00DDDD] text-black flex items-center justify-center shadow-[0_0_12px_rgba(0,221,221,0.6)] z-20">
-                                                                    <CheckCircle className="h-4 w-4 stroke-[3]" />
-                                                                </div>
-                                                            )}
+                                            {/* Style Cards Horizontally Scrollable Slider */}
+                                            <div className="relative w-full px-2">
+                                                {/* Left Arrow Button */}
+                                                <button
+                                                    onClick={() => scrollStyleCards("left")}
+                                                    className={`absolute left-[-24px] top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-xl active:scale-90 ${
+                                                        isDarkMode
+                                                            ? "bg-black/80 border-white/15 text-white/80 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_15px_rgba(0,221,221,0.4)]"
+                                                            : "bg-white/80 border-black/15 text-black/80 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_15px_rgba(0,221,221,0.2)]"
+                                                    }`}
+                                                    title="Scroll Left"
+                                                >
+                                                    <ChevronLeft className="h-5 w-5 stroke-[2.5]" />
+                                                </button>
 
-                                                            {/* Label text */}
-                                                            <div className="absolute bottom-5 left-5 right-5 text-left z-10">
-                                                                <span className="text-white text-base md:text-lg font-sans font-semibold tracking-tight leading-tight block group-hover:text-[#00DDDD] transition-colors duration-200">
-                                                                    {style.label}
-                                                                </span>
-                                                            </div>
-                                                        </motion.div>
-                                                    );
-                                                })}
-                                            </motion.div>
+                                                {/* Right Arrow Button */}
+                                                <button
+                                                    onClick={() => scrollStyleCards("right")}
+                                                    className={`absolute right-[-24px] top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-xl active:scale-90 ${
+                                                        isDarkMode
+                                                            ? "bg-black/80 border-white/15 text-white/80 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_15px_rgba(0,221,221,0.4)]"
+                                                            : "bg-white/80 border-black/15 text-black/80 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_15px_rgba(0,221,221,0.2)]"
+                                                    }`}
+                                                    title="Scroll Right"
+                                                >
+                                                    <ChevronRight className="h-5 w-5 stroke-[2.5]" />
+                                                </button>
+
+                                                {/* Scrollable Container */}
+                                                <motion.div
+                                                    ref={styleCardsScrollRef}
+                                                    variants={{
+                                                        hidden: { opacity: 0 },
+                                                        show: {
+                                                            opacity: 1,
+                                                            transition: {
+                                                                staggerChildren: 0.05
+                                                            }
+                                                        }
+                                                    }}
+                                                    initial="hidden"
+                                                    animate="show"
+                                                    className="flex flex-row flex-nowrap overflow-x-auto no-scrollbar scroll-smooth gap-5 py-4 w-full"
+                                                >
+                                                    {IMAGE_STYLES.map((style) => {
+                                                        const isSelected = selectedImageStyle === style.id;
+                                                        return (
+                                                            <motion.div
+                                                                key={style.id}
+                                                                variants={{
+                                                                    hidden: { opacity: 0, x: 30, scale: 0.95 },
+                                                                    show: { 
+                                                                        opacity: 1, 
+                                                                        x: 0, 
+                                                                        scale: 1,
+                                                                        transition: {
+                                                                            type: "spring",
+                                                                            stiffness: 100,
+                                                                            damping: 15
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                whileHover={{ scale: 1.03, y: -2 }}
+                                                                whileTap={{ scale: 0.98 }}
+                                                                onClick={() => {
+                                                                    setSelectedImageStyle(style.id);
+                                                                    // Find if input already starts with another style's prompt
+                                                                    const currentStyle = IMAGE_STYLES.find(s => input.startsWith(s.prompt));
+                                                                    if (currentStyle) {
+                                                                        setInput(input.replace(currentStyle.prompt, style.prompt));
+                                                                    } else {
+                                                                        setInput(style.prompt + input);
+                                                                    }
+                                                                    toast.success(`Active Style: ${style.label}`);
+                                                                }}
+                                                                className={`group relative w-[240px] sm:w-[280px] flex-shrink-0 aspect-[16/10] overflow-hidden rounded-[2.2rem] cursor-pointer border-2 transition-all duration-300 ${
+                                                                    isSelected
+                                                                        ? "border-[#00DDDD] shadow-[0_0_25px_rgba(0,221,221,0.4)]"
+                                                                        : isDarkMode 
+                                                                            ? "border-white/5 hover:border-white/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.5)]"
+                                                                            : "border-black/5 hover:border-black/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.15)]"
+                                                                }`}
+                                                            >
+                                                                {/* Background image preview */}
+                                                                <img
+                                                                    src={style.sample}
+                                                                    alt={style.label}
+                                                                    className="absolute inset-0 w-full h-full object-cover select-none transition-transform duration-500 ease-out group-hover:scale-105"
+                                                                    loading="lazy"
+                                                                />
+                                                                
+                                                                {/* Linear overlay */}
+                                                                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent transition-opacity duration-300 group-hover:opacity-90" />
+                                                                
+                                                                {/* Selected Check Indicator */}
+                                                                {isSelected && (
+                                                                    <div className="absolute top-4 right-4 h-6 w-6 rounded-full bg-[#00DDDD] text-black flex items-center justify-center shadow-[0_0_12px_rgba(0,221,221,0.6)] z-20">
+                                                                        <CheckCircle className="h-4 w-4 stroke-[3]" />
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Label text */}
+                                                                <div className="absolute bottom-5 left-5 right-5 text-left z-10">
+                                                                    <span className="text-white text-base md:text-lg font-sans font-semibold tracking-tight leading-tight block group-hover:text-[#00DDDD] transition-colors duration-200">
+                                                                        {style.label}
+                                                                    </span>
+                                                                </div>
+                                                            </motion.div>
+                                                        );
+                                                    })}
+                                                </motion.div>
+                                            </div>
                                         </div>
                                     ) : (
                                         <WelcomeBox
@@ -2076,8 +2124,8 @@ STRICT RULES:
                             })()}
 
                             {selectedEngine === "AI Image Lab" && (
-                                <div className="mb-4">
-                                    <div className="flex flex-wrap gap-2">
+                                <div className="mb-4 w-full overflow-hidden">
+                                    <div className="flex flex-row flex-nowrap gap-2 overflow-x-auto no-scrollbar w-full pb-1 scroll-smooth">
                                         {IMAGE_STYLES.map((style) => {
                                             const isSelected = selectedImageStyle === style.id;
                                             return (
