@@ -105,6 +105,20 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
         // Convert \( \) to $ $
         processed = processed.replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$');
         
+        // Convert mermaid SVG cache image URLs to clean standard client-side mermaid code blocks
+        processed = processed.replace(/!\[.*?\]\((?:https?:\/\/[^\s)]*?mermaid\.svg\?code=([^\s)]+))\)/g, (match, codeParam) => {
+            try {
+                const decodedCode = decodeURIComponent(codeParam);
+                return `\n\n\`\`\`mermaid\n${decodedCode}\n\`\`\`\n\n`;
+            } catch (e) {
+                console.error("Failed to decode inline mermaid URL:", e);
+                return match;
+            }
+        });
+
+        // Filter out literal placeholder images like ![...](image_url) to avoid showing broken images
+        processed = processed.replace(/!\[.*?\]\(image_url\)/g, '');
+        
         return processed;
     }, [content]);
 
