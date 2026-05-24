@@ -2047,8 +2047,8 @@ STRICT RULES:
                 </main>
 
                 {/* Input Bar */}
-                <div className={`${isMobile ? "fixed" : "absolute"} ${isMobile ? "bottom-[10px]" : "bottom-0"} left-0 right-0 z-50 p-4 md:p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}>
-                    <div className="w-full max-w-4xl relative mb-4 md:mb-0">
+                <div className={`${isMobile ? "fixed" : "absolute"} ${isMobile ? "bottom-[10px]" : "bottom-0"} left-0 right-0 z-50 p-4 md:p-10 flex justify-center`}>
+                    <div className={`w-full max-w-4xl relative mb-4 md:mb-0 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent`}>
                         <div className="relative">
                             {/* File Preview */}
                             <AnimatePresence>
@@ -2622,9 +2622,9 @@ STRICT RULES:
             {/* AI Image Lab Mode Background Flowing Grids */}
             {selectedEngine === "AI Image Lab" && (
                 <div className={`fixed inset-0 z-0 pointer-events-none overflow-hidden transition-opacity duration-1000 ${isDarkMode ? "opacity-[0.88]" : "opacity-[0.80]"}`}>
-                    <div className="absolute inset-0 flex gap-0 justify-center w-full h-full">
+                    <div className="absolute inset-0 flex gap-0 w-full h-full">
                         {/* Column 1 */}
-                        <div className="flex-1 max-w-[25%] flex flex-col gap-0 overflow-hidden">
+                        <div className="flex-1 max-w-[33.33%] lg:max-w-[25%] flex flex-col gap-0 overflow-hidden">
                             <div className="flex flex-col gap-0 animate-scroll-up">
                                 {[...LAB_IMAGES_COL_1, ...LAB_IMAGES_COL_1].map((url, index) => {
                                     const heights = [260, 360, 220, 400, 280, 340, 240, 380];
@@ -2642,7 +2642,7 @@ STRICT RULES:
                             </div>
                         </div>
                         {/* Column 2 */}
-                        <div className="flex-1 max-w-[25%] flex flex-col gap-0 overflow-hidden">
+                        <div className="flex-1 max-w-[33.33%] lg:max-w-[25%] flex flex-col gap-0 overflow-hidden">
                             <div className="flex flex-col gap-0 animate-scroll-down">
                                 {[...LAB_IMAGES_COL_2, ...LAB_IMAGES_COL_2].map((url, index) => {
                                     const heights = [320, 200, 380, 270, 340, 250, 360, 300];
@@ -2660,7 +2660,7 @@ STRICT RULES:
                             </div>
                         </div>
                         {/* Column 3 */}
-                        <div className="flex-1 max-w-[25%] flex flex-col gap-0 overflow-hidden">
+                        <div className="flex-1 max-w-[33.33%] lg:max-w-[25%] flex flex-col gap-0 overflow-hidden">
                             <div className="flex flex-col gap-0 animate-scroll-up-slow">
                                 {[...LAB_IMAGES_COL_3, ...LAB_IMAGES_COL_3].map((url, index) => {
                                     const heights = [240, 350, 210, 390, 300, 270, 330, 370];
