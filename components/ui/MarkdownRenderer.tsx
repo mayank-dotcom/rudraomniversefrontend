@@ -131,10 +131,10 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
             blocks.push(match[1].trim());
         }
 
-        if (blocks.length > 0) {
-            // Remove duplicate diagram-like markdown images
-            processed = processed.replace(/!\[(?:Diagram|Chart|Visual|Image).*?\]\(https?:\/\/[^\s)]+\)/g, '');
+        // Remove unwanted diagram-like markdown images from any external renderer (kroki, etc.)
+        processed = processed.replace(/!\[(?:Diagram|Chart|Visual|Image).*?\]\(https?:\/\/[^\s)]+\)/g, '');
 
+        if (blocks.length > 1) {
             // If there are duplicate consecutive mermaid blocks, keep only the first of each duplicate pair
             const parts = processed.split(/(```mermaid\n[\s\S]*?```)/g);
             const seen: string[] = [];
