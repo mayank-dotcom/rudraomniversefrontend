@@ -112,8 +112,8 @@ mermaid.initialize({
 
 function MermaidBlock({ code }: { code: string }) {
     const ref = useRef<HTMLDivElement>(null);
-    const [svg, setSvg] = React.useState<string>("");
-    const [error, setError] = React.useState<string>("");
+    const [state, setState] = React.useState<"loading" | "ready" | "error">("loading");
+    const [svg, setSvg] = React.useState("");
 
     useEffect(() => {
         let cancelled = false;
@@ -121,36 +121,34 @@ function MermaidBlock({ code }: { code: string }) {
             try {
                 const id = "mermaid-" + Math.random().toString(36).slice(2, 9);
                 const { svg: rendered } = await mermaid.render(id, code);
-                if (!cancelled) setSvg(rendered);
-            } catch (e) {
-                if (!cancelled) setError("Failed to render diagram");
+                if (!cancelled) {
+                    setSvg(rendered);
+                    setState("ready");
+                }
+            } catch {
+                if (!cancelled) setState("error");
             }
         })();
         return () => { cancelled = true; };
     }, [code]);
 
-    if (error) {
+    if (state === "loading") return <div className="my-4 h-0" />;
+
+    if (state === "error") {
         return (
             <div className="my-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-mono">
-                {error}
+                Failed to render diagram
             </div>
         );
     }
 
-    if (svg) {
-        return (
-            <div
-                ref={ref}
-                className="my-4 flex justify-center"
-                dangerouslySetInnerHTML={{ __html: svg }}
-            />
-        );
-    }
-
     return (
-        <div className="my-4 p-4 rounded-lg bg-black/5 dark:bg-white/5 animate-pulse text-center text-sm text-black/40 dark:text-white/40">
-            Rendering diagram…
-        </div>
+        <div
+            ref={ref}
+            className="my-4 flex justify-center"
+            style={{ animation: "diagramFadeIn 0.25s ease" }}
+            dangerouslySetInnerHTML={{ __html: svg }}
+        />
     );
 }
 
@@ -225,8 +223,9 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                         if (!src || typeof src !== "string") return null;
                         if (src === "image_url" || src === "placeholder" || src === "") return null;
                         return (
-                            <span className="block my-4">
-                                <img src={src} alt={alt || ""} className="max-w-full h-auto rounded-lg" loading="lazy" />
+                            <span className="block my-4" style={{ animation: "diagramFadeIn 0.3s ease" }}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={src} alt={alt || ""} className="max-w-full h-auto rounded-lg" />
                             </span>
                         );
                     },

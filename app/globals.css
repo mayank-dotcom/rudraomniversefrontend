@@ -88,6 +88,12 @@ body {
 .tracking-wide-label { letter-spacing: 0.1em; }
 .tracking-wide-nav { letter-spacing: 0.05em; }
 
+/* Diagram fade-in */
+@keyframes diagramFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* Selection */
 ::selection {
   background: #00DDDD;
