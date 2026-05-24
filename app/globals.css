@@ -88,10 +88,29 @@ body {
 .tracking-wide-label { letter-spacing: 0.1em; }
 .tracking-wide-nav { letter-spacing: 0.05em; }
 
-/* Diagram fade-in */
-@keyframes diagramFadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
+/* Pixelated reveal animation - plays only once when first visible */
+@keyframes pixelReveal {
+    0% {
+        filter: blur(16px);
+        transform: scale(1.04);
+        image-rendering: pixelated;
+        opacity: 0.6;
+    }
+    40% {
+        filter: blur(4px);
+        transform: scale(1.02);
+        image-rendering: pixelated;
+        opacity: 0.9;
+    }
+    100% {
+        filter: blur(0);
+        transform: scale(1);
+        image-rendering: auto;
+        opacity: 1;
+    }
+}
+.animate-pixel-reveal {
+    animation: pixelReveal 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* Selection */
