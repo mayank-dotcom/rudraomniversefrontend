@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
@@ -9,6 +9,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "katex/dist/katex.min.css";
 import { Copy, Check } from "lucide-react";
+import mermaid from "mermaid";
 
 interface MarkdownRendererProps {
     content: string;
@@ -95,6 +96,64 @@ function CodeBlock({ code, language, isDarkMode }: { code: string; language: str
   )
 }
 
+mermaid.initialize({
+    startOnLoad: false,
+    theme: "base",
+    themeVariables: {
+        primaryColor: "#0dd",
+        primaryTextColor: "#000",
+        primaryBorderColor: "#0dd",
+        lineColor: "#0dd",
+        secondaryColor: "#00cccc",
+        tertiaryColor: "#e6ffff",
+        fontSize: "16px",
+    },
+});
+
+function MermaidBlock({ code }: { code: string }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [svg, setSvg] = React.useState<string>("");
+    const [error, setError] = React.useState<string>("");
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const id = "mermaid-" + Math.random().toString(36).slice(2, 9);
+                const { svg: rendered } = await mermaid.render(id, code);
+                if (!cancelled) setSvg(rendered);
+            } catch (e) {
+                if (!cancelled) setError("Failed to render diagram");
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [code]);
+
+    if (error) {
+        return (
+            <div className="my-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-mono">
+                {error}
+            </div>
+        );
+    }
+
+    if (svg) {
+        return (
+            <div
+                ref={ref}
+                className="my-4 flex justify-center"
+                dangerouslySetInnerHTML={{ __html: svg }}
+            />
+        );
+    }
+
+    return (
+        <div className="my-4 p-4 rounded-lg bg-black/5 dark:bg-white/5 animate-pulse text-center text-sm text-black/40 dark:text-white/40">
+            Rendering diagram…
+        </div>
+    );
+}
+
 export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRendererProps) {
     const processedContent = React.useMemo(() => {
         let processed = content;
@@ -162,6 +221,10 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
 
                         const lang = match?.[1] || "";
 
+                        if (lang === "mermaid") {
+                            return <MermaidBlock code={String(children)} />;
+                        }
+
                         return (
                             <CodeBlock
                                 code={String(children)}
@@ -174,7 +237,7 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                         const { children } = props;
                         return (
                             <div className="overflow-x-auto my-4">
-                                <table className={`w-full border-collapse text-sm md:text-base ${isDarkMode ? "text-white" : "text-black"}`}>
+                                <table className={`w-auto mx-auto border-collapse text-sm md:text-base ${isDarkMode ? "text-white" : "text-black"}`}>
                                     {children}
                                 </table>
                             </div>
