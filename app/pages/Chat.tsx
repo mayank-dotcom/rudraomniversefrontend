@@ -1786,14 +1786,7 @@ STRICT RULES:
                                         <div className="w-full max-w-4xl mx-auto py-8 px-4 md:px-0">
                                             {/* Redesigned AI Image Lab Header */}
                                             <div className="text-center mb-10">
-                                                <motion.div
-                                                    initial={{ opacity: 0, scale: 0.9 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    transition={{ duration: 0.5 }}
-                                                    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#00DDDD]/30 bg-[#00DDDD]/10 text-[#00DDDD] text-xs font-mono uppercase tracking-[0.25em] mb-4 shadow-[0_0_15px_rgba(0,221,221,0.15)]"
-                                                >
 
-                                                </motion.div>
                                                 <motion.h1
                                                     initial={{ opacity: 0, y: -10 }}
                                                     animate={{ opacity: 1, y: 0 }}

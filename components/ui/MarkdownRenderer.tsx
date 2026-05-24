@@ -8,7 +8,6 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "katex/dist/katex.min.css";
 import { Copy, Check } from "lucide-react";
-import MermaidDiagram from "./MermaidDiagram";
 
 interface MarkdownRendererProps {
     content: string;
@@ -95,125 +94,16 @@ function CodeBlock({ code, language, isDarkMode }: { code: string; language: str
   )
 }
 
-/** Inline fallback component: decodes a kroki.io mermaid URL and renders it locally. */
-function KrokiImage({ src, isDarkMode }: { src: string; isDarkMode: boolean }) {
-    const [code, setCode] = React.useState<string | null>(null);
-    const [failed, setFailed] = React.useState(false);
-
-    React.useEffect(() => {
-        const match = src.match(/kroki\.io\/mermaid\/svg\/([A-Za-z0-9+/=_-]+)/);
-        if (!match) { setFailed(true); return; }
-        decodeKrokiPayload(match[1])
-            .then(setCode)
-            .catch(() => setFailed(true));
-    }, [src]);
-
-    if (failed) return null;
-    if (!code) return (
-        <div className="my-4 p-6 rounded-lg flex items-center justify-center"
-            style={{ border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}` }}>
-            <div className={`animate-pulse text-sm font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                Rendering diagram...
-            </div>
-        </div>
-    );
-    return <MermaidDiagram code={code} isDarkMode={isDarkMode} />;
-}
-
-/**
- * Decode a kroki.io base64url+deflate payload back to plain text.
- * Kroki encodes diagrams as: deflate(utf8(code)) -> base64url
- * We use the native DecompressionStream API (available in all modern browsers).
- */
-async function decodeKrokiPayload(b64url: string): Promise<string> {
-    // base64url -> base64
-    const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice(0, (4 - b64url.length % 4) % 4);
-    const binaryStr = atob(b64);
-    const bytes = Uint8Array.from(binaryStr, c => c.charCodeAt(0));
-    const ds = new DecompressionStream('deflate-raw');
-    const writer = ds.writable.getWriter();
-    writer.write(bytes);
-    writer.close();
-    const reader = ds.readable.getReader();
-    const chunks: Uint8Array[] = [];
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-    }
-    const totalLen = chunks.reduce((s, c) => s + c.length, 0);
-    const result = new Uint8Array(totalLen);
-    let offset = 0;
-    for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
-    return new TextDecoder().decode(result);
-}
-
 export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRendererProps) {
-    const [processedContent, setProcessedContent] = React.useState<string>(() => {
-        // Synchronous initial pass (skips async kroki decoding)
+    const processedContent = React.useMemo(() => {
         let processed = content;
         processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$');
         processed = processed.replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$');
-        processed = processed.replace(/!\[.*?\]\((?:https?:\/\/[^\s)]*?mermaid\.svg\?code=([^\s)]+))\)/g, (match, codeParam) => {
-            try { return `\n\n\`\`\`mermaid\n${decodeURIComponent(codeParam)}\n\`\`\`\n\n`; } catch { return match; }
-        });
         processed = processed.replace(/!\[.*?\]\((?:image_url|placeholder)\)/g, '');
         processed = processed.replace(/!\[.*?\]\(\)/g, '');
         processed = processed.replace(/\]\((?:image_url|placeholder)\)/g, ']()');
         return processed;
-    });
-
-    // Async effect: decode any kroki.io mermaid URLs present in the content
-    React.useEffect(() => {
-        let cancelled = false;
-        const KROKI_RE = /!\[.*?\]\(https:\/\/kroki\.io\/mermaid\/svg\/([A-Za-z0-9+/=_-]+)\)/g;
-
-        async function processKroki() {
-            let base = content;
-            base = base.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$');
-            base = base.replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$');
-            base = base.replace(/!\[.*?\]\((?:https?:\/\/[^\s)]*?mermaid\.svg\?code=([^\s)]+))\)/g, (match, codeParam) => {
-                try { return `\n\n\`\`\`mermaid\n${decodeURIComponent(codeParam)}\n\`\`\`\n\n`; } catch { return match; }
-            });
-
-            // Collect all kroki matches first
-            const krokiMatches = [...base.matchAll(KROKI_RE)];
-            if (krokiMatches.length === 0) {
-                if (!cancelled) {
-                    base = base.replace(/!\[.*?\]\((?:image_url|placeholder)\)/g, '');
-                    base = base.replace(/!\[.*?\]\(\)/g, '');
-                    base = base.replace(/\]\((?:image_url|placeholder)\)/g, ']()');
-                    setProcessedContent(base);
-                }
-                return;
-            }
-
-            // Decode each kroki payload and replace in-place
-            for (const m of krokiMatches) {
-                if (cancelled) return;
-                try {
-                    const diagramCode = await decodeKrokiPayload(m[1]);
-                    base = base.replace(m[0], `\n\n\`\`\`mermaid\n${diagramCode}\n\`\`\`\n\n`);
-                } catch (e) {
-                    console.error('Failed to decode kroki mermaid payload:', e);
-                    // Remove the broken image so it doesn't hit the network
-                    base = base.replace(m[0], '');
-                }
-            }
-
-            if (!cancelled) {
-                base = base.replace(/!\[.*?\]\((?:image_url|placeholder)\)/g, '');
-                base = base.replace(/!\[.*?\]\(\)/g, '');
-                base = base.replace(/\]\((?:image_url|placeholder)\)/g, ']()');
-                setProcessedContent(base);
-            }
-        }
-
-        processKroki();
-        return () => { cancelled = true; };
     }, [content]);
-
 
     return (
         <div
@@ -247,27 +137,6 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                         const { src, alt, ...rest } = props;
                         if (!src || typeof src !== "string") return null;
                         if (src === "image_url" || src === "placeholder" || src === "") return null;
-
-                        // Intercept kroki.io mermaid SVG URLs — content has already been decoded
-                        // in processedContent, but as a safety net handle any that slip through.
-                        if (src.includes("kroki.io/mermaid/svg/")) {
-                            // Return a lazy-decoded MermaidDiagram
-                            return <KrokiImage src={src} isDarkMode={isDarkMode} />;
-                        }
-
-                        if (src.includes("mermaid.svg?code=")) {
-                            try {
-                                const absoluteUrl = src.startsWith("http") ? src : `https://dummy.com${src.startsWith("/") ? "" : "/"}${src}`;
-                                const url = new URL(absoluteUrl);
-                                const codeParam = url.searchParams.get("code");
-                                if (codeParam) {
-                                    const decodedCode = decodeURIComponent(codeParam);
-                                    return <MermaidDiagram code={decodedCode} isDarkMode={isDarkMode} />;
-                                }
-                            } catch (e) {
-                                console.error("Failed to parse or render mermaid URL:", e);
-                            }
-                        }
                         return <img src={src} alt={alt} {...rest} />;
                     },
                     code(props) {
@@ -287,10 +156,6 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                         }
 
                         const lang = match?.[1] || "";
-
-                        if (lang === "mermaid") {
-                            return <MermaidDiagram code={String(children)} isDarkMode={isDarkMode} />;
-                        }
 
                         return (
                             <CodeBlock
