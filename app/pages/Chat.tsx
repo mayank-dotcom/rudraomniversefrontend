@@ -1986,10 +1986,10 @@ STRICT RULES:
                                         >
                                             <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[90%] md:max-w-[80%]" : "items-start max-w-[90%] md:max-w-[60%]"}`}>
                                                 <div className="flex items-center gap-3 mb-4">
-                                                    <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/80 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/30") : "text-black/60"}`}>
+                                                    <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/80 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/30") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]" : "text-black/60")}`}>
                                                         {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
                                                     </span>
-                                                    <span className={`text-[9px] font-mono ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/60 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/20") : "text-black/60"}`}>{msg.timestamp}</span>
+                                                    <span className={`text-[9px] font-mono ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/60 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/20") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]" : "text-black/60")}`}>{msg.timestamp}</span>
                                                 </div>
 
                                                 <div className={`py-1.5 px-4 md:py-2 md:px-5 ${msg.role === "user"
@@ -2038,10 +2038,10 @@ STRICT RULES:
                                                 <div className={`flex items-center gap-3 mt-3 ${msg.role === "user" ? "justify-end" : "justify-start px-8"}`}>
                                                     {msg.role === "user" ? (
                                                         <>
-                                                            <button onClick={() => setInput(msg.content)} title="Edit & resend" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
+                                                            <button onClick={() => setInput(msg.content)} title="Edit & resend" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
                                                                 <Edit3 className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => copyToClipboard(msg.content)} title="Copy message" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
+                                                            <button onClick={() => copyToClipboard(msg.content)} title="Copy message" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
                                                                 <Copy className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
                                                         </>
@@ -2052,7 +2052,7 @@ STRICT RULES:
                                                                 onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, 1)}
                                                                 className={`p-2 transition-all duration-300 group ${msg.feedback === 1
                                                                     ? (isDarkMode ? "text-emerald-400" : "text-emerald-600")
-                                                                    : (isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-emerald-400 hover:scale-105" : "text-white/60 hover:text-white hover:scale-105") : "text-black/60 hover:text-black hover:scale-105")
+                                                                    : (isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-emerald-400 hover:scale-105" : "text-white/60 hover:text-white hover:scale-105") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-emerald-600 hover:scale-105" : "text-black/60 hover:text-black hover:scale-105"))
                                                                     }`}
                                                             >
                                                                 <ThumbsUp className="h-5 w-5 group-hover:scale-110 transition-transform" />
@@ -2062,18 +2062,18 @@ STRICT RULES:
                                                                 onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, -1)}
                                                                 className={`p-2 transition-all duration-300 group ${msg.feedback === -1
                                                                     ? (isDarkMode ? "text-red-400" : "text-red-600")
-                                                                    : (isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-red-400 hover:scale-105" : "text-white/60 hover:text-white hover:scale-105") : "text-black/60 hover:text-black hover:scale-105")
+                                                                    : (isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-red-400 hover:scale-105" : "text-white/60 hover:text-white hover:scale-105") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-red-600 hover:scale-105" : "text-black/60 hover:text-black hover:scale-105"))
                                                                     }`}
                                                             >
                                                                 <ThumbsDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => copyToClipboard(msg.content)} title="Copy message" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
+                                                            <button onClick={() => copyToClipboard(msg.content)} title="Copy message" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
                                                                 <Copy className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => retryMessage(i)} title="Regenerate" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
+                                                            <button onClick={() => retryMessage(i)} title="Regenerate" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
                                                                 <RotateCcw className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : "text-black/60 hover:text-black"} hover:scale-105 transition-all duration-300 group`}>
+                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
                                                                 <FileDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
                                                         </>
