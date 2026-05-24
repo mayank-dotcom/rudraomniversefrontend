@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
@@ -94,37 +94,6 @@ function CodeBlock({ code, language, isDarkMode }: { code: string; language: str
   )
 }
 
-function PixelReveal({ src, alt }: { src: string; alt: string }) {
-    const ref = useRef<HTMLSpanElement>(null);
-    const [revealed, setRevealed] = React.useState(false);
-
-    React.useEffect(() => {
-        const el = ref.current;
-        if (!el || revealed) return;
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setRevealed(true);
-                    observer.disconnect();
-                }
-            },
-            { threshold: 0.1 }
-        );
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [revealed]);
-
-    return (
-        <span
-            ref={ref}
-            className={`block my-4 ${revealed ? "animate-pixel-reveal" : "opacity-0"}`}
-        >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt={alt} className="max-w-full h-auto rounded-lg" />
-        </span>
-    );
-}
-
 function MermaidImage({ code }: { code: string }) {
     const src = React.useMemo(() => {
         try {
@@ -137,7 +106,12 @@ function MermaidImage({ code }: { code: string }) {
 
     if (!src) return null;
 
-    return <PixelReveal src={src} alt="Mermaid diagram" />;
+    return (
+        <span className="block my-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={src} alt="Mermaid diagram" className="max-w-full h-auto rounded-lg" />
+        </span>
+    );
 }
 
 export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRendererProps) {
@@ -210,7 +184,12 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                         const { src, alt } = props;
                         if (!src || typeof src !== "string") return null;
                         if (src === "image_url" || src === "placeholder" || src === "") return null;
-                        return <PixelReveal src={src} alt={alt || ""} />;
+                        return (
+                            <span className="block my-4">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={src} alt={alt || ""} className="max-w-full h-auto rounded-lg" />
+                            </span>
+                        );
                     },
                     code(props) {
                         const { children, className, ...rest } = props;
