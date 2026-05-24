@@ -1769,7 +1769,7 @@ STRICT RULES:
                     )}
                 </header>
 
-                <main className={`flex-1 ${isChatEmpty ? "overflow-y-hidden flex flex-col justify-center pt-32 pb-16" : "overflow-y-auto block pt-10 pb-36"} px-6 md:px-20 relative z-10 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+                <main className={`flex-1 ${isChatEmpty ? "overflow-y-hidden flex flex-col justify-center pt-20 md:pt-32 pb-16" : "overflow-y-auto block pt-10 pb-36"} px-4 md:px-20 relative z-10 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
                     <div className={`${isChatEmpty ? "w-full" : "max-w-3xl w-full"} mx-auto`}>
                         {/* Error Display */}
                         {chatError && (
@@ -1784,15 +1784,15 @@ STRICT RULES:
                             <AnimatePresence initial={false}>
                                 {messages.length === 0 || messages.every((msg) => msg.localOnly) ? (
                                     selectedEngine === "AI Image Lab" ? (
-                                        <div className="w-full max-w-4xl mx-auto py-2 px-4 md:px-0">
+                                        <div className="w-full max-w-4xl mx-auto py-4 md:py-2 px-0">
                                             {/* Redesigned AI Image Lab Header */}
-                                            <div className="text-center mb-2">
+                                            <div className="text-center mb-4 md:mb-2 px-4 md:px-0">
 
                                                 <motion.h1
                                                     initial={{ opacity: 0, y: -10 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ duration: 0.5, delay: 0.1 }}
-                                                    className={`text-3xl md:text-5xl font-sans font-extrabold tracking-tight mb-4 ${isDarkMode
+                                                    className={`text-2xl sm:text-3xl md:text-5xl font-sans font-extrabold tracking-tight mb-2 md:mb-4 ${isDarkMode
                                                         ? "bg-gradient-to-r from-white via-white to-white/60 text-transparent bg-clip-text"
                                                         : "text-black"
                                                         }`}
@@ -1803,19 +1803,19 @@ STRICT RULES:
                                                     initial={{ opacity: 0, y: 10 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ duration: 0.5, delay: 0.2 }}
-                                                    className={`text-sm md:text-base font-sans max-w-lg mx-auto ${isDarkMode ? "text-white/50" : "text-black/60"
+                                                    className={`text-xs sm:text-sm md:text-base font-sans max-w-xs sm:max-w-lg mx-auto ${isDarkMode ? "text-white/50" : "text-black/60"
                                                         }`}
                                                 >
-                                                    Select a highly curated style template and let your imagination come to life.
+                                                    Select a style template and let your imagination come to life.
                                                 </motion.p>
                                             </div>
 
                                             {/* Style Cards Horizontally Scrollable Slider */}
-                                            <div className="relative w-full px-12">
-                                                {/* Left Arrow Button */}
+                                            <div className="relative w-full sm:px-12 px-0">
+                                                {/* Left Arrow Button - hidden on mobile, shown on sm+ */}
                                                 <button
                                                     onClick={() => scrollStyleCards("left")}
-                                                    className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-2xl active:scale-90 ${isDarkMode
+                                                    className={`hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 items-center justify-center shadow-2xl active:scale-90 ${isDarkMode
                                                         ? "bg-black/90 border-white/15 text-white/95 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.5)]"
                                                         : "bg-white/95 border-black/15 text-black hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.3)]"
                                                         }`}
@@ -1824,10 +1824,10 @@ STRICT RULES:
                                                     <ChevronLeft className="h-6 w-6 stroke-[2.5]" />
                                                 </button>
 
-                                                {/* Right Arrow Button */}
+                                                {/* Right Arrow Button - hidden on mobile, shown on sm+ */}
                                                 <button
                                                     onClick={() => scrollStyleCards("right")}
-                                                    className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 flex items-center justify-center shadow-2xl active:scale-90 ${isDarkMode
+                                                    className={`hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 items-center justify-center shadow-2xl active:scale-90 ${isDarkMode
                                                         ? "bg-black/90 border-white/15 text-white/95 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.5)]"
                                                         : "bg-white/95 border-black/15 text-black hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.3)]"
                                                         }`}
@@ -1850,7 +1850,7 @@ STRICT RULES:
                                                     }}
                                                     initial="hidden"
                                                     animate="show"
-                                                    className="flex flex-row flex-nowrap overflow-x-auto no-scrollbar scroll-smooth gap-5 py-1 w-full"
+                                                    className="flex flex-row flex-nowrap overflow-x-auto no-scrollbar scroll-smooth gap-3 sm:gap-5 py-2 sm:py-1 w-full px-4 sm:px-0"
                                                 >
                                                     {IMAGE_STYLES.map((style) => {
                                                         const isSelected = selectedImageStyle === style.id;
@@ -1883,7 +1883,7 @@ STRICT RULES:
                                                                     }
                                                                     toast.success(`Active Style: ${style.label}`);
                                                                 }}
-                                                                className={`group relative w-full sm:w-[calc((100%-20px)/2)] md:w-[calc((100%-40px)/3)] flex-shrink-0 aspect-[16/10] overflow-hidden rounded-[2.2rem] cursor-pointer border-2 transition-all duration-300 ${isSelected
+                                                                className={`group relative w-[72vw] sm:w-[calc((100%-20px)/2)] md:w-[calc((100%-40px)/3)] flex-shrink-0 aspect-[4/3] sm:aspect-[16/10] overflow-hidden rounded-[1.5rem] sm:rounded-[2.2rem] cursor-pointer border-2 transition-all duration-300 ${isSelected
                                                                     ? "border-[#00DDDD] shadow-[0_0_25px_rgba(0,221,221,0.4)]"
                                                                     : isDarkMode
                                                                         ? "border-white/5 hover:border-white/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.5)]"
@@ -1903,14 +1903,14 @@ STRICT RULES:
 
                                                                 {/* Selected Check Indicator */}
                                                                 {isSelected && (
-                                                                    <div className="absolute top-4 right-4 h-6 w-6 rounded-full bg-[#00DDDD] text-black flex items-center justify-center shadow-[0_0_12px_rgba(0,221,221,0.6)] z-20">
-                                                                        <CheckCircle className="h-4 w-4 stroke-[3]" />
+                                                                    <div className="absolute top-2 right-2 sm:top-4 sm:right-4 h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-[#00DDDD] text-black flex items-center justify-center shadow-[0_0_12px_rgba(0,221,221,0.6)] z-20">
+                                                                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 stroke-[3]" />
                                                                     </div>
                                                                 )}
 
                                                                 {/* Label text */}
-                                                                <div className="absolute bottom-5 left-5 right-5 text-left z-10">
-                                                                    <span className="text-white text-base md:text-lg font-sans font-semibold tracking-tight leading-tight block group-hover:text-[#00DDDD] transition-colors duration-200">
+                                                                <div className="absolute bottom-3 sm:bottom-5 left-3 sm:left-5 right-3 sm:right-5 text-left z-10">
+                                                                    <span className="text-white text-sm sm:text-base md:text-lg font-sans font-semibold tracking-tight leading-tight block group-hover:text-[#00DDDD] transition-colors duration-200">
                                                                         {style.label}
                                                                     </span>
                                                                 </div>
