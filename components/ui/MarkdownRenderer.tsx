@@ -162,6 +162,33 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
         processed = processed.replace(/!\[.*?\]\((?:image_url|placeholder)\)/g, '');
         processed = processed.replace(/!\[.*?\]\(\)/g, '');
         processed = processed.replace(/\]\((?:image_url|placeholder)\)/g, ']()');
+
+        // Extract all mermaid blocks
+        const mermaidRegex = /```mermaid\n([\s\S]*?)```/g;
+        const blocks: string[] = [];
+        let match;
+        while ((match = mermaidRegex.exec(processed)) !== null) {
+            blocks.push(match[1].trim());
+        }
+
+        if (blocks.length > 0) {
+            // Remove duplicate diagram-like markdown images
+            processed = processed.replace(/!\[(?:Diagram|Chart|Visual|Image).*?\]\(https?:\/\/[^\s)]+\)/g, '');
+
+            // If there are duplicate consecutive mermaid blocks, keep only the first of each duplicate pair
+            const parts = processed.split(/(```mermaid\n[\s\S]*?```)/g);
+            const seen: string[] = [];
+            const deduped = parts.filter((part) => {
+                if (part.startsWith('```mermaid')) {
+                    const content = part.replace(/```mermaid\n([\s\S]*?)```/, '$1').trim();
+                    if (seen.includes(content)) return false;
+                    seen.push(content);
+                }
+                return true;
+            });
+            processed = deduped.join('').replace(/\n{3,}/g, '\n\n').trim();
+        }
+
         return processed;
     }, [content]);
 
