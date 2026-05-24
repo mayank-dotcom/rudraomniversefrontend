@@ -804,6 +804,50 @@ const Chat = () => {
         }
     };
 
+    // Auto-scroll style cards carousel — pauses on user interaction, resumes after 1.5s
+    useEffect(() => {
+        if (selectedEngine !== "AI Image Lab") return;
+        const container = styleCardsScrollRef.current;
+        if (!container) return;
+
+        let rafId: number;
+        let isPaused = false;
+        let resumeTimeout: ReturnType<typeof setTimeout>;
+        const SPEED = 0.6; // px per frame
+
+        const step = () => {
+            if (!isPaused && container) {
+                // Loop back to start when we reach (or pass) the end
+                if (container.scrollLeft + container.clientWidth >= container.scrollWidth - 1) {
+                    container.scrollLeft = 0;
+                } else {
+                    container.scrollLeft += SPEED;
+                }
+            }
+            rafId = requestAnimationFrame(step);
+        };
+
+        const pause = () => {
+            isPaused = true;
+            clearTimeout(resumeTimeout);
+            resumeTimeout = setTimeout(() => { isPaused = false; }, 1500);
+        };
+
+        container.addEventListener("pointerdown", pause, { passive: true });
+        container.addEventListener("touchstart", pause, { passive: true });
+        container.addEventListener("wheel", pause, { passive: true });
+
+        rafId = requestAnimationFrame(step);
+
+        return () => {
+            cancelAnimationFrame(rafId);
+            clearTimeout(resumeTimeout);
+            container.removeEventListener("pointerdown", pause);
+            container.removeEventListener("touchstart", pause);
+            container.removeEventListener("wheel", pause);
+        };
+    }, [selectedEngine]);
+
     const handleBattleArenaHost = (config: { adminName: string; topic: string; difficulty: string; questionCount: number }) => {
         setIsBattleArenaModalOpen(false);
         window.location.href = `/battle-arena?host=true&name=${encodeURIComponent(config.adminName)}&topic=${encodeURIComponent(config.topic)}&difficulty=${config.difficulty}&count=${config.questionCount}`;
@@ -2111,7 +2155,7 @@ STRICT RULES:
                             })()}
 
                             {selectedEngine === "AI Image Lab" && (
-                                <div className="mb-3 w-full">
+                                <div className="hidden sm:block mb-3 w-full">
                                     <div className="flex flex-row flex-nowrap gap-1.5 md:gap-2 overflow-x-auto no-scrollbar w-full pb-1 scroll-smooth px-0.5 md:px-1">
                                         {IMAGE_STYLES.map((style) => {
                                             const isSelected = selectedImageStyle === style.id;
