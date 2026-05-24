@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
@@ -9,8 +9,6 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "katex/dist/katex.min.css";
 import { Copy, Check } from "lucide-react";
-import mermaid from "mermaid";
-
 interface MarkdownRendererProps {
     content: string;
     isDarkMode: boolean;
@@ -96,59 +94,23 @@ function CodeBlock({ code, language, isDarkMode }: { code: string; language: str
   )
 }
 
-mermaid.initialize({
-    startOnLoad: false,
-    theme: "base",
-    themeVariables: {
-        primaryColor: "#0dd",
-        primaryTextColor: "#000",
-        primaryBorderColor: "#0dd",
-        lineColor: "#0dd",
-        secondaryColor: "#00cccc",
-        tertiaryColor: "#e6ffff",
-        fontSize: "16px",
-    },
-});
-
-function MermaidBlock({ code }: { code: string }) {
-    const ref = useRef<HTMLDivElement>(null);
-    const [state, setState] = React.useState<"loading" | "ready" | "error">("loading");
-    const [svg, setSvg] = React.useState("");
-
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            try {
-                const id = "mermaid-" + Math.random().toString(36).slice(2, 9);
-                const { svg: rendered } = await mermaid.render(id, code);
-                if (!cancelled) {
-                    setSvg(rendered);
-                    setState("ready");
-                }
-            } catch {
-                if (!cancelled) setState("error");
-            }
-        })();
-        return () => { cancelled = true; };
+function MermaidImage({ code }: { code: string }) {
+    const src = React.useMemo(() => {
+        try {
+            const base64 = btoa(unescape(encodeURIComponent(code)));
+            return `https://mermaid.ink/img/${base64}?type=png`;
+        } catch {
+            return "";
+        }
     }, [code]);
 
-    if (state === "loading") return <div className="my-4 h-0" />;
-
-    if (state === "error") {
-        return (
-            <div className="my-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-mono">
-                Failed to render diagram
-            </div>
-        );
-    }
+    if (!src) return null;
 
     return (
-        <div
-            ref={ref}
-            className="my-4 flex justify-center"
-            style={{ animation: "diagramFadeIn 0.25s ease" }}
-            dangerouslySetInnerHTML={{ __html: svg }}
-        />
+        <span className="block my-4" style={{ animation: "diagramFadeIn 0.3s ease" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={src} alt="Mermaid diagram" className="max-w-full h-auto rounded-lg" />
+        </span>
     );
 }
 
@@ -248,7 +210,7 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                         const lang = match?.[1] || "";
 
                         if (lang === "mermaid") {
-                            return <MermaidBlock code={String(children)} />;
+                            return <MermaidImage code={String(children)} />;
                         }
 
                         return (
