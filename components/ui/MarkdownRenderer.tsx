@@ -165,6 +165,48 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                             />
                         );
                     },
+                    table(props) {
+                        const { children } = props;
+                        return (
+                            <div className="overflow-x-auto my-4">
+                                <table className={`w-full border-collapse text-sm md:text-base ${isDarkMode ? "text-white" : "text-black"}`}>
+                                    {children}
+                                </table>
+                            </div>
+                        );
+                    },
+                    thead(props) {
+                        const { children } = props;
+                        return <thead className={isDarkMode ? "bg-white/5" : "bg-black/5"}>{children}</thead>;
+                    },
+                    th(props) {
+                        const { children } = props;
+                        return (
+                            <th className={`px-4 py-2 text-left font-semibold border ${isDarkMode ? "border-white/20 text-white" : "border-black/20 text-black"}`}>
+                                {children}
+                            </th>
+                        );
+                    },
+                    td(props) {
+                        const { children } = props;
+                        return (
+                            <td className={`px-4 py-2 border ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                {children}
+                            </td>
+                        );
+                    },
+                    ul(props) {
+                        const { children } = props;
+                        return <ul className={`list-disc pl-6 my-3 space-y-1 ${isDarkMode ? "text-white" : "text-black"}`}>{children}</ul>;
+                    },
+                    ol(props) {
+                        const { children } = props;
+                        return <ol className={`list-decimal pl-6 my-3 space-y-1 ${isDarkMode ? "text-white" : "text-black"}`}>{children}</ol>;
+                    },
+                    li(props) {
+                        const { children } = props;
+                        return <li className={`text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white" : "text-black"}`}>{children}</li>;
+                    },
                     p(props) {
                         const { children } = props;
                         return <p className={`${isDarkMode ? "text-white" : "text-black"} text-base md:text-lg leading-relaxed`}>{children}</p>;

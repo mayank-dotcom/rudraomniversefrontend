@@ -153,6 +153,7 @@ const IMAGE_STYLES = [
     { id: "gothic-clay", label: "Gothic clay", prompt: "Create a stop-motion style gothic claymation scene, featuring detailed whimsical clay textures, a miniature gothic room with warm candlelight, and a dark cozy fairy tale mood. ", sample: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80" },
     { id: "cyberpunk", label: "Cyberpunk", prompt: "Create a cyberpunk digital artwork featuring a glowing neon city alleyway at night under light rain, reflections on wet asphalt, and deep high contrast colors. ", sample: "https://images.unsplash.com/photo-1515621061946-eff1c2a352bd?auto=format&fit=crop&w=600&q=80" },
     { id: "anime", label: "Anime", prompt: "Create a beautiful modern anime-style digital illustration with soft cel-shading, vibrant magical colors, highly detailed atmospheric lighting, and high-fidelity scenery. ", sample: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80" },
+    { id: "ghibli", label: "Ghibli", prompt: "Create a whimsical Studio Ghibli-inspired scene with soft watercolor textures, warm earthy tones, lush green landscapes, gentle magical lighting, and a nostalgic hand-painted feel. ", sample: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80" },
 ];
 
 const LAB_IMAGES_COL_1 = [
@@ -1783,9 +1784,9 @@ STRICT RULES:
                             <AnimatePresence initial={false}>
                                 {messages.length === 0 || messages.every((msg) => msg.localOnly) ? (
                                     selectedEngine === "AI Image Lab" ? (
-                                        <div className="w-full max-w-4xl mx-auto py-8 px-4 md:px-0">
+                                        <div className="w-full max-w-4xl mx-auto py-2 px-4 md:px-0">
                                             {/* Redesigned AI Image Lab Header */}
-                                            <div className="text-center mb-10">
+                                            <div className="text-center mb-2">
 
                                                 <motion.h1
                                                     initial={{ opacity: 0, y: -10 }}
@@ -1849,7 +1850,7 @@ STRICT RULES:
                                                     }}
                                                     initial="hidden"
                                                     animate="show"
-                                                    className="flex flex-row flex-nowrap overflow-x-auto no-scrollbar scroll-smooth gap-5 py-4 w-full"
+                                                    className="flex flex-row flex-nowrap overflow-x-auto no-scrollbar scroll-smooth gap-5 py-1 w-full"
                                                 >
                                                     {IMAGE_STYLES.map((style) => {
                                                         const isSelected = selectedImageStyle === style.id;
@@ -1948,7 +1949,7 @@ STRICT RULES:
                                                 </div>
 
                                                 <div className={`py-1.5 px-4 md:py-2 md:px-5 ${msg.role === "user"
-                                                    ? (isDarkMode ? "bg-black border border-white/20 rounded-[18px_4px_18px_4px]" : "bg-transparent border-2 border-black rounded-[18px_4px_18px_4px]")
+                                                    ? (isDarkMode ? "bg-black border border-white/20 rounded-[18px_4px_18px_4px]" : (selectedEngine === "AI Image Lab" ? "bg-white border-2 border-black/10 rounded-[18px_4px_18px_4px]" : "bg-transparent border-2 border-black rounded-[18px_4px_18px_4px]"))
                                                     : (isDarkMode ? "bg-transparent rounded-[2.5rem]" : "bg-transparent rounded-[2.5rem]")
                                                     } relative group`}>
                                                     {msg.role === "user" ? (
