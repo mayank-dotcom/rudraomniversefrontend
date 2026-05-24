@@ -1801,7 +1801,7 @@ STRICT RULES:
                         </div>
                     ) : (
                         <div className="hidden md:flex flex-col items-end gap-0.5">
-                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>Current Session</span>
+                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/70" : "text-white/30") : "text-black/40"}`}>Current Session</span>
                             <div className="flex items-center gap-2">
                                 <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${isDarkMode ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-500/10 border border-emerald-500/20"}`}>
                                     <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
@@ -1837,7 +1837,7 @@ STRICT RULES:
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ duration: 0.5, delay: 0.1 }}
                                                     className={`text-2xl sm:text-3xl md:text-5xl font-sans font-extrabold tracking-tight mb-2 md:mb-4 ${isDarkMode
-                                                        ? "bg-gradient-to-r from-white via-white to-white/60 text-transparent bg-clip-text"
+                                                        ? "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
                                                         : "text-black"
                                                         }`}
                                                 >
@@ -1847,7 +1847,7 @@ STRICT RULES:
                                                     initial={{ opacity: 0, y: 10 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ duration: 0.5, delay: 0.2 }}
-                                                    className={`text-xs sm:text-sm md:text-base font-sans max-w-xs sm:max-w-lg mx-auto ${isDarkMode ? "text-white/50" : "text-black/60"
+                                                    className={`text-xs sm:text-sm md:text-base font-sans max-w-xs sm:max-w-lg mx-auto ${isDarkMode ? "text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" : "text-black/60"
                                                         }`}
                                                 >
                                                     Select a style template and let your imagination come to life.
@@ -1986,10 +1986,10 @@ STRICT RULES:
                                         >
                                             <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[90%] md:max-w-[80%]" : "items-start max-w-[90%] md:max-w-[60%]"}`}>
                                                 <div className="flex items-center gap-3 mb-4">
-                                                    <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/60"}`}>
+                                                    <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/80 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/30") : "text-black/60"}`}>
                                                         {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
                                                     </span>
-                                                    <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/20" : "text-black/60"}`}>{msg.timestamp}</span>
+                                                    <span className={`text-[9px] font-mono ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/60 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/20") : "text-black/60"}`}>{msg.timestamp}</span>
                                                 </div>
 
                                                 <div className={`py-1.5 px-4 md:py-2 md:px-5 ${msg.role === "user"
