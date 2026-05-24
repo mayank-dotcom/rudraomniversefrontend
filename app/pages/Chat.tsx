@@ -273,7 +273,7 @@ const Chat = () => {
         { name: "Interview Prep", endpoint: "/tools/interview", version: "1.0", icon: UserCog },
         { name: "Mock Paper Generator", endpoint: "/chat", version: "1.0", icon: MockIcon },
         { name: "Persona Mode", endpoint: "/chat", version: "1.0", icon: Sparkles },
-        { name: "AI Image Lab", endpoint: "/chat", version: "1.0", icon: ImageIcon },
+        { name: "AI Image Lab", endpoint: "/features/image/generate", version: "1.0", icon: ImageIcon },
         { name: "Battle Arena", endpoint: "/battle-arena", version: "1.0", icon: Swords },
     ];
 
