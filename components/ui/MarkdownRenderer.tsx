@@ -131,7 +131,10 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
             blocks.push(match[1].trim());
         }
 
-        // Remove unwanted diagram-like markdown images from any external renderer (kroki, etc.)
+        // Remove anything related to kroki.io (markdown images, plain URLs)
+        processed = processed.replace(/!\[.*?\]\(https?:\/\/kroki\.io[^\s)]*\)/g, '');
+        processed = processed.replace(/https?:\/\/kroki\.io\/\S+/g, '');
+        // Remove unwanted diagram-like markdown images from any external renderer
         processed = processed.replace(/!\[(?:Diagram|Chart|Visual|Image).*?\]\(https?:\/\/[^\s)]+\)/g, '');
 
         if (blocks.length > 1) {
