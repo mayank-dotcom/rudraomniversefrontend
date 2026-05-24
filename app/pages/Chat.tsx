@@ -2091,8 +2091,8 @@ STRICT RULES:
                 </main>
 
                 {/* Input Bar */}
-                <div className={`${isMobile ? "fixed" : "absolute"} ${isMobile ? "bottom-[10px]" : "bottom-0"} left-0 right-0 z-50 p-4 md:p-10 flex justify-center`}>
-                    <div className={`w-full max-w-4xl relative mb-4 md:mb-0 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent`}>
+                <div className={`${isMobile ? "fixed" : "absolute"} ${isMobile ? "bottom-[10px]" : "bottom-0"} left-0 right-0 z-50 p-4 md:p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}>
+                    <div className={`w-full max-w-4xl relative mb-4 md:mb-0`}>
                         <div className="relative">
                             {/* File Preview */}
                             <AnimatePresence>
