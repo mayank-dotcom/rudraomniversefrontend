@@ -3,6 +3,7 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
+import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -130,14 +131,18 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
             } as React.CSSProperties}
         >
             <ReactMarkdown
-                remarkPlugins={[[remarkMath, { singleDollar: true, doubleDollar: true }]]}
+                remarkPlugins={[[remarkMath, { singleDollar: true, doubleDollar: true }], remarkGfm]}
                 rehypePlugins={[[rehypeKatex, { trust: true, strict: false }]]}
                 components={{
                     img(props) {
-                        const { src, alt, ...rest } = props;
+                        const { src, alt } = props;
                         if (!src || typeof src !== "string") return null;
                         if (src === "image_url" || src === "placeholder" || src === "") return null;
-                        return <img src={src} alt={alt} {...rest} />;
+                        return (
+                            <span className="block my-4">
+                                <img src={src} alt={alt || ""} className="max-w-full h-auto rounded-lg" loading="lazy" />
+                            </span>
+                        );
                     },
                     code(props) {
                         const { children, className, ...rest } = props;
