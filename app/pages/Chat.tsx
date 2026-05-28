@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
-import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo } from "@/lib/auth";
+import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole } from "@/lib/auth";
 import { useTheme } from "@/lib/theme-context";
 import {
     ChatSummary,
@@ -277,6 +277,12 @@ const Chat = () => {
         { name: "AI Image Lab", endpoint: "/features/image/generate", version: "1.0", icon: ImageIcon },
         { name: "Battle Arena", endpoint: "/battle-arena", version: "1.0", icon: Swords },
     ];
+
+    const employeeRestrictedEngines = ["Student Mode", "Interview Prep", "Mock Paper Generator", "Battle Arena"];
+    const userRole = typeof window !== "undefined" ? getUserRole() : null;
+    const visibleEngines = userRole === "employee"
+        ? engines.filter(e => !employeeRestrictedEngines.includes(e.name))
+        : engines;
 
     const activeChat = chats.find((chat) => chat.id === activeChatId) || null;
     const filteredChats = useMemo(() => {
@@ -645,7 +651,7 @@ const Chat = () => {
                 }
             })
             .catch(err => {
-                console.error("Failed to fetch subscription status:", err);
+                console.warn("Failed to fetch subscription status:", err.message || err);
             })
             .finally(() => {
                 setIsSubscriptionLoading(false);
@@ -1503,7 +1509,7 @@ STRICT RULES:
                             {sidebarTab === "modes" && (
                                 <div className="space-y-1 px-1">
                                     {sidebarWidth > 120 && <span className={`px-2 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black"}`}>AI Engines</span>}
-                                    {engines.map((engine) => {
+                                    {visibleEngines.map((engine) => {
                                         const featureId = getFeatureIdForEngine(engine.name)
                                         const isAvailable = planFeatures.length === 0 || planFeatures.includes(featureId)
                                         return (
@@ -1973,6 +1979,7 @@ STRICT RULES:
                                             }}
                                             onOpenMockPaper={() => setIsMockPaperModalOpen(true)}
                                             onOpenInterview={() => setIsInterviewModalOpen(true)}
+                                            hiddenEngines={userRole === "employee" ? employeeRestrictedEngines : []}
                                         />
                                     )
                                 ) : (
@@ -2307,7 +2314,7 @@ STRICT RULES:
                                                         <span className={`px-2 py-0.5 ${isDarkMode ? "bg-white/10 text-white" : "bg-black/5 text-black/60"} text-[8px] font-mono rounded`}>FREE</span>
                                                     </div>
                                                     <div className="space-y-1">
-                                                        {engines.map((engine) => {
+                                                        {visibleEngines.map((engine) => {
                                                             const featureId = getFeatureIdForEngine(engine.name)
                                                             const isAvailable = planFeatures.length === 0 || planFeatures.includes(featureId)
                                                             return (

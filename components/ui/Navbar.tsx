@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { LogOut, Moon, Sun, Menu, X } from "lucide-react"
+import { LogOut, Moon, Sun, Menu, X, Code2, Smartphone, ChevronDown } from "lucide-react"
 import { removeApiKey, isAuthenticated } from "@/lib/auth"
 import { useTheme } from "@/lib/theme-context"
 
@@ -15,6 +15,7 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
     const [authed, setAuthed] = useState(false)
     const { isDarkMode, toggleTheme } = useTheme()
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isAccessOpen, setIsAccessOpen] = useState(false);
 
     useEffect(() => {
         setAuthed(isAuthenticated());
@@ -30,8 +31,12 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
         { label: "Features", href: "/#features" },
         { label: "Pricing", href: "/pricing" },
         { label: "Manifesto", href: "/#manifesto" },
-        { label: "Access", href: "/#cta" },
         { label: "Schools", href: "/schools" },
+    ];
+
+    const accessItems = [
+        { label: "Plugin", href: "/plugin", icon: Code2, desc: "For VS Code, JetBrains & more" },
+        { label: "Mobile App", href: "/mobile-app", icon: Smartphone, desc: "Native mobile experience" },
     ];
 
     return (
@@ -73,6 +78,51 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
                             <span className="group-hover:text-[var(--color-cyan)] transition-colors duration-300">{link.label}</span>
                         </Link>
                     ))}
+
+                    {/* Access Dropdown */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsAccessOpen((prev) => !prev)}
+                            className={`group flex items-center gap-2 font-sans font-medium uppercase transition-all duration-300 cursor-pointer ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`}
+                            style={{ fontSize: "12px", letterSpacing: "0.05em" }}
+                        >
+                            <span className="group-hover:text-[var(--color-cyan)] transition-colors duration-300">Access</span>
+                            <ChevronDown className={`h-3 w-3 transition-transform duration-300 ${isAccessOpen ? "rotate-180" : ""}`} />
+                        </button>
+                        {isAccessOpen && (
+                            <>
+                                <div className="fixed inset-0 z-10" onClick={() => setIsAccessOpen(false)} />
+                                <motion.div
+                                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                                    transition={{ duration: 0.2, ease: "easeOut" }}
+                                    className={`absolute top-full left-1/2 -translate-x-1/2 mt-3 w-64 rounded-xl border p-2 shadow-2xl z-20 ${isDarkMode ? "bg-[#0a0a0a]/95 border-white/10 backdrop-blur-xl" : "bg-white/95 border-black/5 backdrop-blur-xl"}`}
+                                >
+                                    {accessItems.map((item) => (
+                                        <Link
+                                            key={item.label}
+                                            href={item.href}
+                                            className={`flex items-start gap-4 rounded-lg p-3.5 transition-all duration-200 group/drop ${isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"}`}
+                                            onClick={() => setIsAccessOpen(false)}
+                                        >
+                                            <div className={`flex items-center justify-center h-10 w-10 rounded-lg shrink-0 ${isDarkMode ? "bg-white/5" : "bg-black/5"} group-hover/drop:bg-[var(--color-cyan)]/10 transition-colors duration-200`}>
+                                                <item.icon className={`h-5 w-5 ${isDarkMode ? "text-white/60" : "text-black/60"} group-hover/drop:text-[var(--color-cyan)] transition-colors duration-200`} />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className={`font-sans font-semibold text-sm ${isDarkMode ? "text-white/80" : "text-black/80"} group-hover/drop:text-[var(--color-cyan)] transition-colors duration-200`}>
+                                                    {item.label}
+                                                </span>
+                                                <span className={`font-sans text-xs mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                    {item.desc}
+                                                </span>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </motion.div>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-5">
@@ -134,6 +184,22 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
                             onClick={() => setIsMenuOpen(false)}
                         >
                             {link.label}
+                        </Link>
+                    ))}
+                    {/* Mobile Access Label */}
+                    <div className={`px-6 pt-3 pb-1 font-sans font-semibold uppercase text-[10px] tracking-[0.1em] ${isDarkMode ? "text-white/20" : "text-black/20"}`}>
+                        Access
+                    </div>
+                    {accessItems.map((item) => (
+                        <Link
+                            key={item.label}
+                            href={item.href}
+                            className={`flex items-center gap-4 px-6 py-3 font-sans font-medium transition-colors ${isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black"}`}
+                            style={{ fontSize: "12px", letterSpacing: "0.05em" }}
+                            onClick={() => setIsMenuOpen(false)}
+                        >
+                            <item.icon className="h-4 w-4" />
+                            {item.label}
                         </Link>
                     ))}
                     {!authed && (

@@ -45,19 +45,21 @@ interface WelcomeBoxProps {
     onSelectEngine: (engine: string) => void;
     onOpenMockPaper: () => void;
     onOpenInterview: () => void;
+    hiddenEngines?: string[];
 }
 
-const WelcomeBox = ({ isDarkMode, onSelectEngine, onOpenMockPaper, onOpenInterview }: WelcomeBoxProps) => {
+const WelcomeBox = ({ isDarkMode, onSelectEngine, onOpenMockPaper, onOpenInterview, hiddenEngines = [] }: WelcomeBoxProps) => {
     const [currentIndex, setCurrentIndex] = useState(0);
 
-    const displayCards = allCards.slice(currentIndex, currentIndex + 2);
+    const filteredCards = allCards.filter(card => !hiddenEngines.includes(card.engine));
+    const displayCards = filteredCards.slice(currentIndex, currentIndex + 2);
 
     const handlePrev = () => {
         setCurrentIndex((prev) => Math.max(0, prev - 2));
     };
 
     const handleNext = () => {
-        setCurrentIndex((prev) => Math.min(allCards.length - 2, prev + 2));
+        setCurrentIndex((prev) => Math.min(filteredCards.length - 2, prev + 2));
     };
 
     const handleCardClick = (card: FeatureCardData) => {
@@ -70,7 +72,7 @@ const WelcomeBox = ({ isDarkMode, onSelectEngine, onOpenMockPaper, onOpenIntervi
         }
     };
 
-    const totalPages = Math.ceil(allCards.length / 2);
+    const totalPages = Math.ceil(filteredCards.length / 2);
     const currentPage = Math.floor(currentIndex / 2);
 
     return (
@@ -176,7 +178,7 @@ const WelcomeBox = ({ isDarkMode, onSelectEngine, onOpenMockPaper, onOpenIntervi
                 {/* Right Arrow */}
                 <button
                     onClick={handleNext}
-                    disabled={currentIndex >= allCards.length - 2}
+                    disabled={currentIndex >= filteredCards.length - 2}
                     className={`p-2 sm:p-3 border rounded-full transition-all flex-shrink-0 ${isDarkMode
                         ? "border-white/10 text-white/40 hover:text-white hover:border-white/30 hover:bg-white/5 disabled:opacity-20 disabled:hover:bg-transparent"
                         : "border-black/10 text-black/40 hover:text-black hover:border-black/30 hover:bg-black/5 disabled:opacity-20 disabled:hover:bg-transparent"

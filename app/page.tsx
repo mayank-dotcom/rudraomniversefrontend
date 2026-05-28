@@ -13,7 +13,7 @@ import AuthSelection from "./pages/AuthSelection";
 import StudentLogin from "./pages/StudentLogin";
 import SchoolAdminLogin from "./pages/SchoolAdminLogin";
 import SchoolFacultyLogin from "./pages/SchoolFacultyLogin";
-import EnterpriseLogin from "./pages/EnterpriseLogin";
+
 import Schools from "./pages/Schools";
 import About from "./pages/About";
 import Privacy from "./pages/Privacy";

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { GithubAuthProvider, GoogleAuthProvider, signInWithPopup } from "firebase/auth"
 import { getFirebaseAuth, sendFirebaseOTP, cleanupRecaptcha } from "@/lib/firebase"
@@ -11,24 +11,43 @@ import { Code, Mail, GitBranch, Phone, KeyRound, Check, ChevronRight, Terminal, 
 
 type PhoneStep = "phone" | "otp" | "details" | "success"
 
+function getEditorScheme(): string {
+  if (typeof window === "undefined") return "vscode"
+  return new URLSearchParams(window.location.search).get("editor") || "vscode"
+}
+
+function getEditorDisplayName(scheme: string): string {
+  const names: Record<string, string> = {
+    "vscode": "VS Code",
+    "vscode-insiders": "VS Code Insiders",
+    "cursor": "Cursor",
+    "windsurf": "Windsurf",
+    "antigravity-ide": "Antigravity IDE",
+  }
+  return names[scheme] || scheme.charAt(0).toUpperCase() + scheme.slice(1)
+}
+
 export default function IDELogin() {
   const { isDarkMode } = useTheme()
   const initialKey = getApiKey()
   const [loggedIn, setLoggedIn] = useState(!!initialKey)
+  const editorName = useMemo(() => getEditorDisplayName(getEditorScheme()), [])
 
   useEffect(() => {
     if (initialKey) {
+      const scheme = getEditorScheme()
       const timer = setTimeout(() => {
-        window.location.href = "vscode://rudranex.rudranex-developer-assistant/auth?key=" + encodeURIComponent(initialKey)
+        window.location.href = scheme + "://rudranex.rudranex-developer-assistant/auth?key=" + encodeURIComponent(initialKey)
       }, 1500)
       return () => clearTimeout(timer)
     }
   }, [initialKey])
 
   const handleConnected = (key: string) => {
+    const scheme = getEditorScheme()
     setLoggedIn(true)
     setTimeout(() => {
-      window.location.href = "vscode://rudranex.rudranex-developer-assistant/auth?key=" + encodeURIComponent(key)
+      window.location.href = scheme + "://rudranex.rudranex-developer-assistant/auth?key=" + encodeURIComponent(key)
     }, 500)
   }
 
@@ -48,9 +67,9 @@ export default function IDELogin() {
           >
             <Terminal className={`h-10 w-10 ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`} />
           </motion.div>
-          <h1 className={`text-2xl font-bold mb-3 ${isDarkMode ? "text-white" : "text-black"}`}>Connecting VS Code...</h1>
+          <h1 className={`text-2xl font-bold mb-3 ${isDarkMode ? "text-white" : "text-black"}`}>Connecting {editorName}...</h1>
           <p className={`text-sm ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
-            Your Rudranex account is authenticated. Redirecting to VS Code extension.
+            Your Rudranex account is authenticated. Redirecting to {editorName} extension.
           </p>
           <motion.div
             initial={{ width: 0 }}
@@ -75,9 +94,9 @@ export default function IDELogin() {
           <div className={`h-16 w-16 rounded-2xl ${isDarkMode ? "bg-indigo-500/10 border border-indigo-500/20" : "bg-indigo-50 border border-indigo-200"} flex items-center justify-center mx-auto mb-4`}>
             <Code className={`h-8 w-8 ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`} />
           </div>
-          <h1 className={`text-2xl font-bold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}>VS Code Extension Login</h1>
+          <h1 className={`text-2xl font-bold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}>{editorName} Extension Login</h1>
           <p className={`text-xs font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-            Sign in to connect your VS Code extension
+            Sign in to connect your {editorName} extension
           </p>
         </div>
 
@@ -88,6 +107,7 @@ export default function IDELogin() {
 }
 
 function LoginForm({ onSuccess, isDarkMode }: { onSuccess: (key: string) => void; isDarkMode: boolean }) {
+  const editorName = useMemo(() => getEditorDisplayName(getEditorScheme()), [])
   const [step, setStep] = useState<PhoneStep>("phone")
   const [phone, setPhone] = useState("")
   const [otp, setOtp] = useState("")
@@ -240,7 +260,7 @@ function LoginForm({ onSuccess, isDarkMode }: { onSuccess: (key: string) => void
         >
           <Check className="h-8 w-8 text-green-400" />
         </motion.div>
-        <p className={`text-sm font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>Connected! Opening VS Code...</p>
+        <p className={`text-sm font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>Connected! Opening {editorName}...</p>
       </motion.div>
     )
   }

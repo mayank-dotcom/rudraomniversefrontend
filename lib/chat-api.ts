@@ -520,11 +520,54 @@ export async function loginByAdminCode(admin_code: string, password: string) {
     }),
   })
 
-  const data = await parseJson<AdminCodeLoginResponse>(res)
+  let data: any
+  const rawText = await res.text()
+  try {
+    data = JSON.parse(rawText)
+  } catch {
+    throw new Error(`Server returned ${res.status} ${res.statusText}. Response: ${rawText.substring(0, 200)}`)
+  }
+
   if (!res.ok || !data.success) {
     throw new Error(data.error || "Admin code login failed")
   }
-  return data
+  return data as AdminCodeLoginResponse
+}
+
+export interface EmployeeLoginPayload {
+  mobile_number: string
+  enterprise_code: string
+  password: string
+}
+
+export interface EmployeeLoginResponse {
+  success: boolean
+  api_key?: string
+  role?: string
+  name?: string
+  enterprise_name?: string
+  error?: string
+}
+
+export async function loginEnterprise(payload: EmployeeLoginPayload) {
+  const res = await fetch(`${API_BASE}/auth/enterprise/employee/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+
+  let data: any
+  const rawText = await res.text()
+  try {
+    data = JSON.parse(rawText)
+  } catch {
+    throw new Error(`Server returned ${res.status} ${res.statusText}. Response: ${rawText.substring(0, 200)}`)
+  }
+
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Employee login failed")
+  }
+  return data as EmployeeLoginResponse
 }
 
 export interface CreateSchoolAdminPayload {
@@ -1014,6 +1057,490 @@ export async function getAdminPlans() {
   const data = await parseJson<AdminPlansResponse>(res)
   if (!res.ok || !data.success) {
     throw new Error(data.error || "Unable to fetch plans")
+  }
+  return data
+}
+
+export interface AdminEnterprise {
+  id: number
+  enterprise_name: string
+  enterprise_code: string
+  allowed_features: string[]
+  created_at: string
+}
+
+export interface AdminEnterprisesResponse {
+  success: boolean
+  count?: number
+  enterprises?: AdminEnterprise[]
+  error?: string
+}
+
+export interface OnboardEnterprisePayload {
+  enterprise_name: string
+  enterprise_code: string
+  admin_name: string
+  admin_email: string
+  admin_password: string
+  allowed_features?: string[]
+}
+
+export interface OnboardEnterpriseResponse {
+  success: boolean
+  enterprise?: { id: number; enterprise_name: string; enterprise_code: string }
+  admin?: { id: string; name: string; admin_code: string }
+  error?: string
+}
+
+export async function signupEnterpriseAdmin(payload: OnboardEnterprisePayload) {
+  const res = await fetch(`${API_BASE}/auth/enterprise/admin/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<any>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to register enterprise admin.")
+  }
+  return data
+}
+
+export async function onboardEnterprise(payload: OnboardEnterprisePayload) {
+  const res = await fetch(`${API_BASE}/admin/onboard-enterprise`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<OnboardEnterpriseResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to onboard enterprise.")
+  }
+  return data
+}
+
+export async function getAdminEnterprises() {
+  const res = await fetch(`${API_BASE}/admin/enterprises`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<AdminEnterprisesResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to fetch enterprises.")
+  }
+  return data
+}
+
+export async function createEnterprise(payload: Partial<AdminEnterprise>) {
+  const res = await fetch(`${API_BASE}/admin/enterprises`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<{ success: boolean; enterprise?: AdminEnterprise; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to create enterprise.")
+  }
+  return data
+}
+
+export async function updateEnterprise(id: number | string, payload: Partial<AdminEnterprise>) {
+  const res = await fetch(`${API_BASE}/admin/enterprises/${id}`, {
+    method: "PUT",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<{ success: boolean; enterprise?: AdminEnterprise; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to update enterprise.")
+  }
+  return data
+}
+
+export async function deleteEnterprise(id: number | string) {
+  const res = await fetch(`${API_BASE}/admin/enterprises/${id}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to delete enterprise.")
+  }
+  return data
+}
+
+export interface EnterpriseStatsGlobalResponse {
+  success: boolean
+  enterprises?: Array<{
+    id: number
+    school_name: string
+    school_code: string
+    student_count: number
+    admin_count: number
+    total_ai_requests: number
+    recent_activities: number
+  }>
+  error?: string
+}
+
+export async function getEnterpriseStatsGlobal() {
+  const res = await fetch(`${API_BASE}/admin/enterprises/stats`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<EnterpriseStatsGlobalResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to fetch global enterprise stats.")
+  }
+  return data
+}
+
+// ─── Managers Management APIs (for Enterprise Dashboard) ───
+
+export interface EnterpriseManager {
+  id: string
+  name: string
+  email?: string
+  admin_code?: string
+  employee_quota?: number
+  assigned_class?: string
+  created_at?: string
+}
+
+export interface EnterpriseManagerListResponse {
+  success: boolean
+  count?: number
+  manager?: EnterpriseManager[]
+  error?: string
+}
+
+export async function getEnterpriseManagers() {
+  const res = await fetch(`${API_BASE}/enterprise/manager`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<EnterpriseManagerListResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to fetch managers.")
+  }
+  return data
+}
+
+export interface CreateEnterpriseManagerPayload {
+  name: string
+  email?: string
+  password: string
+  quota?: number
+  assigned_class?: string
+  admin_code: string
+}
+
+export async function createEnterpriseManager(payload: CreateEnterpriseManagerPayload) {
+  const res = await fetch(`${API_BASE}/enterprise/manager`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<{ success: boolean; manager?: EnterpriseManager; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to create manager.")
+  }
+  return data
+}
+
+export interface ManagerStatsResponse {
+  success: boolean
+  quota?: { current: number; threshold: number; utilization: string }
+  growth?: { new_accessions: string; mtd_growth: string }
+  stability?: { deletions: string; status: string }
+  health?: { index: string; latency: string; sync: string; uptime: string }
+  logs?: Array<{ timestamp: string; type: string; action: string }>
+  error?: string
+}
+
+export async function getEnterpriseManagerStats(adminCode: string) {
+  const res = await fetch(`${API_BASE}/enterprise/manager/${encodeURIComponent(adminCode)}/stats`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<ManagerStatsResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to fetch manager stats.")
+  }
+  return data
+}
+
+export async function updateEnterpriseManagerQuota(adminCode: string, quota: number) {
+  const res = await fetch(`${API_BASE}/enterprise/manager/${encodeURIComponent(adminCode)}/quota`, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify({ quota }),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to update manager quota.")
+  }
+  return data
+}
+
+export async function deleteEnterpriseManager(adminCode: string) {
+  const res = await fetch(`${API_BASE}/enterprise/manager/${encodeURIComponent(adminCode)}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to delete manager.")
+  }
+  return data
+}
+
+// Public Employee Signup (for Manager panel since enterprise routes require enterprise_admin role)
+export async function createEnterpriseEmployeeViaPublicSignup(payload: {
+  name: string
+  mobile_number: string
+  enterprise_code: string
+  password: string
+}) {
+  const res = await fetch(`${API_BASE}/auth/enterprise/employee/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<{ success: boolean; api_key?: string; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to create employee.")
+  }
+  return data
+}
+
+// ─── Employees Management APIs (for Managers/Enterprise Dashboard) ───
+
+export interface EnterpriseEmployee {
+  id: string
+  name: string
+  roll_no?: string
+  mobile_number?: string
+  assigned_class?: string
+  total_score?: number
+  created_at?: string
+}
+
+export interface EnterpriseEmployeesResponse {
+  success: boolean
+  count?: number
+  employees?: EnterpriseEmployee[]
+  error?: string
+}
+
+export async function getEnterpriseEmployees(className?: string) {
+  const url = new URL(`${API_BASE}/enterprise/employees`)
+  if (className?.trim()) {
+    url.searchParams.set("class_name", className.trim())
+  }
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<EnterpriseEmployeesResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to fetch employees.")
+  }
+  return data
+}
+
+export interface CreateEnterpriseEmployeePayload {
+  name: string
+  roll_no: string
+  mobile_number: string
+  password: string
+  assigned_class?: string
+}
+
+export async function createEnterpriseEmployee(payload: CreateEnterpriseEmployeePayload) {
+  const res = await fetch(`${API_BASE}/enterprise/employees`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<{ success: boolean; employee?: { id: string; name: string; roll_no: string }; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to create employee.")
+  }
+  return data
+}
+
+export async function uploadEnterpriseEmployeesBulk(file: File) {
+  const formData = new FormData()
+  formData.append("file", file)
+
+  const res = await fetch(`${API_BASE}/enterprise/employees/upload`, {
+    method: "POST",
+    headers: {
+      "x-api-key": getApiKey() || "",
+      "x-admin-key": getAdminKey() || "",
+    },
+    body: formData,
+  })
+  const data = await parseJson<{ success: boolean; processed: number; added: number; failed: number; errors: string[]; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to parse Excel file.")
+  }
+  return data
+}
+
+export interface EmployeeStatsResponse {
+  success: boolean
+  profile?: { name: string; code: string; protocol: string }
+  performance?: { quiz_accuracy: string; interview_success: string; battle_readiness: string }
+  ranking?: { rank: string; total: number; percentile: string }
+  stats?: { total_quizzes: number; quiz_growth: string; interviews: number; battles_won: number; battle_ratio: string }
+  skills?: Array<{ label: string; value: number }>
+  logs?: Array<{ type: string; title: string; meta: string; time: string; date: string }>
+  error?: string
+}
+
+export async function getEnterpriseEmployeeStats(id: string) {
+  const res = await fetch(`${API_BASE}/enterprise/employees/${id}/stats`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<EmployeeStatsResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to fetch employee stats.")
+  }
+  return data
+}
+
+export async function updateEnterpriseEmployee(id: string, payload: { name?: string; assigned_class?: string }) {
+  const res = await fetch(`${API_BASE}/enterprise/employees/${id}`, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to update employee.")
+  }
+  return data
+}
+
+export async function deleteEnterpriseEmployee(id: string) {
+  const res = await fetch(`${API_BASE}/enterprise/employees/${id}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to delete employee.")
+  }
+  return data
+}
+
+// ─── Enterprise Analytics & Announcements APIs ───
+
+export interface EnterpriseStatsResponse {
+  success: boolean
+  enterprise_name?: string
+  enterprise_code?: string
+  total_employees?: number
+  total_manager?: number
+  total_nodes?: number
+  global_engagement?: string
+  manager_stats?: any
+  enrollment_trends?: any[]
+  token_economy?: { monthly_burn: string; burn_rate: string; efficiency: string }
+  resource_allocation?: { compute: number; storage: number; network: number }
+  employee_limit?: number
+  total_quota_assigned?: number
+  engagement_distribution?: any[]
+  node_distribution?: any[]
+  footer?: { token_index: string; active_sessions: number; uptime: string }
+  error?: string
+}
+
+export async function getEnterpriseStats() {
+  const res = await fetch(`${API_BASE}/enterprise/stats`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<EnterpriseStatsResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to fetch enterprise analytics.")
+  }
+  return data
+}
+
+export interface EnterpriseAnnouncement {
+  id: number
+  title: string
+  content: string
+  target_audience: string
+  priority: string
+  attachment_url: string | null
+  created_at: string
+  author_name?: string
+}
+
+export interface EnterpriseAnnouncementsResponse {
+  success: boolean
+  announcements?: EnterpriseAnnouncement[]
+  error?: string
+}
+
+export async function getEnterpriseAnnouncements() {
+  const res = await fetch(`${API_BASE}/enterprise/announcements`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<EnterpriseAnnouncementsResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to fetch announcements.")
+  }
+  return data
+}
+
+export interface CreateEnterpriseAnnouncementPayload {
+  title?: string
+  content: string
+  target?: string
+  priority?: string
+  file?: File
+}
+
+export async function createEnterpriseAnnouncement(payload: CreateEnterpriseAnnouncementPayload) {
+  let res: Response
+  if (payload.file) {
+    const formData = new FormData()
+    formData.append("title", payload.title || "")
+    formData.append("content", payload.content)
+    formData.append("target", payload.target || "all")
+    formData.append("priority", payload.priority || "standard")
+    formData.append("file", payload.file)
+
+    res = await fetch(`${API_BASE}/enterprise/announcements`, {
+      method: "POST",
+      headers: {
+        "x-api-key": getApiKey() || "",
+        "x-admin-key": getAdminKey() || "",
+      },
+      body: formData,
+    })
+  } else {
+    res = await fetch(`${API_BASE}/enterprise/announcements`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({
+        title: payload.title,
+        content: payload.content,
+        target: payload.target,
+        priority: payload.priority,
+      }),
+    })
+  }
+
+  const data = await parseJson<{ success: boolean; message: string; attachment?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to create announcement.")
   }
   return data
 }

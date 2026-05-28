@@ -75,3 +75,24 @@ export function removeAdminKey() {
 export function isAdminAuthenticated(): boolean {
   return !!getAdminKey()
 }
+
+const USER_ROLE_STORAGE = "rudranex_user_role"
+
+export function setUserRole(role: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(USER_ROLE_STORAGE, role)
+  }
+}
+
+export function getUserRole(): string | null {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem(USER_ROLE_STORAGE)
+  }
+  return null
+}
+
+export function removeUserRole() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(USER_ROLE_STORAGE)
+  }
+}

@@ -1,7 +1,12 @@
 "use client"
 
-import EnterpriseLogin from "../../pages/EnterpriseLogin"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 
-export default function EnterpriseLoginPage() {
-    return <EnterpriseLogin />
+export default function OldEnterpriseLoginRedirect() {
+    const router = useRouter()
+    useEffect(() => {
+        router.replace("/auth/enterprise-portal")
+    }, [router])
+    return null
 }

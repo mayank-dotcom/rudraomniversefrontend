@@ -5,11 +5,11 @@ import {
     MoreHorizontal, Plus, Briefcase, Users, Clock, CheckCircle2,
     ChevronRight, ArrowUpRight, Globe, Shield, Zap, Table as TableIcon, LayoutDashboard,
     ChevronLeft, ChevronRight as ChevronRightIcon, LogOut, Moon, Sun, RefreshCw, Database,
-    TrendingUp, ShieldCheck, Cpu, X, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown, Trash2
+    TrendingUp, ShieldCheck, Cpu, X, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Building2
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser, getAdminRequests, declineAdminRequest, AdminRequest, getAdminSchools, getAdminSchoolAdmins, AdminSchool, AdminSchoolAdmin, getFrozenUsers, getAdminSchoolFacultyByCode, SchoolFacultyMember, deleteAdminUser, deleteSchoolFaculty, getAdminActivity, getAvailableFeatures, AvailableFeature, setPlanFeatures, getPlanFeatures, getPlanStrikeOff, setPlanStrikeOff } from '@/lib/chat-api';
+import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser, getAdminRequests, declineAdminRequest, AdminRequest, getAdminSchools, getAdminSchoolAdmins, AdminSchool, AdminSchoolAdmin, getFrozenUsers, getAdminSchoolFacultyByCode, SchoolFacultyMember, deleteAdminUser, deleteSchoolFaculty, getAdminActivity, getAvailableFeatures, AvailableFeature, setPlanFeatures, getPlanFeatures, getPlanStrikeOff, setPlanStrikeOff, getAdminEnterprises, onboardEnterprise, deleteEnterprise, getEnterpriseStatsGlobal, AdminEnterprise } from '@/lib/chat-api';
 import { isAdminAuthenticated, setAdminKey, removeAdminKey, setApiKey } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -143,7 +143,7 @@ const Dashboard = () => {
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
-    const [view, setView] = useState<'visual' | 'table' | 'plans' | 'sites' | 'requests' | 'schools'>('visual');
+    const [view, setView] = useState<'visual' | 'table' | 'plans' | 'sites' | 'requests' | 'schools' | 'enterprises'>('visual');
     const [isDarkMode, setIsDarkMode] = useState(true);
     const [plans, setPlans] = useState<Plan[]>([]);
     const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
@@ -210,6 +210,27 @@ const Dashboard = () => {
     const [deletingSchoolAdminId, setDeletingSchoolAdminId] = useState<string | null>(null);
     const [confirmDeleteFacultyCode, setConfirmDeleteFacultyCode] = useState<string | null>(null);
     const [deletingFacultyCode, setDeletingFacultyCode] = useState<string | null>(null);
+
+    // Enterprises view state
+    const [enterprises, setEnterprises] = useState<AdminEnterprise[]>([]);
+    const [enterpriseStats, setEnterpriseStats] = useState<any[]>([]);
+    const [isEnterprisesLoading, setIsEnterprisesLoading] = useState(false);
+    const [enterprisesSearch, setEnterprisesSearch] = useState("");
+    const [enterprisesSortField, setEnterprisesSortField] = useState<'name' | 'code' | 'created'>("created");
+    const [enterprisesSortOrder, setEnterprisesSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [enterprisesRowsPerPage, setEnterprisesRowsPerPage] = useState<number>(10);
+    const [enterprisesPage, setEnterprisesPage] = useState<number>(1);
+    const [enterprisesDateFrom, setEnterprisesDateFrom] = useState<string>("");
+    const [enterprisesDateTo, setEnterprisesDateTo] = useState<string>("");
+    const [showCreateEnterpriseModal, setShowCreateEnterpriseModal] = useState(false);
+    const [newEnterpriseName, setNewEnterpriseName] = useState("");
+    const [newEnterpriseCode, setNewEnterpriseCode] = useState("");
+    const [newEnterpriseAdminName, setNewEnterpriseAdminName] = useState("");
+    const [newEnterpriseAdminEmail, setNewEnterpriseAdminEmail] = useState("");
+    const [newEnterpriseAdminPassword, setNewEnterpriseAdminPassword] = useState("");
+    const [isCreatingEnterprise, setIsCreatingEnterprise] = useState(false);
+    const [createdEnterpriseInfo, setCreatedEnterpriseInfo] = useState<any>(null);
+    const [selectedEnterprise, setSelectedEnterprise] = useState<any>(null);
     const USERS_PER_PAGE = 10;
 
     const sortedUsers = useMemo(() => {
@@ -302,6 +323,89 @@ const Dashboard = () => {
             toast.error("Failed to load schools data");
         } finally {
             setIsSchoolsLoading(false);
+        }
+    };
+
+    const fetchEnterprisesData = async () => {
+        setIsEnterprisesLoading(true);
+        try {
+            const [entRes, statsRes] = await Promise.all([
+                getAdminEnterprises(),
+                getEnterpriseStatsGlobal().catch(() => ({ success: true, enterprises: [] }))
+            ]);
+            if (entRes.success) setEnterprises(entRes.enterprises || []);
+            if (statsRes.success) setEnterpriseStats((statsRes as any).enterprises || []);
+        } catch (e) {
+            toast.error("Failed to load enterprises data");
+        } finally {
+            setIsEnterprisesLoading(false);
+        }
+    };
+
+    const handleCreateEnterprise = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const enterpriseName = newEnterpriseName.trim();
+        const enterpriseCode = newEnterpriseCode.trim().toUpperCase();
+        const name = newEnterpriseAdminName.trim();
+        const email = newEnterpriseAdminEmail.trim();
+        const adminPassword = newEnterpriseAdminPassword.trim();
+
+        if (!enterpriseName || !enterpriseCode || !name || !email || !adminPassword) {
+            toast.error("All fields are required");
+            return;
+        }
+
+        if (!/^[A-Z0-9_-]{3,30}$/.test(enterpriseCode)) {
+            toast.error("Enterprise code must be 3-30 chars: A-Z, 0-9, _ or -");
+            return;
+        }
+
+        if (adminPassword.length < 8) {
+            toast.error("Admin password must be at least 8 characters");
+            return;
+        }
+
+        setIsCreatingEnterprise(true);
+        try {
+            const res = await onboardEnterprise({
+                enterprise_name: enterpriseName,
+                enterprise_code: enterpriseCode,
+                admin_name: name,
+                admin_email: email,
+                admin_password: adminPassword,
+            });
+            const adminCode = res.admin?.admin_code || enterpriseCode;
+            setCreatedEnterpriseInfo({
+                enterpriseName,
+                enterpriseCode,
+                adminName: name,
+                adminEmail: email,
+                adminPassword,
+                adminCode,
+            });
+            setShowCreateEnterpriseModal(false);
+            setNewEnterpriseName("");
+            setNewEnterpriseCode("");
+            setNewEnterpriseAdminName("");
+            setNewEnterpriseAdminEmail("");
+            setNewEnterpriseAdminPassword("");
+
+            toast.success("Enterprise onboarded successfully!");
+            await fetchEnterprisesData();
+        } catch (err: any) {
+            toast.error("Failed to create enterprise admin: " + err.message);
+        } finally {
+            setIsCreatingEnterprise(false);
+        }
+    };
+
+    const handleDeleteEnterprise = async (id: number) => {
+        try {
+            await deleteEnterprise(id);
+            setEnterprises(prev => prev.filter(e => e.id !== id));
+            toast.success("Enterprise deleted successfully");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to delete enterprise");
         }
     };
 
@@ -458,6 +562,44 @@ const Dashboard = () => {
         setSchoolsPage(1);
     };
 
+    // Derived enterprises list: filter -> sort -> paginate
+    const processedEnterprises = useMemo(() => {
+        let list = [...enterprises];
+        const q = enterprisesSearch.trim().toLowerCase();
+        if (q) {
+            list = list.filter(e => e.enterprise_name.toLowerCase().includes(q) || e.enterprise_code.toLowerCase().includes(q));
+        }
+        if (enterprisesDateFrom) {
+            const from = new Date(enterprisesDateFrom);
+            list = list.filter(e => new Date(e.created_at) >= from);
+        }
+        if (enterprisesDateTo) {
+            const to = new Date(enterprisesDateTo);
+            // include entire end date
+            to.setHours(23, 59, 59, 999);
+            list = list.filter(e => new Date(e.created_at) <= to);
+        }
+        list.sort((a, b) => {
+            let va: any, vb: any;
+            if (enterprisesSortField === 'name') { va = a.enterprise_name.toLowerCase(); vb = b.enterprise_name.toLowerCase(); }
+            else if (enterprisesSortField === 'code') { va = a.enterprise_code.toLowerCase(); vb = b.enterprise_code.toLowerCase(); }
+            else { va = new Date(a.created_at).getTime(); vb = new Date(b.created_at).getTime(); }
+            if (va < vb) return enterprisesSortOrder === 'asc' ? -1 : 1;
+            if (va > vb) return enterprisesSortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return list;
+    }, [enterprises, enterprisesSearch, enterprisesDateFrom, enterprisesDateTo, enterprisesSortField, enterprisesSortOrder]);
+
+    const enterprisesTotalPages = useMemo(() => Math.max(1, Math.ceil(processedEnterprises.length / Math.max(1, enterprisesRowsPerPage))), [processedEnterprises.length, enterprisesRowsPerPage]);
+    const visibleEnterprises = useMemo(() => processedEnterprises.slice((enterprisesPage - 1) * enterprisesRowsPerPage, enterprisesPage * enterprisesRowsPerPage), [processedEnterprises, enterprisesPage, enterprisesRowsPerPage]);
+
+    const toggleEnterprisesSort = (field: 'name' | 'code' | 'created') => {
+        if (enterprisesSortField === field) setEnterprisesSortOrder(o => o === 'asc' ? 'desc' : 'asc');
+        else { setEnterprisesSortField(field); setEnterprisesSortOrder('asc'); }
+        setEnterprisesPage(1);
+    };
+
     const fetchRequests = async () => {
         setIsRequestsLoading(true)
         try {
@@ -537,10 +679,6 @@ const Dashboard = () => {
                 }
                 if (role === "faculty") {
                     window.location.href = "/admin/school-faculty";
-                    return;
-                }
-                if (role === "enterprise_admin") {
-                    window.location.href = "/admin/enterprise-admin";
                     return;
                 }
 
@@ -862,6 +1000,12 @@ const Dashboard = () => {
                             <Users className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Schools
                         </button>
                         <button
+                            onClick={() => { setView('enterprises' as any); fetchEnterprisesData(); }}
+                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === ('enterprises' as any) ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
+                        >
+                            <Building2 className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Enterprises
+                        </button>
+                        <button
                             onClick={() => setView('sites')}
                             className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'sites' ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
                         >
@@ -878,6 +1022,13 @@ const Dashboard = () => {
                     >
                         <Plus className="h-3.5 w-3.5" />
                         Add School Admin
+                    </button>
+                    <button
+                        onClick={() => setShowCreateEnterpriseModal(true)}
+                        className="px-4 py-2 bg-orange-600 text-white border border-orange-500 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-orange-500 transition-all rounded-full flex items-center gap-2"
+                    >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Enterprise Admin
                     </button>
                     {/* Navbar refresh removed as requested */}
 
@@ -1917,6 +2068,177 @@ const Dashboard = () => {
                         </motion.div>
                     )}
 
+                    {/* Enterprises View */}
+                    {view === 'enterprises' && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="p-10"
+                        >
+                            <div className={`${isDarkMode ? 'bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/20' : 'bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-black'} border rounded-none overflow-hidden backdrop-blur-3xl min-h-[calc(100vh-80px)]`}>
+                                <div className="p-4 lg:p-6">
+                                    {/* Stat Cards Row */}
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                                        <StatCard
+                                            title="Total Enterprises"
+                                            value={enterprises.length}
+                                            icon={Building2}
+                                            color="#00DDDD"
+                                            isDarkMode={isDarkMode}
+                                        />
+                                        <StatCard
+                                            title="Total Employees"
+                                            value={enterpriseStats.reduce((sum, item) => sum + (item.student_count || 0), 0)}
+                                            icon={Users}
+                                            color="#FFA500"
+                                            isDarkMode={isDarkMode}
+                                        />
+                                        <StatCard
+                                            title="AI Operations"
+                                            value={enterpriseStats.reduce((sum, item) => sum + (item.total_ai_requests || 0), 0)}
+                                            icon={Cpu}
+                                            color="#10B981"
+                                            isDarkMode={isDarkMode}
+                                        />
+                                        <StatCard
+                                            title="Active B2B Admins"
+                                            value={enterpriseStats.reduce((sum, item) => sum + (item.admin_count || 0), 0)}
+                                            icon={ShieldCheck}
+                                            color="#EC4899"
+                                            isDarkMode={isDarkMode}
+                                        />
+                                    </div>
+
+                                    {/* Controls: search, dates, rows per page */}
+                                    <div className="flex flex-col md:flex-row md:items-end gap-4 mb-6 justify-between">
+                                        <div className="flex-1 min-w-[220px]">
+                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>Search</label>
+                                            <div className="relative">
+                                                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${isDarkMode ? 'opacity-30 text-white' : 'opacity-40 text-black'}`} />
+                                                <input
+                                                    value={enterprisesSearch}
+                                                    onChange={(e) => { setEnterprisesSearch(e.target.value); setEnterprisesPage(1); }}
+                                                    placeholder="Search enterprise name or code..."
+                                                    className={`w-full pl-9 pr-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white placeholder:text-white/30' : 'bg-black/5 border-black/10 text-black placeholder:text-black/40'}`}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>From</label>
+                                            <input type="date" value={enterprisesDateFrom} onChange={(e) => { setEnterprisesDateFrom(e.target.value); setEnterprisesPage(1); }} className={`px-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'}`} />
+                                        </div>
+                                        <div>
+                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>To</label>
+                                            <input type="date" value={enterprisesDateTo} onChange={(e) => { setEnterprisesDateTo(e.target.value); setEnterprisesPage(1); }} className={`px-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'}`} />
+                                        </div>
+                                        <div>
+                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>Rows</label>
+                                            <select value={enterprisesRowsPerPage} onChange={(e) => { setEnterprisesRowsPerPage(parseInt(e.target.value) || 10); setEnterprisesPage(1); }} className={`px-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'}`}>
+                                                <option value={10}>10</option>
+                                                <option value={25}>25</option>
+                                                <option value={50}>50</option>
+                                                <option value={100}>100</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 opacity-0 select-none`}>Refresh</label>
+                                            <button
+                                                onClick={fetchEnterprisesData}
+                                                className={`h-10 w-10 rounded-xl border flex items-center justify-center transition-all ${isDarkMode ? 'border-white/10 hover:bg-white/5 text-white' : 'border-black/10 hover:bg-black/5 text-black'} ${isEnterprisesLoading ? 'animate-spin' : ''}`}
+                                                title="Refresh"
+                                            >
+                                                <RefreshCw className={`h-4 w-4 ${isDarkMode ? 'opacity-60' : 'opacity-60'}`} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Table View */}
+                                    <div className={`relative border rounded-[1rem] overflow-hidden ${isDarkMode ? 'border-white/10 bg-white/[0.03]' : 'border-black bg-black/[0.02]'}`}>
+                                        <div className={`p-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black'} flex items-center justify-between`}>
+                                            <h3 className={`text-lg font-display font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>Enterprises</h3>
+                                            <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? 'opacity-40' : 'opacity-60'}`}>{processedEnterprises.length} results</span>
+                                        </div>
+
+                                        {isEnterprisesLoading ? (
+                                            <div className="p-10 text-center text-[10px] font-mono opacity-40">Loading...</div>
+                                        ) : processedEnterprises.length === 0 ? (
+                                            <div className="p-10 text-center text-[10px] font-mono opacity-40">No enterprises found</div>
+                                        ) : (
+                                            <div className="overflow-x-auto">
+                                                <table className={`w-full border ${isDarkMode ? 'border-white/10' : 'border-black'} rounded-xl overflow-hidden`}>
+                                                    <thead>
+                                                        <tr className={`${isDarkMode ? 'text-white/60' : 'text-black/70'} text-[9px] font-mono uppercase tracking-[0.3em] border-b ${isDarkMode ? 'border-white/10' : 'border-black'}`}>
+                                                            <th className="p-4 text-left">
+                                                                <button onClick={() => toggleEnterprisesSort('name')} className="flex items-center gap-1 hover:opacity-80">
+                                                                    Name {enterprisesSortField === 'name' ? (enterprisesSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                                                                </button>
+                                                            </th>
+                                                            <th className="p-4 text-left">
+                                                                <button onClick={() => toggleEnterprisesSort('code')} className="flex items-center gap-1 hover:opacity-80">
+                                                                    Code {enterprisesSortField === 'code' ? (enterprisesSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                                                                </button>
+                                                            </th>
+                                                            <th className="p-4 text-center">Employees</th>
+                                                            <th className="p-4 text-center">Admins</th>
+                                                            <th className="p-4 text-center">AI Requests</th>
+                                                            <th className="p-4 text-left">
+                                                                <button onClick={() => toggleEnterprisesSort('created')} className="flex items-center gap-1 hover:opacity-80">
+                                                                    Created {enterprisesSortField === 'created' ? (enterprisesSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                                                                </button>
+                                                            </th>
+                                                            <th className="p-4 text-right">Delete</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {visibleEnterprises.map((e) => {
+                                                            const stats = enterpriseStats.find(item => item.school_code === e.enterprise_code);
+                                                            return (
+                                                                <tr
+                                                                    key={e.id}
+                                                                    className={`border-b transition-colors ${isDarkMode ? 'border-white/10 hover:bg-white/[0.04]' : 'border-black/20 hover:bg-black/[0.03]'}`}
+                                                                >
+                                                                    <td className="p-4 text-sm font-bold">{e.enterprise_name}</td>
+                                                                    <td className="p-4 text-xs font-mono opacity-80">{e.enterprise_code}</td>
+                                                                    <td className="p-4 text-center text-xs font-mono">{stats?.student_count || 0}</td>
+                                                                    <td className="p-4 text-center text-xs font-mono">{stats?.admin_count || 0}</td>
+                                                                    <td className="p-4 text-center text-xs font-mono text-[#00DDDD]">{stats?.total_ai_requests || 0}</td>
+                                                                    <td className="p-4 text-xs font-mono opacity-60">{new Date(e.created_at).toLocaleDateString()}</td>
+                                                                    <td className="p-4 text-right">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                if (confirm(`Are you sure you want to delete the enterprise "${e.enterprise_name}"? All associated managers, employees, and stats will be permanently deleted.`)) {
+                                                                                    handleDeleteEnterprise(e.id);
+                                                                                }
+                                                                            }}
+                                                                            className="p-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300"
+                                                                            title="Delete Enterprise"
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+
+                                        {/* Pagination */}
+                                        <div className={`p-4 flex items-center justify-between border-t ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
+                                            <div className={`text-[10px] font-mono ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>Page {enterprisesPage} / {enterprisesTotalPages}</div>
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={() => setEnterprisesPage(p => Math.max(1, p - 1))} disabled={enterprisesPage === 1} className={`px-3 py-1.5 rounded-lg border text-[10px] ${isDarkMode ? 'border-white/10 text-white/80 disabled:opacity-30 hover:bg-white/5' : 'border-black/10 text-black/80 disabled:opacity-30 hover:bg-black/5'}`}>Prev</button>
+                                                <button onClick={() => setEnterprisesPage(p => Math.min(enterprisesTotalPages, p + 1))} disabled={enterprisesPage === enterprisesTotalPages} className={`px-3 py-1.5 rounded-lg border text-[10px] ${isDarkMode ? 'border-white/10 text-white/80 disabled:opacity-30 hover:bg-white/5' : 'border-black/10 text-black/80 disabled:opacity-30 hover:bg-black/5'}`}>Next</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
                     {/* Plans View */}
                     {view === 'plans' && (
                         <motion.div
@@ -2668,6 +2990,161 @@ const Dashboard = () => {
                             ) : (
                                 <><Copy className="h-3.5 w-3.5" />Copy All Credentials</>
                             )}
+                        </button>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Create Enterprise Admin Modal */}
+            {showCreateEnterpriseModal && (
+                <div className="fixed inset-0 z-[210] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className={`relative w-full max-w-lg border border-zinc-800/50 p-6 rounded-[2rem] ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
+                            }`}
+                    >
+                        <button
+                            onClick={() => setShowCreateEnterpriseModal(false)}
+                            className={`absolute top-4 right-4 p-2 rounded-xl transition-all ${isDarkMode ? "opacity-40 text-white hover:opacity-100 hover:bg-white/5" : "opacity-60 text-black hover:opacity-100 hover:bg-black/5"}`}
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+
+                        <h2 className={`text-xl font-display font-black uppercase tracking-tight mb-6 ${isDarkMode ? "text-white" : "text-black"}`}>
+                            Add Enterprise Admin
+                        </h2>
+
+                        <form onSubmit={handleCreateEnterprise} className="space-y-4">
+                            <div>
+                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Enterprise Name</label>
+                                <input
+                                    value={newEnterpriseName}
+                                    onChange={(e) => setNewEnterpriseName(e.target.value)}
+                                    required
+                                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                />
+                            </div>
+                            <div>
+                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Enterprise Code (Unique Key)</label>
+                                <input
+                                    value={newEnterpriseCode}
+                                    onChange={(e) => setNewEnterpriseCode(e.target.value.toUpperCase())}
+                                    required
+                                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                />
+                            </div>
+                            <div>
+                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Name</label>
+                                <input
+                                    value={newEnterpriseAdminName}
+                                    onChange={(e) => setNewEnterpriseAdminName(e.target.value)}
+                                    required
+                                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                />
+                            </div>
+                            <div>
+                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Admin Email</label>
+                                <input
+                                    type="email"
+                                    value={newEnterpriseAdminEmail}
+                                    onChange={(e) => setNewEnterpriseAdminEmail(e.target.value)}
+                                    required
+                                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                />
+                            </div>
+                            <div>
+                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Admin Password</label>
+                                <input
+                                    type="password"
+                                    value={newEnterpriseAdminPassword}
+                                    onChange={(e) => setNewEnterpriseAdminPassword(e.target.value)}
+                                    required
+                                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={isCreatingEnterprise}
+                                className="w-full py-3 bg-orange-500 text-white text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl disabled:opacity-50"
+                            >
+                                {isCreatingEnterprise ? "CREATING..." : "CREATE ENTERPRISE ADMIN"}
+                            </button>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Enterprise Created Success Dialog */}
+            {createdEnterpriseInfo && (
+                <div className="fixed inset-0 z-[220] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className={`relative w-full max-w-lg border border-zinc-800/50 p-6 rounded-[2rem] overflow-hidden ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
+                            }`}
+                    >
+                        <button
+                            onClick={() => setCreatedEnterpriseInfo(null)}
+                            className={`absolute top-4 right-4 p-2 rounded-xl transition-all ${isDarkMode ? "opacity-40 text-white hover:opacity-100 hover:bg-white/5" : "opacity-60 text-black hover:opacity-100 hover:bg-black/5"}`}
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+
+                        <div className="mb-5 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+                            <Zap className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400">Email Delivery Warning</p>
+                                <p className="text-[10px] font-mono text-amber-400/70 mt-0.5 leading-relaxed">
+                                    Copy & save these credentials now — they are not shown again.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="text-center mb-5">
+                            <div className="h-12 w-12 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center mx-auto mb-3">
+                                <CheckCircle2 className="h-6 w-6 text-orange-400" />
+                            </div>
+                            <h2 className={`text-xl font-display font-black uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
+                                Enterprise Onboarded
+                            </h2>
+                        </div>
+
+                        {/* Credential rows with copy */}
+                        <div className={`space-y-2 p-4 rounded-2xl text-xs font-mono ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                            {([
+                                { label: 'Enterprise', value: createdEnterpriseInfo.enterpriseName },
+                                { label: 'Enterprise Code', value: createdEnterpriseInfo.enterpriseCode },
+                                { label: 'Admin Name', value: createdEnterpriseInfo.adminName },
+                                { label: 'Login Email', value: createdEnterpriseInfo.adminEmail },
+                                { label: 'Admin Code', value: createdEnterpriseInfo.adminCode, highlight: true },
+                                { label: 'Password', value: createdEnterpriseInfo.adminPassword, highlight: true },
+                            ] as { label: string; value: string; highlight?: boolean }[]).map(({ label, value, highlight }) => (
+                                <div key={label} className={`flex items-center justify-between gap-4 px-3 py-2 rounded-xl ${highlight ? (isDarkMode ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-orange-500/10 border border-orange-500/20') : ''
+                                    }`}>
+                                     <span className={`text-[9px] uppercase tracking-widest shrink-0 ${isDarkMode ? 'opacity-40' : 'opacity-60'}`}>{label}</span>
+                                     <span className={`font-bold truncate ${highlight ? 'text-orange-400' : ''}`}>{value}</span>
+                                     <button
+                                         onClick={() => navigator.clipboard.writeText(value)}
+                                         className={`shrink-0 p-1 rounded-lg transition-all hover:scale-110 ${isDarkMode ? 'opacity-30 hover:opacity-80 hover:bg-white/10' : 'opacity-40 hover:opacity-80 hover:bg-black/10'}`}
+                                         title={`Copy ${label}`}
+                                     >
+                                         <Copy className="h-3 w-3" />
+                                     </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                const text = `Enterprise: ${createdEnterpriseInfo.enterpriseName}\nEnterprise Code: ${createdEnterpriseInfo.enterpriseCode}\nAdmin Name: ${createdEnterpriseInfo.adminName}\nEmail: ${createdEnterpriseInfo.adminEmail}\nAdmin Code (Login ID): ${createdEnterpriseInfo.adminCode}\nPassword: ${createdEnterpriseInfo.adminPassword}\n\nLogin at: ${window.location.origin}/admin`;
+                                navigator.clipboard.writeText(text).then(() => {
+                                    toast.success("All credentials copied to clipboard!");
+                                });
+                            }}
+                            className="w-full mt-4 py-3 bg-orange-500 text-white text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl flex items-center justify-center gap-2"
+                        >
+                            <Copy className="h-3.5 w-3.5" /> Copy All Credentials
                         </button>
                     </motion.div>
                 </div>
