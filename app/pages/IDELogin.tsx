@@ -37,7 +37,7 @@ export default function IDELogin() {
     if (initialKey) {
       const scheme = getEditorScheme()
       const timer = setTimeout(() => {
-        window.location.href = scheme + "://rudranex.rudranex-developer-assistant/auth?key=" + encodeURIComponent(initialKey)
+        window.location.href = scheme + "://rudraomniverse.rudranex-developer-assistant/auth?key=" + encodeURIComponent(initialKey)
       }, 1500)
       return () => clearTimeout(timer)
     }
@@ -47,7 +47,7 @@ export default function IDELogin() {
     const scheme = getEditorScheme()
     setLoggedIn(true)
     setTimeout(() => {
-      window.location.href = scheme + "://rudranex.rudranex-developer-assistant/auth?key=" + encodeURIComponent(key)
+      window.location.href = scheme + "://rudraomniverse.rudranex-developer-assistant/auth?key=" + encodeURIComponent(key)
     }, 500)
   }
 
