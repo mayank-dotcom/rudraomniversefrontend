@@ -254,10 +254,7 @@ const Chat = () => {
     const [gmailSelectedEmail, setGmailSelectedEmail] = useState<any | null>(null);
     const [gmailConnecting, setGmailConnecting] = useState(false);
     const [gmailSearchQuery, setGmailSearchQuery] = useState("");
-    const [gmailSendMode, setGmailSendMode] = useState<"single" | "bulk" | "auto" | "bulk-auto" | null>(null);
-    const [gmailComposeTo, setGmailComposeTo] = useState("");
-    const [gmailComposeSubject, setGmailComposeSubject] = useState("");
-    const [gmailComposeBody, setGmailComposeBody] = useState("");
+    const [gmailMailTo, setGmailMailTo] = useState("");
     const [gmailSending, setGmailSending] = useState(false);
     const [gmailSendResult, setGmailSendResult] = useState("");
     const [gmailAutoStatus, setGmailAutoStatus] = useState("");
@@ -482,6 +479,9 @@ const Chat = () => {
             setGmailEmail("")
             setGmailEmails([])
             setGmailSelectedEmail(null)
+            setGmailMailTo("")
+            setGmailSendResult("")
+            setGmailAutoStatus("")
         } catch (e: any) {
             setGmailError(e.message || "Failed to disconnect")
         } finally {
@@ -502,62 +502,35 @@ const Chat = () => {
     }
 
     // ── Gmail Send / Auto-Reply Handlers ──
-    const handleSendSingleEmail = async () => {
-        if (!gmailComposeTo.trim() || !gmailComposeSubject.trim() || !gmailComposeBody.trim()) {
-            setGmailSendResult("Please fill in all fields");
-            return
-        }
-        setGmailSending(true);
-        setGmailSendResult("");
-        try {
-            const { sendGoogleEmail } = await import("@/lib/chat-api");
-            const res = await sendGoogleEmail({
-                to: gmailComposeTo.trim(),
-                subject: gmailComposeSubject.trim(),
-                body: gmailComposeBody.trim(),
-            });
-            if (res.success) {
-                setGmailSendResult("Email sent successfully!");
-                setGmailComposeTo("");
-                setGmailComposeSubject("");
-                setGmailComposeBody("");
-            } else {
-                setGmailSendResult(res.error || "Failed to send email");
-            }
-        } catch (e: any) {
-            setGmailSendResult(e.message || "Failed to send email");
-        } finally {
-            setGmailSending(false);
-        }
-    };
+    const [gmailConfirmSend, setGmailConfirmSend] = useState(false);
+    const [gmailSendMode, setGmailSendMode] = useState<"single" | "bulk" | null>(null);
+    const [gmailPolishedBody, setGmailPolishedBody] = useState("");
+    const [gmailPolishing, setGmailPolishing] = useState(false);
 
-    const handleSendBulkEmail = async () => {
-        const recipients = gmailComposeTo.split(",").map(s => s.trim()).filter(Boolean);
-        if (!recipients.length || !gmailComposeSubject.trim() || !gmailComposeBody.trim()) {
-            setGmailSendResult("Please fill in all fields");
-            return
-        }
+    const handleMailSend = async (body: string) => {
+        const to = gmailMailTo.trim();
+        if (!to || !body.trim()) return;
+        const recipients = to.includes(",") ? to.split(",").map(s => s.trim()).filter(Boolean) : [to];
+        const subject = body.split("\n")[0].slice(0, 80) || "Message from Rudranex AI";
         setGmailSending(true);
         setGmailSendResult("");
-        let sent = 0, failed = 0;
         try {
             const { sendGoogleEmail } = await import("@/lib/chat-api");
-            for (const to of recipients) {
+            let sent = 0, failed = 0;
+            for (const r of recipients) {
                 try {
-                    const res = await sendGoogleEmail({ to, subject: gmailComposeSubject.trim(), body: gmailComposeBody.trim() });
+                    const res = await sendGoogleEmail({ to: r, subject, body });
                     if (res.success) sent++; else failed++;
                 } catch { failed++ }
             }
-            setGmailSendResult(`Sent to ${sent}/${recipients.length} recipient(s)` + (failed ? ` (${failed} failed)` : ""));
-            if (sent > 0) {
-                setGmailComposeTo("");
-                setGmailComposeSubject("");
-                setGmailComposeBody("");
-            }
+            setGmailSendResult(`Sent to ${sent}/${recipients.length} recipient(s)` + (failed ? ` (${failed} failed)` : " ✓"));
+            if (sent > 0) { setGmailMailTo(""); setInput(""); }
         } catch (e: any) {
-            setGmailSendResult(e.message || "Bulk send failed");
+            setGmailSendResult("Failed: " + (e.message || "Unknown error"));
         } finally {
             setGmailSending(false);
+            setGmailConfirmSend(false);
+            setGmailPolishedBody("");
         }
     };
 
@@ -567,13 +540,9 @@ const Chat = () => {
         try {
             const { triggerGoogleAutoReplyAll } = await import("@/lib/chat-api");
             const res = await triggerGoogleAutoReplyAll(10);
-            if (res.success) {
-                setGmailAutoStatus(`Auto-replied to ${res.replied} email(s)`);
-            } else {
-                setGmailAutoStatus(res.error || "Auto-reply failed");
-            }
+            setGmailAutoStatus(res.success ? `Auto-replied to ${res.replied} email(s) ✓` : (res.error || "Auto-reply failed"));
         } catch (e: any) {
-            setGmailAutoStatus(e.message || "Auto-reply failed");
+            setGmailAutoStatus("Failed: " + (e.message || "Unknown error"));
         } finally {
             setGmailSending(false);
         }
@@ -593,13 +562,9 @@ const Chat = () => {
             const ids = empRes.employees.map((e: any) => e.id);
             setGmailAutoStatus(`Triggering bulk reply for ${ids.length} employee(s)...`);
             const res = await triggerEnterpriseBulkReply(ids, 5);
-            if (res.success) {
-                setGmailAutoStatus(res.message || "Bulk auto-reply completed");
-            } else {
-                setGmailAutoStatus(res.error || "Bulk auto-reply failed");
-            }
+            setGmailAutoStatus(res.success ? (res.message || "Bulk auto-reply completed ✓") : (res.error || "Failed"));
         } catch (e: any) {
-            setGmailAutoStatus(e.message || "Bulk auto-reply failed");
+            setGmailAutoStatus("Failed: " + (e.message || "Unknown error"));
         } finally {
             setGmailSending(false);
         }
@@ -1248,6 +1213,27 @@ STRICT RULES:
         const trimmedInput = input.trim();
         if ((!trimmedInput && !selectedFile) || isLoading || isProcessingFile) {
             toast.error("Please enter a message or attach a file");
+            return;
+        }
+
+        // Gmail mode: if To is filled, polish with AI then show confirmation
+        if (rightSidebarTab === "gmail" && userRole === "employee" && gmailConnected && gmailMailTo.trim()) {
+            setGmailPolishing(true);
+            setGmailPolishedBody("");
+            setGmailConfirmSend(true);
+            try {
+                const { sendChatCompletion } = await import("@/lib/chat-api");
+                const res = await sendChatCompletion({
+                    messages: [
+                        { role: "system", content: "You are an email writing assistant. Polish the following rough text into a professional, well-formatted email. Fix grammar, improve clarity, and add appropriate structure. Return ONLY the polished email body — no explanations, no greetings like 'Here is your polished email', no extra commentary." },
+                        { role: "user", content: trimmedInput }
+                    ]
+                });
+                setGmailPolishedBody((res as any)?.choices?.[0]?.message?.content || trimmedInput);
+            } catch {
+                setGmailPolishedBody(trimmedInput);
+            }
+            setGmailPolishing(false);
             return;
         }
 
@@ -2430,135 +2416,189 @@ STRICT RULES:
                                     </div>
                                 </div>
                             )}
-                            {/* ─── Gmail Send Toolbar ─── */}
+                            {/* ─── Gmail Mail Toolbar ─── */}
                             {rightSidebarTab === "gmail" && userRole === "employee" && gmailConnected && (
-                                <div className="mb-2">
-                                    {!gmailSendMode ? (
-                                        <div className="flex items-center gap-1.5">
-                                            {([
-                                                { key: "single", label: "Send", icon: "→" },
-                                                { key: "bulk", label: "Bulk", icon: "⊕" },
-                                                { key: "auto", label: "Auto-Reply", icon: "↺" },
-                                                { key: "bulk-auto", label: "Bulk Auto", icon: "⇄" },
-                                            ] as const).map(({ key, label, icon }) => (
-                                                <button
-                                                    key={key}
-                                                    onClick={() => {
-                                                        setGmailSendMode(key);
-                                                        setGmailSendResult("");
-                                                        setGmailAutoStatus("");
-                                                    }}
-                                                    className={`flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all ${isDarkMode
-                                                        ? "border-white/10 text-white/50 hover:border-white/30 hover:text-white"
-                                                        : "border-black/10 text-black/50 hover:border-black/30 hover:text-black"
-                                                        }`}
-                                                >
-                                                    <span className="text-[11px]">{icon}</span>
-                                                    {label}
-                                                </button>
-                                            ))}
+                                <div className="mb-2 space-y-1.5">
+                                    {/* To: field + Send/Bulk toggle */}
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-[9px] font-mono uppercase tracking-widest shrink-0 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>To:</span>
+                                        <div className="relative flex-1">
+                                            <input
+                                                type="text"
+                                                placeholder="email@example.com or comma,separated,emails"
+                                                value={gmailMailTo}
+                                                onChange={(e) => setGmailMailTo(e.target.value)}
+                                                className={`w-full px-2 py-1.5 text-[10px] font-mono rounded border outline-none transition-all ${isDarkMode
+                                                    ? "bg-white/[0.03] border-white/10 text-white placeholder-white/20 focus:border-[#4285F4]/50"
+                                                    : "bg-black/[0.02] border-black/10 text-black placeholder-black/30 focus:border-[#4285F4]/50"
+                                                    }`}
+                                            />
                                         </div>
-                                    ) : (
-                                        <div className={`border rounded-xl p-3 ${isDarkMode ? "border-white/10 bg-white/[0.03]" : "border-black/10 bg-black/[0.02]"}`}>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className={`text-[9px] font-mono uppercase tracking-[0.15em] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>
-                                                    {gmailSendMode === "single" && "Send Mail"}
-                                                    {gmailSendMode === "bulk" && "Bulk Send"}
-                                                    {gmailSendMode === "auto" && "Auto-Reply"}
-                                                    {gmailSendMode === "bulk-auto" && "Bulk Auto-Reply"}
-                                                </span>
-                                                <button
-                                                    onClick={() => { setGmailSendMode(null); setGmailSendResult(""); setGmailAutoStatus(""); }}
-                                                    className={`p-1 rounded transition-all ${isDarkMode ? "hover:bg-white/10 text-white/40" : "hover:bg-black/10 text-black/40"}`}
-                                                >
-                                                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-
-                                            {(gmailSendMode === "single" || gmailSendMode === "bulk") && (
-                                                <div className="space-y-2">
-                                                    <input
-                                                        type="text"
-                                                        placeholder={gmailSendMode === "bulk" ? "To (comma-separated emails)" : "To (recipient email)"}
-                                                        value={gmailComposeTo}
-                                                        onChange={(e) => setGmailComposeTo(e.target.value)}
-                                                        className={`w-full px-2.5 py-1.5 text-[10px] font-mono rounded border outline-none transition-all ${isDarkMode
-                                                            ? "bg-white/[0.03] border-white/10 text-white placeholder-white/20"
-                                                            : "bg-black/[0.02] border-black/10 text-black placeholder-black/30"
-                                                            }`}
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Subject"
-                                                        value={gmailComposeSubject}
-                                                        onChange={(e) => setGmailComposeSubject(e.target.value)}
-                                                        className={`w-full px-2.5 py-1.5 text-[10px] font-mono rounded border outline-none transition-all ${isDarkMode
-                                                            ? "bg-white/[0.03] border-white/10 text-white placeholder-white/20"
-                                                            : "bg-black/[0.02] border-black/10 text-black placeholder-black/30"
-                                                            }`}
-                                                    />
-                                                    <textarea
-                                                        placeholder="Email body (HTML supported)"
-                                                        value={gmailComposeBody}
-                                                        onChange={(e) => setGmailComposeBody(e.target.value)}
-                                                        rows={3}
-                                                        className={`w-full px-2.5 py-1.5 text-[10px] font-mono rounded border outline-none resize-none transition-all ${isDarkMode
-                                                            ? "bg-white/[0.03] border-white/10 text-white placeholder-white/20"
-                                                            : "bg-black/[0.02] border-black/10 text-black placeholder-black/30"
-                                                            }`}
-                                                    />
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={gmailSendMode === "single" ? handleSendSingleEmail : handleSendBulkEmail}
-                                                            disabled={gmailSending}
-                                                            className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all ${gmailSending ? "opacity-50" : ""} ${isDarkMode
-                                                                ? "bg-white text-black hover:bg-white/90"
-                                                                : "bg-black text-white hover:bg-black/90"
-                                                                }`}
-                                                        >
-                                                            {gmailSending ? "Sending..." : "Send"}
-                                                        </button>
-                                                        {gmailSendResult && (
-                                                            <span className={`text-[9px] font-mono ${gmailSendResult.includes("success") ? "text-green-500" : "text-red-400"}`}>
-                                                                {gmailSendResult}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {(gmailSendMode === "auto" || gmailSendMode === "bulk-auto") && (
-                                                <div>
-                                                    <p className={`text-[9px] font-mono mb-2 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-                                                        {gmailSendMode === "auto"
-                                                            ? "Trigger AI auto-reply to your unread emails. Your email agent must be active."
-                                                            : "Trigger bulk auto-reply for all employees with active agents."}
-                                                    </p>
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={gmailSendMode === "auto" ? handleTriggerAutoReply : handleTriggerBulkAutoReply}
-                                                            disabled={gmailSending}
-                                                            className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all ${gmailSending ? "opacity-50" : ""} ${isDarkMode
-                                                                ? "bg-white text-black hover:bg-white/90"
-                                                                : "bg-black text-white hover:bg-black/90"
-                                                                }`}
-                                                        >
-                                                            {gmailSending ? "Processing..." : "Trigger"}
-                                                        </button>
-                                                        {gmailAutoStatus && (
-                                                            <span className={`text-[9px] font-mono ${gmailAutoStatus.includes("replied") || gmailAutoStatus.includes("completed") ? "text-green-500" : "text-red-400"}`}>
-                                                                {gmailAutoStatus}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                                        <button
+                                            onClick={() => setGmailMailTo("")}
+                                            className={`p-1.5 rounded transition-all ${isDarkMode ? "hover:bg-white/10 text-white/30" : "hover:bg-black/10 text-black/30"}`}
+                                            title="Clear"
+                                        >
+                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    {/* Action buttons */}
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <button
+                                            onClick={() => {
+                                                if (!gmailMailTo.trim() || !input.trim()) return;
+                                                setGmailConfirmSend(true);
+                                            }}
+                                            disabled={!gmailMailTo.trim() || !input.trim() || gmailSending}
+                                            className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all disabled:opacity-30 ${isDarkMode
+                                                ? "border-white/15 text-white/60 hover:border-white/30 hover:text-white"
+                                                : "border-black/15 text-black/60 hover:border-black/30 hover:text-black"
+                                                }`}
+                                        >
+                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M22 2L11 13" /><path d="M22 2L15 22l-4-9-9-4z" />
+                                            </svg>
+                                            Send
+                                        </button>
+                                        <button
+                                            onClick={handleTriggerAutoReply}
+                                            disabled={gmailSending}
+                                            className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all disabled:opacity-30 ${isDarkMode
+                                                ? "border-white/15 text-white/60 hover:border-white/30 hover:text-white"
+                                                : "border-black/15 text-black/60 hover:border-black/30 hover:text-black"
+                                                }`}
+                                        >
+                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                            </svg>
+                                            Auto
+                                        </button>
+                                        <button
+                                            onClick={handleTriggerBulkAutoReply}
+                                            disabled={gmailSending}
+                                            className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all disabled:opacity-30 ${isDarkMode
+                                                ? "border-white/15 text-white/60 hover:border-white/30 hover:text-white"
+                                                : "border-black/15 text-black/60 hover:border-black/30 hover:text-black"
+                                                }`}
+                                        >
+                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                            </svg>
+                                            Bulk Auto
+                                        </button>
+                                        {gmailSendResult && (
+                                            <span className={`text-[8px] font-mono ${gmailSendResult.includes("✓") ? "text-green-500" : "text-red-400"}`}>{gmailSendResult}</span>
+                                        )}
+                                        {gmailAutoStatus && !gmailSendResult && (
+                                            <span className={`text-[8px] font-mono ${gmailAutoStatus.includes("✓") ? "text-green-500" : "text-red-400"}`}>{gmailAutoStatus}</span>
+                                        )}
+                                    </div>
                                 </div>
                             )}
+
+                            {/* ─── Send Confirmation Modal ─── */}
+                            <AnimatePresence>
+                                {gmailConfirmSend && gmailMailTo.trim() && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="fixed inset-0 z-[150] flex items-center justify-center p-4"
+                                        onClick={() => { setGmailConfirmSend(false); setGmailPolishedBody(""); }}
+                                    >
+                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/40"} backdrop-blur-sm`} />
+                                        <motion.div
+                                            initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                                            exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                            className={`relative w-full max-w-lg rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/10"}`}
+                                        >
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
+                                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                        <rect x="2" y="4" width="20" height="16" rx="2" fill="#EA4335"/>
+                                                        <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Send as Email</p>
+                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                        To: <span className="font-bold">{gmailMailTo.includes(",") ? `${gmailMailTo.split(",").length} recipients` : gmailMailTo}</span>
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Polished email body */}
+                                            {gmailPolishing ? (
+                                                <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-white/[0.03]">
+                                                    <div className="h-4 w-4 rounded-full border-2 border-t-transparent animate-spin border-[#4285F4]" />
+                                                    <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/50" : "text-black/50"}`}>AI is polishing your message...</span>
+                                                </div>
+                                            ) : gmailPolishedBody ? (
+                                                <>
+                                                    <textarea
+                                                        value={gmailPolishedBody}
+                                                        onChange={(e) => setGmailPolishedBody(e.target.value)}
+                                                        rows={6}
+                                                        className={`w-full mb-3 p-2.5 text-[10px] font-mono leading-relaxed rounded-lg border outline-none resize-none transition-all ${isDarkMode
+                                                            ? "bg-white/[0.03] border-white/10 text-white/80 focus:border-[#4285F4]/50"
+                                                            : "bg-black/[0.02] border-black/10 text-black/80 focus:border-[#4285F4]/50"
+                                                            }`}
+                                                    />
+                                                    <div className="flex items-center gap-2 mb-4">
+                                                        <button
+                                                            onClick={async () => {
+                                                                setGmailPolishing(true);
+                                                                try {
+                                                                    const { sendChatCompletion } = await import("@/lib/chat-api");
+                                                                    const res = await sendChatCompletion({
+                                                                        messages: [
+                                                                            { role: "system", content: "You are an email writing assistant. Polish the following rough text into a professional, well-formatted email. Return ONLY the polished email body." },
+                                                                            { role: "user", content: input.trim() }
+                                                                        ]
+                                                                    });
+                                                                    setGmailPolishedBody((res as any)?.choices?.[0]?.message?.content || input.trim());
+                                                                } catch {
+                                                                    setGmailPolishedBody(input.trim());
+                                                                }
+                                                                setGmailPolishing(false);
+                                                            }}
+                                                            className={`flex items-center gap-1 px-2 py-1 text-[8px] font-mono rounded-md border transition-all ${isDarkMode ? "border-white/10 text-white/40 hover:border-white/30" : "border-black/10 text-black/40 hover:border-black/30"}`}
+                                                        >
+                                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                                                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                                            </svg>
+                                                            Regenerate
+                                                        </button>
+                                                        <span className={`text-[7px] font-mono ${isDarkMode ? "text-white/25" : "text-black/25"}`}>Edit freely above</span>
+                                                    </div>
+                                                </>
+                                            ) : null}
+
+                                            <div className="flex items-center gap-2 justify-end">
+                                                <button
+                                                    onClick={() => { setGmailConfirmSend(false); setGmailPolishedBody(""); }}
+                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/50 hover:bg-white/10" : "text-black/50 hover:bg-black/10"}`}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={() => handleMailSend(gmailPolishedBody || input.trim())}
+                                                    disabled={gmailSending || gmailPolishing}
+                                                    className={`px-4 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all disabled:opacity-50 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
+                                                >
+                                                    {gmailSending ? "Sending..." : "Send"}
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             <div className={`relative flex flex-row items-center border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
                                 <div className="flex-1 min-w-0 flex items-center">
