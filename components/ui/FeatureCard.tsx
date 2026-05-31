@@ -1,7 +1,6 @@
 "use client"
 
 import { motion } from "framer-motion";
-import { ArrowUpRight } from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
 
 interface FeatureCardProps {
@@ -48,19 +47,6 @@ const FeatureCard = ({ title, description, index, tag }: FeatureCardProps) => {
                 >
                     {description}
                 </p>
-            </div>
-
-            {/* Read More — Nav Link style (12px Medium, 0.05em) */}
-            <div className="flex items-center gap-2 cursor-pointer">
-                <span
-                    className={`font-sans font-medium uppercase transition-colors ${isDarkMode ? "text-white/25 group-hover:text-white" : "text-black/35 group-hover:text-black"}`}
-                    style={{ fontSize: "12px", letterSpacing: "0.05em" }}
-                >
-                    Read More
-                </span>
-                <ArrowUpRight
-                    className={`h-3.5 w-3.5 transition-all group-hover:text-[var(--color-cyan)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${isDarkMode ? "text-white/20" : "text-black/20"}`}
-                />
             </div>
 
             {/* Hover Glow */}

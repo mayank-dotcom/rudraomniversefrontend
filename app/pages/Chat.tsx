@@ -283,6 +283,7 @@ const Chat = () => {
 
     const engines = [
         { name: "Student Mode", endpoint: "/chat", version: "1.0", icon: GraduationCap },
+        { name: "Assistant Mode", endpoint: "/chat", version: "1.0", icon: Bot },
 
         { name: "Interview Prep", endpoint: "/tools/interview", version: "1.0", icon: UserCog },
         { name: "Mock Paper Generator", endpoint: "/chat", version: "1.0", icon: MockIcon },

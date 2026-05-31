@@ -2155,6 +2155,7 @@ export function getPlanFeatures(planId: string): string[] {
 export function getFeatureIdForEngine(engineName: string): string {
   const map: Record<string, string> = {
     "Student Mode": "student_mode",
+    "Assistant Mode": "student_mode",
     "Interview Prep": "interview_prep",
     "Mock Paper Generator": "mock_paper_generator",
     "Persona Mode": "persona_mode",

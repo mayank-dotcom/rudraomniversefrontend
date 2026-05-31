@@ -2189,22 +2189,24 @@ const Dashboard = () => {
                                         <RefreshCw className={`h-4 w-4 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
                                     </button>
                                 </div>
-                                <div className="p-6 md:p-10">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="p-0">
+                                    <div className="flex flex-col">
                                         {[
                                             { key: 'about_us', label: 'About Us', icon: 'ℹ️' },
                                             { key: 'privacy_policy', label: 'Privacy Policy', icon: '🔒' },
                                             { key: 'terms_conditions', label: 'Terms of Service', icon: '📜' },
                                             { key: 'contact_info', label: 'Contact Us', icon: '📧' },
-                                        ].map((page) => {
+                                            { key: 'social_media_links', label: 'Social Media Links', icon: '🔗' },
+                                            { key: 'schools_page', label: 'Schools Page', icon: '🏫' },
+                                            { key: 'b2b_page', label: 'B2B Page', icon: '💼' },
+                                        ].map((page, index, array) => {
                                             const setting = siteSettings.find(s => s.key === page.key)
                                             return (
                                                 <div
                                                     key={page.key}
-                                                    className={`relative border rounded-[2.5rem] p-8 transition-all hover:scale-[1.02] overflow-hidden group cursor-pointer ${isDarkMode
-                                                            ? "border-zinc-800/50 bg-gradient-to-br from-zinc-900 via-black to-zinc-900"
-                                                            : "border-zinc-800/50 bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                                                        }`}
+                                                    className={`flex items-center justify-between p-6 transition-all cursor-pointer group ${
+                                                        index !== array.length - 1 ? (isDarkMode ? "border-b border-white/5" : "border-b border-black/5") : ""
+                                                    } ${isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"}`}
                                                     onClick={() => {
                                                         const raw = setting?.value || '';
                                                         setEditingSiteSetting({ key: page.key, value: raw });
@@ -2214,6 +2216,12 @@ const Dashboard = () => {
                                                                 setSiteFormData({ elements: parsed.sections.map((s: string) => ({ type: 'paragraph', content: s })) });
                                                             } else if (page.key === 'contact_info' && parsed.description && !parsed.paragraphs) {
                                                                 setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
+                                                            } else if (page.key === 'social_media_links' && !parsed.links) {
+                                                                setSiteFormData({ links: [] });
+                                                            } else if (page.key === 'schools_page' && !parsed.title) {
+                                                                setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '', features: [] });
+                                                            } else if (page.key === 'b2b_page' && !parsed.title) {
+                                                                setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '' });
                                                             } else {
                                                                 setSiteFormData(parsed);
                                                             }
@@ -2222,23 +2230,29 @@ const Dashboard = () => {
                                                                 setSiteFormData({ elements: raw.split('\n\n').filter(Boolean).map((p: string) => ({ type: 'paragraph', content: p })) });
                                                             } else if (page.key === 'contact_info') {
                                                                 setSiteFormData({ paragraphs: raw.split('\n\n').filter(Boolean), email: '', responseTime: '' });
+                                                            } else if (page.key === 'social_media_links') {
+                                                                setSiteFormData({ links: [] });
+                                                            } else if (page.key === 'schools_page') {
+                                                                setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '', features: [] });
+                                                            } else if (page.key === 'b2b_page') {
+                                                                setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '' });
                                                             } else {
                                                                 setSiteFormData(null);
                                                             }
                                                         }
                                                     }}
                                                 >
-                                                    <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                                                    <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <h3 className={`text-lg font-display font-black tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{page.label}</h3>
+                                                    <div className="flex items-center gap-4">
                                                         <span className="text-2xl">{page.icon}</span>
+                                                        <div>
+                                                            <h3 className={`text-lg font-display font-black tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{page.label}</h3>
+                                                            <p className={`text-[10px] font-mono line-clamp-1 leading-relaxed ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
+                                                                {setting?.value?.substring(0, 100) || 'No content yet...'}
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                    <p className={`text-[10px] font-mono line-clamp-3 leading-relaxed ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
-                                                        {setting?.value?.substring(0, 150) || 'No content yet...'}
-                                                    </p>
-                                                    <div className={`mt-4 text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`}>
-                                                        Click to edit
+                                                    <div className={`text-[10px] font-mono uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                        Edit
                                                     </div>
                                                 </div>
                                             )
@@ -3780,7 +3794,10 @@ const Dashboard = () => {
                             {editingSiteSetting.key === 'about_us' ? 'About Us' :
                                 editingSiteSetting.key === 'privacy_policy' ? 'Privacy Policy' :
                                     editingSiteSetting.key === 'terms_conditions' ? 'Terms of Service' :
-                                        editingSiteSetting.key === 'contact_info' ? 'Contact Us' : editingSiteSetting.key}
+                                        editingSiteSetting.key === 'contact_info' ? 'Contact Us' : 
+                                            editingSiteSetting.key === 'social_media_links' ? 'Social Media Links' : 
+                                                editingSiteSetting.key === 'schools_page' ? 'Schools Page' : 
+                                                    editingSiteSetting.key === 'b2b_page' ? 'B2B Page' : editingSiteSetting.key}
                         </h2>
 
                         {editingSiteSetting.key === 'about_us' && (
@@ -3916,6 +3933,235 @@ const Dashboard = () => {
                                         }}
                                         className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
                                             }`}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {editingSiteSetting.key === 'social_media_links' && (
+                            <div className="space-y-4">
+                                {(Array.isArray(siteFormData?.links) ? siteFormData.links : []).map((link: any, i: number) => {
+                                    const updateField = (field: string, val: string) => {
+                                        const next = JSON.parse(JSON.stringify(siteFormData));
+                                        if (next.links && next.links[i]) next.links[i][field] = val;
+                                        setSiteFormData(next);
+                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                    };
+                                    return (
+                                        <div key={i} className={`p-4 rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Link {i + 1}</label>
+                                                <button
+                                                    onClick={() => {
+                                                        const next = JSON.parse(JSON.stringify(siteFormData));
+                                                        next.links = next.links.filter((_: any, j: number) => j !== i);
+                                                        setSiteFormData(next);
+                                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                    }}
+                                                    className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    value={link.platform || ''}
+                                                    onChange={(e) => updateField('platform', e.target.value)}
+                                                    placeholder="Platform (e.g. Twitter)"
+                                                    className={`w-1/3 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                />
+                                                <input
+                                                    value={link.url || ''}
+                                                    onChange={(e) => updateField('url', e.target.value)}
+                                                    placeholder="URL"
+                                                    className={`w-2/3 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                <button
+                                    onClick={() => {
+                                        const next = JSON.parse(JSON.stringify(siteFormData || {}));
+                                        if (!next.links) next.links = [];
+                                        next.links.push({ platform: '', url: '' });
+                                        setSiteFormData(next);
+                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                    }}
+                                    className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                >
+                                    + Add Link
+                                </button>
+                            </div>
+                        )}
+
+                        {editingSiteSetting.key === 'schools_page' && (
+                            <div className="space-y-6">
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Title</label>
+                                    <input
+                                        value={siteFormData?.title || ''}
+                                        onChange={(e) => {
+                                            const next = { ...siteFormData, title: e.target.value };
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                        placeholder="Hero Title (e.g. Empower your Institution.)"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Description</label>
+                                    <textarea
+                                        value={siteFormData?.description || ''}
+                                        onChange={(e) => {
+                                            const next = { ...siteFormData, description: e.target.value };
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        rows={3}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                        placeholder="Hero Description"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Custom Link Text</label>
+                                    <input
+                                        value={siteFormData?.linkText || ''}
+                                        onChange={(e) => {
+                                            const next = { ...siteFormData, linkText: e.target.value };
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                        placeholder="e.g. Back Home"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Custom Link URL</label>
+                                    <input
+                                        value={siteFormData?.linkUrl || ''}
+                                        onChange={(e) => {
+                                            const next = { ...siteFormData, linkUrl: e.target.value };
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                        placeholder="e.g. /"
+                                    />
+                                </div>
+                                <div className="space-y-4">
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Features</label>
+                                    {(Array.isArray(siteFormData?.features) ? siteFormData.features : []).map((feature: any, i: number) => {
+                                        const updateFeature = (field: string, val: string) => {
+                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                            if (next.features && next.features[i]) next.features[i][field] = val;
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        };
+                                        return (
+                                            <div key={i} className={`p-4 rounded-xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-xs font-mono">Feature {i + 1}</span>
+                                                    <button
+                                                        onClick={() => {
+                                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                                            next.features = next.features.filter((_: any, j: number) => j !== i);
+                                                            setSiteFormData(next);
+                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                        }}
+                                                        className="text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <input
+                                                        value={feature.title || ''}
+                                                        onChange={(e) => updateFeature('title', e.target.value)}
+                                                        placeholder="Feature Title"
+                                                        className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                    />
+                                                    <textarea
+                                                        value={feature.desc || ''}
+                                                        onChange={(e) => updateFeature('desc', e.target.value)}
+                                                        placeholder="Feature Description"
+                                                        rows={2}
+                                                        className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                    />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    <button
+                                        onClick={() => {
+                                            const next = JSON.parse(JSON.stringify(siteFormData || {}));
+                                            if (!next.features) next.features = [];
+                                            next.features.push({ title: '', desc: '' });
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                    >
+                                        + Add Feature
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {editingSiteSetting.key === 'b2b_page' && (
+                            <div className="space-y-6">
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Title</label>
+                                    <input
+                                        value={siteFormData?.title || ''}
+                                        onChange={(e) => {
+                                            const next = { ...siteFormData, title: e.target.value };
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                        placeholder="Hero Title (e.g. Quiet power. Tailored access.)"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Description</label>
+                                    <textarea
+                                        value={siteFormData?.description || ''}
+                                        onChange={(e) => {
+                                            const next = { ...siteFormData, description: e.target.value };
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        rows={3}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                        placeholder="Hero Description"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Custom Link Text</label>
+                                    <input
+                                        value={siteFormData?.linkText || ''}
+                                        onChange={(e) => {
+                                            const next = { ...siteFormData, linkText: e.target.value };
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                        placeholder="e.g. Learn More"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Custom Link URL</label>
+                                    <input
+                                        value={siteFormData?.linkUrl || ''}
+                                        onChange={(e) => {
+                                            const next = { ...siteFormData, linkUrl: e.target.value };
+                                            setSiteFormData(next);
+                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                        }}
+                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                        placeholder="e.g. /pricing"
                                     />
                                 </div>
                             </div>

@@ -6,7 +6,7 @@ import Navbar from "@/components/ui/Navbar";
 import Footer from "@/components/ui/Footer";
 import { ThemeProvider } from "@/lib/theme-context";
 import { Check, Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, ArrowRight } from "lucide-react";
-import { getPlansList, Plan, getPlanStrikeOff } from "@/lib/chat-api";
+import { getPlansList, Plan, getPlanStrikeOff, getPublicSiteSettings } from "@/lib/chat-api";
 import { toast } from "sonner";
 import { useTheme } from "@/lib/theme-context";
 
@@ -14,6 +14,37 @@ const PricingContent = () => {
     const { isDarkMode } = useTheme();
     const [plans, setPlans] = useState<Plan[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    const [pageData, setPageData] = useState<{
+        title: string;
+        description: string;
+        linkText: string;
+        linkUrl: string;
+    }>({
+        title: "Quiet power.\nTailored access.",
+        description: "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
+        linkText: "Learn More",
+        linkUrl: "/pricing"
+    });
+
+    useEffect(() => {
+        getPublicSiteSettings().then(res => {
+            const setting = res.settings?.find(s => s.key === "b2b_page");
+            if (setting?.value) {
+                try {
+                    const parsed = JSON.parse(setting.value);
+                    setPageData({
+                        title: parsed.title || "Quiet power.\nTailored access.",
+                        description: parsed.description || "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
+                        linkText: parsed.linkText || "Learn More",
+                        linkUrl: parsed.linkUrl || "/pricing"
+                    });
+                } catch (e) {
+                    console.error("Error parsing B2B settings", e);
+                }
+            }
+        }).catch(() => {});
+    }, []);
 
     useEffect(() => {
         const fetchPlans = async () => {
@@ -95,15 +126,23 @@ const PricingContent = () => {
                                 className="font-display font-bold leading-[0.9] mb-12"
                                 style={{ fontSize: "clamp(3.5rem, 9vw, 72px)", letterSpacing: "-0.04em" }}
                             >
-                                Quiet power. <br />
-                                <span className="italic text-[var(--color-cyan)]">Tailored access.</span>
+                                {pageData.title.split('\n').map((line, idx, arr) => (
+                                    <span key={idx}>
+                                        {idx > 0 && <br />}
+                                        {idx === arr.length - 1 ? (
+                                            <span className="italic text-[var(--color-cyan)]">{line}</span>
+                                        ) : (
+                                            line
+                                        )}
+                                    </span>
+                                ))}
                             </h1>
                             {/* Body Copy — 16px Regular */}
                             <p 
                                 className={`max-w-xl leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}
                                 style={{ fontSize: "16px" }}
                             >
-                                Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.
+                                {pageData.description}
                             </p>
                         </div>
                     </div>

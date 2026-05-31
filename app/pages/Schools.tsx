@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Navbar from "@/components/ui/Navbar"
 import Footer from "@/components/ui/Footer"
 import { Building2, GraduationCap, Users, CheckCircle, Send, ArrowLeft } from "lucide-react"
 import { useTheme } from "@/lib/theme-context"
+import { getPublicSiteSettings } from "@/lib/chat-api"
 
 const API_BASE = process.env.NEXT_PUBLIC_BASE_URL!
 
@@ -18,6 +19,49 @@ export default function Schools() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+
+  // Dynamic Site Settings
+  const [pageData, setPageData] = useState<{
+    title: string;
+    description: string;
+    linkText: string;
+    linkUrl: string;
+    features: { title: string; desc: string }[];
+  }>({
+    title: "Empower your\nInstitution.",
+    description: "From personalized tutoring to automated assessments — bring the future of education to your classrooms with Rudranex AI.",
+    linkText: "Back Home",
+    linkUrl: "/",
+    features: [
+      { title: "AI Tutoring", desc: "Personalized learning paths for every student powered by advanced AI models." },
+      { title: "Admin Dashboard", desc: "Full control over faculty, students, and curriculum with real-time analytics." },
+      { title: "Branding", desc: "Custom onboarding with your school code, faculty management, and roll numbers." }
+    ]
+  });
+
+  useEffect(() => {
+    getPublicSiteSettings().then(res => {
+      const setting = res.settings?.find(s => s.key === "schools_page");
+      if (setting?.value) {
+        try {
+          const parsed = JSON.parse(setting.value);
+          setPageData({
+            title: parsed.title || "Empower your\nInstitution.",
+            description: parsed.description || "From personalized tutoring to automated assessments — bring the future of education to your classrooms with Rudranex AI.",
+            linkText: parsed.linkText || "Back Home",
+            linkUrl: parsed.linkUrl || "/",
+            features: Array.isArray(parsed.features) && parsed.features.length > 0 ? parsed.features : [
+              { title: "AI Tutoring", desc: "Personalized learning paths for every student powered by advanced AI models." },
+              { title: "Admin Dashboard", desc: "Full control over faculty, students, and curriculum with real-time analytics." },
+              { title: "Branding", desc: "Custom onboarding with your school code, faculty management, and roll numbers." }
+            ]
+          });
+        } catch (e) {
+          console.error("Error parsing schools page settings", e);
+        }
+      }
+    }).catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,8 +116,16 @@ export default function Schools() {
                 className="font-display font-bold leading-[0.9] mb-12"
                 style={{ fontSize: "clamp(3.5rem, 9vw, 72px)", letterSpacing: "-0.04em" }}
             >
-                Empower your <br />
-                <span className="italic text-[var(--color-cyan)]">Institution.</span>
+                {pageData.title.split('\n').map((line, idx, arr) => (
+                  <span key={idx}>
+                    {idx > 0 && <br />}
+                    {idx === arr.length - 1 ? (
+                      <span className="italic text-[var(--color-cyan)]">{line}</span>
+                    ) : (
+                      line
+                    )}
+                  </span>
+                ))}
             </h1>
 
             {/* Body Copy — 16px Regular */}
@@ -81,44 +133,28 @@ export default function Schools() {
                 className={`text-base md:text-lg max-w-2xl leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}
                 style={{ fontSize: "16px" }}
             >
-              From personalized tutoring to automated assessments — bring the future of education to your classrooms with Rudranex AI.
+              {pageData.description}
             </p>
           </motion.div>
 
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-white/5 mb-32 overflow-hidden bg-black/20">
-            {[
-              {
-                icon: GraduationCap,
-                title: "AI Tutoring",
-                desc: "Personalized learning paths for every student powered by advanced AI models.",
-                num: "01"
-              },
-              {
-                icon: Users,
-                title: "Admin Dashboard",
-                desc: "Full control over faculty, students, and curriculum with real-time analytics.",
-                num: "02"
-              },
-              {
-                icon: Building2,
-                title: "Branding",
-                desc: "Custom onboarding with your school code, faculty management, and roll numbers.",
-                num: "03"
-              },
-            ].map((feature, i) => (
-              <div
-                key={i}
-                className="p-12 border-r last:border-r-0 border-white/5 bg-[#0d0d0d] hover:bg-[#111] transition-all duration-500 group"
-              >
-                <div className="flex justify-between items-center mb-12">
-                    <feature.icon className="h-6 w-6 text-white/30 group-hover:text-[var(--color-cyan)] transition-colors" />
-                    <span className="font-sans font-bold text-[11px] text-white/10 group-hover:text-white/20" style={{ letterSpacing: "0.1em" }}>{feature.num}</span>
+            {pageData.features.map((feature, i) => {
+              const Icon = i === 0 ? GraduationCap : i === 1 ? Users : Building2;
+              return (
+                <div
+                  key={i}
+                  className="p-12 border-r last:border-r-0 border-white/5 bg-[#0d0d0d] hover:bg-[#111] transition-all duration-500 group"
+                >
+                  <div className="flex justify-between items-center mb-12">
+                      <Icon className="h-6 w-6 text-white/30 group-hover:text-[var(--color-cyan)] transition-colors" />
+                      <span className="font-sans font-bold text-[11px] text-white/10 group-hover:text-white/20" style={{ letterSpacing: "0.1em" }}>0{i + 1}</span>
+                  </div>
+                  <h3 className="font-display font-semibold text-white text-xl mb-4 uppercase tracking-tight group-hover:text-[var(--color-cyan)] transition-colors">{feature.title}</h3>
+                  <p className="font-sans font-normal text-white/35 text-[14px] leading-relaxed group-hover:text-white/50 transition-colors">{feature.desc}</p>
                 </div>
-                <h3 className="font-display font-semibold text-white text-xl mb-4 uppercase tracking-tight group-hover:text-[var(--color-cyan)] transition-colors">{feature.title}</h3>
-                <p className="font-sans font-normal text-white/35 text-[14px] leading-relaxed group-hover:text-white/50 transition-colors">{feature.desc}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Request Form */}
@@ -151,10 +187,10 @@ export default function Schools() {
                       Submit Another Request
                     </button>
                     <a
-                      href="/"
+                      href={pageData.linkUrl}
                       className={`w-full py-4 border font-sans font-semibold uppercase tracking-widest text-[11px] transition-all active:scale-95 flex items-center justify-center gap-2 ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
                     >
-                      <ArrowLeft className="h-3 w-3" /> Back Home
+                      <ArrowLeft className="h-3 w-3" /> {pageData.linkText}
                     </a>
                   </div>
                 </motion.div>
