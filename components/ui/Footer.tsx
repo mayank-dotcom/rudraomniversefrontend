@@ -1,9 +1,34 @@
 "use client"
 
 import { useTheme } from "@/lib/theme-context";
+import { useState, useEffect } from "react";
+import { getPublicSiteSettings } from "@/lib/chat-api";
 
 export default function Footer() {
     const { isDarkMode } = useTheme();
+    const [socialLinks, setSocialLinks] = useState({
+        twitter: "#",
+        linkedin: "#",
+        github: "#"
+    });
+
+    useEffect(() => {
+        getPublicSiteSettings().then(res => {
+            const setting = res.settings?.find(s => s.key === "social_media_links");
+            if (setting?.value) {
+                try {
+                    const parsed = JSON.parse(setting.value);
+                    setSocialLinks({
+                        twitter: parsed.twitter || "#",
+                        linkedin: parsed.linkedin || "#",
+                        github: parsed.github || "#"
+                    });
+                } catch (e) {
+                    console.error("Error parsing social links", e);
+                }
+            }
+        }).catch(() => {});
+    }, []);
 
     return (
         <footer className={`py-24 border-t ${isDarkMode ? "bg-[#0a0a0a] border-white/5" : "bg-white border-black/5"}`}>
@@ -42,7 +67,7 @@ export default function Footer() {
                         {[
                             { heading: "Company", links: [{ label: "About Us", href: "/about" }, { label: "Privacy Policy", href: "/privacy" }, { label: "Terms of Service", href: "/terms" }, { label: "Contact Us", href: "/contact" }] },
                             { heading: "Platforms", links: [{ label: "For Schools", href: "/schools" }, { label: "For B2B", href: "/pricing" }, { label: "Pricing", href: "/pricing" }] },
-                            { heading: "Social", links: [{ label: "X / Twitter", href: "#" }, { label: "LinkedIn", href: "#" }, { label: "GitHub", href: "#" }] },
+                            { heading: "Social", links: [{ label: "X / Twitter", href: socialLinks.twitter }, { label: "LinkedIn", href: socialLinks.linkedin }, { label: "GitHub", href: socialLinks.github }] },
                         ].map((col) => (
                             <div key={col.heading} className="flex flex-col gap-5">
                                 {/* Technical Label for column headers */}

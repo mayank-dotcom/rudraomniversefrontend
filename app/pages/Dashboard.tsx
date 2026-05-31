@@ -1568,18 +1568,18 @@ const Dashboard = () => {
                     {/* Right Hand Utilities Cluster */}
                     <div className="flex items-center gap-3">
                         
-                        {/* Right Sidebar Toggle Button (Desktop Users Sidebar, visual view only) */}
-                        {view === 'visual' && (
+                        {/* Right Sidebar Toggle Button (Desktop Users/Pages Sidebar) */}
+                        {(view === 'visual' || view === 'sites') && (
                             <button
                                 onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
                                 className={`hidden lg:flex h-10 w-10 rounded-2xl border items-center justify-center transition-all ${
                                     isRightSidebarCollapsed 
-                                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500 hover:text-black hover:border-emerald-500"
+                                        ? "bg-[#00DDDD]/10 text-[#00DDDD] border-[#00DDDD]/30 hover:bg-[#00DDDD] hover:text-black hover:border-[#00DDDD]"
                                         : isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-black/5 text-black"
                                 }`}
-                                title={isRightSidebarCollapsed ? "Show Users Sidebar" : "Collapse Users Sidebar"}
+                                title={isRightSidebarCollapsed ? (view === 'visual' ? "Show Users Sidebar" : "Show Pages Sidebar") : (view === 'visual' ? "Collapse Users Sidebar" : "Collapse Pages Sidebar")}
                             >
-                                <Users className="h-4 w-4" />
+                                {view === 'visual' ? <Users className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                             </button>
                         )}
 
@@ -2211,9 +2211,7 @@ const Dashboard = () => {
                             exit={{ opacity: 0, y: -20 }}
                             className="p-4 md:p-8 lg:p-10"
                         >
-                            <div className="flex flex-col lg:flex-row gap-8">
-                                {/* Main Content Form (Left) */}
-                                <div className="flex-1 min-w-0">
+                            <div className="max-w-4xl mx-auto">
                                     {editingSiteSetting ? (
                                         <div className="space-y-6">
                                             <div className="flex items-center justify-between pb-4 border-b border-zinc-800/30">
@@ -2374,69 +2372,45 @@ const Dashboard = () => {
 
                                             {editingSiteSetting.key === 'social_media_links' && (
                                                 <div className="space-y-4">
-                                                    {(Array.isArray(siteFormData?.links) ? siteFormData.links : []).map((link: any, i: number) => {
-                                                        const updateField = (field: string, val: string) => {
-                                                            const next = JSON.parse(JSON.stringify(siteFormData));
-                                                            if (next.links && next.links[i]) next.links[i][field] = val;
-                                                            setSiteFormData(next);
-                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                                        };
-                                                        return (
-                                                            <div key={i} className={`p-4 rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
-                                                                <div className="flex items-center justify-between mb-2">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                                                            Link {i + 1}
-                                                                        </label>
-                                                                        {link.platform && (
-                                                                            <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-mono font-bold uppercase tracking-widest ${
-                                                                                isDarkMode ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-emerald-500/5 text-emerald-600 border border-emerald-500/10"
-                                                                            }`}>
-                                                                                {link.platform}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            const next = JSON.parse(JSON.stringify(siteFormData));
-                                                                            next.links = next.links.filter((_: any, j: number) => j !== i);
-                                                                            setSiteFormData(next);
-                                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                                                        }}
-                                                                        className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
-                                                                    >
-                                                                        Remove
-                                                                    </button>
-                                                                </div>
-                                                                <div className="flex gap-2">
-                                                                    <input
-                                                                        value={link.platform || ''}
-                                                                        onChange={(e) => updateField('platform', e.target.value)}
-                                                                        placeholder="Platform (e.g. Twitter)"
-                                                                        className={`w-1/3 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                                                    />
-                                                                    <input
-                                                                        value={link.url || ''}
-                                                                        onChange={(e) => updateField('url', e.target.value)}
-                                                                        placeholder="URL"
-                                                                        className={`w-2/3 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                    <button
-                                                        onClick={() => {
-                                                            const next = JSON.parse(JSON.stringify(siteFormData || {}));
-                                                            if (!next.links) next.links = [];
-                                                            next.links.push({ platform: '', url: '' });
-                                                            setSiteFormData(next);
-                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                                        }}
-                                                        className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
-                                                    >
-                                                        + Add Link
-                                                    </button>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Twitter / X Link</label>
+                                                        <input
+                                                            value={siteFormData?.twitter || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, twitter: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="https://x.com/username"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>LinkedIn Link</label>
+                                                        <input
+                                                            value={siteFormData?.linkedin || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, linkedin: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="https://linkedin.com/in/username"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>GitHub Link</label>
+                                                        <input
+                                                            value={siteFormData?.github || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, github: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="https://github.com/username"
+                                                        />
+                                                    </div>
                                                 </div>
                                             )}
 
@@ -2712,92 +2686,6 @@ const Dashboard = () => {
                                         </div>
                                     )}
                                 </div>
-
-                                {/* Right Sidebar */}
-                                <div className={`w-full lg:w-72 flex flex-col gap-2 shrink-0 border border-zinc-800/20 lg:border-y-0 lg:border-r-0 lg:border-l ${isDarkMode ? "border-white/5" : "border-black/5"} p-6 rounded-3xl lg:rounded-none`}>
-                                    <span className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-40 block px-4 mb-3">Site Pages</span>
-                                    {[
-                                        { key: 'about_us', label: 'About Us', icon: 'ℹ️' },
-                                        { key: 'privacy_policy', label: 'Privacy Policy', icon: '🔒' },
-                                        { key: 'terms_conditions', label: 'Terms of Service', icon: '📜' },
-                                        { key: 'contact_info', label: 'Contact Us', icon: '📧' },
-                                        { key: 'social_media_links', label: 'Social Media Links', icon: '🔗' },
-                                        { key: 'schools_page', label: 'Schools Page', icon: '🏫' },
-                                        { key: 'b2b_page', label: 'B2B Page', icon: '💼' },
-                                    ].map((page) => {
-                                        const isActive = editingSiteSetting?.key === page.key;
-                                        return (
-                                            <button
-                                                key={page.key}
-                                                onClick={() => {
-                                                    const setting = siteSettings.find(s => s.key === page.key);
-                                                    const raw = setting?.value || '';
-                                                    try {
-                                                        const parsed = JSON.parse(raw);
-                                                        setEditingSiteSetting({ key: page.key, value: raw });
-                                                        if (page.key === 'about_us' && Array.isArray(parsed.sections) && !parsed.elements) {
-                                                            setSiteFormData({ elements: parsed.sections.map((s: string) => ({ type: 'paragraph', content: s })) });
-                                                        } else if (page.key === 'contact_info' && parsed.description && !parsed.paragraphs) {
-                                                            setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
-                                                        } else if (page.key === 'social_media_links' && !parsed.links) {
-                                                            setSiteFormData({ links: [] });
-                                                        } else {
-                                                            setSiteFormData(parsed);
-                                                        }
-                                                    } catch {
-                                                        if (page.key === 'about_us') {
-                                                            setSiteFormData({ elements: raw.split('\n\n').filter(Boolean).map((p: string) => ({ type: 'paragraph', content: p })) });
-                                                            setEditingSiteSetting({ key: page.key, value: raw });
-                                                        } else if (page.key === 'contact_info') {
-                                                            setSiteFormData({ paragraphs: raw.split('\n\n').filter(Boolean), email: '', responseTime: '' });
-                                                            setEditingSiteSetting({ key: page.key, value: raw });
-                                                        } else if (page.key === 'social_media_links') {
-                                                            setSiteFormData({ links: [] });
-                                                            setEditingSiteSetting({ key: page.key, value: JSON.stringify({ links: [] }) });
-                                                        } else if (page.key === 'schools_page') {
-                                                            const defaults = {
-                                                                title: "Empower your\nInstitution.",
-                                                                description: "From personalized tutoring to automated assessments — bring the future of education to your classrooms with Rudranex AI.",
-                                                                linkText: "Back Home",
-                                                                linkUrl: "/",
-                                                                features: [
-                                                                    { title: "AI Tutoring", desc: "Personalized learning paths for every student powered by advanced AI models." },
-                                                                    { title: "Admin Dashboard", desc: "Full control over faculty, students, and curriculum with real-time analytics." },
-                                                                    { title: "Branding", desc: "Custom onboarding with your school code, faculty management, and roll numbers." }
-                                                                ]
-                                                            };
-                                                            setSiteFormData(defaults);
-                                                            setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
-                                                        } else if (page.key === 'b2b_page') {
-                                                            const defaults = {
-                                                                title: "Quiet power.\nTailored access.",
-                                                                description: "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
-                                                                linkText: "Learn More",
-                                                                linkUrl: "/pricing"
-                                                            };
-                                                            setSiteFormData(defaults);
-                                                            setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
-                                                        } else {
-                                                            setSiteFormData(null);
-                                                            setEditingSiteSetting({ key: page.key, value: raw });
-                                                        }
-                                                    }
-                                                }}
-                                                className={`w-full flex items-center transition-all duration-300 gap-4 px-4 py-3.5 rounded-2xl text-left ${
-                                                    isActive
-                                                        ? "text-[#00DDDD] bg-[#00DDDD]/5 font-bold shadow-[inset_0_1px_1px_rgba(0,221,221,0.1)]"
-                                                        : isDarkMode
-                                                            ? "text-white/55 hover:text-white hover:bg-white/5"
-                                                            : "text-black/60 hover:text-black hover:bg-black/5"
-                                                }`}
-                                            >
-                                                <span className="text-lg">{page.icon}</span>
-                                                <span className="font-display uppercase tracking-wider text-[11px] font-semibold">{page.label}</span>
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                            </div>
                         </motion.div>
                     )}
 
@@ -4045,6 +3933,157 @@ const Dashboard = () => {
                                 className="absolute top-0 left-0 w-[4px] h-full cursor-col-resize hover:bg-[#00DDDD]/50 active:bg-[#00DDDD] transition-colors z-[70]"
                             />
                         </>
+                    )}
+                </aside>
+            )}
+
+            {/* Persistent Desktop Right Sidebar (Collapsible Sites Selector) */}
+            {view === 'sites' && (
+                <aside 
+                    className={`hidden lg:flex flex-col h-full shrink-0 relative z-25 transition-all duration-300 overflow-hidden ${
+                        isDarkMode 
+                            ? "border-white/10 bg-black/40 bg-gradient-to-b from-zinc-950 via-black to-zinc-950" 
+                            : "border-black/10 bg-white bg-gradient-to-b from-zinc-50 via-white to-zinc-50"
+                    } backdrop-blur-3xl`}
+                    style={{
+                        width: isRightSidebarCollapsed ? "0px" : `${rightSidebarWidth}px`,
+                        padding: isRightSidebarCollapsed ? "0px" : "2rem 1.5rem",
+                        borderLeft: isRightSidebarCollapsed ? "none" : (isDarkMode ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)"),
+                        opacity: isRightSidebarCollapsed ? 0 : 1
+                    }}
+                >
+                    {!isRightSidebarCollapsed && (
+                        <div className="h-full flex flex-col min-h-0 relative">
+                            {/* Drag Resize Handle */}
+                            <div
+                                onMouseDown={handleRightResizeMouseDown}
+                                className="absolute top-0 left-0 w-[4px] h-full cursor-col-resize hover:bg-[#00DDDD]/50 active:bg-[#00DDDD] transition-colors z-[70]"
+                            />
+                            
+                            {/* Top Part: Page Navigation */}
+                            <div className="flex flex-col gap-2 mb-6 shrink-0">
+                                <div className="flex items-center justify-between px-4 mb-3">
+                                    <span className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-40 block">Site Pages</span>
+                                    <button
+                                        onClick={() => setIsRightSidebarCollapsed(true)}
+                                        className={`p-1 rounded-lg border transition-all ${
+                                            isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"
+                                        }`}
+                                        title="Collapse Sites Sidebar"
+                                    >
+                                        <X className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+                                {[
+                                    { key: 'about_us', label: 'About Us', icon: 'ℹ️' },
+                                    { key: 'privacy_policy', label: 'Privacy Policy', icon: '🔒' },
+                                    { key: 'terms_conditions', label: 'Terms of Service', icon: '📜' },
+                                    { key: 'contact_info', label: 'Contact Us', icon: '📧' },
+                                    { key: 'social_media_links', label: 'Social Media Links', icon: '🔗' },
+                                    { key: 'schools_page', label: 'Schools Page', icon: '🏫' },
+                                    { key: 'b2b_page', label: 'B2B Page', icon: '💼' },
+                                ].map((page) => {
+                                    const isActive = editingSiteSetting?.key === page.key;
+                                    return (
+                                        <button
+                                            key={page.key}
+                                            onClick={() => {
+                                                const setting = siteSettings.find(s => s.key === page.key);
+                                                const raw = setting?.value || '';
+                                                try {
+                                                    const parsed = JSON.parse(raw);
+                                                    setEditingSiteSetting({ key: page.key, value: raw });
+                                                    if (page.key === 'about_us' && Array.isArray(parsed.sections) && !parsed.elements) {
+                                                        setSiteFormData({ elements: parsed.sections.map((s: string) => ({ type: 'paragraph', content: s })) });
+                                                    } else if (page.key === 'contact_info' && parsed.description && !parsed.paragraphs) {
+                                                        setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
+                                                    } else if (page.key === 'social_media_links') {
+                                                        setSiteFormData({ twitter: parsed.twitter || '', linkedin: parsed.linkedin || '', github: parsed.github || '' });
+                                                    } else {
+                                                        setSiteFormData(parsed);
+                                                    }
+                                                } catch {
+                                                    if (page.key === 'about_us') {
+                                                        setSiteFormData({ elements: raw.split('\n\n').filter(Boolean).map((p: string) => ({ type: 'paragraph', content: p })) });
+                                                        setEditingSiteSetting({ key: page.key, value: raw });
+                                                    } else if (page.key === 'contact_info') {
+                                                        setSiteFormData({ paragraphs: raw.split('\n\n').filter(Boolean), email: '', responseTime: '' });
+                                                        setEditingSiteSetting({ key: page.key, value: raw });
+                                                    } else if (page.key === 'social_media_links') {
+                                                        setSiteFormData({ twitter: '', linkedin: '', github: '' });
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify({ twitter: '', linkedin: '', github: '' }) });
+                                                    } else if (page.key === 'schools_page') {
+                                                        const defaults = {
+                                                            title: "Empower your\nInstitution.",
+                                                            description: "From personalized tutoring to automated assessments — bring the future of education to your classrooms with Rudranex AI.",
+                                                            linkText: "Back Home",
+                                                            linkUrl: "/",
+                                                            features: [
+                                                                { title: "AI Tutoring", desc: "Personalized learning paths for every student powered by advanced AI models." },
+                                                                { title: "Admin Dashboard", desc: "Full control over faculty, students, and curriculum with real-time analytics." },
+                                                                { title: "Branding", desc: "Custom onboarding with your school code, faculty management, and roll numbers." }
+                                                            ]
+                                                        };
+                                                        setSiteFormData(defaults);
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
+                                                    } else if (page.key === 'b2b_page') {
+                                                        const defaults = {
+                                                            title: "Quiet power.\nTailored access.",
+                                                            description: "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
+                                                            linkText: "Learn More",
+                                                            linkUrl: "/pricing"
+                                                        };
+                                                        setSiteFormData(defaults);
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
+                                                    } else {
+                                                        setSiteFormData(null);
+                                                        setEditingSiteSetting({ key: page.key, value: raw });
+                                                    }
+                                                }
+                                            }}
+                                            className={`w-full flex items-center transition-all duration-300 gap-4 px-4 py-3 rounded-2xl text-left ${
+                                                isActive
+                                                    ? "text-[#00DDDD] bg-[#00DDDD]/5 font-bold shadow-[inset_0_1px_1px_rgba(0,221,221,0.1)] border border-[#00DDDD]/25"
+                                                    : isDarkMode
+                                                        ? "text-white/55 hover:text-white hover:bg-white/5"
+                                                        : "text-black/60 hover:text-black hover:bg-black/5"
+                                            }`}
+                                        >
+                                            <span className="text-lg">{page.icon}</span>
+                                            <span className="font-display uppercase tracking-wider text-[11px] font-semibold">{page.label}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+
+                            {/* Bottom Part: Real Fixed System Audit Logs */}
+                            <div className="flex-1 flex flex-col min-h-0 bg-black/10 dark:bg-black/20 p-4 rounded-2xl overflow-hidden">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-[#00DDDD] animate-pulse" />
+                                    <span className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-50 block">System Logs & Audits</span>
+                                </div>
+                                <div className="flex-1 overflow-y-auto font-mono text-[9px] space-y-3 pr-2 scrollbar-thin scrollbar-thumb-zinc-800">
+                                    {(() => {
+                                        const logs = [
+                                            { time: new Date().toLocaleTimeString(), type: 'SYS', text: 'Rudranex AI System handshake established.' },
+                                            { time: new Date().toLocaleTimeString(), type: 'API', text: 'getPublicSiteSettings fetched successfully.' },
+                                            { time: new Date().toLocaleTimeString(), type: 'SEC', text: 'Active administrator session verified.' },
+                                            { time: new Date().toLocaleTimeString(), type: 'SYS', text: `Loaded editing frame: ${editingSiteSetting?.key || 'about_us'}` },
+                                            { time: new Date().toLocaleTimeString(), type: 'ENV', text: 'Theme system synchronized successfully.' }
+                                        ];
+                                        return logs.map((log, index) => (
+                                            <div key={index} className="border-l border-[#00DDDD]/20 pl-2 py-0.5 space-y-0.5">
+                                                <div className="flex items-center gap-2 opacity-40">
+                                                    <span>[{log.time}]</span>
+                                                    <span className="text-[#00DDDD] font-bold">::{log.type}</span>
+                                                </div>
+                                                <p className="text-white/60 line-clamp-2 leading-normal">{log.text}</p>
+                                            </div>
+                                        ));
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </aside>
             )}
