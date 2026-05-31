@@ -6,7 +6,7 @@ import {
     Send, Bot, User, LogOut, MessageSquare, Plus, Search,
     ChevronLeft, ChevronRight, Moon, Sun, GraduationCap,
     UserCog, Mic, ChevronUp,
-    ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2,
+    ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2, Mail, Inbox,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
     Swords, CheckCircle, XCircle, Code, Zap, Pause
 } from "lucide-react";
@@ -245,6 +245,14 @@ const Chat = () => {
     const [showDots, setShowDots] = useState(false);
     const [responseTime, setResponseTime] = useState<number | null>(null);
     const [sidebarTab, setSidebarTab] = useState<"history" | "modes">("history");
+    const [rightSidebarTab, setRightSidebarTab] = useState<"usage" | "gmail">("usage");
+    const [gmailConnected, setGmailConnected] = useState(false);
+    const [gmailEmail, setGmailEmail] = useState("");
+    const [gmailEmails, setGmailEmails] = useState<any[]>([]);
+    const [gmailLoading, setGmailLoading] = useState(false);
+    const [gmailError, setGmailError] = useState("");
+    const [gmailSelectedEmail, setGmailSelectedEmail] = useState<any | null>(null);
+    const [gmailConnecting, setGmailConnecting] = useState(false);
     const PLACEHOLDER_TEXTS = useMemo(() => [
         "Describe your query or paste a concept...",
         "Ask me anything about your studies...",
@@ -374,6 +382,94 @@ const Chat = () => {
         }, 3600000);
         return () => clearInterval(interval);
     }, [selectedEngine]);
+
+    // ── Gmail / Google Connection ──
+    const checkGmailStatus = useCallback(async () => {
+        try {
+            const { getGoogleStatus } = await import("@/lib/chat-api")
+            const res = await getGoogleStatus()
+            setGmailConnected(res.connected === true)
+            if (res.connected === true && res.email) {
+                setGmailEmail(res.email)
+            }
+        } catch { /* ignore */ }
+    }, [])
+
+    useEffect(() => {
+        if (userRole !== "employee" || rightSidebarTab !== "gmail" || isRightSidebarCollapsed) return
+        checkGmailStatus()
+    }, [userRole, rightSidebarTab, isRightSidebarCollapsed, checkGmailStatus])
+
+    const fetchGmailEmails = useCallback(async () => {
+        if (!gmailConnected) return
+        setGmailLoading(true)
+        setGmailError("")
+        try {
+            const { listGoogleEmails } = await import("@/lib/chat-api")
+            const res = await listGoogleEmails({ maxResults: 20 })
+            if (res.success) {
+                setGmailEmails(res.emails || [])
+            } else {
+                setGmailError("Failed to fetch emails")
+            }
+        } catch (e: any) {
+            setGmailError(e.message || "Failed to fetch emails")
+        } finally {
+            setGmailLoading(false)
+        }
+    }, [gmailConnected])
+
+    useEffect(() => {
+        if (gmailConnected && rightSidebarTab === "gmail" && !isRightSidebarCollapsed) {
+            fetchGmailEmails()
+        }
+    }, [gmailConnected, rightSidebarTab, isRightSidebarCollapsed, fetchGmailEmails])
+
+    const handleConnectGmail = async () => {
+        setGmailConnecting(true)
+        setGmailError("")
+        try {
+            const { getGoogleAuthUrl } = await import("@/lib/chat-api")
+            const res = await getGoogleAuthUrl()
+            if (res.success && res.url) {
+                window.open(res.url, "_blank", "width=600,height=700")
+            } else {
+                setGmailError("Failed to get auth URL")
+            }
+        } catch (e: any) {
+            setGmailError(e.message || "Failed to connect")
+        } finally {
+            setGmailConnecting(false)
+        }
+    }
+
+    const handleDisconnectGmail = async () => {
+        setGmailLoading(true)
+        try {
+            const { disconnectGoogle } = await import("@/lib/chat-api")
+            await disconnectGoogle()
+            setGmailConnected(false)
+            setGmailEmail("")
+            setGmailEmails([])
+            setGmailSelectedEmail(null)
+        } catch (e: any) {
+            setGmailError(e.message || "Failed to disconnect")
+        } finally {
+            setGmailLoading(false)
+        }
+    }
+
+    const handleSelectEmail = async (msgId: string) => {
+        try {
+            const { getGoogleEmailDetail } = await import("@/lib/chat-api")
+            const res = await getGoogleEmailDetail(msgId)
+            if (res.success) {
+                setGmailSelectedEmail(res.email)
+            }
+        } catch (e: any) {
+            setGmailError(e.message || "Failed to load email")
+        }
+    }
 
     const [isRecording, setIsRecording] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -2397,145 +2493,270 @@ STRICT RULES:
             >
                 {!isRightSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
-                        <div className={`flex-1 p-8 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"} overflow-y-auto`}>
-                            {/* Plan Badge */}
-                            <div className="flex items-start mb-8">
-                                <div className="flex flex-col">
-                                    <span className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-black bg-white px-2 py-0.5" : "text-white bg-black px-2 py-0.5"} mb-1 pl-4`}>Active Plan</span>
-                                    <div className="flex items-stretch gap-2">
-                                        <div className={`flex items-center justify-center ${isDarkMode ? "bg-black border-2 border-white" : "bg-white border-2 border-black"} px-2`}>
-                                            <div className={`h-1.5 w-1.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(0,221,221,0.5)] ${subscription?.subscription ? 'bg-[#00DDDD]' : 'bg-amber-500'}`} />
-                                        </div>
-                                        <span className={`flex items-center text-xs font-bold ${isDarkMode ? "text-black bg-white px-2 border-2 border-transparent" : "text-white bg-black px-2 border-2 border-transparent"} tracking-widest uppercase`}>
-                                            {isSubscriptionLoading ? "Loading..." : (subscription?.subscription?.plan_name || "Free Trial")}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative mt-[1px] ml-[6px]`}>
-                                    <Clock className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
-                                    <div className={`absolute inset-0 rounded-sm border ${isDarkMode ? 'border-white' : 'border-black'} pointer-events-none`} />
-                                </div>
-                            </div>
-
-                            {/* Circular Usage Chart */}
-                            <div className="relative w-32 h-32 mx-auto mb-8 flex-shrink-0">
-                                <svg className="w-full h-full rotate-[-90deg]">
-                                    <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "rgba(0, 221, 221, 0.1)" : "rgba(0, 221, 221, 0.05)"} strokeWidth="6" />
-                                    <circle
-                                        cx="64" cy="64" r="58" fill="none"
-                                        stroke="#00DDDD"
-                                        strokeWidth="6"
-                                        strokeDasharray="364"
-                                        strokeDashoffset={String(
-                                            isSubscriptionLoading || !subscription?.usage || !subscription?.subscription?.details?.daily_chat_limit
-                                                ? 364
-                                                : 364 - ((subscription.usage.daily_chats / subscription.subscription.details.daily_chat_limit) * 364)
-                                        )}
-                                        strokeLinecap="round"
-                                        className="transition-all duration-1000 drop-shadow-[0_0_8px_rgba(0,221,221,0.5)]"
-                                    />
-                                </svg>
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <ChatLoader isDarkMode={isDarkMode} />
-                                </div>
-                            </div>
-
-                            {/* Detailed Metrics */}
-                            <div className="space-y-4 mb-8">
-                                {/* Chats Usage */}
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                        <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Chats Used</span>
-                                        <span className={isDarkMode ? "text-white" : "text-black"}>
-                                            {subscription?.usage?.daily_chats || 0} / {subscription?.subscription?.details?.daily_chat_limit || 1}
-                                        </span>
-                                    </div>
-                                    <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                        <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{
-                                                width: `${Math.min(100, ((subscription?.usage?.daily_chats || 0) / (subscription?.subscription?.details?.daily_chat_limit || 1)) * 100)}%`
-                                            }}
-                                            className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
-                                        />
-                                    </div>
-                                </div>
-                                <div className={`h-[1px] w-full ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-
-                                {/* Usage Progress Bars */}
-                                <div className="space-y-6">
-                                    {/* Images Usage */}
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                            <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Images Used</span>
-                                            <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                {subscription?.usage?.monthly_images || 0} / {subscription?.subscription?.details?.monthly_image_limit || 1}
-                                            </span>
-                                        </div>
-                                        <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                            <motion.div
-                                                initial={{ width: 0 }}
-                                                animate={{
-                                                    width: `${Math.min(100, ((subscription?.usage?.monthly_images || 0) / (subscription?.subscription?.details?.monthly_image_limit || 1)) * 100)}%`
-                                                }}
-                                                className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Coding Usage */}
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                            <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Coding Used</span>
-                                            <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                {subscription?.usage?.daily_codings || 0} / {subscription?.subscription?.details?.daily_coding_limit || 1}
-                                            </span>
-                                        </div>
-                                        <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                            <motion.div
-                                                initial={{ width: 0 }}
-                                                animate={{
-                                                    width: `${Math.min(100, ((subscription?.usage?.daily_codings || 0) / (subscription?.subscription?.details?.daily_coding_limit || 1)) * 100)}%`
-                                                }}
-                                                className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2 mb-8">
-                                <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                                    <div className="h-full w-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]" />
-                                </div>
-                                <div className="flex justify-between text-[8px] font-mono uppercase opacity-70">
-                                    <span>Backend</span>
-                                    <span className="text-[#00DDDD]">Stable</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2 mb-8">
-                                <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                                    <div className="h-full w-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]" />
-                                </div>
-                                <div className="flex justify-between text-[8px] font-mono uppercase opacity-70">
-                                    <span>Frontend</span>
-                                    <span className="text-[#00DDDD]">Stable</span>
-                                </div>
-                            </div>
-
-                            <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : ""}`}>
-                                <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(0,221,221,0.5)] transition-all duration-300">
-                                    <div className="bubble-layer bubble-1"></div>
-                                    <div className="bubble-layer bubble-2"></div>
-                                    <div className="bubble-layer bubble-3"></div>
-                                    <div className="bubble-layer bubble-4"></div>
-                                    <div className="bubble-layer bubble-5"></div>
-                                    <div className="bubble-layer bubble-6"></div>
-                                    <div className="bubble-layer bubble-7"></div>
-                                    <span>Upgrade Now</span>
+                        {/* Tab Bar */}
+                        <div className={`flex border-b ${isDarkMode ? "border-white/10" : "border-black/10"} shrink-0`}>
+                            <button
+                                onClick={() => setRightSidebarTab("usage")}
+                                className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${rightSidebarTab === "usage"
+                                    ? (isDarkMode ? "text-white border-b-2 border-white" : "text-black border-b-2 border-black")
+                                    : (isDarkMode ? "text-white/30 hover:text-white/60" : "text-black/30 hover:text-black/60")}`}
+                            >
+                                Usage
+                            </button>
+                            {userRole === "employee" && (
+                                <button
+                                    onClick={() => setRightSidebarTab("gmail")}
+                                    className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 ${rightSidebarTab === "gmail"
+                                        ? (isDarkMode ? "text-white border-b-2 border-white" : "text-black border-b-2 border-black")
+                                        : (isDarkMode ? "text-white/30 hover:text-white/60" : "text-black/30 hover:text-black/60")}`}
+                                >
+                                    <Mail className="h-3 w-3" />
+                                    Gmail
                                 </button>
-                            </Link>
+                            )}
+                        </div>
+
+                        <div className={`flex-1 p-8 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"} overflow-y-auto`}>
+                            {rightSidebarTab === "usage" && (
+                                <>
+                                    {/* Plan Badge */}
+                                    <div className="flex items-start mb-8">
+                                        <div className="flex flex-col">
+                                            <span className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-black bg-white px-2 py-0.5" : "text-white bg-black px-2 py-0.5"} mb-1 pl-4`}>Active Plan</span>
+                                            <div className="flex items-stretch gap-2">
+                                                <div className={`flex items-center justify-center ${isDarkMode ? "bg-black border-2 border-white" : "bg-white border-2 border-black"} px-2`}>
+                                                    <div className={`h-1.5 w-1.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(0,221,221,0.5)] ${subscription?.subscription ? 'bg-[#00DDDD]' : 'bg-amber-500'}`} />
+                                                </div>
+                                                <span className={`flex items-center text-xs font-bold ${isDarkMode ? "text-black bg-white px-2 border-2 border-transparent" : "text-white bg-black px-2 border-2 border-transparent"} tracking-widest uppercase`}>
+                                                    {isSubscriptionLoading ? "Loading..." : (subscription?.subscription?.plan_name || "Free Trial")}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative mt-[1px] ml-[6px]`}>
+                                            <Clock className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
+                                            <div className={`absolute inset-0 rounded-sm border ${isDarkMode ? 'border-white' : 'border-black'} pointer-events-none`} />
+                                        </div>
+                                    </div>
+
+                                    {/* Circular Usage Chart */}
+                                    <div className="relative w-32 h-32 mx-auto mb-8 flex-shrink-0">
+                                        <svg className="w-full h-full rotate-[-90deg]">
+                                            <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "rgba(0, 221, 221, 0.1)" : "rgba(0, 221, 221, 0.05)"} strokeWidth="6" />
+                                            <circle
+                                                cx="64" cy="64" r="58" fill="none"
+                                                stroke="#00DDDD"
+                                                strokeWidth="6"
+                                                strokeDasharray="364"
+                                                strokeDashoffset={String(
+                                                    isSubscriptionLoading || !subscription?.usage || !subscription?.subscription?.details?.daily_chat_limit
+                                                        ? 364
+                                                        : 364 - ((subscription.usage.daily_chats / subscription.subscription.details.daily_chat_limit) * 364)
+                                                )}
+                                                strokeLinecap="round"
+                                                className="transition-all duration-1000 drop-shadow-[0_0_8px_rgba(0,221,221,0.5)]"
+                                            />
+                                        </svg>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <ChatLoader isDarkMode={isDarkMode} />
+                                        </div>
+                                    </div>
+
+                                    {/* Detailed Metrics */}
+                                    <div className="space-y-4 mb-8">
+                                        {/* Chats Usage */}
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Chats Used</span>
+                                                <span className={isDarkMode ? "text-white" : "text-black"}>
+                                                    {subscription?.usage?.daily_chats || 0} / {subscription?.subscription?.details?.daily_chat_limit || 1}
+                                                </span>
+                                            </div>
+                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{
+                                                        width: `${Math.min(100, ((subscription?.usage?.daily_chats || 0) / (subscription?.subscription?.details?.daily_chat_limit || 1)) * 100)}%`
+                                                    }}
+                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className={`h-[1px] w-full ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                                        {/* Usage Progress Bars */}
+                                        <div className="space-y-6">
+                                            {/* Images Usage */}
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
+                                                    <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Images Used</span>
+                                                    <span className={isDarkMode ? "text-white" : "text-black"}>
+                                                        {subscription?.usage?.monthly_images || 0} / {subscription?.subscription?.details?.monthly_image_limit || 1}
+                                                    </span>
+                                                </div>
+                                                <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{
+                                                            width: `${Math.min(100, ((subscription?.usage?.monthly_images || 0) / (subscription?.subscription?.details?.monthly_image_limit || 1)) * 100)}%`
+                                                        }}
+                                                        className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Coding Usage */}
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
+                                                    <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Coding Used</span>
+                                                    <span className={isDarkMode ? "text-white" : "text-black"}>
+                                                        {subscription?.usage?.daily_codings || 0} / {subscription?.subscription?.details?.daily_coding_limit || 1}
+                                                    </span>
+                                                </div>
+                                                <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{
+                                                            width: `${Math.min(100, ((subscription?.usage?.daily_codings || 0) / (subscription?.subscription?.details?.daily_coding_limit || 1)) * 100)}%`
+                                                        }}
+                                                        className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2 mb-8">
+                                        <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                                            <div className="h-full w-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]" />
+                                        </div>
+                                        <div className="flex justify-between text-[8px] font-mono uppercase opacity-70">
+                                            <span>Backend</span>
+                                            <span className="text-[#00DDDD]">Stable</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2 mb-8">
+                                        <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                                            <div className="h-full w-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]" />
+                                        </div>
+                                        <div className="flex justify-between text-[8px] font-mono uppercase opacity-70">
+                                            <span>Frontend</span>
+                                            <span className="text-[#00DDDD]">Stable</span>
+                                        </div>
+                                    </div>
+
+                                    <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : ""}`}>
+                                        <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(0,221,221,0.5)] transition-all duration-300">
+                                            <div className="bubble-layer bubble-1"></div>
+                                            <div className="bubble-layer bubble-2"></div>
+                                            <div className="bubble-layer bubble-3"></div>
+                                            <div className="bubble-layer bubble-4"></div>
+                                            <div className="bubble-layer bubble-5"></div>
+                                            <div className="bubble-layer bubble-6"></div>
+                                            <div className="bubble-layer bubble-7"></div>
+                                            <span>Upgrade Now</span>
+                                        </button>
+                                    </Link>
+                                </>
+                            )}
+
+                            {rightSidebarTab === "gmail" && userRole === "employee" && (
+                                <>
+                                    {/* Gmail Header */}
+                                    <div className="flex items-center justify-between mb-8">
+                                        <div className="flex flex-col">
+                                            <span className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-black bg-white px-2 py-0.5" : "text-white bg-black px-2 py-0.5"} mb-1`}>Gmail</span>
+                                            {gmailConnected && gmailEmail && (
+                                                <span className="text-[10px] font-mono text-white/40 mt-1">{gmailEmail}</span>
+                                            )}
+                                        </div>
+                                        {gmailConnected && (
+                                            <button
+                                                onClick={handleDisconnectGmail}
+                                                disabled={gmailLoading}
+                                                className={`text-[8px] font-mono uppercase tracking-[0.15em] px-3 py-1.5 border ${isDarkMode ? "border-white/20 text-white/50 hover:text-white hover:border-white/50" : "border-black/20 text-black/50 hover:text-black hover:border-black/50"} transition-all disabled:opacity-50`}
+                                            >
+                                                Disconnect
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {gmailError && (
+                                        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-[10px] font-mono">
+                                            {gmailError}
+                                        </div>
+                                    )}
+
+                                    {!gmailConnected ? (
+                                        <div className="text-center py-12">
+                                            <div className={`h-16 w-16 mx-auto rounded-full mb-6 flex items-center justify-center ${isDarkMode ? "bg-white/5 border border-white/10" : "bg-black/5 border border-black/10"}`}>
+                                                <Mail className={`h-8 w-8 ${isDarkMode ? "text-white/30" : "text-black/30"}`} />
+                                            </div>
+                                            <p className="text-[11px] font-mono text-white/40 mb-6 leading-relaxed">
+                                                Connect your Gmail account to view your inbox directly in the chat.
+                                            </p>
+                                            <button
+                                                onClick={handleConnectGmail}
+                                                disabled={gmailConnecting}
+                                                className={`px-6 py-3 text-[10px] font-mono uppercase tracking-[0.2em] font-bold transition-all ${gmailConnecting ? "opacity-50" : "hover:scale-105 active:scale-95"} ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/85"}`}
+                                            >
+                                                {gmailConnecting ? "Connecting..." : "Connect Gmail →"}
+                                            </button>
+                                        </div>
+                                    ) : gmailLoading ? (
+                                        <div className="flex items-center justify-center py-12">
+                                            <div className="animate-spin h-8 w-8 border-2 border-white/20 border-t-white rounded-full" />
+                                        </div>
+                                    ) : gmailSelectedEmail ? (
+                                        <div>
+                                            <button
+                                                onClick={() => setGmailSelectedEmail(null)}
+                                                className={`text-[9px] font-mono uppercase tracking-[0.15em] mb-4 flex items-center gap-1 ${isDarkMode ? "text-white/50 hover:text-white" : "text-black/50 hover:text-black"} transition-all`}
+                                            >
+                                                ← Back to Inbox
+                                            </button>
+                                            <div className={`p-4 border ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"} mb-4`}>
+                                                <p className="text-xs font-bold mb-1 break-words">{gmailSelectedEmail.subject}</p>
+                                                <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>From: {gmailSelectedEmail.from}</p>
+                                                <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Date: {gmailSelectedEmail.date}</p>
+                                            </div>
+                                            <div
+                                                className={`text-[11px] leading-relaxed ${isDarkMode ? "text-white/80" : "text-black/80"} prose prose-invert max-w-none`}
+                                                dangerouslySetInnerHTML={{ __html: gmailSelectedEmail.body || gmailSelectedEmail.snippet || "" }}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {gmailEmails.length === 0 ? (
+                                                <p className={`text-[10px] font-mono text-center py-8 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                    No emails found in your inbox.
+                                                </p>
+                                            ) : (
+                                                gmailEmails.map((email: any) => (
+                                                    <button
+                                                        key={email.id}
+                                                        onClick={() => handleSelectEmail(email.id)}
+                                                        className={`w-full text-left p-4 border transition-all ${isDarkMode ? "border-white/5 hover:border-white/20 bg-white/[0.02] hover:bg-white/5" : "border-black/5 hover:border-black/20 bg-black/[0.02] hover:bg-black/5"} ${email.unread ? (isDarkMode ? "border-l-white border-l-2" : "border-l-black border-l-2") : ""}`}
+                                                    >
+                                                        <p className={`text-[11px] font-bold truncate mb-1 ${email.unread ? "" : (isDarkMode ? "text-white/70" : "text-black/70")}`}>
+                                                            {email.subject || "(No Subject)"}
+                                                        </p>
+                                                        <p className={`text-[9px] font-mono truncate ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                            {email.from}
+                                                        </p>
+                                                        <p className={`text-[9px] font-mono mt-1 line-clamp-1 ${isDarkMode ? "text-white/20" : "text-black/20"}`}>
+                                                            {email.snippet || ""}
+                                                        </p>
+                                                        <p className={`text-[8px] font-mono mt-1 ${isDarkMode ? "text-white/15" : "text-black/15"}`}>
+                                                            {email.date ? new Date(email.date).toLocaleString() : ""}
+                                                        </p>
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
                     </div>
                 ) : (
@@ -2549,6 +2770,16 @@ STRICT RULES:
                                 <Clock className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
                                 <div className={`absolute inset-0 rounded-sm border ${isDarkMode ? 'border-white' : 'border-black'} pointer-events-none`} />
                             </div>
+
+                            {userRole === "employee" && (
+                                <button
+                                    onClick={() => { setRightSidebarTab("gmail"); setIsRightSidebarCollapsed(false) }}
+                                    title="Gmail"
+                                    className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative cursor-pointer hover:scale-110 transition-all ${rightSidebarTab === "gmail" && !isRightSidebarCollapsed ? "ring-1 ring-white" : ""}`}
+                                >
+                                    <Mail className={`h-4 w-4 ${gmailConnected ? "text-[#00DDDD]" : (isDarkMode ? "text-white" : "text-black")}`} />
+                                </button>
+                            )}
 
                             <div className={`h-[1px] w-8 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
                         </div>

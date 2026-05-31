@@ -2258,3 +2258,45 @@ export function stopSpeechRecognition() {
     delete (window as any).__speechRecognitionInstance
   }
 }
+
+// ─── Google / Gmail APIs ──────────────────────────────────────────────
+
+async function googleFetch(url: string, options?: RequestInit) {
+  const res = await fetch(url, {
+    ...options,
+    headers: { "x-api-key": getApiKey() || "", ...options?.headers as Record<string, string> }
+  })
+  if (!res.ok) {
+    return { success: false as const, error: `Request failed with status ${res.status}` }
+  }
+  const text = await res.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { success: false as const, error: "Invalid response from server" }
+  }
+}
+
+export async function getGoogleAuthUrl() {
+  return googleFetch(`${API_BASE}/google/auth-url`) as Promise<{ success: boolean; url?: string; error?: string }>
+}
+
+export async function getGoogleStatus() {
+  return googleFetch(`${API_BASE}/google/status`) as Promise<{ success: boolean; connected?: boolean; email?: string; connectedAt?: string; error?: string }>
+}
+
+export async function listGoogleEmails(params?: { maxResults?: number; pageToken?: string; q?: string }) {
+  const query = new URLSearchParams()
+  if (params?.maxResults) query.set("maxResults", String(params.maxResults))
+  if (params?.pageToken) query.set("pageToken", params.pageToken)
+  if (params?.q) query.set("q", params.q)
+  return googleFetch(`${API_BASE}/google/emails?${query}`) as Promise<{ success: boolean; emails?: any[]; nextPageToken?: string | null; error?: string }>
+}
+
+export async function getGoogleEmailDetail(messageId: string) {
+  return googleFetch(`${API_BASE}/google/emails/${messageId}`) as Promise<{ success: boolean; email?: any; error?: string }>
+}
+
+export async function disconnectGoogle() {
+  return googleFetch(`${API_BASE}/google/disconnect`, { method: "DELETE" }) as Promise<{ success: boolean; message?: string; error?: string }>
+}
