@@ -253,6 +253,7 @@ const Chat = () => {
     const [gmailError, setGmailError] = useState("");
     const [gmailSelectedEmail, setGmailSelectedEmail] = useState<any | null>(null);
     const [gmailConnecting, setGmailConnecting] = useState(false);
+    const [gmailSearchQuery, setGmailSearchQuery] = useState("");
     const PLACEHOLDER_TEXTS = useMemo(() => [
         "Describe your query or paste a concept...",
         "Ask me anything about your studies...",
@@ -400,12 +401,14 @@ const Chat = () => {
         checkGmailStatus()
     }, [userRole, rightSidebarTab, isRightSidebarCollapsed, checkGmailStatus])
 
-    const fetchGmailEmails = useCallback(async () => {
+    const fetchGmailEmails = useCallback(async (searchQuery?: string) => {
         setGmailLoading(true)
         setGmailError("")
         try {
             const { listGoogleEmails } = await import("@/lib/chat-api")
-            const res = await listGoogleEmails({ maxResults: 50 })
+            const params: any = { maxResults: 50 }
+            if (searchQuery) params.q = searchQuery
+            const res = await listGoogleEmails(params)
             if (res.success) {
                 setGmailEmails(res.emails || [])
                 if (!res.emails || res.emails.length === 0) {
@@ -2681,55 +2684,71 @@ STRICT RULES:
                             )}
 
                             {rightSidebarTab === "gmail" && userRole === "employee" && (
-                                <>
-                                    <div className="flex items-center justify-between mb-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
-                                                <Mail className={`h-4 w-4 ${isDarkMode ? "text-[#EA4335]" : "text-[#EA4335]"}`} />
+                                <div className="flex flex-col h-full">
+                                    {/* ─── SEARCH BAR ─── */}
+                                    {gmailConnected && (
+                                        <div className="shrink-0 mb-4">
+                                            <div className={`relative group ${gmailSelectedEmail ? "opacity-30 pointer-events-none" : ""}`}>
+                                                <div className={`absolute inset-0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 ${isDarkMode ? "bg-gradient-to-r from-[#EA4335]/10 via-[#FBBC05]/10 to-[#34A853]/10" : "bg-gradient-to-r from-[#EA4335]/5 via-[#FBBC05]/5 to-[#34A853]/5"}`} />
+                                                <div className="relative flex items-center">
+                                                    <div className={`absolute left-3 flex items-center gap-1.5`}>
+                                                        <Search className={`h-3.5 w-3.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`} />
+                                                        <span className={`h-3 w-[1px] ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        value={gmailSearchQuery}
+                                                        onChange={(e) => setGmailSearchQuery(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Enter") {
+                                                                fetchGmailEmails(gmailSearchQuery || undefined)
+                                                            }
+                                                        }}
+                                                        placeholder="Search emails..."
+                                                        className={`w-full pl-10 pr-10 py-2.5 text-[10px] font-mono rounded-xl border outline-none transition-all duration-200 ${isDarkMode
+                                                            ? "bg-white/[0.03] border-white/10 text-white placeholder-white/20 focus:border-[#4285F4]/50 focus:bg-white/[0.05]"
+                                                            : "bg-black/[0.02] border-black/10 text-black placeholder-black/20 focus:border-[#4285F4]/50 focus:bg-black/[0.04]"
+                                                            }`}
+                                                    />
+                                                    {gmailSearchQuery && (
+                                                        <button
+                                                            onClick={() => { setGmailSearchQuery(""); fetchGmailEmails() }}
+                                                            className={`absolute right-2 p-1.5 rounded-lg transition-all ${isDarkMode ? "hover:bg-white/10 text-white/30 hover:text-white" : "hover:bg-black/10 text-black/30 hover:text-black"}`}
+                                                        >
+                                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h3 className={`text-[10px] font-bold font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>
-                                                    Gmail Inbox
-                                                </h3>
-                                                {gmailConnected && gmailEmail && (
-                                                    <p className={`text-[9px] font-mono mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{gmailEmail}</p>
-                                                )}
+                                            <div className="flex items-center gap-3 mt-2 px-1">
+                                                {["in:inbox", "is:unread", "is:important", "has:attachment"].map((filter) => (
+                                                    <button
+                                                        key={filter}
+                                                        onClick={() => {
+                                                            setGmailSearchQuery(filter)
+                                                            fetchGmailEmails(filter)
+                                                        }}
+                                                        className={`text-[7px] font-mono uppercase tracking-[0.15em] px-2 py-1 rounded-md border transition-all ${gmailSearchQuery === filter
+                                                            ? (isDarkMode
+                                                                ? "bg-[#4285F4]/20 border-[#4285F4]/40 text-[#4285F4]"
+                                                                : "bg-[#4285F4]/10 border-[#4285F4]/30 text-[#4285F4]")
+                                                            : (isDarkMode
+                                                                ? "border-white/10 text-white/30 hover:border-white/20 hover:text-white/50"
+                                                                : "border-black/10 text-black/30 hover:border-black/20 hover:text-black/50")
+                                                            }`}
+                                                    >
+                                                        {filter.replace(":", " ")}
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
-                                        {gmailConnected && (
-                                            <div className="flex items-center gap-1.5">
-                                                <button
-                                                    onClick={fetchGmailEmails}
-                                                    disabled={gmailLoading}
-                                                    title="Refresh"
-                                                    className={`p-2 rounded-lg transition-all disabled:opacity-30 ${isDarkMode ? "hover:bg-white/10 text-white/50 hover:text-white" : "hover:bg-black/10 text-black/50 hover:text-black"}`}
-                                                >
-                                                    <svg className={`h-3.5 w-3.5 ${gmailLoading ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <polyline points="23 4 23 10 17 10" />
-                                                        <polyline points="1 20 1 14 7 14" />
-                                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    onClick={handleDisconnectGmail}
-                                                    disabled={gmailLoading}
-                                                    title="Disconnect"
-                                                    className={`p-2 rounded-lg transition-all disabled:opacity-30 ${isDarkMode ? "hover:bg-white/10 text-white/30 hover:text-red-400" : "hover:bg-black/10 text-black/30 hover:text-red-500"}`}
-                                                >
-                                                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                                                        <polyline points="16 17 21 12 16 7" />
-                                                        <line x1="21" y1="12" x2="9" y2="12" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
+                                    )}
 
-                                    <div className={`h-[1px] w-full mb-5 ${isDarkMode ? "bg-gradient-to-r from-transparent via-white/10 to-transparent" : "bg-gradient-to-r from-transparent via-black/10 to-transparent"}`} />
-
+                                    {/* ─── ERROR ─── */}
                                     {gmailError && (
-                                        <div className={`mb-4 p-3 rounded-lg flex items-start gap-2.5 ${isDarkMode ? "bg-red-500/10 border border-red-500/20" : "bg-red-500/5 border border-red-500/20"}`}>
+                                        <div className={`shrink-0 mb-4 p-3 rounded-lg flex items-start gap-2.5 ${isDarkMode ? "bg-red-500/10 border border-red-500/20" : "bg-red-500/5 border border-red-500/20"}`}>
                                             <div className={`h-4 w-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${isDarkMode ? "bg-red-500/20" : "bg-red-500/15"}`}>
                                                 <svg className="h-2.5 w-2.5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                                                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -2739,122 +2758,170 @@ STRICT RULES:
                                         </div>
                                     )}
 
-                                    {!gmailConnected ? (
-                                        <div className="flex flex-col items-center justify-center py-10 px-4">
-                                            <div className={`relative mb-6`}>
-                                                <div className={`h-20 w-20 mx-auto rounded-2xl flex items-center justify-center ${isDarkMode ? "bg-gradient-to-br from-[#EA4335]/20 to-[#FBBC05]/10 border border-white/10" : "bg-gradient-to-br from-[#EA4335]/10 to-[#FBBC05]/5 border border-black/10"}`}>
-                                                    <Mail className={`h-9 w-9 ${isDarkMode ? "text-[#EA4335]" : "text-[#EA4335]"}`} />
+                                    {/* ─── CONTENT ─── */}
+                                    <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 custom-scrollbar">
+                                        {!gmailConnected ? (
+                                            <div className="flex flex-col items-center justify-center py-10 px-4">
+                                                <div className={`relative mb-6`}>
+                                                    <div className={`h-20 w-20 mx-auto rounded-2xl flex items-center justify-center bg-gradient-to-br ${isDarkMode ? "from-[#EA4335]/20 via-[#FBBC05]/10 to-[#4285F4]/20 border border-white/10" : "from-[#EA4335]/10 via-[#FBBC05]/5 to-[#4285F4]/10 border border-black/10"}`}>
+                                                        <Mail className={`h-9 w-9`} style={{ color: '#EA4335' }} />
+                                                    </div>
+                                                    <div className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full flex items-center justify-center ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}>
+                                                        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                                                        </svg>
+                                                    </div>
                                                 </div>
-                                                <div className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full flex items-center justify-center ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}>
-                                                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                                                <p className={`text-[11px] font-mono text-center leading-relaxed mb-6 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                                                    Connect your Gmail account to view<br />your inbox directly in the chat.
+                                                </p>
+                                                <button
+                                                    onClick={handleConnectGmail}
+                                                    disabled={gmailConnecting}
+                                                    className={`group relative px-6 py-3 text-[10px] font-mono uppercase tracking-[0.2em] font-bold rounded-xl transition-all duration-300 ${gmailConnecting ? "opacity-50" : "hover:scale-[1.02] active:scale-[0.98]"} ${isDarkMode ? "bg-white text-black hover:shadow-[0_0_30px_rgba(255,255,255,0.15)]" : "bg-black text-white hover:shadow-[0_0_30px_rgba(0,0,0,0.15)]"}`}
+                                                >
+                                                    <span className="relative z-10 flex items-center gap-2">
+                                                        {gmailConnecting ? (
+                                                            <>
+                                                                <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                                                </svg>
+                                                                Connecting...
+                                                            </>
+                                                        ) : (
+                                                            <>Connect Gmail <span className="text-[14px]">→</span></>
+                                                        )}
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        ) : gmailLoading ? (
+                                            <div className="flex flex-col items-center justify-center py-16 gap-3">
+                                                <div className={`h-8 w-8 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? "border-white/20 border-t-white" : "border-black/20 border-t-black"}`} />
+                                                <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Loading emails...</p>
+                                            </div>
+                                        ) : gmailSelectedEmail ? (
+                                            <div className="space-y-4">
+                                                <button
+                                                    onClick={() => setGmailSelectedEmail(null)}
+                                                    className={`group flex items-center gap-2 text-[9px] font-mono uppercase tracking-[0.15em] transition-all ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`}
+                                                >
+                                                    <svg className={`h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
                                                     </svg>
-                                                </div>
-                                            </div>
-                                            <p className={`text-[11px] font-mono text-center leading-relaxed mb-6 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-                                                Connect your Gmail account to view<br />your inbox directly in the chat.
-                                            </p>
-                                            <button
-                                                onClick={handleConnectGmail}
-                                                disabled={gmailConnecting}
-                                                className={`group relative px-6 py-3 text-[10px] font-mono uppercase tracking-[0.2em] font-bold rounded-xl transition-all duration-300 ${gmailConnecting ? "opacity-50" : "hover:scale-[1.02] active:scale-[0.98]"} ${isDarkMode ? "bg-white text-black hover:shadow-[0_0_30px_rgba(255,255,255,0.15)]" : "bg-black text-white hover:shadow-[0_0_30px_rgba(0,0,0,0.15)]"}`}
-                                            >
-                                                <span className="relative z-10 flex items-center gap-2">
-                                                    {gmailConnecting ? (
-                                                        <>
-                                                            <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
-                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                                            </svg>
-                                                            Connecting...
-                                                        </>
-                                                    ) : (
-                                                        <>Connect Gmail <span className="text-[14px]">→</span></>
-                                                    )}
-                                                </span>
-                                            </button>
-                                        </div>
-                                    ) : gmailLoading ? (
-                                        <div className="flex flex-col items-center justify-center py-16 gap-3">
-                                            <div className={`h-8 w-8 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? "border-white/20 border-t-white" : "border-black/20 border-t-black"}`} />
-                                            <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Loading emails...</p>
-                                        </div>
-                                    ) : gmailSelectedEmail ? (
-                                        <div className="space-y-4">
-                                            <button
-                                                onClick={() => setGmailSelectedEmail(null)}
-                                                className={`group flex items-center gap-2 text-[9px] font-mono uppercase tracking-[0.15em] transition-all ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`}
-                                            >
-                                                <svg className={`h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
-                                                </svg>
-                                                Back to Inbox
-                                            </button>
-                                            <div className={`rounded-xl border p-4 ${isDarkMode ? "border-white/10 bg-gradient-to-br from-white/[0.03] to-white/[0.06]" : "border-black/10 bg-gradient-to-br from-black/[0.02] to-black/[0.04]"}`}>
-                                                <p className={`text-[12px] font-bold leading-snug mb-3 ${isDarkMode ? "text-white" : "text-black"}`}>{gmailSelectedEmail.subject}</p>
-                                                <div className="space-y-1.5">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/25" : "text-black/25"}`}>From</span>
-                                                        <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{gmailSelectedEmail.from}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/25" : "text-black/25"}`}>Date</span>
-                                                        <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/50" : "text-black/50"}`}>{gmailSelectedEmail.date}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className={`rounded-xl border p-4 ${isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.02]"}`}>
-                                                <div
-                                                    className={`text-[11px] leading-relaxed ${isDarkMode ? "text-white/80" : "text-black/80"} prose prose-sm max-w-none ${isDarkMode ? "prose-invert" : ""}`}
-                                                    dangerouslySetInnerHTML={{ __html: gmailSelectedEmail.body || gmailSelectedEmail.snippet || "" }}
-                                                />
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2.5">
-                                            {gmailEmails.length === 0 ? (
-                                                <div className="flex flex-col items-center py-12 gap-4">
-                                                    <div className={`h-14 w-14 rounded-xl flex items-center justify-center ${isDarkMode ? "bg-white/[0.03] border border-white/5" : "bg-black/[0.02] border border-black/5"}`}>
-                                                        <Inbox className={`h-6 w-6 ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
-                                                    </div>
-                                                    <p className={`text-[10px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>No emails found in your inbox.</p>
-                                                </div>
-                                            ) : (
-                                                gmailEmails.map((email: any, idx: number) => (
-                                                    <button
-                                                        key={email.id}
-                                                        onClick={() => handleSelectEmail(email.id)}
-                                                        className={`group w-full text-left rounded-xl border transition-all duration-200 ${email.unread
-                                                            ? (isDarkMode
-                                                                ? "border-[#EA4335]/20 bg-[#EA4335]/[0.02] hover:bg-[#EA4335]/[0.06]"
-                                                                : "border-[#EA4335]/20 bg-[#EA4335]/[0.02] hover:bg-[#EA4335]/[0.05]")
-                                                            : (isDarkMode
-                                                                ? "border-white/5 hover:border-white/15 bg-white/[0.02] hover:bg-white/[0.04]"
-                                                                : "border-black/5 hover:border-black/15 bg-black/[0.01] hover:bg-black/[0.03]")
-                                                            }`}
-                                                    >
-                                                        <div className="p-3.5">
-                                                            <div className="flex items-start justify-between gap-3 mb-2">
-                                                                <p className={`text-[11px] font-bold truncate flex-1 ${email.unread ? (isDarkMode ? "text-white" : "text-black") : (isDarkMode ? "text-white/70" : "text-black/70")}`}>
-                                                                    {email.subject || "(No Subject)"}
-                                                                </p>
-                                                                <span className={`text-[8px] font-mono whitespace-nowrap shrink-0 ${isDarkMode ? "text-white/25" : "text-black/25"}`}>
-                                                                    {email.date ? new Date(email.date).toLocaleDateString() : ""}
-                                                                </span>
-                                                            </div>
-                                                            <p className={`text-[9px] font-mono truncate mb-1.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                                {email.from}
-                                                            </p>
-                                                            <p className={`text-[9px] font-mono line-clamp-1 leading-relaxed ${isDarkMode ? "text-white/25" : "text-black/25"}`}>
-                                                                {email.snippet || ""}
-                                                            </p>
+                                                    Back to Inbox
+                                                </button>
+                                                <div className={`rounded-xl border p-4 ${isDarkMode ? "border-white/10 bg-gradient-to-br from-white/[0.03] to-white/[0.06]" : "border-black/10 bg-gradient-to-br from-black/[0.02] to-black/[0.04]"}`}>
+                                                    <p className={`text-[12px] font-bold leading-snug mb-3 ${isDarkMode ? "text-white" : "text-black"}`}>{gmailSelectedEmail.subject}</p>
+                                                    <div className="space-y-1.5">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/25" : "text-black/25"}`}>From</span>
+                                                            <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{gmailSelectedEmail.from}</span>
                                                         </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/25" : "text-black/25"}`}>Date</span>
+                                                            <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/50" : "text-black/50"}`}>{gmailSelectedEmail.date}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className={`rounded-xl border p-4 ${isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.02]"}`}>
+                                                    <div
+                                                        className={`text-[11px] leading-relaxed ${isDarkMode ? "text-white/80" : "text-black/80"} prose prose-sm max-w-none ${isDarkMode ? "prose-invert" : ""}`}
+                                                        dangerouslySetInnerHTML={{ __html: gmailSelectedEmail.body || gmailSelectedEmail.snippet || "" }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : gmailEmails.length === 0 ? (
+                                            <div className="flex flex-col items-center py-12 gap-4">
+                                                <div className={`h-14 w-14 rounded-xl flex items-center justify-center ${isDarkMode ? "bg-white/[0.03] border border-white/5" : "bg-black/[0.02] border border-black/5"}`}>
+                                                    <Inbox className={`h-6 w-6 ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
+                                                </div>
+                                                <p className={`text-[10px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                    {gmailSearchQuery ? `No results for "${gmailSearchQuery}"` : "No emails found in your inbox."}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            gmailEmails.map((email: any, idx: number) => (
+                                                <button
+                                                    key={email.id}
+                                                    onClick={() => handleSelectEmail(email.id)}
+                                                    className={`group w-full text-left rounded-xl border transition-all duration-200 ${email.unread
+                                                        ? (isDarkMode
+                                                            ? "border-[#EA4335]/20 bg-[#EA4335]/[0.02] hover:bg-[#EA4335]/[0.06]"
+                                                            : "border-[#EA4335]/20 bg-[#EA4335]/[0.02] hover:bg-[#EA4335]/[0.05]")
+                                                        : (isDarkMode
+                                                            ? "border-white/5 hover:border-white/15 bg-white/[0.02] hover:bg-white/[0.04]"
+                                                            : "border-black/5 hover:border-black/15 bg-black/[0.01] hover:bg-black/[0.03]")
+                                                        }`}
+                                                >
+                                                    <div className="p-3.5">
+                                                        <div className="flex items-start justify-between gap-3 mb-2">
+                                                            <p className={`text-[11px] font-bold truncate flex-1 ${email.unread ? (isDarkMode ? "text-white" : "text-black") : (isDarkMode ? "text-white/70" : "text-black/70")}`}>
+                                                                {email.subject || "(No Subject)"}
+                                                            </p>
+                                                            <span className={`text-[8px] font-mono whitespace-nowrap shrink-0 ${isDarkMode ? "text-white/25" : "text-black/25"}`}>
+                                                                {email.date ? new Date(email.date).toLocaleDateString() : ""}
+                                                            </span>
+                                                        </div>
+                                                        <p className={`text-[9px] font-mono truncate mb-1.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                            {email.from}
+                                                        </p>
+                                                        <p className={`text-[9px] font-mono line-clamp-1 leading-relaxed ${isDarkMode ? "text-white/25" : "text-black/25"}`}>
+                                                            {email.snippet || ""}
+                                                        </p>
+                                                    </div>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    {/* ─── FOOTER (sticky bottom) ─── */}
+                                    {gmailConnected && (
+                                        <div className={`shrink-0 mt-4 pt-4 border-t sticky bottom-0 ${isDarkMode ? "border-white/10 bg-[#0a0a0a]" : "border-black/10 bg-[#fcfcfc]"}`}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
+                                                        <Mail className="h-3.5 w-3.5" style={{ color: '#EA4335' }} />
+                                                    </div>
+                                                    <div>
+                                                        <p className={`text-[8px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>
+                                                            Gmail Inbox
+                                                        </p>
+                                                        {gmailEmail && (
+                                                            <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/35" : "text-black/35"}`}>{gmailEmail}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        onClick={() => fetchGmailEmails(gmailSearchQuery || undefined)}
+                                                        disabled={gmailLoading}
+                                                        title="Refresh"
+                                                        className={`p-1.5 rounded-lg transition-all disabled:opacity-30 ${isDarkMode ? "hover:bg-white/10 text-white/40 hover:text-white" : "hover:bg-black/10 text-black/40 hover:text-black"}`}
+                                                    >
+                                                        <svg className={`h-3 w-3 ${gmailLoading ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <polyline points="23 4 23 10 17 10" />
+                                                            <polyline points="1 20 1 14 7 14" />
+                                                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                                        </svg>
                                                     </button>
-                                                ))
-                                            )}
+                                                    <button
+                                                        onClick={handleDisconnectGmail}
+                                                        disabled={gmailLoading}
+                                                        title="Disconnect"
+                                                        className={`p-1.5 rounded-lg transition-all disabled:opacity-30 ${isDarkMode ? "hover:bg-white/10 text-white/30 hover:text-[#EA4335]" : "hover:bg-black/10 text-black/30 hover:text-[#EA4335]"}`}
+                                                    >
+                                                        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                                            <polyline points="16 17 21 12 16 7" />
+                                                            <line x1="21" y1="12" x2="9" y2="12" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
-                                </>
+                                </div>
                             )}
                         </div>
                     </div>
