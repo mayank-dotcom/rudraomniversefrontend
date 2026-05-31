@@ -2600,9 +2600,9 @@ STRICT RULES:
                                 )}
                             </AnimatePresence>
 
-                            <div className={`relative flex flex-row items-center border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
-                                <div className="flex-1 min-w-0 flex items-center">
-                                    <div className="flex items-center gap-1 md:gap-2 pl-1.5 md:pl-3">
+                            <div className={`relative flex border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
+                                <div className="flex-1 min-w-0 flex">
+                                    <div className="flex items-end gap-1 md:gap-2 pl-1.5 md:pl-3 pb-2.5">
                                         <button
                                             onClick={() => fileInputRef.current?.click()}
                                             disabled={isLoading || isProcessingFile}
@@ -2624,17 +2624,31 @@ STRICT RULES:
                                         />
                                     </div>
 
-                                    <input
-                                        type="text"
+                                    <textarea
                                         value={input}
-                                        onChange={(e) => setInput(e.target.value)}
-                                        onKeyDown={(e) => e.key === "Enter" && !isProcessingFile && void handleSend()}
+                                        onChange={(e) => {
+                                            setInput(e.target.value);
+                                            e.currentTarget.style.height = 'auto';
+                                            e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" && !e.shiftKey && !isProcessingFile) {
+                                                e.preventDefault();
+                                                void handleSend();
+                                            }
+                                        }}
+                                        onInput={(e) => {
+                                            e.currentTarget.style.height = 'auto';
+                                            e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                        }}
                                         placeholder={isProcessingFile ? "Processing file..." : typedPlaceholder}
-                                        className={`flex-1 min-w-0 bg-transparent ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} py-2.5 pl-2 text-base focus:outline-none`}
+                                        rows={1}
+                                        className={`flex-1 min-w-0 bg-transparent resize-none ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} py-2.5 pl-2 text-base focus:outline-none`}
+                                        style={{ maxHeight: '40vh' }}
                                     />
                                 </div>
 
-                                <div className="flex items-center justify-end gap-1 md:gap-1.5 pr-1 md:pr-2 flex-shrink-0">
+                                <div className="flex items-end justify-end gap-1 md:gap-1.5 pr-1 md:pr-2 pb-2 flex-shrink-0">
                                     {!input.trim() && !isProcessingFile && (
                                         <div className="relative flex items-center justify-center mr-1">
                                             <AnimatePresence>

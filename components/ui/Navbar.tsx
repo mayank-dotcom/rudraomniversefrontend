@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { LogOut, Moon, Sun, Menu, X, Code2, Smartphone, ChevronDown } from "lucide-react"
-import { removeApiKey, isAuthenticated } from "@/lib/auth"
+import { Moon, Sun, Menu, X, Code2, Smartphone, ChevronDown } from "lucide-react"
+import { isAuthenticated } from "@/lib/auth"
 import { useTheme } from "@/lib/theme-context"
 
 interface NavbarProps {
@@ -20,12 +20,6 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
     useEffect(() => {
         setAuthed(isAuthenticated());
     }, []);
-
-    const handleLogout = () => {
-        removeApiKey()
-        setAuthed(false)
-        window.location.href = "/"
-    }
 
     const navLinks = [
         { label: "Features", href: "/#features" },
@@ -136,14 +130,13 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
                     </button>
 
                     {authed ? (
-                        <button
-                            onClick={handleLogout}
+                        <Link
+                            href="/chat"
                             className={`hidden md:flex items-center gap-2 px-5 py-2.5 font-sans font-semibold uppercase transition-all active:scale-95 ${isDarkMode ? "border border-white/10 text-white hover:bg-white/5" : "border border-black/10 text-black hover:bg-black/5"}`}
                             style={{ fontSize: "14px", letterSpacing: "0.05em" }}
                         >
-                            <LogOut className="h-3.5 w-3.5" />
-                            Logout
-                        </button>
+                            Back to Chat
+                        </Link>
                     ) : (
                         /* Button — 14px Semi-Bold, 0.05em tracking */
                         <button
@@ -202,8 +195,8 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
                             {item.label}
                         </Link>
                     ))}
-                    {!authed && (
-                        <div className="px-6 mt-4">
+                    <div className="px-6 mt-4">
+                        {!authed ? (
                             <button
                                 onClick={() => {
                                     onAuthClick?.();
@@ -214,8 +207,17 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
                             >
                                 Login / Sign Up
                             </button>
-                        </div>
-                    )}
+                        ) : (
+                            <Link
+                                href="/chat"
+                                onClick={() => setIsMenuOpen(false)}
+                                className={`block w-full py-4 text-center font-sans font-semibold uppercase ${isDarkMode ? "border border-white/10 text-white" : "border border-black/10 text-black"}`}
+                                style={{ fontSize: "14px", letterSpacing: "0.05em" }}
+                            >
+                                Back to Chat
+                            </Link>
+                        )}
+                    </div>
                 </motion.div>
             )}
         </motion.nav>
