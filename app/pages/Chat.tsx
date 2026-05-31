@@ -446,7 +446,8 @@ const Chat = () => {
         setGmailError("")
         try {
             const { getGoogleAuthUrl } = await import("@/lib/chat-api")
-            const res = await getGoogleAuthUrl()
+            const redirectUri = window.location.origin + '/google-connected'
+            const res = await getGoogleAuthUrl(redirectUri)
             if (res.success && res.url) {
                 window.open(res.url, "_blank", "width=600,height=700")
             } else {

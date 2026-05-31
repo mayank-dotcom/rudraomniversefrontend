@@ -2277,8 +2277,9 @@ async function googleFetch(url: string, options?: RequestInit) {
   }
 }
 
-export async function getGoogleAuthUrl() {
-  return googleFetch(`${API_BASE}/google/auth-url`) as Promise<{ success: boolean; url?: string; error?: string }>
+export async function getGoogleAuthUrl(redirectUri?: string) {
+  const query = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : ''
+  return googleFetch(`${API_BASE}/google/auth-url${query}`) as Promise<{ success: boolean; url?: string; error?: string }>
 }
 
 export async function getGoogleStatus() {
