@@ -6,7 +6,7 @@ import {
     Send, Bot, User, LogOut, MessageSquare, Plus, Search,
     ChevronLeft, ChevronRight, Moon, Sun, GraduationCap,
     UserCog, Mic, ChevronUp,
-    ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2, Mail, Inbox,
+    ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2, Inbox,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
     Swords, CheckCircle, XCircle, Code, Zap, Pause
 } from "lucide-react";
@@ -2521,8 +2521,8 @@ STRICT RULES:
                             <button
                                 onClick={() => setRightSidebarTab("usage")}
                                 className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${rightSidebarTab === "usage"
-                                    ? (isDarkMode ? "text-white border-b-2 border-white" : "text-black border-b-2 border-black")
-                                    : (isDarkMode ? "text-white/30 hover:text-white/60" : "text-black/30 hover:text-black/60")}`}
+                                    ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
+                                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")}`}
                             >
                                 Usage
                             </button>
@@ -2530,10 +2530,13 @@ STRICT RULES:
                                 <button
                                     onClick={() => setRightSidebarTab("gmail")}
                                     className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 ${rightSidebarTab === "gmail"
-                                        ? (isDarkMode ? "text-white border-b-2 border-white" : "text-black border-b-2 border-black")
-                                        : (isDarkMode ? "text-white/30 hover:text-white/60" : "text-black/30 hover:text-black/60")}`}
+                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")}`}
                                 >
-                                    <Mail className="h-3 w-3" />
+                                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none">
+                                        <rect x="2" y="4" width="20" height="16" rx="2" fill="currentColor"/>
+                                        <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                                    </svg>
                                     Gmail
                                 </button>
                             )}
@@ -2692,8 +2695,8 @@ STRICT RULES:
                                                 <div className={`absolute inset-0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 ${isDarkMode ? "bg-gradient-to-r from-[#EA4335]/10 via-[#FBBC05]/10 to-[#34A853]/10" : "bg-gradient-to-r from-[#EA4335]/5 via-[#FBBC05]/5 to-[#34A853]/5"}`} />
                                                 <div className="relative flex items-center">
                                                     <div className={`absolute left-3 flex items-center gap-1.5`}>
-                                                        <Search className={`h-3.5 w-3.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`} />
-                                                        <span className={`h-3 w-[1px] ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
+                                                        <Search className={`h-3.5 w-3.5 ${isDarkMode ? "text-white/30" : "text-black/50"}`} />
+                                                        <span className={`h-3 w-[1px] ${isDarkMode ? "bg-white/10" : "bg-black/30"}`} />
                                                     </div>
                                                     <input
                                                         type="text"
@@ -2707,13 +2710,13 @@ STRICT RULES:
                                                         placeholder="Search emails..."
                                                         className={`w-full pl-10 pr-10 py-2.5 text-[10px] font-mono rounded-xl border outline-none transition-all duration-200 ${isDarkMode
                                                             ? "bg-white/[0.03] border-white/10 text-white placeholder-white/20 focus:border-[#4285F4]/50 focus:bg-white/[0.05]"
-                                                            : "bg-black/[0.02] border-black/10 text-black placeholder-black/20 focus:border-[#4285F4]/50 focus:bg-black/[0.04]"
+                                                            : "bg-white border-black/30 text-black placeholder-black/50 focus:border-[#4285F4]/70 focus:bg-white"
                                                             }`}
                                                     />
                                                     {gmailSearchQuery && (
                                                         <button
                                                             onClick={() => { setGmailSearchQuery(""); fetchGmailEmails() }}
-                                                            className={`absolute right-2 p-1.5 rounded-lg transition-all ${isDarkMode ? "hover:bg-white/10 text-white/30 hover:text-white" : "hover:bg-black/10 text-black/30 hover:text-black"}`}
+                                                            className={`absolute right-2 p-1.5 rounded-lg transition-all ${isDarkMode ? "hover:bg-white/10 text-white/30 hover:text-white" : "hover:bg-black/10 text-black/50 hover:text-black"}`}
                                                         >
                                                             <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                                                                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -2736,7 +2739,7 @@ STRICT RULES:
                                                                 : "bg-[#4285F4]/10 border-[#4285F4]/30 text-[#4285F4]")
                                                             : (isDarkMode
                                                                 ? "border-white/10 text-white/30 hover:border-white/20 hover:text-white/50"
-                                                                : "border-black/10 text-black/30 hover:border-black/20 hover:text-black/50")
+                                                                : "border-black/30 text-black/60 hover:border-black/60 hover:text-black/90")
                                                             }`}
                                                     >
                                                         {filter.replace(":", " ")}
@@ -2764,7 +2767,10 @@ STRICT RULES:
                                             <div className="flex flex-col items-center justify-center py-10 px-4">
                                                 <div className={`relative mb-6`}>
                                                     <div className={`h-20 w-20 mx-auto rounded-2xl flex items-center justify-center bg-gradient-to-br ${isDarkMode ? "from-[#EA4335]/20 via-[#FBBC05]/10 to-[#4285F4]/20 border border-white/10" : "from-[#EA4335]/10 via-[#FBBC05]/5 to-[#4285F4]/10 border border-black/10"}`}>
-                                                        <Mail className={`h-9 w-9`} style={{ color: '#EA4335' }} />
+                                                        <svg className="h-9 w-9" viewBox="0 0 24 24" fill="none">
+                                                            <rect x="2" y="4" width="20" height="16" rx="2" fill="#EA4335"/>
+                                                            <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                                                        </svg>
                                                     </div>
                                                     <div className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full flex items-center justify-center ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}>
                                                         <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -2790,7 +2796,7 @@ STRICT RULES:
                                                                 Connecting...
                                                             </>
                                                         ) : (
-                                                            <>Connect Gmail <span className="text-[14px]">→</span></>
+                                                            <>+ Gmail <span className="text-[14px]">→</span></>
                                                         )}
                                                     </span>
                                                 </button>
@@ -2881,14 +2887,17 @@ STRICT RULES:
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2.5">
                                                     <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
-                                                        <Mail className="h-3.5 w-3.5" style={{ color: '#EA4335' }} />
+                                                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                                                            <rect x="2" y="4" width="20" height="16" rx="2" fill="#EA4335"/>
+                                                            <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                                                        </svg>
                                                     </div>
                                                     <div>
                                                         <p className={`text-[8px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>
                                                             Gmail Inbox
                                                         </p>
                                                         {gmailEmail && (
-                                                            <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/35" : "text-black/35"}`}>{gmailEmail}</p>
+                                                            <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/35" : "text-black/60"}`}>{gmailEmail}</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -2897,7 +2906,7 @@ STRICT RULES:
                                                         onClick={() => fetchGmailEmails(gmailSearchQuery || undefined)}
                                                         disabled={gmailLoading}
                                                         title="Refresh"
-                                                        className={`p-1.5 rounded-lg transition-all disabled:opacity-30 ${isDarkMode ? "hover:bg-white/10 text-white/40 hover:text-white" : "hover:bg-black/10 text-black/40 hover:text-black"}`}
+                                                        className={`p-1.5 rounded-lg transition-all disabled:opacity-30 ${isDarkMode ? "hover:bg-white/10 text-white/40 hover:text-white" : "hover:bg-black/10 text-black/60 hover:text-black"}`}
                                                     >
                                                         <svg className={`h-3 w-3 ${gmailLoading ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                             <polyline points="23 4 23 10 17 10" />
@@ -2909,7 +2918,7 @@ STRICT RULES:
                                                         onClick={handleDisconnectGmail}
                                                         disabled={gmailLoading}
                                                         title="Disconnect"
-                                                        className={`p-1.5 rounded-lg transition-all disabled:opacity-30 ${isDarkMode ? "hover:bg-white/10 text-white/30 hover:text-[#EA4335]" : "hover:bg-black/10 text-black/30 hover:text-[#EA4335]"}`}
+                                                        className={`p-1.5 rounded-lg transition-all disabled:opacity-30 ${isDarkMode ? "hover:bg-white/10 text-white/30 hover:text-[#EA4335]" : "hover:bg-black/10 text-black/60 hover:text-[#EA4335]"}`}
                                                     >
                                                         <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -2943,7 +2952,10 @@ STRICT RULES:
                                     title="Gmail"
                                     className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative cursor-pointer hover:scale-110 transition-all ${rightSidebarTab === "gmail" && !isRightSidebarCollapsed ? "ring-1 ring-white" : ""}`}
                                 >
-                                    <Mail className={`h-4 w-4 ${gmailConnected ? "text-[#00DDDD]" : (isDarkMode ? "text-white" : "text-black")}`} />
+                                    <svg className={`h-4 w-4 ${gmailConnected ? "text-[#00DDDD]" : (isDarkMode ? "text-white" : "text-black")}`} viewBox="0 0 24 24" fill="none">
+                                        <rect x="2" y="4" width="20" height="16" rx="2" fill="currentColor"/>
+                                        <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                                    </svg>
                                 </button>
                             )}
 
