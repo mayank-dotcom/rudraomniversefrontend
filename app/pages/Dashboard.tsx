@@ -2732,35 +2732,54 @@ const Dashboard = () => {
                                                 onClick={() => {
                                                     const setting = siteSettings.find(s => s.key === page.key);
                                                     const raw = setting?.value || '';
-                                                    setEditingSiteSetting({ key: page.key, value: raw });
                                                     try {
                                                         const parsed = JSON.parse(raw);
+                                                        setEditingSiteSetting({ key: page.key, value: raw });
                                                         if (page.key === 'about_us' && Array.isArray(parsed.sections) && !parsed.elements) {
                                                             setSiteFormData({ elements: parsed.sections.map((s: string) => ({ type: 'paragraph', content: s })) });
                                                         } else if (page.key === 'contact_info' && parsed.description && !parsed.paragraphs) {
                                                             setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
                                                         } else if (page.key === 'social_media_links' && !parsed.links) {
                                                             setSiteFormData({ links: [] });
-                                                        } else if (page.key === 'schools_page' && !parsed.title) {
-                                                            setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '', features: [] });
-                                                        } else if (page.key === 'b2b_page' && !parsed.title) {
-                                                            setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '' });
                                                         } else {
                                                             setSiteFormData(parsed);
                                                         }
                                                     } catch {
                                                         if (page.key === 'about_us') {
                                                             setSiteFormData({ elements: raw.split('\n\n').filter(Boolean).map((p: string) => ({ type: 'paragraph', content: p })) });
+                                                            setEditingSiteSetting({ key: page.key, value: raw });
                                                         } else if (page.key === 'contact_info') {
                                                             setSiteFormData({ paragraphs: raw.split('\n\n').filter(Boolean), email: '', responseTime: '' });
+                                                            setEditingSiteSetting({ key: page.key, value: raw });
                                                         } else if (page.key === 'social_media_links') {
                                                             setSiteFormData({ links: [] });
+                                                            setEditingSiteSetting({ key: page.key, value: JSON.stringify({ links: [] }) });
                                                         } else if (page.key === 'schools_page') {
-                                                            setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '', features: [] });
+                                                            const defaults = {
+                                                                title: "Empower your\nInstitution.",
+                                                                description: "From personalized tutoring to automated assessments — bring the future of education to your classrooms with Rudranex AI.",
+                                                                linkText: "Back Home",
+                                                                linkUrl: "/",
+                                                                features: [
+                                                                    { title: "AI Tutoring", desc: "Personalized learning paths for every student powered by advanced AI models." },
+                                                                    { title: "Admin Dashboard", desc: "Full control over faculty, students, and curriculum with real-time analytics." },
+                                                                    { title: "Branding", desc: "Custom onboarding with your school code, faculty management, and roll numbers." }
+                                                                ]
+                                                            };
+                                                            setSiteFormData(defaults);
+                                                            setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
                                                         } else if (page.key === 'b2b_page') {
-                                                            setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '' });
+                                                            const defaults = {
+                                                                title: "Quiet power.\nTailored access.",
+                                                                description: "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
+                                                                linkText: "Learn More",
+                                                                linkUrl: "/pricing"
+                                                            };
+                                                            setSiteFormData(defaults);
+                                                            setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
                                                         } else {
                                                             setSiteFormData(null);
+                                                            setEditingSiteSetting({ key: page.key, value: raw });
                                                         }
                                                     }
                                                 }}
