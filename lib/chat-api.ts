@@ -295,6 +295,9 @@ export interface AdminUser {
   is_frozen: boolean
   plan_name: string
   created_at: string
+  role?: string
+  enterprise_id?: number
+  school_id?: number
   subscription: {
     plan: string
     status: string
@@ -1190,6 +1193,19 @@ export async function getEnterpriseStatsGlobal() {
   const data = await parseJson<EnterpriseStatsGlobalResponse>(res)
   if (!res.ok || !data.success) {
     throw new Error(data.error || "Unable to fetch global enterprise stats.")
+  }
+  return data
+}
+
+// Admin: Delete a school by id
+export async function deleteAdminSchool(schoolId: number | string) {
+  const res = await fetch(`${API_BASE}/admin/schools/${schoolId}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Unable to delete school.")
   }
   return data
 }

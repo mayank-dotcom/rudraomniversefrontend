@@ -5,11 +5,11 @@ import {
     MoreHorizontal, Plus, Briefcase, Users, Clock, CheckCircle2,
     ChevronRight, ArrowUpRight, Globe, Shield, Zap, Table as TableIcon, LayoutDashboard,
     ChevronLeft, ChevronRight as ChevronRightIcon, LogOut, Moon, Sun, RefreshCw, Database,
-    TrendingUp, ShieldCheck, Cpu, X, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Building2
+    TrendingUp, ShieldCheck, Cpu, X, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Building2, Menu
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser, getAdminRequests, declineAdminRequest, AdminRequest, getAdminSchools, getAdminSchoolAdmins, AdminSchool, AdminSchoolAdmin, getFrozenUsers, getAdminSchoolFacultyByCode, SchoolFacultyMember, deleteAdminUser, deleteSchoolFaculty, getAdminActivity, getAvailableFeatures, AvailableFeature, setPlanFeatures, getPlanFeatures, getPlanStrikeOff, setPlanStrikeOff, getAdminEnterprises, onboardEnterprise, deleteEnterprise, getEnterpriseStatsGlobal, AdminEnterprise } from '@/lib/chat-api';
+import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser, getAdminRequests, declineAdminRequest, AdminRequest, getAdminSchools, getAdminSchoolAdmins, AdminSchool, AdminSchoolAdmin, getFrozenUsers, getAdminSchoolFacultyByCode, SchoolFacultyMember, deleteAdminUser, deleteSchoolFaculty, getAdminActivity, getAvailableFeatures, AvailableFeature, setPlanFeatures, getPlanFeatures, getPlanStrikeOff, setPlanStrikeOff, getAdminEnterprises, onboardEnterprise, deleteEnterprise, getEnterpriseStatsGlobal, AdminEnterprise, deleteAdminSchool } from '@/lib/chat-api';
 import { isAdminAuthenticated, setAdminKey, removeAdminKey, setApiKey } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -104,15 +104,18 @@ const PlanCard = ({ plan, isDarkMode, onEdit }: { plan: any, isDarkMode: boolean
 };
 
 const StatCard = ({ title, value, icon: Icon, color, subtext, isDarkMode }: { title: string, value: any, icon: any, color: string, subtext?: string, isDarkMode: boolean }) => (
-    <div className={`relative border rounded-[2.5rem] p-8 overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-zinc-800/50" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"}`}>
-        <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-        <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-        <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{title}</span>
+    <div className={`relative p-6 transition-all duration-300 border-b ${
+        isDarkMode ? "border-white/5" : "border-zinc-300"
+    }`}>
+        <div className="flex justify-between items-start">
+            <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{title}</span>
+            {Icon && <Icon className="h-4 w-4 opacity-35" style={{ color }} />}
+        </div>
         <div className="flex items-baseline gap-2 mt-2">
             <h4 className={`text-2xl font-display font-black tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{value}</h4>
             {subtext && <span className={`text-[10px] font-mono ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>{subtext}</span>}
         </div>
-        <div className={`h-[2px] w-8 mt-4 rounded-full`} style={{ backgroundColor: color }} />
+        <div className="h-[2px] w-8 mt-4 rounded-full" style={{ backgroundColor: color }} />
     </div>
 );
 
@@ -144,7 +147,86 @@ const Dashboard = () => {
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [view, setView] = useState<'visual' | 'table' | 'plans' | 'sites' | 'requests' | 'schools' | 'enterprises'>('visual');
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(true);
+    const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(false);
+    const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(false);
+    const [leftSidebarWidth, setLeftSidebarWidth] = useState<number>(288);
+    const [rightSidebarWidth, setRightSidebarWidth] = useState<number>(320);
+    const [activeExcelCell, setActiveExcelCell] = useState<{ rowIdx: number, colKey: string } | null>({ rowIdx: 1, colKey: 'A' });
+    const [activeSchoolsCell, setActiveSchoolsCell] = useState<{ rowIdx: number, colKey: string } | null>({ rowIdx: 1, colKey: 'A' });
+    const [activeEnterprisesCell, setActiveEnterprisesCell] = useState<{ rowIdx: number, colKey: string } | null>({ rowIdx: 1, colKey: 'A' });
+
+    const getExcelCellValueFormula = (rowIdx: number, colKey: string) => {
+        const uIdx = rowIdx - 1;
+        const user = paginatedUsers[uIdx];
+        if (!user) return "";
+        switch (colKey) {
+            case 'A': return `=USER_IDENTITY("${user.name}", "${user.email}")`;
+            case 'B': return `=SUBSCRIPTION_PLAN("${user.subscription.plan}", "${user.subscription.status}")`;
+            case 'C': return `=RESOURCE_TOKENS_USED(${user.subscription.tokens_used}, ${user.subscription.tokens_limit})`;
+            case 'D': return `=USAGE_METRICS(chats: ${user.subscription.daily_chats}, limit: ${user.subscription.tokens_limit})`;
+            case 'E': return `=ADMIN_ACTION(visualize: "${user.name}", id: "${user.id}")`;
+            default: return "";
+        }
+    };
+
+    const getSchoolsExcelCellValueFormula = (rowIdx: number, colKey: string) => {
+        const sIdx = rowIdx - 1;
+        const school = visibleSchools[sIdx];
+        if (!school) return "";
+        switch (colKey) {
+            case 'A': return `=SCHOOL_NAME("${school.school_name}")`;
+            case 'B': return `=SCHOOL_CODE("${school.school_code}")`;
+            case 'C': return `=ONBOARD_DATE("${new Date(school.created_at).toLocaleDateString()}")`;
+            case 'D': return `=MANAGE_FACILITIES(school_code: "${school.school_code}")`;
+            default: return "";
+        }
+    };
+
+    const getEnterprisesExcelCellValueFormula = (rowIdx: number, colKey: string) => {
+        const eIdx = rowIdx - 1;
+        const ent = visibleEnterprises[eIdx];
+        if (!ent) return "";
+        const stats = enterpriseStats.find(item => item.school_code === ent.enterprise_code);
+        switch (colKey) {
+            case 'A': return `=ENTERPRISE_NAME("${ent.enterprise_name}")`;
+            case 'B': return `=ENTERPRISE_CODE("${ent.enterprise_code}")`;
+            case 'C': return `=RESOURCE_METRICS(employees: ${stats?.student_count || 0}, admins: ${stats?.admin_count || 0})`;
+            case 'D': return `=AI_OPERATIONS(requests: ${stats?.total_ai_requests || 0})`;
+            case 'E': return `=ONBOARD_DATE("${new Date(ent.created_at).toLocaleDateString()}")`;
+            case 'F': return `=ADMIN_DELETE(enterprise_id: ${ent.id})`;
+            default: return "";
+        }
+    };
+
+    const handleLeftResizeMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            const newWidth = Math.max(200, Math.min(450, moveEvent.clientX));
+            setLeftSidebarWidth(newWidth);
+        };
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    const handleRightResizeMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            const newWidth = Math.max(240, Math.min(500, window.innerWidth - moveEvent.clientX));
+            setRightSidebarWidth(newWidth);
+        };
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    };
     const [plans, setPlans] = useState<Plan[]>([]);
     const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
     const [isUpdatingTokens, setIsUpdatingTokens] = useState(false);
@@ -231,6 +313,8 @@ const Dashboard = () => {
     const [isCreatingEnterprise, setIsCreatingEnterprise] = useState(false);
     const [createdEnterpriseInfo, setCreatedEnterpriseInfo] = useState<any>(null);
     const [selectedEnterprise, setSelectedEnterprise] = useState<any>(null);
+    const [entFreezingUserId, setEntFreezingUserId] = useState<string | null>(null);
+    const [entDeletingUserId, setEntDeletingUserId] = useState<string | null>(null);
     const USERS_PER_PAGE = 10;
 
     const sortedUsers = useMemo(() => {
@@ -329,12 +413,14 @@ const Dashboard = () => {
     const fetchEnterprisesData = async () => {
         setIsEnterprisesLoading(true);
         try {
-            const [entRes, statsRes] = await Promise.all([
+            const [entRes, statsRes, usersRes] = await Promise.all([
                 getAdminEnterprises(),
-                getEnterpriseStatsGlobal().catch(() => ({ success: true, enterprises: [] }))
+                getEnterpriseStatsGlobal().catch(() => ({ success: true, enterprises: [] })),
+                getAdminUsers().catch(() => ({ success: true, users: [] }))
             ]);
             if (entRes.success) setEnterprises(entRes.enterprises || []);
             if (statsRes.success) setEnterpriseStats((statsRes as any).enterprises || []);
+            if (usersRes.success) setUsers(usersRes.users || []);
         } catch (e) {
             toast.error("Failed to load enterprises data");
         } finally {
@@ -406,6 +492,64 @@ const Dashboard = () => {
             toast.success("Enterprise deleted successfully");
         } catch (e: any) {
             toast.error(e.message || "Failed to delete enterprise");
+        }
+    };
+
+    const handleDeleteSchool = async (id: number) => {
+        try {
+            await deleteAdminSchool(id);
+            setSchools(prev => prev.filter(s => s.id !== id));
+            setSelectedSchool(prev => prev?.id === id ? null : prev);
+            toast.success("School deleted successfully");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to delete school");
+        }
+    };
+
+    const handleEntFreezeUser = async (userId: string) => {
+        setEntFreezingUserId(userId);
+        try {
+            const res = await freezeUser(userId);
+            if (res.success) {
+                setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_frozen: true } : u));
+                toast.success(res.message || 'User frozen');
+            } else {
+                throw new Error(res.error || 'Failed to freeze');
+            }
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to freeze user');
+        } finally {
+            setEntFreezingUserId(null);
+        }
+    };
+
+    const handleEntUnfreezeUser = async (userId: string) => {
+        setEntFreezingUserId(userId);
+        try {
+            const res = await unfreezeUser(userId);
+            if (res.success) {
+                setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_frozen: false } : u));
+                toast.success(res.message || 'User unfrozen');
+            } else {
+                throw new Error(res.error || 'Failed to unfreeze');
+            }
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to unfreeze user');
+        } finally {
+            setEntFreezingUserId(null);
+        }
+    };
+
+    const handleEntDeleteUser = async (userId: string) => {
+        setEntDeletingUserId(userId);
+        try {
+            await deleteAdminUser(userId);
+            setUsers(prev => prev.filter(u => u.id !== userId));
+            toast.success('User deleted');
+        } catch (e: any) {
+            toast.error(e.message || 'Failed to delete user');
+        } finally {
+            setEntDeletingUserId(null);
         }
     };
 
@@ -946,15 +1090,102 @@ const Dashboard = () => {
         );
     }
 
+    const UsersListPanel = ({ isMobile = false, onClose }: { isMobile?: boolean, onClose?: () => void }) => {
+        return (
+            <div className={isMobile ? "space-y-8 block lg:hidden mt-8" : "h-full flex flex-col min-h-0"}>
+                <div className={
+                    isMobile 
+                        ? `relative border border-zinc-800/50 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] backdrop-blur-xl overflow-hidden group ${
+                            isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                          }`
+                        : "flex-1 flex flex-col min-h-0"
+                }>
+                    {isMobile && (
+                        <>
+                            <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none" />
+                            <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
+                        </>
+                    )}
+                    <div className="flex items-center justify-between mb-8 shrink-0">
+                        <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>System Users</h3>
+                        <div className="flex items-center gap-3">
+                            {onClose && (
+                                <button
+                                    onClick={onClose}
+                                    className={`p-1 rounded-lg border transition-all ${
+                                        isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"
+                                    }`}
+                                    title="Collapse Users Sidebar"
+                                >
+                                    <X className="h-3.5 w-3.5" />
+                                </button>
+                            )}
+                            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                        </div>
+                    </div>
+
+                    <div className="relative mb-6 shrink-0">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-20" />
+                        <input
+                            type="text"
+                            placeholder="SEARCH ID / NAME..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className={`w-full pl-11 pr-4 py-3 text-[10px] font-mono tracking-widest ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"} border rounded-2xl focus:outline-none focus:border-emerald-500/50 transition-all`}
+                        />
+                    </div>
+
+                    <div className={`space-y-2 custom-scrollbar pr-2 overflow-y-auto ${isMobile ? "max-h-[500px]" : "flex-1 min-h-0"}`}>
+                        {isLoading ? (
+                            Array.from({ length: 5 }).map((_, i) => (
+                                <div key={i} className={`h-12 w-full animate-pulse rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+                            ))
+                        ) : (
+                            filteredUsers.map((user) => (
+                                <button
+                                    key={user.id}
+                                    onClick={() => setSelectedUser(user)}
+                                    className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group ${selectedUser?.id === user.id
+                                        ? "bg-emerald-500 text-black font-bold shadow-[0_10px_30px_rgba(16,185,129,0.2)]"
+                                        : (isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black")
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-4 text-left">
+                                        <div className={`h-8 w-8 rounded-full border flex items-center justify-center ${selectedUser?.id === user.id ? "border-black/20" : isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                            <User className={`h-3.5 w-3.5 ${selectedUser?.id === user.id ? "text-black" : ""}`} />
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-[11px] font-bold truncate tracking-tight">{user.name}</span>
+                                            <span className={`text-[9px] font-mono uppercase truncate ${selectedUser?.id === user.id ? "text-black" : isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{user.subscription.plan}</span>
+                                        </div>
+                                    </div>
+                                    <ChevronRight className={`h-3.5 w-3.5 transition-transform ${selectedUser?.id === user.id ? "translate-x-1 text-black" : isDarkMode ? "opacity-0 group-hover:opacity-100 text-white" : "opacity-0 group-hover:opacity-100 text-black"}`} />
+                                </button>
+                            ))
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
-        <div className={`h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} font-sans selection:bg-white selection:text-black overflow-hidden flex flex-col transition-colors duration-500`}>
+        <div className={`h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} font-sans selection:bg-white selection:text-black overflow-hidden flex flex-col lg:flex-row transition-colors duration-500`}>
             <div className={`absolute inset-0 noise opacity-[0.03] pointer-events-none ${isDarkMode ? "" : "invert"}`} />
 
-            {/* Top Navigation */}
-            <nav className={`h-20 flex items-center justify-between px-10 border-b ${isDarkMode ? "border-white bg-black/80" : "border-black bg-white/80"} backdrop-blur-2xl sticky top-0 z-[100]`}>
-                <div className="flex items-center gap-12">
-                    <Link href="/" className="flex items-center gap-4 group">
-                        <div className="h-[30px] w-[30px] flex items-center justify-center transition-transform group-hover:rotate-45 overflow-hidden">
+            {/* 1. Desktop Sidebar */}
+            <aside 
+                className={`hidden lg:flex flex-col h-screen shrink-0 border-r relative z-[60] ${
+                    isDarkMode 
+                        ? "border-white/10 bg-black/40 bg-gradient-to-b from-zinc-950 via-black to-zinc-950" 
+                        : "border-zinc-300 bg-white bg-gradient-to-b from-zinc-50 via-white to-zinc-50"
+                } backdrop-blur-3xl transition-all duration-300`}
+                style={{ width: isLeftSidebarCollapsed ? "80px" : `${leftSidebarWidth}px` }}
+            >
+                {/* Sidebar Header / Logo */}
+                <div className={`h-20 flex items-center border-b border-inherit px-8 ${isLeftSidebarCollapsed ? "justify-center px-0" : "justify-between"}`}>
+                    <Link href="/" className="flex items-center gap-3 group">
+                        <div className="h-8 w-8 flex items-center justify-center transition-transform group-hover:rotate-45 overflow-hidden shrink-0">
                             <img 
                                 src={isDarkMode ? "/dark.png" : "/light.png"} 
                                 alt="Logo" 
@@ -962,89 +1193,378 @@ const Dashboard = () => {
                                 style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
                             />
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className="h-5 flex items-center shrink-0 overflow-hidden">
-                                <img 
-                                    src={isDarkMode ? "/dark_text.png" : "/light_text.png"} 
-                                    alt="Rudranex" 
-                                    className="h-full object-contain"
-                                />
+                        {!isLeftSidebarCollapsed && (
+                            <div 
+                                className="flex items-center gap-1.5"
+                                style={{
+                                    transform: `scale(${Math.min(1, (leftSidebarWidth - 40) / 248)})`,
+                                    transformOrigin: "left center"
+                                }}
+                            >
+                                <div className="h-4.5 flex items-center shrink-0 overflow-hidden">
+                                    <img 
+                                        src={isDarkMode ? "/dark_text.png" : "/light_text.png"} 
+                                        alt="Rudranex" 
+                                        className="h-full object-contain"
+                                    />
+                                </div>
+                                <span className={`font-serif italic text-base tracking-tighter ${isDarkMode ? "text-white/40" : "text-black/40"}`}>admin</span>
                             </div>
-                            <span className={`font-serif italic text-xl tracking-tighter ${isDarkMode ? "text-white/40" : "text-black/40"}`}>admin</span>
-                        </div>
+                        )}
                     </Link>
-
-                    <div className="hidden lg:flex items-center gap-8">
-                        <button
-                            onClick={() => setView('visual')}
-                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'visual' ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
-                        >
-                            <LayoutDashboard className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Dashboard
-                        </button>
-                        <button
-                            onClick={() => setView('table')}
-                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'table' ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
-                        >
-                            <TableIcon className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Tabular
-                        </button>
-                        <button
-                            onClick={() => setView('plans')}
-                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'plans' ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
-                        >
-                            <Zap className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Plans
-                        </button>
-                        <button
-                            onClick={() => { setView('schools'); fetchSchoolsData(); }}
-                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'schools' ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
-                        >
-                            <Users className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Schools
-                        </button>
-                        <button
-                            onClick={() => { setView('enterprises' as any); fetchEnterprisesData(); }}
-                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === ('enterprises' as any) ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
-                        >
-                            <Building2 className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Enterprises
-                        </button>
-                        <button
-                            onClick={() => setView('sites')}
-                            className={`flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${view === 'sites' ? "text-[#00DDDD] font-bold" : `${isDarkMode ? "text-white/40 hover:text-white" : "text-black hover:text-gray-500"}`}`}
-                        >
-                            <FileText className={`h-3.5 w-3.5 ${isDarkMode ? "text-white" : "text-black"}`} /> Sites
-                        </button>
-                        {/* Requests text tab removed; icon moved to right cluster */}
-                    </div>
                 </div>
 
-                <div className="flex items-center gap-6">
-                    <button
-                        onClick={() => setShowCreateSchoolAdminModal(true)}
-                        className="px-4 py-2 bg-emerald-600 text-white border border-emerald-500 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-emerald-500 transition-all rounded-full flex items-center gap-2"
-                    >
-                        <Plus className="h-3.5 w-3.5" />
-                        Add School Admin
-                    </button>
-                    <button
-                        onClick={() => setShowCreateEnterpriseModal(true)}
-                        className="px-4 py-2 bg-orange-600 text-white border border-orange-500 text-[10px] font-mono uppercase tracking-[0.2em] hover:bg-orange-500 transition-all rounded-full flex items-center gap-2"
-                    >
-                        <Plus className="h-3.5 w-3.5" />
-                        Add Enterprise Admin
-                    </button>
-                    {/* Navbar refresh removed as requested */}
+                {/* Sidebar Menu Items */}
+                <div className="flex-1 overflow-y-auto px-4 py-6 space-y-2 custom-scrollbar">
+                    {!isLeftSidebarCollapsed && (
+                        <span className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-40 block px-4 mb-3">Navigation</span>
+                    )}
+                    
+                    {([
+                        { id: 'visual', label: 'Dashboard', icon: LayoutDashboard, action: () => setView('visual') },
+                        { id: 'table', label: 'Tabular', icon: TableIcon, action: () => setView('table') },
+                        { id: 'plans', label: 'Plans', icon: Zap, action: () => setView('plans') },
+                        { id: 'schools', label: 'Schools', icon: Users, action: () => { setView('schools'); fetchSchoolsData(); } },
+                        { id: 'enterprises', label: 'Enterprises', icon: Building2, action: () => { setView('enterprises' as any); fetchEnterprisesData(); } },
+                        { id: 'sites', label: 'Sites', icon: FileText, action: () => setView('sites') }
+                    ] as { id: typeof view; label: string; icon: any; action: () => void }[]).map((item) => {
+                        const Icon = item.icon;
+                        const isActive = view === item.id;
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => {
+                                    item.action();
+                                    setIsMobileSidebarOpen(false);
+                                }}
+                                className={`w-full flex items-center transition-all duration-300 group relative text-left ${
+                                    isLeftSidebarCollapsed 
+                                        ? "px-0 justify-center py-4 rounded-xl"
+                                        : "gap-4 px-4 py-3.5 rounded-2xl"
+                                } ${
+                                    isActive
+                                        ? "text-[#00DDDD] bg-[#00DDDD]/5 font-bold shadow-[inset_0_1px_1px_rgba(0,221,221,0.1)]"
+                                        : isDarkMode
+                                            ? "text-white/55 hover:text-white hover:bg-white/5"
+                                            : "text-black/60 hover:text-black hover:bg-black/5"
+                                }`}
+                                title={isLeftSidebarCollapsed ? item.label : undefined}
+                            >
+                                {/* Active Left Indicator Bar */}
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="activeBarDesktop"
+                                        className="absolute left-0 top-3 bottom-3 w-[3px] bg-[#00DDDD] rounded-r"
+                                    />
+                                )}
+                                <Icon className={`h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110 ${isActive ? "text-[#00DDDD]" : isDarkMode ? "text-white/40 group-hover:text-white" : "text-black/50 group-hover:text-black"}`} />
+                                {!isLeftSidebarCollapsed && (
+                                    <span className="truncate text-[10px] font-mono uppercase tracking-[0.25em]">{item.label}</span>
+                                )}
+                            </button>
+                        );
+                    })}
 
-                    <div className={`h-8 w-[1px] mx-2 ${isDarkMode ? "bg-white/20" : "bg-black/20"}`} />
+                    {/* Quick CTAs */}
+                    {isLeftSidebarCollapsed ? (
+                        <div className="pt-6 mt-6 border-t border-dashed border-inherit flex flex-col items-center gap-4">
+                            <button
+                                onClick={() => setShowCreateSchoolAdminModal(true)}
+                                className="h-10 w-10 rounded-xl bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center hover:bg-emerald-600 hover:text-white hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all duration-300"
+                                title="Add School Admin"
+                            >
+                                <Plus className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={() => setShowCreateEnterpriseModal(true)}
+                                className="h-10 w-10 rounded-xl bg-orange-600/10 text-orange-400 border border-orange-500/20 flex items-center justify-center hover:bg-orange-600 hover:text-white hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] transition-all duration-300"
+                                title="Add Enterprise Admin"
+                            >
+                                <Plus className="h-4 w-4" />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="pt-6 mt-6 border-t border-dashed border-inherit space-y-3">
+                            <span className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-40 block px-4">Actions</span>
+                            
+                            <button
+                                onClick={() => setShowCreateSchoolAdminModal(true)}
+                                className="w-full px-4 py-3 bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono uppercase tracking-[0.15em] hover:bg-emerald-600 hover:text-white hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all duration-300 rounded-2xl flex items-center gap-3 group text-left"
+                            >
+                                <div className="h-6 w-6 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors shrink-0">
+                                    <Plus className="h-3.5 w-3.5" />
+                                </div>
+                                <span className="truncate">Add School Admin</span>
+                            </button>
+                            
+                            <button
+                                onClick={() => setShowCreateEnterpriseModal(true)}
+                                className="w-full px-4 py-3 bg-orange-600/10 text-orange-400 border border-orange-500/20 text-[10px] font-mono uppercase tracking-[0.15em] hover:bg-orange-600 hover:text-white hover:border-orange-500 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] transition-all duration-300 rounded-2xl flex items-center gap-3 group text-left"
+                            >
+                                <div className="h-6 w-6 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-colors shrink-0">
+                                    <Plus className="h-3.5 w-3.5" />
+                                </div>
+                                <span className="truncate">Add Enterprise Admin</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
 
+
+
+                {/* Sidebar Footer System Core */}
+                <div className="p-6 border-t border-inherit flex justify-center">
+                    {isLeftSidebarCollapsed ? (
+                        <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse shrink-0" title="Core Node Online (NODE://IND-01)" />
+                    ) : (
+                        <div className={`p-4 rounded-2xl flex items-center gap-3.5 border w-full ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"}`}>
+                            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                            <div className="flex flex-col min-w-0">
+                                <span className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Global Core Node</span>
+                                <span className="text-[10px] font-bold font-mono tracking-tight text-emerald-400 truncate">NODE://IND-01</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                {/* Drag Resize Handle */}
+                {!isLeftSidebarCollapsed && (
+                    <div
+                        onMouseDown={handleLeftResizeMouseDown}
+                        className="absolute top-0 right-0 w-[4px] h-full cursor-col-resize hover:bg-[#00DDDD]/50 active:bg-[#00DDDD] transition-colors z-[70]"
+                    />
+                )}
+            </aside>
+
+            {/* 2. Mobile Sidebar Drawer */}
+            <AnimatePresence>
+                {isMobileSidebarOpen && (
+                    <div className="fixed inset-0 z-[150] lg:hidden flex">
+                        {/* Backdrop Overlay */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsMobileSidebarOpen(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+
+                        {/* Sidebar Slide-out Panel */}
+                        <motion.aside
+                            initial={{ x: "-100%" }}
+                            animate={{ x: 0 }}
+                            exit={{ x: "-100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className={`relative w-[280px] max-w-[85vw] h-full flex flex-col border-r z-10 ${
+                                isDarkMode 
+                                    ? "border-white/10 bg-zinc-950" 
+                                    : "border-black/10 bg-white"
+                            } transition-colors duration-500`}
+                        >
+                            {/* Close Toggler */}
+                            <button
+                                onClick={() => setIsMobileSidebarOpen(false)}
+                                className={`absolute top-5 right-5 p-2 rounded-xl border ${
+                                    isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"
+                                }`}
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+
+                            {/* Mobile Logo */}
+                            <div className="h-20 flex items-center px-8 border-b border-inherit">
+                                <Link href="/" className="flex items-center gap-3">
+                                    <div className="h-7 w-7 flex items-center justify-center">
+                                        <img 
+                                            src={isDarkMode ? "/dark.png" : "/light.png"} 
+                                            alt="Logo" 
+                                            className="h-full w-full object-contain"
+                                            style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="h-4 flex items-center shrink-0 overflow-hidden">
+                                            <img 
+                                                src={isDarkMode ? "/dark_text.png" : "/light_text.png"} 
+                                                alt="Rudranex" 
+                                                className="h-full object-contain"
+                                            />
+                                        </div>
+                                        <span className={`font-serif italic text-sm tracking-tighter ${isDarkMode ? "text-white/40" : "text-black/40"}`}>admin</span>
+                                    </div>
+                                </Link>
+                            </div>
+
+                            {/* Mobile Menu Items */}
+                            <div className="flex-1 overflow-y-auto px-4 py-6 space-y-2 custom-scrollbar border-inherit">
+                                <span className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-40 block px-4 mb-3">Navigation</span>
+                                
+                                {([
+                                    { id: 'visual', label: 'Dashboard', icon: LayoutDashboard, action: () => setView('visual') },
+                                    { id: 'table', label: 'Tabular', icon: TableIcon, action: () => setView('table') },
+                                    { id: 'plans', label: 'Plans', icon: Zap, action: () => setView('plans') },
+                                    { id: 'schools', label: 'Schools', icon: Users, action: () => { setView('schools'); fetchSchoolsData(); } },
+                                    { id: 'enterprises', label: 'Enterprises', icon: Building2, action: () => { setView('enterprises' as any); fetchEnterprisesData(); } },
+                                    { id: 'sites', label: 'Sites', icon: FileText, action: () => setView('sites') }
+                                ] as { id: typeof view; label: string; icon: any; action: () => void }[]).map((item) => {
+                                    const Icon = item.icon;
+                                    const isActive = view === item.id;
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => {
+                                                item.action();
+                                                setIsMobileSidebarOpen(false);
+                                            }}
+                                            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[10px] font-mono uppercase tracking-[0.25em] transition-all duration-300 relative text-left ${
+                                                isActive
+                                                    ? "text-[#00DDDD] bg-[#00DDDD]/5 font-bold"
+                                                    : isDarkMode
+                                                        ? "text-white/55 hover:text-white hover:bg-white/5"
+                                                        : "text-black/60 hover:text-black hover:bg-black/5"
+                                            }`}
+                                        >
+                                            {isActive && (
+                                                <motion.div
+                                                    layoutId="activeBarMobile"
+                                                    className="absolute left-0 top-3 bottom-3 w-[3px] bg-[#00DDDD] rounded-r"
+                                                />
+                                            )}
+                                            <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[#00DDDD]" : isDarkMode ? "text-white/40" : "text-black/50"}`} />
+                                            <span className="truncate">{item.label}</span>
+                                        </button>
+                                    );
+                                })}
+
+                                {/* Quick CTAs in Mobile Drawer */}
+                                <div className="pt-6 mt-6 border-t border-dashed border-inherit space-y-3">
+                                    <span className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-40 block px-4">Actions</span>
+                                    
+                                    <button
+                                        onClick={() => {
+                                            setShowCreateSchoolAdminModal(true);
+                                            setIsMobileSidebarOpen(false);
+                                        }}
+                                        className="w-full px-4 py-3.5 bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono uppercase tracking-[0.15em] rounded-2xl flex items-center gap-3 text-left"
+                                    >
+                                        <Plus className="h-4 w-4 shrink-0" />
+                                        <span className="truncate">Add School Admin</span>
+                                    </button>
+                                    
+                                    <button
+                                        onClick={() => {
+                                            setShowCreateEnterpriseModal(true);
+                                            setIsMobileSidebarOpen(false);
+                                        }}
+                                        className="w-full px-4 py-3.5 bg-orange-600/10 text-orange-400 border border-orange-500/20 text-[10px] font-mono uppercase tracking-[0.15em] rounded-2xl flex items-center gap-3 text-left"
+                                    >
+                                        <Plus className="h-4 w-4 shrink-0" />
+                                        <span className="truncate">Add Enterprise Admin</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Mobile Drawer Status */}
+                            <div className="p-6 border-t border-inherit">
+                                <div className={`p-4 rounded-2xl flex items-center gap-3 border ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"}`}>
+                                    <div className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-[8px] font-mono uppercase tracking-widest opacity-40">System Core Node</span>
+                                        <span className="text-[10px] font-bold font-mono text-emerald-400 truncate">NODE://IND-01</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.aside>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* 3. Main Content Wrapper */}
+            <div className="flex-1 h-screen flex flex-col overflow-hidden relative z-10">
+                
+                {/* Sticky Header Bar */}
+                <header className={`h-20 shrink-0 flex items-center justify-between px-6 md:px-10 border-b relative z-30 ${
+                    isDarkMode ? "border-white/10 bg-black/60" : "border-zinc-300 bg-white/60"
+                } backdrop-blur-2xl transition-colors duration-500`}>
+                    
                     <div className="flex items-center gap-4">
+                        {/* Hamburger Trigger for Mobile */}
+                        <button
+                            onClick={() => setIsMobileSidebarOpen(true)}
+                            className={`lg:hidden p-3 rounded-2xl border transition-all ${
+                                isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-black/5 text-black"
+                            }`}
+                        >
+                            <Menu className="h-4.5 w-4.5" />
+                        </button>
+
+                        {/* Desktop Left Sidebar Collapse Toggle Button */}
+                        <button
+                            onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
+                            className={`hidden lg:flex p-3 rounded-2xl border transition-all ${
+                                isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-black/5 text-black"
+                            }`}
+                            title={isLeftSidebarCollapsed ? "Expand Navigation Sidebar" : "Collapse Navigation Sidebar"}
+                        >
+                            {isLeftSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                        </button>
+
+                        {/* Breadcrumbs / Section Title for Desktop, Brand for Mobile */}
+                        <div className="hidden lg:flex flex-col">
+                            <span className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/30" : "text-black/45"}`}>
+                                Global System Console
+                            </span>
+                            <span className={`text-xs font-mono font-black uppercase tracking-[0.2em] flex items-center gap-2 ${
+                                isDarkMode ? "text-[#00DDDD]" : "text-black"
+                            }`}>
+                                System Nodes <ChevronRight className="h-3 w-3 opacity-40 text-inherit" /> {view}
+                            </span>
+                        </div>
+
+                        {/* Mobile Brand Logo */}
+                        <div className="lg:hidden flex items-center gap-2">
+                            <img src={isDarkMode ? "/dark.png" : "/light.png"} alt="Logo" className="h-5 w-5 object-contain" />
+                            <span className="text-[10px] font-mono font-black uppercase tracking-[0.2em] text-[#00DDDD]">
+                                RudraNex
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Right Hand Utilities Cluster */}
+                    <div className="flex items-center gap-3">
+                        
+                        {/* Right Sidebar Toggle Button (Desktop Users Sidebar, visual view only) */}
+                        {view === 'visual' && (
+                            <button
+                                onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
+                                className={`hidden lg:flex h-10 w-10 rounded-2xl border items-center justify-center transition-all ${
+                                    isRightSidebarCollapsed 
+                                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500 hover:text-black hover:border-emerald-500"
+                                        : isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-black/5 text-black"
+                                }`}
+                                title={isRightSidebarCollapsed ? "Show Users Sidebar" : "Collapse Users Sidebar"}
+                            >
+                                <Users className="h-4 w-4" />
+                            </button>
+                        )}
+
+                        {/* Dark/Light Mode Toggler */}
                         <div
                             onClick={() => setIsDarkMode(!isDarkMode)}
-                            className={`h-10 w-10 rounded-2xl border flex items-center justify-center cursor-pointer transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5" : "border-black/10 hover:bg-black/5"}`}
+                            className={`h-10 w-10 rounded-2xl border flex items-center justify-center cursor-pointer transition-all ${
+                                isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-black/5 text-black"
+                            }`}
+                            title="Toggle Theme"
                         >
                             {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
                         </div>
+
+                        {/* Notification Bell */}
                         <button
                             onClick={() => { setView('requests'); fetchRequests(); }}
-                            className={`relative h-10 w-10 rounded-2xl border flex items-center justify-center transition-all ${isDarkMode ? 'border-white/10 hover:bg-white/5' : 'border-black/10 hover:bg-black/5'}`}
-                            title="Notifications"
+                            className={`relative h-10 w-10 rounded-2xl border flex items-center justify-center transition-all ${
+                                isDarkMode ? 'border-white/10 hover:bg-white/5' : 'border-zinc-300 hover:bg-black/5'
+                            }`}
+                            title="Notifications & Requests"
                         >
                             <Bell className={`h-4 w-4 ${isDarkMode ? 'text-white' : 'text-black'}`} />
                             {requests.filter(r => r.status === 'pending').length > 0 && (
@@ -1053,518 +1573,551 @@ const Dashboard = () => {
                                 </span>
                             )}
                         </button>
+
+                        {/* Divider */}
+                        <div className={`h-6 w-[1px] mx-1 ${isDarkMode ? "bg-white/10" : "bg-zinc-300"}`} />
+
+                        {/* Logout Button */}
                         <div
                             onClick={handleAdminLogout}
                             className="h-10 w-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center group cursor-pointer overflow-hidden hover:bg-amber-500 transition-all"
+                            title="Logout Admin"
                         >
                             <LogOut className="h-4 w-4 text-amber-500 group-hover:text-black transition-colors" />
                         </div>
                     </div>
-                </div>
-            </nav>
+                </header>
 
-            <main className={`flex-1 overflow-y-auto p-10 relative z-10 w-full max-w-[1800px] mx-auto custom-scrollbar ${isDarkMode ? "text-white" : "text-black"}`}>
-                <AnimatePresence mode="wait">
-                    {view === 'visual' && (
-                        <motion.div
-                            key="visual"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            className="grid grid-cols-12 gap-8"
-                        >
-                            {/* Left Panel: Users List */}
-                            <div className="col-span-12 lg:col-span-3 space-y-8">
-                                <div className={`relative border border-zinc-800/50 p-8 rounded-[2.5rem] backdrop-blur-xl overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                                    }`}>
-                                    <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                                    <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                    <div className="flex items-center justify-between mb-8">
-                                        <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>System Users</h3>
-                                        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    </div>
-
-                                    <div className="relative mb-6">
-                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-20" />
-                                        <input
-                                            type="text"
-                                            placeholder="SEARCH ID / NAME..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className={`w-full pl-11 pr-4 py-3 text-[10px] font-mono tracking-widest ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"} border rounded-2xl focus:outline-none focus:border-emerald-500/50 transition-all`}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
-                                        {isLoading ? (
-                                            Array.from({ length: 5 }).map((_, i) => (
-                                                <div key={i} className={`h-12 w-full animate-pulse rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-                                            ))
-                                        ) : (
-                                            filteredUsers.map((user) => (
-                                                <button
-                                                    key={user.id}
-                                                    onClick={() => setSelectedUser(user)}
-                                                    className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group ${selectedUser?.id === user.id
-                                                        ? "bg-emerald-500 text-black font-bold shadow-[0_10px_30px_rgba(16,185,129,0.2)]"
-                                                        : (isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black")
-                                                        }`}
-                                                >
-                                                    <div className="flex items-center gap-4 text-left">
-                                                        <div className={`h-8 w-8 rounded-full border flex items-center justify-center ${selectedUser?.id === user.id ? "border-black/20" : isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                                                            <User className={`h-3.5 w-3.5 ${selectedUser?.id === user.id ? "text-black" : ""}`} />
+                {/* Main Content Layout Row (Main + Collapsible Right Sidebar) */}
+                <div className="flex-1 flex overflow-hidden relative z-10 w-full">
+                    {/* Main Scrollable View */}
+                    <main className={`flex-1 overflow-y-auto p-6 md:p-10 relative z-10 w-full max-w-[1800px] mx-auto custom-scrollbar ${isDarkMode ? "text-white" : "text-black"}`}>
+                    <AnimatePresence mode="wait">
+                        {view === 'visual' && (
+                            <motion.div
+                                key="visual"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                className="space-y-8 w-full"
+                            >
+                                {/* Main Content Area: Analytics */}
+                                <div className="col-span-12 space-y-8 w-full">
+                                    {selectedUser ? (
+                                        <>
+                                            {/* User Identity Header */}
+                                            <div className="relative pb-8 border-b border-zinc-800/20 dark:border-white/5 flex flex-col lg:flex-row lg:items-center justify-between gap-8 z-10 mb-8">
+                                                    <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+                                                        <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-[1.5rem] sm:rounded-[2rem] bg-emerald-500 flex items-center justify-center text-black shrink-0">
+                                                            <User className="h-8 w-8 sm:h-10 sm:w-10" />
                                                         </div>
-                                                        <div className="flex flex-col min-w-0">
-                                                            <span className="text-[11px] font-bold truncate tracking-tight">{user.name}</span>
-                                                            <span className={`text-[9px] font-mono uppercase truncate ${selectedUser?.id === user.id ? "text-black" : isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{user.subscription.plan}</span>
+                                                        <div className="min-w-0">
+                                                            <div className="flex flex-col sm:flex-row items-center gap-3 mb-2 justify-center sm:justify-start">
+                                                                <h2 className={`text-2xl sm:text-4xl font-display font-black tracking-tighter truncate ${isDarkMode ? "text-white" : "text-black"}`}>{selectedUser.name}</h2>
+                                                                <span className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-widest ${selectedUser.subscription.status === 'active' ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" :
+                                                                        selectedUser.subscription.status === 'frozen' ? "bg-red-500/20 text-red-400 border border-red-500/30" :
+                                                                            "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                                                    }`}>
+                                                                    {selectedUser.subscription.status}
+                                                                </span>
+                                                            </div>
+                                                            <p className={`text-xs sm:text-sm font-mono flex items-center justify-center sm:justify-start gap-2 uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"} truncate`}>
+                                                                <Mail className="h-3.5 w-3.5 shrink-0" /> {selectedUser.email}
+                                                            </p>
+                                                            <p className={`text-[9px] sm:text-[10px] font-mono mt-1 uppercase tracking-widest ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"} truncate`}>UUID: {selectedUser.id}</p>
                                                         </div>
                                                     </div>
-                                                    <ChevronRight className={`h-3.5 w-3.5 transition-transform ${selectedUser?.id === user.id ? "translate-x-1 text-black" : isDarkMode ? "opacity-0 group-hover:opacity-100 text-white" : "opacity-0 group-hover:opacity-100 text-black"}`} />
-                                                </button>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className={`relative border border-zinc-800/50 p-8 rounded-[2.5rem] backdrop-blur-xl text-center overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                                    }`}>
-                                    <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                                    <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                    <Database className={`h-8 w-8 mx-auto mb-4 ${isDarkMode ? "opacity-20 text-white" : "opacity-30 text-black"}`} />
-                                    <h4 className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>System Core</h4>
-                                    <p className={`text-xs font-bold mt-2 ${isDarkMode ? "text-white" : "text-black"}`}>Active Node: IND-01</p>
-                                </div>
-                            </div>
-
-                            {/* Center Panel: Analytics */}
-                            <div className="col-span-12 lg:col-span-9 space-y-8">
-                                {selectedUser ? (
-                                    <>
-                                        {/* User Identity Header */}
-                                        <div className={`relative border border-zinc-800/50 p-10 rounded-[3rem] overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                                            }`}>
-                                            <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                                            <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full" />
-                                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative z-10">
-                                                <div className="flex items-center gap-8">
-                                                    <div className="h-24 w-24 rounded-[2rem] bg-emerald-500 flex items-center justify-center text-black">
-                                                        <User className="h-10 w-10" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-3 mb-2">
-                                                            <h2 className={`text-4xl font-display font-black tracking-tighter ${isDarkMode ? "text-white" : "text-black"}`}>{selectedUser.name}</h2>
-                                                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-widest ${selectedUser.subscription.status === 'active' ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" :
-                                                                    selectedUser.subscription.status === 'frozen' ? "bg-red-500/20 text-red-400 border border-red-500/30" :
-                                                                        "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                                                                }`}>
-                                                                {selectedUser.subscription.status}
-                                                            </span>
-                                                        </div>
-                                                        <p className={`text-sm font-mono flex items-center gap-2 uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                                            <Mail className="h-3.5 w-3.5" /> {selectedUser.email}
-                                                        </p>
-                                                        <p className={`text-[10px] font-mono mt-1 uppercase tracking-widest ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>UUID: {selectedUser.id}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-wrap items-center gap-4">
-                                                    {selectedUser.is_frozen ? (
-                                                        <button
-                                                            onClick={() => handleUnfreezeUser(selectedUser.id)}
-                                                            disabled={isUnfreezing}
-                                                            className="px-8 py-4 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3"
-                                                        >
-                                                            <Zap className="h-4 w-4" /> {isUnfreezing ? 'UNFREEZING...' : 'UNFREEZE'}
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => handleFreezeUser(selectedUser.id)}
-                                                            disabled={isFreezing}
-                                                            className="px-8 py-4 bg-red-500 text-white text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3"
-                                                        >
-                                                            <Zap className="h-4 w-4" /> {isFreezing ? 'FREEZING...' : 'FREEZE'}
-                                                        </button>
-                                                    )}
-                                                    {confirmDeleteUserId === selectedUser.id ? (
-                                                        <div className="flex items-center gap-2">
+                                                    <div className="flex flex-wrap items-center justify-center lg:justify-end gap-4">
+                                                        {selectedUser.is_frozen ? (
                                                             <button
-                                                                onClick={() => handleDeleteUser(selectedUser.id)}
-                                                                disabled={deletingUserId === selectedUser.id}
-                                                                className="px-8 py-4 bg-red-600 text-white text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3 disabled:opacity-50"
+                                                                onClick={() => handleUnfreezeUser(selectedUser.id)}
+                                                                disabled={isUnfreezing}
+                                                                className="px-8 py-4 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3"
                                                             >
-                                                                {deletingUserId === selectedUser.id ? 'DELETING...' : 'CONFIRM DELETE'}
+                                                                <Zap className="h-4 w-4" /> {isUnfreezing ? 'UNFREEZING...' : 'UNFREEZE'}
                                                             </button>
+                                                        ) : (
                                                             <button
-                                                                onClick={() => setConfirmDeleteUserId(null)}
-                                                                className={`p-4 border rounded-2xl transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                                                onClick={() => handleFreezeUser(selectedUser.id)}
+                                                                disabled={isFreezing}
+                                                                className="px-8 py-4 bg-red-500 text-white text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3"
                                                             >
-                                                                <X className="h-4 w-4" />
+                                                                <Zap className="h-4 w-4" /> {isFreezing ? 'FREEZING...' : 'FREEZE'}
                                                             </button>
-                                                        </div>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => setConfirmDeleteUserId(selectedUser.id)}
-                                                            className="px-8 py-4 bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" /> DELETE
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Core Metrics Grid */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                            <StatCard
-                                                title="Subscription Plan"
-                                                value={selectedUser.subscription.plan.toUpperCase()}
-                                                icon={Briefcase}
-                                                color="#10b981"
-                                                subtext="Active"
-                                                isDarkMode={isDarkMode}
-                                            />
-                                            <StatCard
-                                                title="Audio Intelligence"
-                                                value={selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt}
-                                                icon={Activity}
-                                                color="#00DDDD"
-                                                subtext="TTS + STT"
-                                                isDarkMode={isDarkMode}
-                                            />
-                                            <StatCard
-                                                title="Intelligence Suite"
-                                                value={selectedUser.subscription.daily_codings + selectedUser.subscription.daily_visions}
-                                                icon={Cpu}
-                                                color="#f59e0b"
-                                                subtext="Code + Vision"
-                                                isDarkMode={isDarkMode}
-                                            />
-                                            <StatCard
-                                                title="Creative Suite"
-                                                value={selectedUser.subscription.monthly_images + selectedUser.subscription.monthly_flux}
-                                                icon={PieChart}
-                                                color="#8b5cf6"
-                                                subtext="Img + Flux"
-                                                isDarkMode={isDarkMode}
-                                            />
-                                        </div>
-
-                                        {/* Visualization Section */}
-                                        <div className="grid grid-cols-12 gap-8">
-                                            <div className={`relative col-span-12 lg:col-span-8 border border-zinc-800/50 p-10 rounded-[3rem] overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                                                }`}>
-                                                <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                                                <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                                <div className="flex items-center justify-between mb-12">
-                                                    <div>
-                                                        <h3 className={`text-lg font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Resource Utilization</h3>
-                                                        <p className={`text-[10px] font-mono uppercase tracking-[0.3em] mt-1 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Live spectral analysis of user assets</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                                                            <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Healthy</span>
-                                                        </div>
+                                                        )}
+                                                        {confirmDeleteUserId === selectedUser.id ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() => handleDeleteUser(selectedUser.id)}
+                                                                    disabled={deletingUserId === selectedUser.id}
+                                                                    className="px-8 py-4 bg-red-600 text-white text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3 disabled:opacity-50"
+                                                                >
+                                                                    {deletingUserId === selectedUser.id ? 'DELETING...' : 'CONFIRM DELETE'}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setConfirmDeleteUserId(null)}
+                                                                    className={`p-4 border rounded-2xl transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                                                >
+                                                                    <X className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => setConfirmDeleteUserId(selectedUser.id)}
+                                                                className="px-8 py-4 bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 active:scale-95 transition-all rounded-2xl flex items-center gap-3"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" /> DELETE
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
 
-                                                <div className="flex flex-wrap justify-center gap-16 lg:justify-between px-6">
-                                                    <ProgressCircle
-                                                        value={selectedUser.subscription.daily_chats}
-                                                        limit={selectedUser.subscription.tokens_limit}
-                                                        label="Daily Chat"
-                                                        color="#10b981"
-                                                        isDarkMode={isDarkMode}
-                                                    />
-                                                    <ProgressCircle
-                                                        value={selectedUser.subscription.monthly_images + selectedUser.subscription.monthly_flux}
-                                                        limit={selectedUser.subscription.images_limit}
-                                                        label="Image Lab"
-                                                        color="#8b5cf6"
-                                                        isDarkMode={isDarkMode}
-                                                    />
-                                                    <ProgressCircle
-                                                        value={selectedUser.subscription.daily_codings + selectedUser.subscription.daily_visions}
-                                                        limit={Math.max(selectedUser.subscription.daily_coding_limit + selectedUser.subscription.daily_vision_limit, 1)}
-                                                        label="AI Engine Load"
-                                                        color="#f59e0b"
-                                                        isDarkMode={isDarkMode}
-                                                    />
-                                                </div>
+                                            {/* Core Metrics Grid */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                                <StatCard
+                                                    title="Subscription Plan"
+                                                    value={selectedUser.subscription.plan.toUpperCase()}
+                                                    icon={Briefcase}
+                                                    color="#10b981"
+                                                    subtext="Active"
+                                                    isDarkMode={isDarkMode}
+                                                />
+                                                <StatCard
+                                                    title="Audio Intelligence"
+                                                    value={selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt}
+                                                    icon={Activity}
+                                                    color="#00DDDD"
+                                                    subtext="TTS + STT"
+                                                    isDarkMode={isDarkMode}
+                                                />
+                                                <StatCard
+                                                    title="Intelligence Suite"
+                                                    value={selectedUser.subscription.daily_codings + selectedUser.subscription.daily_visions}
+                                                    icon={Cpu}
+                                                    color="#f59e0b"
+                                                    subtext="Code + Vision"
+                                                    isDarkMode={isDarkMode}
+                                                />
+                                                <StatCard
+                                                    title="Creative Suite"
+                                                    value={selectedUser.subscription.monthly_images + selectedUser.subscription.monthly_flux}
+                                                    icon={PieChart}
+                                                    color="#8b5cf6"
+                                                    subtext="Img + Flux"
+                                                    isDarkMode={isDarkMode}
+                                                />
                                             </div>
 
-                                            <div className={`relative col-span-12 lg:col-span-4 border border-zinc-800/50 p-10 rounded-[3rem] flex flex-col justify-between overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                                                }`}>
-                                                <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                                                <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                                <div>
-                                                    <div className="flex items-center gap-3 mb-6">
-                                                        <TrendingUp className={`h-5 w-5 ${isDarkMode ? "text-emerald-400" : "text-emerald-600"}`} />
-                                                        <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>User Efficiency</h3>
+                                            {/* Visualization Section */}
+                                            <div className="grid grid-cols-12 gap-8">
+                                                <div className="col-span-12 lg:col-span-8 py-6">
+                                                    <div className="flex items-center justify-between mb-12">
+                                                        <div>
+                                                            <h3 className={`text-lg font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Resource Utilization</h3>
+                                                            <p className={`text-[10px] font-mono uppercase tracking-[0.3em] mt-1 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Live spectral analysis of user assets</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                                                <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Healthy</span>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <p className={`text-[10px] font-mono uppercase leading-relaxed tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                                        Chat usage: <b>{selectedUser.subscription.daily_chats}/{selectedUser.subscription.tokens_limit}</b> daily • {selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt > 0 ? `Audio: ${selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt} uses • ` : ''}Images: {selectedUser.subscription.monthly_images + selectedUser.subscription.monthly_flux}/{selectedUser.subscription.images_limit} monthly
-                                                    </p>
-                                                </div>
 
-                                                <div className="space-y-4 mt-8">
-                                                    <div className={`flex justify-between items-center text-[10px] font-mono tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                                        <span>SECURITY</span>
-                                                        <span>ENCRYPTED</span>
-                                                    </div>
-                                                    <div className={`h-1.5 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
-                                                        <motion.div
-                                                            className="h-full bg-emerald-500"
-                                                            initial={{ width: 0 }}
-                                                            animate={{ width: "100%" }}
-                                                            transition={{ duration: 2 }}
+                                                    <div className="flex flex-wrap justify-center gap-16 lg:justify-between px-6">
+                                                        <ProgressCircle
+                                                            value={selectedUser.subscription.daily_chats}
+                                                            limit={selectedUser.subscription.tokens_limit}
+                                                            label="Daily Chat"
+                                                            color="#10b981"
+                                                            isDarkMode={isDarkMode}
+                                                        />
+                                                        <ProgressCircle
+                                                            value={selectedUser.subscription.monthly_images + selectedUser.subscription.monthly_flux}
+                                                            limit={selectedUser.subscription.images_limit}
+                                                            label="Image Lab"
+                                                            color="#8b5cf6"
+                                                            isDarkMode={isDarkMode}
+                                                        />
+                                                        <ProgressCircle
+                                                            value={selectedUser.subscription.daily_codings + selectedUser.subscription.daily_visions}
+                                                            limit={Math.max(selectedUser.subscription.daily_coding_limit + selectedUser.subscription.daily_vision_limit, 1)}
+                                                            label="AI Engine Load"
+                                                            color="#f59e0b"
+                                                            isDarkMode={isDarkMode}
                                                         />
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
 
-                                        {/* Activity Log Section */}
-                                        <div className={`mt-8 border border-zinc-800/50 p-10 rounded-[3rem] overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"}`}>
-                                            <div className="flex items-center justify-between mb-8">
-                                                <div className="flex items-center gap-3">
-                                                    <Activity className={`h-5 w-5 ${isDarkMode ? "text-cyan-400" : "text-cyan-600"}`} />
-                                                    <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>Neural Interaction Log</h3>
-                                                </div>
-                                                <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Live Uplink • Selected User</span>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {platformActivity.filter(a => a.user_name === selectedUser.name).slice(0, 5).map((log, i) => (
-                                                    <div key={i} className={`flex items-center justify-between p-4 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"}`}>
-                                                        <div className="flex items-center gap-4">
-                                                            <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isDarkMode ? "bg-cyan-500/10 text-cyan-400" : "bg-cyan-500/10 text-cyan-600"}`}>
-                                                                <MessageSquare className="h-4 w-4" />
-                                                            </div>
-                                                            <div>
-                                                                <p className={`text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-white" : "text-black"}`}>{log.activity_type.replace('_', ' ')}</p>
-                                                                <p className={`text-[9px] font-mono uppercase tracking-widest mt-0.5 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{log.institution}</p>
-                                                            </div>
+                                                <div className="col-span-12 lg:col-span-4 py-6 flex flex-col justify-between">
+                                                    <div>
+                                                        <div className="flex items-center gap-3 mb-6">
+                                                            <TrendingUp className={`h-5 w-5 ${isDarkMode ? "text-emerald-400" : "text-emerald-600"}`} />
+                                                            <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>User Efficiency</h3>
                                                         </div>
-                                                        <span className={`text-[9px] font-mono ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                                            {new Date(log.created_at).toLocaleTimeString()}
-                                                        </span>
+                                                        <p className={`text-[10px] font-mono uppercase leading-relaxed tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                                            Chat usage: <b>{selectedUser.subscription.daily_chats}/{selectedUser.subscription.tokens_limit}</b> daily • {selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt > 0 ? `Audio: ${selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt} uses • ` : ''}Images: {selectedUser.subscription.monthly_images + selectedUser.subscription.monthly_flux}/{selectedUser.subscription.images_limit} monthly
+                                                        </p>
                                                     </div>
-                                                ))}
-                                                {platformActivity.filter(a => a.user_name === selectedUser.name).length === 0 && (
-                                                    <div className="py-8 text-center opacity-30">
-                                                        <p className="text-[10px] font-mono uppercase tracking-[0.2em]">No recent neural spikes detected</p>
+
+                                                    <div className="space-y-4 mt-8">
+                                                        <div className={`flex justify-between items-center text-[10px] font-mono tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                                            <span>SECURITY</span>
+                                                            <span>ENCRYPTED</span>
+                                                        </div>
+                                                        <div className={`h-1.5 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                                            <motion.div
+                                                                className="h-full bg-emerald-500"
+                                                                initial={{ width: 0 }}
+                                                                animate={{ width: "100%" }}
+                                                                transition={{ duration: 2 }}
+                                                            />
+                                                        </div>
                                                     </div>
-                                                )}
+                                                </div>
+                                            </div>
+
+                                            {/* Activity Log Section */}
+                                            <div className="mt-12 py-6">
+                                                <div className="flex items-center justify-between mb-8">
+                                                    <div className="flex items-center gap-3">
+                                                        <Activity className={`h-5 w-5 ${isDarkMode ? "text-cyan-400" : "text-cyan-600"}`} />
+                                                        <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>Neural Interaction Log</h3>
+                                                    </div>
+                                                    <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Live Uplink • Selected User</span>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {platformActivity.filter(a => a.user_name === selectedUser.name).slice(0, 5).map((log, i) => (
+                                                        <div key={i} className={`flex items-center justify-between p-4 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"}`}>
+                                                            <div className="flex items-center gap-4">
+                                                                <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isDarkMode ? "bg-cyan-500/10 text-cyan-400" : "bg-cyan-500/10 text-cyan-600"}`}>
+                                                                    <MessageSquare className="h-4 w-4" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className={`text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? "text-white" : "text-black"}`}>{log.activity_type.replace('_', ' ')}</p>
+                                                                    <p className={`text-[9px] font-mono uppercase tracking-widest mt-0.5 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{log.institution}</p>
+                                                                </div>
+                                                            </div>
+                                                            <span className={`text-[9px] font-mono ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                                                {new Date(log.created_at).toLocaleTimeString()}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                    {platformActivity.filter(a => a.user_name === selectedUser.name).length === 0 && (
+                                                        <div className="py-8 text-center opacity-30">
+                                                            <p className="text-[10px] font-mono uppercase tracking-[0.2em]">No recent neural spikes detected</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div>
+                                            <div className="flex flex-col justify-center h-[600px] text-center opacity-20">
+                                                <Cpu className="h-24 w-24 mb-6 mx-auto" />
+                                                <h2 className="text-2xl font-display font-black uppercase tracking-[0.5em]">Syncing Neural Net...</h2>
+                                                <p className="text-xs font-mono uppercase tracking-[0.3em] mt-4">Select a user node to initialize data </p>
                                             </div>
                                         </div>
-                                    </>
-                                ) : (
-                                    <div>
-                                        <div className="flex flex-col justify-center h-[600px] text-center opacity-20">
-                                            <Cpu className="h-24 w-24 mb-6 mx-auto" />
-                                            <h2 className="text-2xl font-display font-black uppercase tracking-[0.5em]">Syncing Neural Net...</h2>
-                                            <p className="text-xs font-mono uppercase tracking-[0.3em] mt-4">Select a user node to initialize data </p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
+                                    )}
+
+                                    {/* Mobile/Tablet Users List Panel */}
+                                    <UsersListPanel isMobile={true} />
+                                </div>
+                            </motion.div>
+                        )}
 
                     {view === 'table' && (
                         <motion.div
                             key="table"
-                            initial={{ opacity: 0, scale: 0.98 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.98 }}
-                            className={`relative border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                                }`}
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -15 }}
+                            className="space-y-4 w-full"
                         >
-                            <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
-                            <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                            <div className={`p-10 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isDarkMode ? "bg-black border-white/5" : "bg-white border-black/10"}`}>
-                                <div>
-                                    <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>User Transaction Logs</h2>
-                                    <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Full system registry • {users.length} active nodes</p>
+                            {/* Excel Menu & Operations Toolbar */}
+                            <div className={`flex flex-col sm:flex-row sm:items-center justify-between p-1.5 border ${isDarkMode ? "border-zinc-800 bg-zinc-950" : "border-zinc-300 bg-zinc-50"}`}>
+                                {/* Search Bar styled like Spreadsheet Actions */}
+                                <div className="relative w-full sm:w-auto">
+                                    <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`} />
+                                    <input
+                                        type="text"
+                                        placeholder="Sheet Search Filter..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className={`w-full sm:w-[280px] pl-8 pr-4 py-1.5 text-[10px] font-mono tracking-wider focus:outline-none border ${
+                                            isDarkMode 
+                                                ? "bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-emerald-500/50" 
+                                                : "bg-white border-zinc-300 text-black placeholder:text-zinc-400 focus:border-emerald-600"
+                                        }`}
+                                    />
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="relative">
-                                        <Search className={`absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`} />
-                                        <input
-                                            type="text"
-                                            placeholder="FILTER LOGS..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className={`pl-11 pr-8 py-3 text-[10px] font-mono tracking-widest border rounded-2xl focus:outline-none focus:border-emerald-500/50 min-w-[300px] ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black placeholder:text-black/40"
-                                                }`}
-                                        />
-                                    </div>
-                                    <button
-                                        onClick={handleExportCSV}
-                                        className={`px-6 py-3.5 text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:opacity-90 transition-all rounded-2xl ${isDarkMode ? "bg-white text-black" : "bg-black text-white"
-                                            }`}
-                                    >
-                                        Export CSV
-                                    </button>
+
+                                {/* Export CSV Button */}
+                                <button
+                                    onClick={handleExportCSV}
+                                    className={`mt-2 sm:mt-0 px-3 py-1.5 text-[10px] font-mono font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                                        isDarkMode 
+                                            ? "bg-zinc-900 hover:bg-zinc-800 text-emerald-400 border-zinc-800 hover:text-emerald-300" 
+                                            : "bg-white hover:bg-zinc-100 text-emerald-700 border-zinc-300 hover:text-emerald-800"
+                                    }`}
+                                >
+                                    <FileText className="h-3 w-3" />
+                                    Export CSV
+                                </button>
+                            </div>
+
+                            {/* Excel Formula Bar */}
+                            <div className={`flex items-center border-x border-b text-[10px] font-mono ${
+                                isDarkMode ? "border-zinc-800 bg-zinc-900/50 text-white" : "border-zinc-300 bg-zinc-100/50 text-black"
+                            }`}>
+                                {/* Cell Address Coordinate Box */}
+                                <div className={`w-14 text-center py-2 font-bold border-r select-none shrink-0 ${
+                                    isDarkMode ? "border-zinc-800 text-emerald-400" : "border-zinc-300 text-emerald-700"
+                                }`}>
+                                    {activeExcelCell ? `${activeExcelCell.colKey}${activeExcelCell.rowIdx}` : "A1"}
+                                </div>
+
+                                {/* fx indicator */}
+                                <div className={`px-3 select-none italic font-serif font-black text-xs shrink-0 ${isDarkMode ? "text-zinc-500 border-r border-zinc-800" : "text-zinc-400 border-r border-zinc-300"}`}>
+                                    fx
+                                </div>
+
+                                {/* Formula / Cell Content Box */}
+                                <div className="flex-1 px-4 py-2 font-sans truncate select-none text-[10.5px]">
+                                    {activeExcelCell ? getExcelCellValueFormula(activeExcelCell.rowIdx, activeExcelCell.colKey) : ""}
                                 </div>
                             </div>
 
-                            <div className="overflow-x-auto relative overflow-hidden group">
-                                <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
-                                <table className="w-full text-left border-collapse">
+                            {/* Crisp spreadsheet container without rounded corners and card styling */}
+                            <div className={`overflow-x-auto relative z-10 w-full border ${isDarkMode ? "border-zinc-800 bg-zinc-950" : "border-zinc-300 bg-white"}`}>
+                                <table className="w-full text-left border-collapse select-none">
                                     <thead>
-                                        <tr className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "bg-black text-white opacity-40" : "bg-white text-black opacity-60"}`}>
-                                            <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
-                                                <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:opacity-80 transition-all">
+                                        {/* Row 1: Excel Column Letters */}
+                                        <tr className={`text-[8px] font-mono uppercase text-center border-b ${isDarkMode ? "bg-zinc-900/60 border-zinc-800 text-white/40" : "bg-zinc-100 border-zinc-300 text-black/40"}`}>
+                                            <th className="p-2 border-r border-inherit w-10 text-center font-bold bg-zinc-200/50 dark:bg-zinc-900"></th>
+                                            {['A', 'B', 'C', 'D', 'E'].map(col => (
+                                                <th 
+                                                    key={col} 
+                                                    className={`p-2 border-r border-inherit text-center font-bold transition-colors ${
+                                                        activeExcelCell?.colKey === col
+                                                            ? "bg-emerald-500/10 text-emerald-400 font-black"
+                                                            : ""
+                                                    }`}
+                                                >
+                                                    {col}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                        {/* Row 2: Standard Headers */}
+                                        <tr className={`text-[9px] font-mono uppercase tracking-[0.2em] border-b ${isDarkMode ? "bg-zinc-900/40 border-zinc-800 text-white/50" : "bg-zinc-50 border-zinc-300 text-black/60"}`}>
+                                            <th className="p-3 border-r border-inherit text-center font-bold w-10 bg-zinc-200/30 dark:bg-zinc-900/60">#</th>
+                                            <th className="p-4 border-r border-inherit font-bold">
+                                                <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:opacity-85 transition-all">
                                                     Identity {sortField === "name" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                                                 </button>
                                             </th>
-                                            <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
-                                                <button onClick={() => toggleSort("plan")} className="flex items-center gap-1 hover:opacity-80 transition-all">
+                                            <th className="p-4 border-r border-inherit font-bold">
+                                                <button onClick={() => toggleSort("plan")} className="flex items-center gap-1 hover:opacity-85 transition-all">
                                                     Subscription {sortField === "plan" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                                                 </button>
                                             </th>
-                                            <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-center`}>Resources</th>
-                                            <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
-                                                <button onClick={() => toggleSort("latency")} className="flex items-center gap-1 hover:opacity-80 transition-all">
+                                            <th className="p-4 border-r border-inherit font-bold text-center">Resources</th>
+                                            <th className="p-4 border-r border-inherit font-bold">
+                                                <button onClick={() => toggleSort("latency")} className="flex items-center gap-1 hover:opacity-85 transition-all">
                                                     Chat / Usage {sortField === "latency" ? (sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                                                 </button>
                                             </th>
-                                            <th className={`p-8 font-bold border-b ${isDarkMode ? "border-white/5" : "border-black/10"} text-right`}>Administrative</th>
+                                            <th className="p-4 font-bold text-right">Administrative</th>
                                         </tr>
                                     </thead>
-                                    <tbody className={`text-[11px] font-mono uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
+                                    <tbody className={`text-[11px] font-mono tracking-tight ${isDarkMode ? "text-white/90" : "text-black/90"}`}>
                                         {isLoading ? (
                                             Array.from({ length: 5 }).map((_, i) => (
-                                                <tr key={i} className="animate-pulse opacity-20">
-                                                    <td colSpan={5} className={`p-8 border-b h-16 ${isDarkMode ? "border-white/5 bg-white/5" : "border-black/10 bg-black/5"}`} />
+                                                <tr key={i} className="animate-pulse border-b border-zinc-800 opacity-20">
+                                                    <td colSpan={6} className={`p-8 h-16 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
                                                 </tr>
                                             ))
                                         ) : paginatedUsers.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={5} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>Void Found</td>
+                                            <tr className="border-b border-zinc-800">
+                                                <td colSpan={6} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>Void Found</td>
                                             </tr>
                                         ) : (
-                                            paginatedUsers.map((user) => (
-                                                <tr key={user.id} className={`border-b transition-colors group ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/10 hover:bg-black/[0.02]"}`}>
-                                                    <td className="p-8">
-                                                        <div className="flex items-center gap-4">
-                                                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
-                                                                <User className={`h-4 w-4 ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`} />
-                                                            </div>
-                                                            <div className="flex flex-col">
-                                                                <span className={`text-[13px] font-bold tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{user.name}</span>
-                                                                <span className={`text-[9px] lowercase font-sans ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>{user.email}</span>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-8">
-                                                        <div className="flex flex-col gap-1.5">
-                                                            <span className={`text-[10px] font-black w-fit px-2 py-0.5 rounded border ${user.subscription.plan === 'pro' ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" : isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}>
-                                                                {user.subscription.plan}
-                                                            </span>
-                                                            <div className="flex items-center gap-2">
-                                                                <div className={`h-1 w-1 rounded-full ${user.subscription.status === 'active' ? "bg-emerald-500" :
-                                                                        user.subscription.status === 'frozen' ? "bg-red-500" :
-                                                                            "bg-amber-500"
-                                                                    }`} />
-                                                                <span className={`text-[9px] ${isDarkMode ? "text-white opacity-40" : "text-black opacity-60"}`}>{user.subscription.status}</span>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-8">
-                                                        <div className="flex flex-col gap-3 max-w-[200px] mx-auto">
-                                                            <div className={`flex justify-between text-[9px] ${isDarkMode ? "text-white opacity-40" : "text-black opacity-60"}`}>
-                                                                <span>TOKENS</span>
-                                                                <span>{((user.subscription.tokens_used / user.subscription.tokens_limit) * 100).toFixed(0)}%</span>
-                                                            </div>
-                                                            <div className={`h-1 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
-                                                                <div className={`h-full ${isDarkMode ? "bg-white/20" : "bg-black/20"}`} style={{ width: `${(user.subscription.tokens_used / user.subscription.tokens_limit) * 100}%` }} />
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-8">
-                                                        <div className="flex flex-col gap-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <MessageSquare className="h-3 w-3 text-blue-500/50" />
-                                                                <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{user.subscription.daily_chats}</span>
-                                                                <span className={`text-[9px] ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>/ {user.subscription.tokens_limit} chats</span>
-                                                            </div>
-                                                            <span className={`text-[8px] font-mono ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>
-                                                                {user.subscription.daily_codings}C · {user.subscription.daily_visions}V · {user.subscription.monthly_images}I
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                     <td className="p-8 text-right">
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setSelectedUser(user);
-                                                                    setView('visual');
-                                                                }}
-                                                                className={`px-5 py-2.5 border transition-all text-[9px] font-bold tracking-widest rounded-xl ${isDarkMode ? "border-white/5 hover:border-white/20 hover:bg-white/5 text-white" : "border-black/10 hover:border-black/20 hover:bg-black/5 text-black"}`}
-                                                            >
-                                                                Visualize
-                                                            </button>
-                                                            {confirmDeleteUserId === user.id ? (
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <button
-                                                                        onClick={() => handleDeleteUser(user.id)}
-                                                                        disabled={deletingUserId === user.id}
-                                                                        className="px-3 py-2 bg-red-500 text-white text-[9px] font-bold tracking-widest rounded-xl hover:bg-red-600 disabled:opacity-50 transition-all"
-                                                                    >
-                                                                        {deletingUserId === user.id ? '...' : 'CONFIRM'}
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => setConfirmDeleteUserId(null)}
-                                                                        className={`p-2 border rounded-xl transition-all text-[9px] ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
-                                                                    >
-                                                                        <X className="h-3 w-3" />
-                                                                    </button>
+                                            paginatedUsers.map((user, index) => {
+                                                const rowIndex = index + 1;
+                                                const globalRowIndex = (currentPage - 1) * USERS_PER_PAGE + index + 1;
+                                                return (
+                                                    <tr key={user.id} className={`border-b transition-colors ${isDarkMode ? "border-zinc-800 hover:bg-white/[0.01]" : "border-zinc-300 hover:bg-black/[0.01]"}`}>
+                                                        {/* Row index indicator */}
+                                                        <td className={`p-3 text-center text-[9px] font-mono border-r border-inherit w-10 select-none transition-colors ${
+                                                            activeExcelCell?.rowIdx === rowIndex
+                                                                ? "bg-emerald-500/15 text-emerald-500 font-bold"
+                                                                : isDarkMode ? "bg-zinc-950/40 text-white/30" : "bg-zinc-50 text-black/40"
+                                                        }`}>{globalRowIndex}</td>
+                                                        
+                                                        {/* Col A: Identity */}
+                                                        <td 
+                                                            onClick={() => setActiveExcelCell({ rowIdx: rowIndex, colKey: 'A' })}
+                                                            className={`p-4 border-r border-inherit cursor-cell relative transition-all ${
+                                                                activeExcelCell?.rowIdx === rowIndex && activeExcelCell?.colKey === 'A'
+                                                                    ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                    : ""
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`h-8 w-8 rounded-lg flex items-center justify-center border shrink-0 ${isDarkMode ? "bg-white/5 border-white/10 text-white/40" : "bg-black/5 border-zinc-300 text-black/40"}`}>
+                                                                    <User className="h-3.5 w-3.5" />
                                                                 </div>
-                                                            ) : (
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <span className="text-[12px] font-bold tracking-tight truncate">{user.name}</span>
+                                                                    <span className={`text-[9px] lowercase font-sans truncate ${isDarkMode ? "opacity-35 text-white" : "opacity-55 text-black"}`}>{user.email}</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Col B: Subscription */}
+                                                        <td 
+                                                            onClick={() => setActiveExcelCell({ rowIdx: rowIndex, colKey: 'B' })}
+                                                            className={`p-4 border-r border-inherit cursor-cell relative transition-all ${
+                                                                activeExcelCell?.rowIdx === rowIndex && activeExcelCell?.colKey === 'B'
+                                                                    ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                    : ""
+                                                            }`}
+                                                        >
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className={`text-[9px] font-black w-fit px-1.5 py-0.5 rounded border uppercase tracking-wider ${user.subscription.plan === 'pro' ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" : isDarkMode ? "border-white/10 text-white" : "border-zinc-300 text-black"}`}>
+                                                                    {user.subscription.plan}
+                                                                </span>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <div className={`h-1.5 w-1.5 rounded-full ${user.subscription.status === 'active' ? "bg-emerald-500" :
+                                                                            user.subscription.status === 'frozen' ? "bg-red-500" :
+                                                                                "bg-amber-500"
+                                                                        }`} />
+                                                                    <span className={`text-[9px] uppercase font-mono ${isDarkMode ? "text-white opacity-40" : "text-black opacity-60"}`}>{user.subscription.status}</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Col C: Resources */}
+                                                        <td 
+                                                            onClick={() => setActiveExcelCell({ rowIdx: rowIndex, colKey: 'C' })}
+                                                            className={`p-4 border-r border-inherit cursor-cell relative transition-all ${
+                                                                activeExcelCell?.rowIdx === rowIndex && activeExcelCell?.colKey === 'C'
+                                                                    ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                    : ""
+                                                            }`}
+                                                        >
+                                                            <div className="flex flex-col gap-1.5 max-w-[150px] mx-auto">
+                                                                <div className={`flex justify-between text-[8px] font-mono ${isDarkMode ? "text-white opacity-35" : "text-black opacity-55"}`}>
+                                                                    <span>TOKENS</span>
+                                                                    <span>{((user.subscription.tokens_used / user.subscription.tokens_limit) * 100).toFixed(0)}%</span>
+                                                                </div>
+                                                                <div className={`h-1 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                                                    <div className={`h-full ${isDarkMode ? "bg-white/20" : "bg-black/35"}`} style={{ width: `${(user.subscription.tokens_used / user.subscription.tokens_limit) * 100}%` }} />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Col D: Usage */}
+                                                        <td 
+                                                            onClick={() => setActiveExcelCell({ rowIdx: rowIndex, colKey: 'D' })}
+                                                            className={`p-4 border-r border-inherit cursor-cell relative transition-all ${
+                                                                activeExcelCell?.rowIdx === rowIndex && activeExcelCell?.colKey === 'D'
+                                                                    ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                    : ""
+                                                            }`}
+                                                        >
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <MessageSquare className="h-3 w-3 text-blue-500/40" />
+                                                                    <span className="font-bold">{user.subscription.daily_chats}</span>
+                                                                    <span className={`text-[9px] ${isDarkMode ? "opacity-35 text-white" : "opacity-55 text-black"}`}>/ {user.subscription.tokens_limit}</span>
+                                                                </div>
+                                                                <span className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>
+                                                                    {user.subscription.daily_codings}C · {user.subscription.daily_visions}V · {user.subscription.monthly_images}I
+                                                                </span>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Col E: Administrative */}
+                                                        <td 
+                                                            onClick={() => setActiveExcelCell({ rowIdx: rowIndex, colKey: 'E' })}
+                                                            className={`p-4 cursor-cell relative transition-all ${
+                                                                activeExcelCell?.rowIdx === rowIndex && activeExcelCell?.colKey === 'E'
+                                                                    ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                    : ""
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center justify-end gap-2">
                                                                 <button
-                                                                    onClick={() => setConfirmDeleteUserId(user.id)}
-                                                                    className={`p-2.5 border rounded-xl transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-white/5 text-white/40" : "border-black/10 text-black/40"}`}
-                                                                    title="Delete user"
+                                                                    onClick={() => {
+                                                                        setSelectedUser(user);
+                                                                        setView('visual');
+                                                                    }}
+                                                                    className={`px-4 py-2 border transition-all text-[9px] font-bold tracking-widest rounded-xl ${isDarkMode ? "border-zinc-800 hover:border-white/20 hover:bg-white/5 text-white" : "border-zinc-300 hover:border-black/20 hover:bg-black/5 text-black"}`}
                                                                 >
-                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                    Visualize
                                                                 </button>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                                {confirmDeleteUserId === user.id ? (
+                                                                    <div className="flex items-center gap-1">
+                                                                        <button
+                                                                            onClick={() => handleDeleteUser(user.id)}
+                                                                            disabled={deletingUserId === user.id}
+                                                                            className="px-3 py-2 bg-red-500 text-white text-[9px] font-bold tracking-widest rounded-xl hover:bg-red-600 disabled:opacity-50 transition-all"
+                                                                        >
+                                                                            {deletingUserId === user.id ? '...' : 'CONFIRM'}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => setConfirmDeleteUserId(null)}
+                                                                            className={`p-2 border rounded-xl transition-all text-[9px] ${isDarkMode ? "border-zinc-800 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-black/5 text-black"}`}
+                                                                        >
+                                                                            <X className="h-3 w-3" />
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => setConfirmDeleteUserId(user.id)}
+                                                                        className={`p-2 border rounded-xl transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-zinc-800 text-white/40" : "border-zinc-300 text-black/40"}`}
+                                                                        title="Delete user"
+                                                                    >
+                                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>
                             </div>
 
-                            {/* Pagination Controls */}
-                            <div className={`p-8 flex items-center justify-between border-t ${isDarkMode ? "bg-black border-white/10" : "bg-white border-black/10"}`}>
-                                <div className={`flex items-center gap-4 text-[9px] font-mono tracking-[0.3em] uppercase ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                    <Database className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
-                                    <span>Page {currentPage} // {totalPages || 1}</span>
-                                </div>
+                            {/* Excel Bottom Sheet Tab Bar & Status Indicator */}
+                            <div className={`flex items-center justify-center border-x border-b p-2 text-[10px] font-mono select-none ${
+                                isDarkMode ? "border-zinc-800 bg-zinc-950 text-white" : "border-zinc-300 bg-zinc-50 text-black"
+                            }`}>
+                                {/* Real-time Pagination controls resembling Excel page navigation */}
                                 <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                        className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                    </button>
-                                    <div className="flex gap-2">
+                                    <span className="text-[9px] opacity-40 uppercase tracking-widest">Page {currentPage} of {totalPages || 1}</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={currentPage === 1}
+                                            className={`p-1.5 border rounded disabled:opacity-20 transition-all ${isDarkMode ? "border-zinc-800 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-zinc-100 text-black"}`}
+                                        >
+                                            <ChevronLeft className="h-3.5 w-3.5" />
+                                        </button>
                                         {Array.from({ length: totalPages }, (_, i) => i + 1)
                                             .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
                                             .map((pageNum, i, arr) => (
                                                 <React.Fragment key={pageNum}>
-                                                    {i > 0 && arr[i - 1] !== pageNum - 1 && <span className={`opacity-20 px-2 ${isDarkMode ? "text-white" : "text-black"}`}>...</span>}
+                                                    {i > 0 && arr[i - 1] !== pageNum - 1 && <span className="opacity-20 px-1">...</span>}
                                                     <button
                                                         onClick={() => setCurrentPage(pageNum)}
-                                                        className={`h-10 w-10 text-[10px] font-mono rounded-xl transition-all ${currentPage === pageNum
-                                                            ? (isDarkMode ? 'bg-white text-black font-black' : 'bg-black text-white font-black')
-                                                            : (isDarkMode ? 'hover:bg-white/5 opacity-40 text-white' : 'hover:bg-black/5 opacity-60 text-black')
+                                                        className={`px-2.5 py-1 border rounded text-[9px] font-mono transition-all ${currentPage === pageNum
+                                                            ? 'bg-emerald-500 border-emerald-500 text-black font-black'
+                                                            : (isDarkMode ? 'border-zinc-800 hover:bg-white/5 opacity-40 text-white' : 'border-zinc-300 hover:bg-zinc-100 opacity-60 text-black')
                                                             }`}
                                                     >
                                                         {pageNum}
@@ -1572,14 +2125,42 @@ const Dashboard = () => {
                                                 </React.Fragment>
                                             ))
                                         }
+                                        <button
+                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={currentPage === totalPages || totalPages === 0}
+                                            className={`p-1.5 border rounded disabled:opacity-20 transition-all ${isDarkMode ? "border-zinc-800 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-zinc-100 text-black"}`}
+                                        >
+                                            <ChevronRightIcon className="h-3.5 w-3.5" />
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages || totalPages === 0}
-                                        className={`p-3 border rounded-xl disabled:opacity-20 hover:bg-white/5 transition-all ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}
-                                    >
-                                        <ChevronRightIcon className="h-4 w-4" />
-                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Excel Bottom Status Bar */}
+                            <div className={`flex flex-col sm:flex-row sm:items-center justify-between border-x border-b px-4 py-1.5 text-[9px] font-mono select-none ${
+                                isDarkMode ? "border-zinc-900 bg-zinc-900 text-zinc-400" : "border-zinc-300 bg-zinc-100 text-zinc-500"
+                            }`}>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                        <span className="font-bold text-emerald-500 uppercase">Ready</span>
+                                    </div>
+                                    <span>// CALCULATIONS ENGINE: ACTIVE</span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-1 sm:mt-0">
+                                    {/* Excel Metrics calculations of active page users */}
+                                    {paginatedUsers.length > 0 && (
+                                        <div className="flex items-center gap-3 border-r pr-4 sm:pr-6 border-inherit">
+                                            <span>SUM(daily_chats) = <b className={isDarkMode ? "text-white" : "text-black"}>{paginatedUsers.reduce((s, u) => s + u.subscription.daily_chats, 0)}</b></span>
+                                            <span>AVERAGE(daily_chats) = <b className={isDarkMode ? "text-white" : "text-black"}>{(paginatedUsers.reduce((s, u) => s + u.subscription.daily_chats, 0) / paginatedUsers.length).toFixed(1)}</b></span>
+                                        </div>
+                                    )}
+                                    {/* Zoom Level */}
+                                    <div className="flex items-center gap-2">
+                                        <span>Zoom:</span>
+                                        <span className="font-bold">100%</span>
+                                        <span className="opacity-45 select-none font-sans font-bold text-xs">- [========] +</span>
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
@@ -1592,23 +2173,23 @@ const Dashboard = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="p-4 sm:p-6 lg:p-10"
+                            className="p-4 md:p-8 lg:p-10"
                         >
-                            <div className={`border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                            <div className={`border ${isDarkMode ? "border-zinc-800/50" : "border-zinc-300"} rounded-[2rem] md:rounded-[3rem] overflow-hidden backdrop-blur-3xl ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
                                 }`}>
-                                <div className={`p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                <div className={`p-6 md:p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-zinc-300"}`}>
                                     <div>
                                         <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Site Pages</h2>
                                         <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Manage About Us, Privacy Policy, Terms & Contact</p>
                                     </div>
                                     <button
                                         onClick={fetchData}
-                                        className={`p-3 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
+                                        className={`p-3 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-black/5 text-black"}`}
                                     >
                                         <RefreshCw className={`h-4 w-4 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
                                     </button>
                                 </div>
-                                <div className="p-10">
+                                <div className="p-6 md:p-10">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {[
                                             { key: 'about_us', label: 'About Us', icon: 'ℹ️' },
@@ -1675,11 +2256,11 @@ const Dashboard = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="p-4 sm:p-6 lg:p-10"
+                            className="p-4 md:p-8 lg:p-10"
                         >
-                            <div className={`border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                            <div className={`border ${isDarkMode ? "border-zinc-800/50" : "border-zinc-300"} rounded-[2rem] md:rounded-[3rem] overflow-hidden backdrop-blur-3xl ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
                                 }`}>
-                                <div className={`p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                <div className={`p-6 md:p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-zinc-300"}`}>
                                     <div>
                                         <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>School Onboarding Requests</h2>
                                         <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
@@ -1688,7 +2269,7 @@ const Dashboard = () => {
                                     </div>
                                     <button
                                         onClick={fetchRequests}
-                                        className={`p-3 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"} ${isRequestsLoading ? "animate-spin" : ""}`}
+                                        className={`p-3 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-black/5 text-black"} ${isRequestsLoading ? "animate-spin" : ""}`}
                                     >
                                         <RefreshCw className={`h-4 w-4 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
                                     </button>
@@ -1777,462 +2358,1055 @@ const Dashboard = () => {
                         </motion.div>
                     )}
 
-                    {/* Schools View */}
+                                 {/* Schools View */}
                     {view === 'schools' && (
                         <motion.div
                             key="schools"
-                            initial={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, y: 15 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            className="p-0 sm:p-0 lg:p-0"
+                            exit={{ opacity: 0, y: -15 }}
+                            className="space-y-4 w-full"
                         >
-                            <div className={`${isDarkMode ? 'bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/20' : 'bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-black'} border rounded-none overflow-hidden backdrop-blur-3xl min-h-[calc(100vh-80px)]`}>
-                                <div className="p-4 lg:p-6">
-                                    {/* Controls: search, dates, rows per page */}
-                                    <div className="flex flex-col md:flex-row md:items-end gap-4 mb-6 justify-between">
-                                        <div className="flex-1 min-w-[220px]">
-                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>Search</label>
-                                            <div className="relative">
-                                                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${isDarkMode ? 'opacity-30 text-white' : 'opacity-40 text-black'}`} />
-                                                <input
-                                                    value={schoolsSearch}
-                                                    onChange={(e) => { setSchoolsSearch(e.target.value); setSchoolsPage(1); }}
-                                                    placeholder="Search name or code..."
-                                                    className={`w-full pl-9 pr-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white placeholder:text-white/30' : 'bg-black/5 border-black/10 text-black placeholder:text-black/40'}`}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>From</label>
-                                            <input type="date" value={schoolsDateFrom} onChange={(e) => { setSchoolsDateFrom(e.target.value); setSchoolsPage(1); }} className={`px-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'}`} />
-                                        </div>
-                                        <div>
-                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>To</label>
-                                            <input type="date" value={schoolsDateTo} onChange={(e) => { setSchoolsDateTo(e.target.value); setSchoolsPage(1); }} className={`px-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'}`} />
-                                        </div>
-                                        <div>
-                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>Rows</label>
-                                            <select value={schoolsRowsPerPage} onChange={(e) => { setSchoolsRowsPerPage(parseInt(e.target.value) || 10); setSchoolsPage(1); }} className={`px-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'}`}>
-                                                <option value={10}>10</option>
-                                                <option value={25}>25</option>
-                                                <option value={50}>50</option>
-                                                <option value={100}>100</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 opacity-0 select-none`}>Refresh</label>
-                                            <button
-                                                onClick={fetchSchoolsData}
-                                                className={`h-10 w-10 rounded-xl border flex items-center justify-center transition-all ${isDarkMode ? 'border-white/10 hover:bg-white/5 text-white' : 'border-black/10 hover:bg-black/5 text-black'} ${isSchoolsLoading ? 'animate-spin' : ''}`}
-                                                title="Refresh"
-                                            >
-                                                <RefreshCw className={`h-4 w-4 ${isDarkMode ? 'opacity-60' : 'opacity-60'}`} />
-                                            </button>
-                                        </div>
+                            {/* Excel Menu & Operations Toolbar */}
+                            <div className={`flex flex-col md:flex-row md:items-center justify-between p-1.5 border ${
+                                isDarkMode ? "border-zinc-800 bg-zinc-950" : "border-zinc-300 bg-zinc-50"
+                            }`}>
+                                {/* Search and Filter Toolbar */}
+                                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                                    <div className="relative w-full sm:w-[220px]">
+                                        <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`} />
+                                        <input
+                                            type="text"
+                                            placeholder="Sheet Search Filter..."
+                                            value={schoolsSearch}
+                                            onChange={(e) => { setSchoolsSearch(e.target.value); setSchoolsPage(1); }}
+                                            className={`w-full pl-8 pr-4 py-1.5 text-[10px] font-mono tracking-wider focus:outline-none border ${
+                                                isDarkMode 
+                                                    ? "bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-emerald-500/50" 
+                                                    : "bg-white border-zinc-300 text-black placeholder:text-zinc-400 focus:border-emerald-600"
+                                            }`}
+                                        />
                                     </div>
-                                    {/* Schools List */}
-                                    <div className={`relative border rounded-[1rem] overflow-hidden ${isDarkMode ? 'border-white/10 bg-white/[0.03]' : 'border-black bg-black/[0.02]'}`}>
-                                        <div className={`p-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black' } flex items-center justify-between`}>
-                                            <h3 className={`text-lg font-display font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>Schools</h3>
-                                            <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? 'opacity-40' : 'opacity-60'}`}>{processedSchools.length} results</span>
-                                        </div>
+                                    
+                                    {/* Date From */}
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`text-[9px] font-mono uppercase opacity-55 ${isDarkMode ? "text-white" : "text-black"}`}>From:</span>
+                                        <input 
+                                            type="date" 
+                                            value={schoolsDateFrom} 
+                                            onChange={(e) => { setSchoolsDateFrom(e.target.value); setSchoolsPage(1); }} 
+                                            className={`px-2 py-1 text-[10px] font-mono focus:outline-none border ${
+                                                isDarkMode ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-300 text-black"
+                                            }`} 
+                                        />
+                                    </div>
+
+                                    {/* Date To */}
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`text-[9px] font-mono uppercase opacity-55 ${isDarkMode ? "text-white" : "text-black"}`}>To:</span>
+                                        <input 
+                                            type="date" 
+                                            value={schoolsDateTo} 
+                                            onChange={(e) => { setSchoolsDateTo(e.target.value); setSchoolsPage(1); }} 
+                                            className={`px-2 py-1 text-[10px] font-mono focus:outline-none border ${
+                                                isDarkMode ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-300 text-black"
+                                            }`} 
+                                        />
+                                    </div>
+
+                                    {/* Rows */}
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`text-[9px] font-mono uppercase opacity-55 ${isDarkMode ? "text-white" : "text-black"}`}>Rows:</span>
+                                        <select 
+                                            value={schoolsRowsPerPage} 
+                                            onChange={(e) => { setSchoolsRowsPerPage(parseInt(e.target.value) || 10); setSchoolsPage(1); }} 
+                                            className={`px-2 py-1 text-[10px] font-mono focus:outline-none border ${
+                                                isDarkMode ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-300 text-black"
+                                            }`}
+                                        >
+                                            <option value={10}>10</option>
+                                            <option value={25}>25</option>
+                                            <option value={50}>50</option>
+                                            <option value={100}>100</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Refresh Button */}
+                                <div className="flex items-center gap-2 mt-2 md:mt-0">
+                                    <button
+                                        onClick={fetchSchoolsData}
+                                        className={`px-3 py-1.5 text-[10px] font-mono font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                                            isDarkMode 
+                                                ? "bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border-zinc-800" 
+                                                : "bg-white hover:bg-zinc-100 text-zinc-700 border-zinc-300"
+                                        } ${isSchoolsLoading ? "animate-spin" : ""}`}
+                                        title="Refresh Sheet"
+                                    >
+                                        <RefreshCw className="h-3 w-3" />
+                                        Refresh Sheet
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Excel Formula Bar */}
+                            <div className={`flex items-center border-x border-b text-[10px] font-mono ${
+                                isDarkMode ? "border-zinc-800 bg-zinc-900/50 text-white" : "border-zinc-300 bg-zinc-100/50 text-black"
+                            }`}>
+                                <div className={`w-14 text-center py-2 font-bold border-r select-none shrink-0 ${
+                                    isDarkMode ? "border-zinc-800 text-emerald-400" : "border-zinc-300 text-emerald-700"
+                                }`}>
+                                    {activeSchoolsCell ? `${activeSchoolsCell.colKey}${activeSchoolsCell.rowIdx}` : "A1"}
+                                </div>
+
+                                <div className={`px-3 select-none italic font-serif font-black text-xs shrink-0 ${isDarkMode ? "text-zinc-500 border-r border-zinc-800" : "text-zinc-400 border-r border-zinc-300"}`}>
+                                    fx
+                                </div>
+
+                                <div className="flex-1 px-4 py-2 font-sans truncate select-none text-[10.5px]">
+                                    {activeSchoolsCell ? getSchoolsExcelCellValueFormula(activeSchoolsCell.rowIdx, activeSchoolsCell.colKey) : ""}
+                                </div>
+                            </div>
+
+                            {/* Crisp Spreadsheet Container */}
+                            <div className={`overflow-x-auto relative z-10 w-full border ${isDarkMode ? "border-zinc-800 bg-zinc-950" : "border-zinc-300 bg-white"}`}>
+                                <table className="w-full text-left border-collapse select-none">
+                                    <thead>
+                                        {/* Column Letters Headers */}
+                                        <tr className={`text-[8px] font-mono uppercase text-center border-b ${isDarkMode ? "bg-zinc-900/60 border-zinc-800 text-white/40" : "bg-zinc-100 border-zinc-300 text-black/40"}`}>
+                                            <th className="p-2 border-r border-inherit w-10 text-center font-bold bg-zinc-200/50 dark:bg-zinc-900"></th>
+                                            {['A', 'B', 'C', 'D', 'E'].map(col => (
+                                                <th 
+                                                    key={col} 
+                                                    className={`p-2 border-r border-inherit text-center font-bold transition-colors ${
+                                                        activeSchoolsCell?.colKey === col
+                                                            ? "bg-emerald-500/10 text-emerald-400 font-black"
+                                                            : ""
+                                                    }`}
+                                                >
+                                                    {col}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                        {/* Row Column Headers */}
+                                        <tr className={`text-[9px] font-mono uppercase tracking-[0.2em] border-b ${isDarkMode ? "bg-zinc-900/40 border-zinc-800 text-white/50" : "bg-zinc-50 border-zinc-300 text-black/60"}`}>
+                                            <th className="p-3 border-r border-inherit text-center font-bold w-10 bg-zinc-200/30 dark:bg-zinc-900/60">#</th>
+                                            <th className="p-4 border-r border-inherit font-bold">
+                                                <button onClick={() => toggleSchoolsSort('name')} className="flex items-center gap-1 hover:opacity-85 transition-all">
+                                                    School Name {schoolsSortField === 'name' ? (schoolsSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                </button>
+                                            </th>
+                                            <th className="p-4 border-r border-inherit font-bold">
+                                                <button onClick={() => toggleSchoolsSort('code')} className="flex items-center gap-1 hover:opacity-85 transition-all">
+                                                    School Code {schoolsSortField === 'code' ? (schoolsSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                </button>
+                                            </th>
+                                            <th className="p-4 border-r border-inherit font-bold">
+                                                <button onClick={() => toggleSchoolsSort('created')} className="flex items-center gap-1 hover:opacity-85 transition-all">
+                                                    Onboard Date {schoolsSortField === 'created' ? (schoolsSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                </button>
+                                            </th>
+                                            <th className="p-4 font-bold text-right">Facilities Detail</th>
+                                            <th className="p-4 font-bold text-right">Delete</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className={`text-[11px] font-mono tracking-tight ${isDarkMode ? "text-white/90" : "text-black/90"}`}>
                                         {isSchoolsLoading ? (
-                                            <div className="p-10 text-center text-[10px] font-mono opacity-40">Loading...</div>
-                                        ) : processedSchools.length === 0 ? (
-                                            <div className="p-10 text-center text-[10px] font-mono opacity-40">No schools found</div>
+                                            Array.from({ length: 5 }).map((_, i) => (
+                                                <tr key={i} className="animate-pulse border-b border-zinc-800 opacity-20">
+                                                    <td colSpan={6} className={`p-8 h-16 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+                                                </tr>
+                                            ))
+                                        ) : visibleSchools.length === 0 ? (
+                                            <tr className="border-b border-zinc-800">
+                                                <td colSpan={6} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>No Schools Found</td>
+                                            </tr>
                                         ) : (
-                                            <div className="overflow-x-auto">
-                                                <table className={`w-full border ${isDarkMode ? 'border-white/10' : 'border-black'} rounded-xl overflow-hidden`}>
-                                                    <thead>
-                                                        <tr className={`${isDarkMode ? 'text-white/60' : 'text-black/70'} text-[9px] font-mono uppercase tracking-[0.3em] border-b ${isDarkMode ? 'border-white/10' : 'border-black'}`}>
-                                                            <th className="p-4 text-left">
-                                                                <button onClick={() => toggleSchoolsSort('name')} className="flex items-center gap-1 hover:opacity-80">
-                                                                    Name {schoolsSortField === 'name' ? (schoolsSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                                                                </button>
-                                                            </th>
-                                                            <th className="p-4 text-left">
-                                                                <button onClick={() => toggleSchoolsSort('code')} className="flex items-center gap-1 hover:opacity-80">
-                                                                    Code {schoolsSortField === 'code' ? (schoolsSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                                                                </button>
-                                                            </th>
-                                                            <th className="p-4 text-left">
-                                                                <button onClick={() => toggleSchoolsSort('created')} className="flex items-center gap-1 hover:opacity-80">
-                                                                    Created {schoolsSortField === 'created' ? (schoolsSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                                                                </button>
-                                                            </th>
+                                            visibleSchools.map((s, index) => {
+                                                const rowIndex = index + 1;
+                                                const globalRowIndex = (schoolsPage - 1) * schoolsRowsPerPage + index + 1;
+                                                return (
+                                                    <React.Fragment key={s.id}>
+                                                        <tr className={`border-b transition-colors ${isDarkMode ? "border-zinc-800 hover:bg-white/[0.01]" : "border-zinc-300 hover:bg-black/[0.01]"}`}>
+                                                            {/* Row Index */}
+                                                            <td className={`p-3 text-center text-[9px] font-mono border-r border-inherit w-10 select-none transition-colors ${
+                                                                activeSchoolsCell?.rowIdx === rowIndex
+                                                                    ? "bg-emerald-500/15 text-emerald-500 font-bold"
+                                                                    : isDarkMode ? "bg-zinc-950/40 text-white/30" : "bg-zinc-50 text-black/40"
+                                                            }`}>{globalRowIndex}</td>
+
+                                                            {/* Col A: School Name */}
+                                                            <td 
+                                                                onClick={() => setActiveSchoolsCell({ rowIdx: rowIndex, colKey: 'A' })}
+                                                                className={`p-4 border-r border-inherit cursor-cell relative transition-all ${
+                                                                    activeSchoolsCell?.rowIdx === rowIndex && activeSchoolsCell?.colKey === 'A'
+                                                                        ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <span className="text-[12px] font-bold tracking-tight">{s.school_name}</span>
+                                                            </td>
+
+                                                            {/* Col B: School Code */}
+                                                            <td 
+                                                                onClick={() => setActiveSchoolsCell({ rowIdx: rowIndex, colKey: 'B' })}
+                                                                className={`p-4 border-r border-inherit cursor-cell relative transition-all ${
+                                                                    activeSchoolsCell?.rowIdx === rowIndex && activeSchoolsCell?.colKey === 'B'
+                                                                        ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <span className="text-xs font-mono opacity-80">{s.school_code}</span>
+                                                            </td>
+
+                                                            {/* Col C: Onboard Date */}
+                                                            <td 
+                                                                onClick={() => setActiveSchoolsCell({ rowIdx: rowIndex, colKey: 'C' })}
+                                                                className={`p-4 border-r border-inherit cursor-cell relative transition-all ${
+                                                                    activeSchoolsCell?.rowIdx === rowIndex && activeSchoolsCell?.colKey === 'C'
+                                                                        ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <span className="text-xs font-mono opacity-60">{new Date(s.created_at).toLocaleDateString()}</span>
+                                                            </td>
+
+                                                            {/* Col D: Toggle Actions */}
+                                                            <td 
+                                                                onClick={() => setActiveSchoolsCell({ rowIdx: rowIndex, colKey: 'D' })}
+                                                                className={`p-4 cursor-cell relative transition-all ${
+                                                                    activeSchoolsCell?.rowIdx === rowIndex && activeSchoolsCell?.colKey === 'D'
+                                                                        ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center justify-end">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const willOpen = selectedSchool?.id !== s.id;
+                                                                            setSelectedSchool(prev => prev?.id === s.id ? null : s);
+                                                                            if (willOpen && !facultyBySchool[s.school_code]) {
+                                                                                loadFacultyForSchool(s.school_code);
+                                                                            }
+                                                                        }}
+                                                                        className={`px-3 py-1.5 border rounded text-[9px] font-mono tracking-widest uppercase font-bold transition-all ${
+                                                                            selectedSchool?.id === s.id
+                                                                                ? "bg-emerald-500 text-black border-emerald-500 font-black hover:bg-emerald-600"
+                                                                                : isDarkMode
+                                                                                    ? "border-zinc-800 hover:border-white/20 hover:bg-white/5 text-white"
+                                                                                    : "border-zinc-300 hover:border-black/20 hover:bg-black/5 text-black"
+                                                                        }`}
+                                                                    >
+                                                                        {selectedSchool?.id === s.id ? "CLOSE DETS" : "OPEN DETS"}
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+
+                                                            {/* Col E: Delete School */}
+                                                            <td 
+                                                                onClick={() => setActiveSchoolsCell({ rowIdx: rowIndex, colKey: 'E' })}
+                                                                className={`p-4 cursor-cell relative transition-all ${
+                                                                    activeSchoolsCell?.rowIdx === rowIndex && activeSchoolsCell?.colKey === 'E'
+                                                                        ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center justify-end">
+                                                                    <button
+                                                                        onClick={(eBtn) => {
+                                                                            eBtn.stopPropagation();
+                                                                            if (confirm(`Are you sure you want to delete the school "${s.school_name}"? All associated data will be permanently deleted.`)) {
+                                                                                handleDeleteSchool(s.id);
+                                                                            }
+                                                                        }}
+                                                                        className="p-1.5 bg-red-500/10 border border-red-500/20 rounded text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                                                                        title="Delete School"
+                                                                    >
+                                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
                                                         </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {visibleSchools.map((s) => (
-                                                            <React.Fragment key={s.id}>
-                                                                 <tr
-                                                                     onClick={() => {
-                                                                         const willOpen = selectedSchool?.id !== s.id;
-                                                                         setSelectedSchool(prev => prev?.id === s.id ? null : s);
-                                                                         if (willOpen && !facultyBySchool[s.school_code]) {
-                                                                             loadFacultyForSchool(s.school_code)
-                                                                         }
-                                                                     }}
-                                                                     className={`border-b cursor-pointer transition-colors ${isDarkMode ? 'border-white/10 hover:bg-white/[0.04]' : 'border-black/20 hover:bg-black/[0.03]'} ${selectedSchool?.id === s.id ? (isDarkMode ? 'bg-emerald-500/10' : 'bg-emerald-500/10') : ''}`}
-                                                                 >
-                                                                    <td className="p-4 text-sm font-bold">{s.school_name}</td>
-                                                                    <td className="p-4 text-xs font-mono opacity-80">{s.school_code}</td>
-                                                                    <td className="p-4 text-xs font-mono opacity-60">{new Date(s.created_at).toLocaleDateString()}</td>
-                                                                </tr>
-                                                                {selectedSchool?.id === s.id && (
-                                                                    <tr>
-                                                                        <td className="p-0" colSpan={3}>
-                                                                            <div className={`p-4 sm:p-6 ${isDarkMode ? 'bg-white/[0.02] border-t border-white/10' : 'bg-black/[0.02] border-t border-black'}`}>
-                                                                                <div className="flex items-center justify-between mb-3">
-                                                                                    <h4 className={`text-sm font-display font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>Admins</h4>
-                                                                                    <button
-                                                                                        onClick={() => setSelectedSchool(null)}
-                                                                                        className={`text-[10px] font-mono uppercase tracking-widest underline ${isDarkMode ? 'text-white/80 hover:text-white' : 'text-black/60 hover:text-black'}`}
-                                                                                    >
-                                                                                        Close
-                                                                                    </button>
-                                                                                </div>
-                                                                                  {schoolAdmins.filter(a => a.school_name === s.school_name).length === 0 ? (
-                                                                                      <div className={`text-[10px] font-mono opacity-60 ${isDarkMode ? 'text-white' : 'text-black'}`}>No admins for this school</div>
-                                                                                  ) : (
-                                                                                      <div className="overflow-x-auto">
-                                                                                          <table className={`w-full border ${isDarkMode ? 'border-white/10' : 'border-black'} rounded-xl overflow-hidden`}>
-                                                                                              <thead>
-                                                                                                  <tr className={`${isDarkMode ? 'text-white/60' : 'text-black/70'} text-[9px] font-mono uppercase tracking-[0.3em] border-b ${isDarkMode ? 'border-white/10' : 'border-black'}`}>
-                                                                                                      <th className="p-3 text-left">Name</th>
-                                                                                                      <th className="p-3 text-left">Admin Code</th>
-                                                                                                      <th className="p-3 text-left">Students</th>
-                                                                                                      <th className="p-3 text-left">Email</th>
-                                                                                                      <th className="p-3 text-right">Actions</th>
-                                                                                                      <th className="p-3 text-right">Delete</th>
-                                                                                                  </tr>
-                                                                                              </thead>
-                                                                                              <tbody>
-                                                                                                  {schoolAdmins.filter(a => a.school_name === s.school_name).map((a) => {
-                                                                                                      const isFrozen = frozenAdminIds.includes(a.id);
-                                                                                                      return (
-                                                                                                          <tr key={a.id} className={`${isDarkMode ? 'border-white/10' : 'border-black/20'} border-b`}>
-                                                                                                              <td className="p-3">
-                                                                                                                  <div className="flex items-center gap-2">
-                                                                                                                      <span className="text-sm font-bold">{a.name}</span>
-                                                                                                                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono uppercase tracking-widest ${isFrozen ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>{isFrozen ? 'frozen' : 'active'}</span>
-                                                                                                                  </div>
-                                                                                                              </td>
-                                                                                                              <td className="p-3 text-xs font-mono">{a.admin_code}</td>
-                                                                                                              <td className="p-3 text-xs font-mono">{a.student_count}</td>
-                                                                                                              <td className="p-3 text-xs font-mono opacity-80">{a.email || '-'}</td>
-                                                                                                               <td className="p-3 text-right">
-                                                                                                                  {isFrozen ? (
-                                                                                                                      <button
-                                                                                                                          onClick={() => handleUnfreezeAdmin(a.id)}
-                                                                                                                          disabled={freezingAdminId === a.id}
-                                                                                                                          className="px-3 py-1.5 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.2em] rounded-lg hover:scale-105 active:scale-95 transition-all"
-                                                                                                                      >
-                                                                                                                          {freezingAdminId === a.id ? 'UNFREEZING...' : 'UNFREEZE'}
-                                                                                                                      </button>
-                                                                                                                  ) : (
-                                                                                                                      <button
-                                                                                                                          onClick={() => handleFreezeAdmin(a.id)}
-                                                                                                                          disabled={freezingAdminId === a.id}
-                                                                                                                          className="px-3 py-1.5 bg-red-500 text-white text-[10px] font-mono uppercase tracking-[0.2em] rounded-lg hover:scale-105 active:scale-95 transition-all"
-                                                                                                                      >
-                                                                                                                          {freezingAdminId === a.id ? 'FREEZING...' : 'FREEZE'}
-                                                                                                                      </button>
-                                                                                                                  )}
-                                                                                                               </td>
-                                                                                                               <td className="p-3 text-right">
-                                                                                                                   {confirmDeleteSchoolAdminId === a.id ? (
-                                                                                                                       <div className="flex items-center justify-end gap-1">
-                                                                                                                           <button
-                                                                                                                               onClick={() => handleDeleteSchoolAdmin(a.id)}
-                                                                                                                               disabled={deletingSchoolAdminId === a.id}
-                                                                                                                               className="px-2 py-1.5 bg-red-600 text-white text-[9px] font-bold tracking-widest rounded-lg hover:bg-red-700 disabled:opacity-50 transition-all"
-                                                                                                                           >
-                                                                                                                               {deletingSchoolAdminId === a.id ? '...' : 'CONFIRM'}
-                                                                                                                           </button>
-                                                                                                                           <button
-                                                                                                                               onClick={() => setConfirmDeleteSchoolAdminId(null)}
-                                                                                                                               className={`p-1.5 border rounded-lg transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
-                                                                                                                           >
-                                                                                                                               <X className="h-3 w-3" />
-                                                                                                                           </button>
-                                                                                                                       </div>
-                                                                                                                   ) : (
-                                                                                                                       <button
-                                                                                                                           onClick={() => setConfirmDeleteSchoolAdminId(a.id)}
-                                                                                                                           className={`p-1.5 border rounded-lg transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-white/10 text-white/40" : "border-black/10 text-black/40"}`}
-                                                                                                                           title="Delete admin"
-                                                                                                                       >
-                                                                                                                           <Trash2 className="h-3 w-3" />
-                                                                                                                       </button>
-                                                                                                                   )}
-                                                                                                               </td>
-                                                                                                          </tr>
-                                                                                                      );
-                                                                                                  })}
-                                                                                              </tbody>
-                                                                                          </table>
-                                                                                      </div>
-                                                                                  )}
 
-                                                                                  {/* Faculty List */}
-                                                                                  <div className={`mt-6 ${isDarkMode ? '' : ''}`}>
-                                                                                      <div className="flex items-center justify-between mb-2">
-                                                                                          <h4 className={`text-sm font-display font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>Faculty</h4>
-                                                                                          {facultyLoadingCodes.has(s.school_code) && (
-                                                                                              <span className={`text-[10px] font-mono ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>Loading...</span>
-                                                                                          )}
-                                                                                      </div>
-                                                                                      {(!facultyBySchool[s.school_code] || facultyBySchool[s.school_code].length === 0) && !facultyLoadingCodes.has(s.school_code) ? (
-                                                                                          <div className={`text-[10px] font-mono opacity-60 ${isDarkMode ? 'text-white' : 'text-black'}`}>No faculty found</div>
-                                                                                      ) : (
-                                                                                          <div className="overflow-x-auto">
-                                                                                              <table className={`w-full border ${isDarkMode ? 'border-white/10' : 'border-black'} rounded-xl overflow-hidden`}>
-                                                                                                  <thead>
-                                                                                                      <tr className={`${isDarkMode ? 'text-white/60' : 'text-black/70'} text-[9px] font-mono uppercase tracking-[0.3em] border-b ${isDarkMode ? 'border-white/10' : 'border-black'}`}>
-                                                                                                          <th className="p-3 text-left">Name</th>
-                                                                                                          <th className="p-3 text-left">Admin Code</th>
-                                                                                                          <th className="p-3 text-left">Class</th>
-                                                                                                          <th className="p-3 text-left">Email</th>
-                                                                                                          <th className="p-3 text-right">Delete</th>
-                                                                                                      </tr>
-                                                                                                  </thead>
-                                                                                                  <tbody>
-                                                                                                      {(facultyBySchool[s.school_code] || []).map((f) => {
-                                                                                                          const actionKey = f.id || f.admin_code || "";
-                                                                                                          return (
-                                                                                                          <tr key={f.id || f.admin_code} className={`${isDarkMode ? 'border-white/10' : 'border-black/20'} border-b`}>
-                                                                                                              <td className="p-3 text-sm font-bold">{f.name}</td>
-                                                                                                              <td className="p-3 text-xs font-mono">{f.admin_code || '—'}</td>
-                                                                                                              <td className="p-3 text-xs font-mono">{f.assigned_class || '—'}</td>
-                                                                                                              <td className="p-3 text-xs font-mono opacity-80">{f.email || '—'}</td>
-                                                                                                              <td className="p-3 text-right">
-                                                                                                                  {confirmDeleteFacultyCode === actionKey ? (
-                                                                                                                      <div className="flex items-center justify-end gap-1">
-                                                                                                                          <button
-                                                                                                                              onClick={() => handleDeleteFacultyFromDashboard(f, s.school_code)}
-                                                                                                                              disabled={deletingFacultyCode === actionKey || !actionKey}
-                                                                                                                              className="px-2 py-1.5 bg-red-600 text-white text-[9px] font-bold tracking-widest rounded-lg hover:bg-red-700 disabled:opacity-50 transition-all"
-                                                                                                                          >
-                                                                                                                              {deletingFacultyCode === actionKey ? '...' : 'CONFIRM'}
-                                                                                                                          </button>
-                                                                                                                          <button
-                                                                                                                              onClick={() => setConfirmDeleteFacultyCode(null)}
-                                                                                                                              className={`p-1.5 border rounded-lg transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-black/10 hover:bg-black/5 text-black"}`}
-                                                                                                                          >
-                                                                                                                              <X className="h-3 w-3" />
-                                                                                                                          </button>
-                                                                                                                      </div>
-                                                                                                                  ) : (
-                                                                                                                      <button
-                                                                                                                          onClick={() => actionKey && setConfirmDeleteFacultyCode(actionKey)}
-                                                                                                                          className={`p-1.5 border rounded-lg transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-white/10 text-white/40" : "border-black/10 text-black/40"}`}
-                                                                                                                          title="Delete faculty"
-                                                                                                                          disabled={!actionKey}
-                                                                                                                      >
-                                                                                                                          <Trash2 className="h-3 w-3" />
-                                                                                                                      </button>
-                                                                                                                  )}
-                                                                                                              </td>
-                                                                                                          </tr>
-                                                                                                          );
-                                                                                                      })}
-                                                                                                  </tbody>
-                                                                                              </table>
-                                                                                          </div>
-                                                                                      )}
-                                                                                  </div>
-                                                                              </div>
-                                                                          </td>
-                                                                      </tr>
-                                                                  )}
-                                                            </React.Fragment>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                        {/* Expanded Details Row */}
+                                                        {selectedSchool?.id === s.id && (
+                                                            <tr className={isDarkMode ? "bg-zinc-950/40" : "bg-zinc-55/10"}>
+                                                                <td className="p-0 border-b border-zinc-200 dark:border-zinc-800" colSpan={6}>
+                                                                    <div className={`p-6 border-t ${isDarkMode ? 'border-zinc-800' : 'border-zinc-300'}`}>
+                                                                        {/* Admins Sub-Table Header */}
+                                                                        <div className="flex items-center justify-between mb-3">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Shield className="h-4 w-4 text-emerald-400" />
+                                                                                <h4 className={`text-xs font-display font-black uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-black'}`}>School Admins Database</h4>
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={() => setSelectedSchool(null)}
+                                                                                className={`text-[9px] font-mono uppercase tracking-widest underline ${isDarkMode ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black'}`}
+                                                                            >
+                                                                                COLLAPSE
+                                                                            </button>
+                                                                        </div>
+
+                                                                        {schoolAdmins.filter(a => a.school_name === s.school_name).length === 0 ? (
+                                                                            <div className={`p-4 border text-center text-[10px] font-mono opacity-50 ${isDarkMode ? "bg-white/5 border-zinc-850" : "bg-black/5 border-zinc-300"}`}>No admins assigned to this school node</div>
+                                                                        ) : (
+                                                                            <div className={`overflow-x-auto border ${isDarkMode ? "border-zinc-800 bg-zinc-900/20" : "border-zinc-300 bg-white"}`}>
+                                                                                <table className="w-full text-left border-collapse">
+                                                                                    <thead>
+                                                                                        <tr className={`text-[8.5px] font-mono uppercase tracking-widest border-b ${isDarkMode ? "bg-zinc-900 border-zinc-800 text-white/50" : "bg-zinc-100 border-zinc-300 text-black/60"}`}>
+                                                                                            <th className="p-2.5 border-r border-inherit font-bold">Name / Status</th>
+                                                                                            <th className="p-2.5 border-r border-inherit font-bold">Admin Code</th>
+                                                                                            <th className="p-2.5 border-r border-inherit font-bold">Students Count</th>
+                                                                                            <th className="p-2.5 border-r border-inherit font-bold">Email Interface</th>
+                                                                                            <th className="p-2.5 border-r border-inherit font-bold text-right">Actions</th>
+                                                                                            <th className="p-2.5 font-bold text-right">Purge</th>
+                                                                                        </tr>
+                                                                                    </thead>
+                                                                                    <tbody className="text-[10px] font-mono">
+                                                                                        {schoolAdmins.filter(a => a.school_name === s.school_name).map((a) => {
+                                                                                            const isFrozen = frozenAdminIds.includes(a.id);
+                                                                                            return (
+                                                                                                <tr key={a.id} className={`border-b transition-colors ${isDarkMode ? "border-zinc-800/80 hover:bg-white/[0.01]" : "border-zinc-300/80 hover:bg-black/[0.01]"}`}>
+                                                                                                    <td className="p-2.5 border-r border-inherit">
+                                                                                                        <div className="flex items-center gap-2">
+                                                                                                            <span className="font-bold">{a.name}</span>
+                                                                                                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-widest ${isFrozen ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>{isFrozen ? 'frozen' : 'active'}</span>
+                                                                                                        </div>
+                                                                                                    </td>
+                                                                                                    <td className="p-2.5 border-r border-inherit font-mono">{a.admin_code}</td>
+                                                                                                    <td className="p-2.5 border-r border-inherit font-mono">{a.student_count}</td>
+                                                                                                    <td className="p-2.5 border-r border-inherit font-mono opacity-80">{a.email || '—'}</td>
+                                                                                                    <td className="p-2.5 border-r border-inherit text-right">
+                                                                                                        {isFrozen ? (
+                                                                                                            <button
+                                                                                                                onClick={() => handleUnfreezeAdmin(a.id)}
+                                                                                                                disabled={freezingAdminId === a.id}
+                                                                                                                className="px-2 py-1 bg-emerald-500 text-black text-[9px] font-bold tracking-widest rounded hover:bg-emerald-600 disabled:opacity-50 transition-all"
+                                                                                                            >
+                                                                                                                {freezingAdminId === a.id ? '...' : 'UNFREEZE'}
+                                                                                                            </button>
+                                                                                                        ) : (
+                                                                                                            <button
+                                                                                                                onClick={() => handleFreezeAdmin(a.id)}
+                                                                                                                disabled={freezingAdminId === a.id}
+                                                                                                                className="px-2 py-1 bg-red-500 text-white text-[9px] font-bold tracking-widest rounded hover:bg-red-650 disabled:opacity-50 transition-all"
+                                                                                                            >
+                                                                                                                {freezingAdminId === a.id ? '...' : 'FREEZE'}
+                                                                                                            </button>
+                                                                                                        )}
+                                                                                                    </td>
+                                                                                                    <td className="p-2.5 text-right">
+                                                                                                        {confirmDeleteSchoolAdminId === a.id ? (
+                                                                                                            <div className="flex items-center justify-end gap-1">
+                                                                                                                <button
+                                                                                                                    onClick={() => handleDeleteSchoolAdmin(a.id)}
+                                                                                                                    disabled={deletingSchoolAdminId === a.id}
+                                                                                                                    className="px-2 py-1 bg-red-600 text-white text-[8px] font-bold tracking-widest rounded hover:bg-red-700 disabled:opacity-50 transition-all"
+                                                                                                                >
+                                                                                                                    {deletingSchoolAdminId === a.id ? '...' : 'CONFIRM'}
+                                                                                                                </button>
+                                                                                                                <button
+                                                                                                                    onClick={() => setConfirmDeleteSchoolAdminId(null)}
+                                                                                                                    className={`p-1 border rounded transition-all ${isDarkMode ? "border-zinc-800 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-black/5 text-black"}`}
+                                                                                                                >
+                                                                                                                    <X className="h-2.5 w-2.5" />
+                                                                                                                </button>
+                                                                                                            </div>
+                                                                                                        ) : (
+                                                                                                            <button
+                                                                                                                onClick={() => setConfirmDeleteSchoolAdminId(a.id)}
+                                                                                                                className={`p-1.5 border rounded transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-zinc-800 text-white/40" : "border-zinc-300 text-black/40"}`}
+                                                                                                                title="Delete school admin"
+                                                                                                            >
+                                                                                                                <Trash2 className="h-3 w-3" />
+                                                                                                            </button>
+                                                                                                        )}
+                                                                                                    </td>
+                                                                                                </tr>
+                                                                                            );
+                                                                                        })}
+                                                                                    </tbody>
+                                                                                </table>
+                                                                            </div>
+                                                                        )}
+
+                                                                        {/* Faculty Sub-Table Header */}
+                                                                        <div className="flex items-center justify-between mt-6 mb-3">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Users className="h-4 w-4 text-cyan-400" />
+                                                                                <h4 className={`text-xs font-display font-black uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-black'}`}>School Faculty Roster</h4>
+                                                                            </div>
+                                                                            {facultyLoadingCodes.has(s.school_code) && (
+                                                                                <span className="text-[9px] font-mono animate-pulse text-emerald-500">SYNCING DIRECTORY...</span>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {(!facultyBySchool[s.school_code] || facultyBySchool[s.school_code].length === 0) && !facultyLoadingCodes.has(s.school_code) ? (
+                                                                            <div className={`p-4 border text-center text-[10px] font-mono opacity-50 ${isDarkMode ? "bg-white/5 border-zinc-850" : "bg-black/5 border-zinc-300"}`}>No faculty records found in directory</div>
+                                                                        ) : (
+                                                                            <div className={`overflow-x-auto border ${isDarkMode ? "border-zinc-800 bg-zinc-900/20" : "border-zinc-300 bg-white"}`}>
+                                                                                <table className="w-full text-left border-collapse">
+                                                                                    <thead>
+                                                                                        <tr className={`text-[8.5px] font-mono uppercase tracking-widest border-b ${isDarkMode ? "bg-zinc-900 border-zinc-800 text-white/50" : "bg-zinc-100 border-zinc-300 text-black/60"}`}>
+                                                                                            <th className="p-2.5 border-r border-inherit font-bold">Faculty Name</th>
+                                                                                            <th className="p-2.5 border-r border-inherit font-bold">Admin Code Link</th>
+                                                                                            <th className="p-2.5 border-r border-inherit font-bold">Assigned Class</th>
+                                                                                            <th className="p-2.5 border-r border-inherit font-bold">Email ID</th>
+                                                                                            <th className="p-2.5 font-bold text-right">Purge</th>
+                                                                                        </tr>
+                                                                                    </thead>
+                                                                                    <tbody className="text-[10px] font-mono">
+                                                                                        {(facultyBySchool[s.school_code] || []).map((f) => {
+                                                                                            const actionKey = f.id || f.admin_code || "";
+                                                                                            return (
+                                                                                                <tr key={f.id || f.admin_code} className={`border-b transition-colors ${isDarkMode ? "border-zinc-800/80 hover:bg-white/[0.01]" : "border-zinc-300/80 hover:bg-black/[0.01]"}`}>
+                                                                                                    <td className="p-2.5 border-r border-inherit font-bold">{f.name}</td>
+                                                                                                    <td className="p-2.5 border-r border-inherit font-mono">{f.admin_code || '—'}</td>
+                                                                                                    <td className="p-2.5 border-r border-inherit font-mono">{f.assigned_class || '—'}</td>
+                                                                                                    <td className="p-2.5 border-r border-inherit font-mono opacity-80">{f.email || '—'}</td>
+                                                                                                    <td className="p-2.5 text-right">
+                                                                                                        {confirmDeleteFacultyCode === actionKey ? (
+                                                                                                            <div className="flex items-center justify-end gap-1">
+                                                                                                                <button
+                                                                                                                    onClick={() => handleDeleteFacultyFromDashboard(f, s.school_code)}
+                                                                                                                    disabled={deletingFacultyCode === actionKey || !actionKey}
+                                                                                                                    className="px-2 py-1 bg-red-600 text-white text-[8px] font-bold tracking-widest rounded hover:bg-red-700 disabled:opacity-50 transition-all"
+                                                                                                                >
+                                                                                                                    {deletingFacultyCode === actionKey ? '...' : 'CONFIRM'}
+                                                                                                                </button>
+                                                                                                                <button
+                                                                                                                    onClick={() => setConfirmDeleteFacultyCode(null)}
+                                                                                                                    className={`p-1 border rounded transition-all ${isDarkMode ? "border-zinc-800 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-black/5 text-black"}`}
+                                                                                                                >
+                                                                                                                    <X className="h-2.5 w-2.5" />
+                                                                                                                </button>
+                                                                                                            </div>
+                                                                                                        ) : (
+                                                                                                            <button
+                                                                                                                onClick={() => actionKey && setConfirmDeleteFacultyCode(actionKey)}
+                                                                                                                className={`p-1.5 border rounded transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-zinc-800 text-white/40" : "border-zinc-300 text-black/40"}`}
+                                                                                                                title="Delete faculty member"
+                                                                                                                disabled={!actionKey}
+                                                                                                            >
+                                                                                                                <Trash2 className="h-3 w-3" />
+                                                                                                            </button>
+                                                                                                        )}
+                                                                                                    </td>
+                                                                                                </tr>
+                                                                                            );
+                                                                                        })}
+                                                                                    </tbody>
+                                                                                </table>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </React.Fragment>
+                                                );
+                                            })
                                         )}
-                                        {/* Pagination */}
-                                        <div className={`p-4 flex items-center justify-between border-t ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
-                                            <div className={`text-[10px] font-mono ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>Page {schoolsPage} / {schoolsTotalPages}</div>
-                                            <div className="flex items-center gap-2">
-                                                <button onClick={() => setSchoolsPage(p => Math.max(1, p - 1))} disabled={schoolsPage === 1} className={`px-3 py-1.5 rounded-lg border text-[10px] ${isDarkMode ? 'border-white/10 text-white/80 disabled:opacity-30 hover:bg-white/5' : 'border-black/10 text-black/80 disabled:opacity-30 hover:bg-black/5'}`}>Prev</button>
-                                                <button onClick={() => setSchoolsPage(p => Math.min(schoolsTotalPages, p + 1))} disabled={schoolsPage === schoolsTotalPages} className={`px-3 py-1.5 rounded-lg border text-[10px] ${isDarkMode ? 'border-white/10 text-white/80 disabled:opacity-30 hover:bg-white/5' : 'border-black/10 text-black/80 disabled:opacity-30 hover:bg-black/5'}`}>Next</button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    </tbody>
+                                </table>
+                            </div>
 
-                                    {/* Admins are rendered inline within the selected school's row */}
+                            {/* Excel Bottom Sheet Tab Bar */}
+                            <div className={`flex items-center justify-between border-x border-b p-2 text-[10px] font-mono select-none ${
+                                isDarkMode ? "border-zinc-800 bg-zinc-950 text-white" : "border-zinc-300 bg-zinc-50 text-black"
+                            }`}>
+                                {/* Tabs */}
+                                <div className="flex items-center gap-1">
+                                    <div className={`px-3 py-1 border-t-2 border-emerald-500 bg-zinc-900/30 dark:bg-zinc-950 font-bold flex items-center gap-2 border-x ${
+                                        isDarkMode ? "border-zinc-800 text-white" : "border-zinc-300 text-black"
+                                    }`}>
+                                        <Database className="h-3 w-3 text-emerald-500" />
+                                        <span>Sheet2 (Schools Detail)</span>
+                                    </div>
+                                    <button className={`p-1 hover:bg-white/5 rounded transition-all opacity-50`}>
+                                        <Plus className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+
+                                {/* Real-time Pagination controls resembling Excel page navigation */}
+                                <div className="flex items-center gap-3">
+                                    <span className="text-[9px] opacity-40 uppercase tracking-widest">Page {schoolsPage} of {schoolsTotalPages || 1}</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            onClick={() => setSchoolsPage(p => Math.max(1, p - 1))}
+                                            disabled={schoolsPage === 1}
+                                            className={`p-1.5 border rounded disabled:opacity-20 transition-all ${isDarkMode ? "border-zinc-800 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-zinc-100 text-black"}`}
+                                        >
+                                            <ChevronLeft className="h-3.5 w-3.5" />
+                                        </button>
+                                        {Array.from({ length: schoolsTotalPages }, (_, i) => i + 1)
+                                            .filter(p => p === 1 || p === schoolsTotalPages || Math.abs(p - schoolsPage) <= 1)
+                                            .map((pageNum, i, arr) => (
+                                                <React.Fragment key={pageNum}>
+                                                    {i > 0 && arr[i - 1] !== pageNum - 1 && <span className="opacity-20 px-1">...</span>}
+                                                    <button
+                                                        onClick={() => setSchoolsPage(pageNum)}
+                                                        className={`px-2.5 py-1 border rounded text-[9px] font-mono transition-all ${schoolsPage === pageNum
+                                                            ? 'bg-emerald-500 border-emerald-500 text-black font-black'
+                                                            : (isDarkMode ? 'border-zinc-800 hover:bg-white/5 opacity-40 text-white' : 'border-zinc-300 hover:bg-zinc-100 opacity-60 text-black')
+                                                            }`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                </React.Fragment>
+                                            ))
+                                        }
+                                        <button
+                                            onClick={() => setSchoolsPage(p => Math.min(schoolsTotalPages, p + 1))}
+                                            disabled={schoolsPage === schoolsTotalPages || schoolsTotalPages === 0}
+                                            className={`p-1.5 border rounded disabled:opacity-20 transition-all ${isDarkMode ? "border-zinc-800 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-zinc-100 text-black"}`}
+                                        >
+                                            <ChevronRightIcon className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Excel Bottom Status Bar */}
+                            <div className={`flex flex-col sm:flex-row sm:items-center justify-between border-x border-b px-4 py-1.5 text-[9px] font-mono select-none ${
+                                isDarkMode ? "border-zinc-900 bg-zinc-900 text-zinc-400" : "border-zinc-300 bg-zinc-100 text-zinc-500"
+                            }`}>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                        <span className="font-bold text-emerald-500 uppercase">Ready</span>
+                                    </div>
+                                    <span>// SCHOOLS METRICS: ACTIVE</span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-1 sm:mt-0">
+                                    <span>TOTAL_SCHOOLS = <b className={isDarkMode ? "text-white" : "text-black"}>{processedSchools.length}</b></span>
+                                    <div className="flex items-center gap-2">
+                                        <span>Zoom:</span>
+                                        <span className="font-bold">100%</span>
+                                        <span className="opacity-45 select-none font-sans font-bold text-xs">- [========] +</span>
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
                     )}
 
-                    {/* Enterprises View */}
+                               {/* Enterprises View */}
                     {view === 'enterprises' && (
                         <motion.div
-                            initial={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, y: 15 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            className="p-10"
+                            exit={{ opacity: 0, y: -15 }}
+                            className="space-y-4 w-full"
                         >
-                            <div className={`${isDarkMode ? 'bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/20' : 'bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-black'} border rounded-none overflow-hidden backdrop-blur-3xl min-h-[calc(100vh-80px)]`}>
-                                <div className="p-4 lg:p-6">
-                                    {/* Stat Cards Row */}
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                                        <StatCard
-                                            title="Total Enterprises"
-                                            value={enterprises.length}
-                                            icon={Building2}
-                                            color="#00DDDD"
-                                            isDarkMode={isDarkMode}
-                                        />
-                                        <StatCard
-                                            title="Total Employees"
-                                            value={enterpriseStats.reduce((sum, item) => sum + (item.student_count || 0), 0)}
-                                            icon={Users}
-                                            color="#FFA500"
-                                            isDarkMode={isDarkMode}
-                                        />
-                                        <StatCard
-                                            title="AI Operations"
-                                            value={enterpriseStats.reduce((sum, item) => sum + (item.total_ai_requests || 0), 0)}
-                                            icon={Cpu}
-                                            color="#10B981"
-                                            isDarkMode={isDarkMode}
-                                        />
-                                        <StatCard
-                                            title="Active B2B Admins"
-                                            value={enterpriseStats.reduce((sum, item) => sum + (item.admin_count || 0), 0)}
-                                            icon={ShieldCheck}
-                                            color="#EC4899"
-                                            isDarkMode={isDarkMode}
-                                        />
-                                    </div>
-
-                                    {/* Controls: search, dates, rows per page */}
-                                    <div className="flex flex-col md:flex-row md:items-end gap-4 mb-6 justify-between">
-                                        <div className="flex-1 min-w-[220px]">
-                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>Search</label>
-                                            <div className="relative">
-                                                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${isDarkMode ? 'opacity-30 text-white' : 'opacity-40 text-black'}`} />
-                                                <input
-                                                    value={enterprisesSearch}
-                                                    onChange={(e) => { setEnterprisesSearch(e.target.value); setEnterprisesPage(1); }}
-                                                    placeholder="Search enterprise name or code..."
-                                                    className={`w-full pl-9 pr-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white placeholder:text-white/30' : 'bg-black/5 border-black/10 text-black placeholder:text-black/40'}`}
-                                                />
+                            {/* Stat Cards Flat Bordered Grid Row */}
+                            <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t border-x ${isDarkMode ? 'border-zinc-800 bg-zinc-950/20' : 'border-zinc-300 bg-zinc-50/20'}`}>
+                                {[
+                                    { title: "Total Enterprises", value: enterprises.length, icon: Building2, color: "#00DDDD" },
+                                    { title: "Total Employees", value: enterpriseStats.reduce((sum, item) => sum + (item.student_count || 0), 0), icon: Users, color: "#FFA500" },
+                                    { title: "AI Operations", value: enterpriseStats.reduce((sum, item) => sum + (item.total_ai_requests || 0), 0), icon: Cpu, color: "#10B981" },
+                                    { title: "Active B2B Admins", value: enterpriseStats.reduce((sum, item) => sum + (item.admin_count || 0), 0), icon: ShieldCheck, color: "#EC4899" }
+                                ].map((stat, idx) => {
+                                    const Icon = stat.icon;
+                                    return (
+                                        <div key={idx} className={`p-5 flex flex-col justify-between border-b ${
+                                            isDarkMode ? "border-zinc-800" : "border-zinc-300"
+                                        } ${idx < 3 ? "lg:border-r border-inherit" : ""}`}>
+                                            <div className="flex justify-between items-start">
+                                                <span className="text-[9px] font-mono uppercase tracking-[0.3em] opacity-45">{stat.title}</span>
+                                                <Icon className="h-4 w-4 opacity-35" style={{ color: stat.color }} />
                                             </div>
+                                            <div className="flex items-baseline gap-2 mt-2">
+                                                <h4 className={`text-2xl font-display font-black tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{stat.value}</h4>
+                                            </div>
+                                            <div className="h-[2px] w-6 mt-3 rounded-full" style={{ backgroundColor: stat.color }} />
                                         </div>
-                                        <div>
-                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>From</label>
-                                            <input type="date" value={enterprisesDateFrom} onChange={(e) => { setEnterprisesDateFrom(e.target.value); setEnterprisesPage(1); }} className={`px-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'}`} />
-                                        </div>
-                                        <div>
-                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>To</label>
-                                            <input type="date" value={enterprisesDateTo} onChange={(e) => { setEnterprisesDateTo(e.target.value); setEnterprisesPage(1); }} className={`px-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'}`} />
-                                        </div>
-                                        <div>
-                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? 'opacity-50' : 'opacity-60'}`}>Rows</label>
-                                            <select value={enterprisesRowsPerPage} onChange={(e) => { setEnterprisesRowsPerPage(parseInt(e.target.value) || 10); setEnterprisesPage(1); }} className={`px-3 py-2 text-xs font-mono rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'}`}>
-                                                <option value={10}>10</option>
-                                                <option value={25}>25</option>
-                                                <option value={50}>50</option>
-                                                <option value={100}>100</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className={`block text-[9px] font-mono uppercase tracking-widest mb-1 opacity-0 select-none`}>Refresh</label>
-                                            <button
-                                                onClick={fetchEnterprisesData}
-                                                className={`h-10 w-10 rounded-xl border flex items-center justify-center transition-all ${isDarkMode ? 'border-white/10 hover:bg-white/5 text-white' : 'border-black/10 hover:bg-black/5 text-black'} ${isEnterprisesLoading ? 'animate-spin' : ''}`}
-                                                title="Refresh"
-                                            >
-                                                <RefreshCw className={`h-4 w-4 ${isDarkMode ? 'opacity-60' : 'opacity-60'}`} />
-                                            </button>
-                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Excel Menu & Operations Toolbar */}
+                            <div className={`flex flex-col md:flex-row md:items-center justify-between p-1.5 border ${
+                                isDarkMode ? "border-zinc-800 bg-zinc-950" : "border-zinc-300 bg-zinc-50"
+                            }`}>
+                                {/* Search and Filter Toolbar */}
+                                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                                    <div className="relative w-full sm:w-[220px]">
+                                        <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`} />
+                                        <input
+                                            type="text"
+                                            placeholder="Sheet Search Filter..."
+                                            value={enterprisesSearch}
+                                            onChange={(e) => { setEnterprisesSearch(e.target.value); setEnterprisesPage(1); }}
+                                            className={`w-full pl-8 pr-4 py-1.5 text-[10px] font-mono tracking-wider focus:outline-none border ${
+                                                isDarkMode 
+                                                    ? "bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-emerald-500/50" 
+                                                    : "bg-white border-zinc-300 text-black placeholder:text-zinc-400 focus:border-emerald-600"
+                                            }`}
+                                        />
+                                    </div>
+                                    
+                                    {/* Date From */}
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`text-[9px] font-mono uppercase opacity-55 ${isDarkMode ? "text-white" : "text-black"}`}>From:</span>
+                                        <input 
+                                            type="date" 
+                                            value={enterprisesDateFrom} 
+                                            onChange={(e) => { setEnterprisesDateFrom(e.target.value); setEnterprisesPage(1); }} 
+                                            className={`px-2 py-1 text-[10px] font-mono focus:outline-none border ${
+                                                isDarkMode ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-300 text-black"
+                                            }`} 
+                                        />
                                     </div>
 
-                                    {/* Table View */}
-                                    <div className={`relative border rounded-[1rem] overflow-hidden ${isDarkMode ? 'border-white/10 bg-white/[0.03]' : 'border-black bg-black/[0.02]'}`}>
-                                        <div className={`p-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black'} flex items-center justify-between`}>
-                                            <h3 className={`text-lg font-display font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>Enterprises</h3>
-                                            <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? 'opacity-40' : 'opacity-60'}`}>{processedEnterprises.length} results</span>
-                                        </div>
+                                    {/* Date To */}
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`text-[9px] font-mono uppercase opacity-55 ${isDarkMode ? "text-white" : "text-black"}`}>To:</span>
+                                        <input 
+                                            type="date" 
+                                            value={enterprisesDateTo} 
+                                            onChange={(e) => { setEnterprisesDateTo(e.target.value); setEnterprisesPage(1); }} 
+                                            className={`px-2 py-1 text-[10px] font-mono focus:outline-none border ${
+                                                isDarkMode ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-300 text-black"
+                                            }`} 
+                                        />
+                                    </div>
 
+                                    {/* Rows */}
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`text-[9px] font-mono uppercase opacity-55 ${isDarkMode ? "text-white" : "text-black"}`}>Rows:</span>
+                                        <select 
+                                            value={enterprisesRowsPerPage} 
+                                            onChange={(e) => { setEnterprisesRowsPerPage(parseInt(e.target.value) || 10); setEnterprisesPage(1); }} 
+                                            className={`px-2 py-1 text-[10px] font-mono focus:outline-none border ${
+                                                isDarkMode ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-300 text-black"
+                                            }`}
+                                        >
+                                            <option value={10}>10</option>
+                                            <option value={25}>25</option>
+                                            <option value={50}>50</option>
+                                            <option value={100}>100</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Refresh Button */}
+                                <div className="flex items-center gap-2 mt-2 md:mt-0">
+                                    <button
+                                        onClick={fetchEnterprisesData}
+                                        className={`px-3 py-1.5 text-[10px] font-mono font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                                            isDarkMode 
+                                                ? "bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border-zinc-800" 
+                                                : "bg-white hover:bg-zinc-100 text-zinc-700 border-zinc-300"
+                                        } ${isEnterprisesLoading ? "animate-spin" : ""}`}
+                                        title="Refresh Sheet"
+                                    >
+                                        <RefreshCw className="h-3 w-3" />
+                                        Refresh Sheet
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Excel Formula Bar */}
+                            <div className={`flex items-center border-x border-b text-[10px] font-mono ${
+                                isDarkMode ? "border-zinc-800 bg-zinc-900/50 text-white" : "border-zinc-300 bg-zinc-100/50 text-black"
+                            }`}>
+                                <div className={`w-14 text-center py-2 font-bold border-r select-none shrink-0 ${
+                                    isDarkMode ? "border-zinc-800 text-emerald-400" : "border-zinc-300 text-emerald-700"
+                                }`}>
+                                    {activeEnterprisesCell ? `${activeEnterprisesCell.colKey}${activeEnterprisesCell.rowIdx}` : "A1"}
+                                </div>
+
+                                <div className={`px-3 select-none italic font-serif font-black text-xs shrink-0 ${isDarkMode ? "text-zinc-500 border-r border-zinc-800" : "text-zinc-400 border-r border-zinc-300"}`}>
+                                    fx
+                                </div>
+
+                                <div className="flex-1 px-4 py-2 font-sans truncate select-none text-[10.5px]">
+                                    {activeEnterprisesCell ? getEnterprisesExcelCellValueFormula(activeEnterprisesCell.rowIdx, activeEnterprisesCell.colKey) : ""}
+                                </div>
+                            </div>
+
+                            {/* Crisp Spreadsheet Container */}
+                            <div className={`overflow-x-auto relative z-10 w-full border ${isDarkMode ? "border-zinc-800 bg-zinc-950" : "border-zinc-300 bg-white"}`}>
+                                <table className="w-full text-left border-collapse select-none">
+                                    <thead>
+                                        {/* Column Letters Headers */}
+                                        <tr className={`text-[8px] font-mono uppercase text-center border-b ${isDarkMode ? "bg-zinc-900/60 border-zinc-800 text-white/40" : "bg-zinc-100 border-zinc-300 text-black/40"}`}>
+                                            <th className="p-2 border-r border-inherit w-10 text-center font-bold bg-zinc-200/50 dark:bg-zinc-900"></th>
+                                            {['A', 'B', 'C', 'D', 'E', 'F', 'G'].map(col => (
+                                                <th 
+                                                    key={col} 
+                                                    className={`p-2 border-r border-inherit text-center font-bold transition-colors ${
+                                                        activeEnterprisesCell?.colKey === col
+                                                            ? "bg-emerald-500/10 text-emerald-400 font-black"
+                                                            : ""
+                                                    }`}
+                                                >
+                                                    {col}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                        {/* Row Column Headers */}
+                                        <tr className={`text-[9px] font-mono uppercase tracking-[0.2em] border-b ${isDarkMode ? "bg-zinc-900/40 border-zinc-800 text-white/50" : "bg-zinc-50 border-zinc-300 text-black/60"}`}>
+                                            <th className="p-3 border-r border-inherit text-center font-bold w-10 bg-zinc-200/30 dark:bg-zinc-900/60">#</th>
+                                            <th className="p-4 border-r border-inherit font-bold">
+                                                <button onClick={() => toggleEnterprisesSort('name')} className="flex items-center gap-1 hover:opacity-85 transition-all">
+                                                    Enterprise Name {enterprisesSortField === 'name' ? (enterprisesSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                </button>
+                                            </th>
+                                            <th className="p-4 border-r border-inherit font-bold">
+                                                <button onClick={() => toggleEnterprisesSort('code')} className="flex items-center gap-1 hover:opacity-85 transition-all">
+                                                    Enterprise Code {enterprisesSortField === 'code' ? (enterprisesSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                </button>
+                                            </th>
+                                            <th className="p-4 border-r border-inherit font-bold text-center">Employees</th>
+                                            <th className="p-4 border-r border-inherit font-bold text-center">Admins</th>
+                                            <th className="p-4 border-r border-inherit font-bold text-center">AI Requests</th>
+                                            <th className="p-4 border-r border-inherit font-bold">
+                                                <button onClick={() => toggleEnterprisesSort('created')} className="flex items-center gap-1 hover:opacity-85 transition-all">
+                                                    Onboard Date {enterprisesSortField === 'created' ? (enterprisesSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                                </button>
+                                            </th>
+                                            <th className="p-4 font-bold text-right">Delete Operations</th>
+                                            <th className="p-4 font-bold text-right">Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className={`text-[11px] font-mono tracking-tight ${isDarkMode ? "text-white/90" : "text-black/90"}`}>
                                         {isEnterprisesLoading ? (
-                                            <div className="p-10 text-center text-[10px] font-mono opacity-40">Loading...</div>
-                                        ) : processedEnterprises.length === 0 ? (
-                                            <div className="p-10 text-center text-[10px] font-mono opacity-40">No enterprises found</div>
+                                            Array.from({ length: 5 }).map((_, i) => (
+                                                <tr key={i} className="animate-pulse border-b border-zinc-800 opacity-20">
+                                                    <td colSpan={9} className={`p-8 h-16 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+                                                </tr>
+                                            ))
+                                        ) : visibleEnterprises.length === 0 ? (
+                                            <tr className="border-b border-zinc-800">
+                                                <td colSpan={9} className={`p-20 text-center font-display font-black text-2xl uppercase tracking-[1em] ${isDarkMode ? "opacity-20 text-white" : "opacity-40 text-black"}`}>No Enterprises Found</td>
+                                            </tr>
                                         ) : (
-                                            <div className="overflow-x-auto">
-                                                <table className={`w-full border ${isDarkMode ? 'border-white/10' : 'border-black'} rounded-xl overflow-hidden`}>
-                                                    <thead>
-                                                        <tr className={`${isDarkMode ? 'text-white/60' : 'text-black/70'} text-[9px] font-mono uppercase tracking-[0.3em] border-b ${isDarkMode ? 'border-white/10' : 'border-black'}`}>
-                                                            <th className="p-4 text-left">
-                                                                <button onClick={() => toggleEnterprisesSort('name')} className="flex items-center gap-1 hover:opacity-80">
-                                                                    Name {enterprisesSortField === 'name' ? (enterprisesSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                                                                </button>
-                                                            </th>
-                                                            <th className="p-4 text-left">
-                                                                <button onClick={() => toggleEnterprisesSort('code')} className="flex items-center gap-1 hover:opacity-80">
-                                                                    Code {enterprisesSortField === 'code' ? (enterprisesSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                                                                </button>
-                                                            </th>
-                                                            <th className="p-4 text-center">Employees</th>
-                                                            <th className="p-4 text-center">Admins</th>
-                                                            <th className="p-4 text-center">AI Requests</th>
-                                                            <th className="p-4 text-left">
-                                                                <button onClick={() => toggleEnterprisesSort('created')} className="flex items-center gap-1 hover:opacity-80">
-                                                                    Created {enterprisesSortField === 'created' ? (enterprisesSortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                                                                </button>
-                                                            </th>
-                                                            <th className="p-4 text-right">Delete</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {visibleEnterprises.map((e) => {
-                                                            const stats = enterpriseStats.find(item => item.school_code === e.enterprise_code);
-                                                            return (
-                                                                <tr
-                                                                    key={e.id}
-                                                                    className={`border-b transition-colors ${isDarkMode ? 'border-white/10 hover:bg-white/[0.04]' : 'border-black/20 hover:bg-black/[0.03]'}`}
-                                                                >
-                                                                    <td className="p-4 text-sm font-bold">{e.enterprise_name}</td>
-                                                                    <td className="p-4 text-xs font-mono opacity-80">{e.enterprise_code}</td>
-                                                                    <td className="p-4 text-center text-xs font-mono">{stats?.student_count || 0}</td>
-                                                                    <td className="p-4 text-center text-xs font-mono">{stats?.admin_count || 0}</td>
-                                                                    <td className="p-4 text-center text-xs font-mono text-[#00DDDD]">{stats?.total_ai_requests || 0}</td>
-                                                                    <td className="p-4 text-xs font-mono opacity-60">{new Date(e.created_at).toLocaleDateString()}</td>
-                                                                    <td className="p-4 text-right">
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                if (confirm(`Are you sure you want to delete the enterprise "${e.enterprise_name}"? All associated managers, employees, and stats will be permanently deleted.`)) {
-                                                                                    handleDeleteEnterprise(e.id);
-                                                                                }
-                                                                            }}
-                                                                            className="p-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300"
-                                                                            title="Delete Enterprise"
-                                                                        >
-                                                                            <Trash2 className="h-4 w-4" />
-                                                                        </button>
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
+                                            visibleEnterprises.map((e, index) => {
+                                                const rowIndex = index + 1;
+                                                const globalRowIndex = (enterprisesPage - 1) * enterprisesRowsPerPage + index + 1;
+                                                const stats = enterpriseStats.find(item => item.school_code === e.enterprise_code);
+                                                const isExpanded = selectedEnterprise?.id === e.id;
+                                                return (
+                                                    <React.Fragment key={e.id}>
+                                                        <tr className={`border-b transition-colors ${isDarkMode ? "border-zinc-800 hover:bg-white/[0.01]" : "border-zinc-300 hover:bg-black/[0.01]"}`}>
+                                                            {/* Row Index */}
+                                                            <td className={`p-3 text-center text-[9px] font-mono border-r border-inherit w-10 select-none transition-colors ${
+                                                                activeEnterprisesCell?.rowIdx === rowIndex
+                                                                    ? "bg-emerald-500/15 text-emerald-500 font-bold"
+                                                                    : isDarkMode ? "bg-zinc-950/40 text-white/30" : "bg-zinc-50 text-black/40"
+                                                            }`}>{globalRowIndex}</td>
 
-                                        {/* Pagination */}
-                                        <div className={`p-4 flex items-center justify-between border-t ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
-                                            <div className={`text-[10px] font-mono ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>Page {enterprisesPage} / {enterprisesTotalPages}</div>
-                                            <div className="flex items-center gap-2">
-                                                <button onClick={() => setEnterprisesPage(p => Math.max(1, p - 1))} disabled={enterprisesPage === 1} className={`px-3 py-1.5 rounded-lg border text-[10px] ${isDarkMode ? 'border-white/10 text-white/80 disabled:opacity-30 hover:bg-white/5' : 'border-black/10 text-black/80 disabled:opacity-30 hover:bg-black/5'}`}>Prev</button>
-                                                <button onClick={() => setEnterprisesPage(p => Math.min(enterprisesTotalPages, p + 1))} disabled={enterprisesPage === enterprisesTotalPages} className={`px-3 py-1.5 rounded-lg border text-[10px] ${isDarkMode ? 'border-white/10 text-white/80 disabled:opacity-30 hover:bg-white/5' : 'border-black/10 text-black/80 disabled:opacity-30 hover:bg-black/5'}`}>Next</button>
-                                            </div>
+                                                            {/* Col A: Name */}
+                                                            <td 
+                                                                onClick={() => setActiveEnterprisesCell({ rowIdx: rowIndex, colKey: 'A' })}
+                                                                className={`p-4 border-r border-inherit cursor-cell relative transition-all ${
+                                                                    activeEnterprisesCell?.rowIdx === rowIndex && activeEnterprisesCell?.colKey === 'A'
+                                                                        ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <span className="text-[12px] font-bold tracking-tight">{e.enterprise_name}</span>
+                                                            </td>
+
+                                                            {/* Col B: Code */}
+                                                            <td 
+                                                                onClick={() => setActiveEnterprisesCell({ rowIdx: rowIndex, colKey: 'B' })}
+                                                                className={`p-4 border-r border-inherit cursor-cell relative transition-all ${
+                                                                    activeEnterprisesCell?.rowIdx === rowIndex && activeEnterprisesCell?.colKey === 'B'
+                                                                        ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <span className="text-xs font-mono opacity-80">{e.enterprise_code}</span>
+                                                            </td>
+
+                                                            {/* Col C: Employees */}
+                                                            <td 
+                                                                onClick={() => setActiveEnterprisesCell({ rowIdx: rowIndex, colKey: 'C' })}
+                                                                className={`p-4 border-r border-inherit cursor-cell relative text-center transition-all ${
+                                                                    activeEnterprisesCell?.rowIdx === rowIndex && activeEnterprisesCell?.colKey === 'C'
+                                                                        ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <div className="flex flex-col gap-0.5 items-center justify-center">
+                                                                    <span className="text-xs font-mono font-bold">{stats?.student_count || 0}</span>
+                                                                    <span className="text-[8px] opacity-40 uppercase tracking-widest">admins: {stats?.admin_count || 0}</span>
+                                                                </div>
+                                                            </td>
+
+                                                            {/* Col D: AI Requests */}
+                                                            <td 
+                                                                onClick={() => setActiveEnterprisesCell({ rowIdx: rowIndex, colKey: 'D' })}
+                                                                className={`p-4 border-r border-inherit cursor-cell relative text-center transition-all ${
+                                                                    activeEnterprisesCell?.rowIdx === rowIndex && activeEnterprisesCell?.colKey === 'D'
+                                                                        ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <span className="text-xs font-mono font-bold text-[#00DDDD]">{stats?.total_ai_requests || 0}</span>
+                                                            </td>
+
+                                                            {/* Col E: Onboard Date */}
+                                                            <td 
+                                                                onClick={() => setActiveEnterprisesCell({ rowIdx: rowIndex, colKey: 'E' })}
+                                                                className={`p-4 border-r border-inherit cursor-cell relative transition-all ${
+                                                                    activeEnterprisesCell?.rowIdx === rowIndex && activeEnterprisesCell?.colKey === 'E'
+                                                                        ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <span className="text-xs font-mono opacity-60">{new Date(e.created_at).toLocaleDateString()}</span>
+                                                            </td>
+
+                                                            {/* Col F: Administrative Delete */}
+                                                            <td 
+                                                                onClick={() => setActiveEnterprisesCell({ rowIdx: rowIndex, colKey: 'F' })}
+                                                                className={`p-4 cursor-cell relative transition-all ${
+                                                                    activeEnterprisesCell?.rowIdx === rowIndex && activeEnterprisesCell?.colKey === 'F'
+                                                                        ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center justify-end">
+                                                                    <button
+                                                                        onClick={(eBtn) => {
+                                                                            eBtn.stopPropagation();
+                                                                            if (confirm(`Are you sure you want to delete the enterprise "${e.enterprise_name}"? All associated managers, employees, and stats will be permanently deleted.`)) {
+                                                                                handleDeleteEnterprise(e.id);
+                                                                            }
+                                                                        }}
+                                                                        className="p-1.5 bg-red-500/10 border border-red-500/20 rounded text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                                                                        title="Delete Enterprise Node"
+                                                                    >
+                                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+
+                                                            {/* Col G: Toggle Details */}
+                                                            <td 
+                                                                onClick={() => setActiveEnterprisesCell({ rowIdx: rowIndex, colKey: 'G' })}
+                                                                className={`p-4 cursor-cell relative transition-all ${
+                                                                    activeEnterprisesCell?.rowIdx === rowIndex && activeEnterprisesCell?.colKey === 'G'
+                                                                        ? "outline outline-2 outline-emerald-500 -outline-offset-1 z-20 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.02]"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center justify-end">
+                                                                    <button
+                                                                        onClick={(eBtn) => {
+                                                                            eBtn.stopPropagation();
+                                                                            const willOpen = !isExpanded;
+                                                                            setSelectedEnterprise(willOpen ? e : null);
+                                                                        }}
+                                                                        className={`px-3 py-1.5 border rounded text-[9px] font-mono tracking-widest uppercase font-bold transition-all ${
+                                                                            isExpanded
+                                                                                ? "bg-emerald-500 text-black border-emerald-500 font-black hover:bg-emerald-600"
+                                                                                : isDarkMode
+                                                                                    ? "border-zinc-800 hover:border-white/20 hover:bg-white/5 text-white"
+                                                                                    : "border-zinc-300 hover:border-black/20 hover:bg-black/5 text-black"
+                                                                        }`}
+                                                                    >
+                                                                        {isExpanded ? "CLOSE DETS" : "OPEN DETS"}
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+
+                                                        {/* Expanded Details Row */}
+                                                        {isExpanded && (
+                                                            <tr className={isDarkMode ? "bg-zinc-950/40" : "bg-zinc-55/10"}>
+                                                                <td className="p-0 border-b border-zinc-200 dark:border-zinc-800" colSpan={9}>
+                                                                    <div className={`p-6 border-t ${isDarkMode ? 'border-zinc-800' : 'border-zinc-300'}`}>
+                                                                        <div className="flex items-center justify-between mb-4">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Shield className="h-4 w-4 text-emerald-400" />
+                                                                                <h4 className={`text-xs font-display font-black uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-black'}`}>Enterprise Personnel</h4>
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={() => setSelectedEnterprise(null)}
+                                                                                className={`text-[9px] font-mono uppercase tracking-widest underline ${isDarkMode ? 'text-white/60 hover:text-white' : 'text-black/60 hover:text-black'}`}
+                                                                            >
+                                                                                COLLAPSE
+                                                                            </button>
+                                                                        </div>
+
+                                                                        {(() => {
+                                                                            const entUsers = users.filter(u => u.enterprise_id === e.id);
+                                                                            const entAdmins = entUsers.filter(u => u.role === 'enterprise_admin');
+                                                                            const entManagers = entUsers.filter(u => u.role === 'manager');
+                                                                            const entEmployees = entUsers.filter(u => u.role === 'employee');
+                                                                            const renderUserTable = (userList: AdminUser[], label: string, icon: any, color: string) => (
+                                                                                <>
+                                                                                    <div className="flex items-center gap-2 mt-4 mb-2 first:mt-0">
+                                                                                        {React.createElement(icon, { className: `h-4 w-4`, style: { color } })}
+                                                                                        <h4 className={`text-xs font-display font-black uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-black'}`}>{label} ({userList.length})</h4>
+                                                                                    </div>
+                                                                                    {userList.length === 0 ? (
+                                                                                        <div className={`p-3 border text-center text-[10px] font-mono opacity-50 ${isDarkMode ? "bg-white/5 border-zinc-850" : "bg-black/5 border-zinc-300"}`}>No {label.toLowerCase()} found</div>
+                                                                                    ) : (
+                                                                                        <div className={`overflow-x-auto border ${isDarkMode ? "border-zinc-800 bg-zinc-900/20" : "border-zinc-300 bg-white"}`}>
+                                                                                            <table className="w-full text-left border-collapse">
+                                                                                                <thead>
+                                                                                                    <tr className={`text-[8.5px] font-mono uppercase tracking-widest border-b ${isDarkMode ? "bg-zinc-900 border-zinc-800 text-white/50" : "bg-zinc-100 border-zinc-300 text-black/60"}`}>
+                                                                                                        <th className="p-2 border-r border-inherit font-bold">Name / Status</th>
+                                                                                                        <th className="p-2 border-r border-inherit font-bold">Email</th>
+                                                                                                        <th className="p-2 border-r border-inherit font-bold text-right">Freeze</th>
+                                                                                                        <th className="p-2 font-bold text-right">Delete</th>
+                                                                                                    </tr>
+                                                                                                </thead>
+                                                                                                <tbody className="text-[10px] font-mono">
+                                                                                                    {userList.map((u) => (
+                                                                                                        <tr key={u.id} className={`border-b transition-colors ${isDarkMode ? "border-zinc-800/80 hover:bg-white/[0.01]" : "border-zinc-300/80 hover:bg-black/[0.01]"}`}>
+                                                                                                            <td className="p-2 border-r border-inherit">
+                                                                                                                <div className="flex items-center gap-2">
+                                                                                                                    <span className="font-bold">{u.name}</span>
+                                                                                                                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-widest ${u.is_frozen ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>{u.is_frozen ? 'frozen' : 'active'}</span>
+                                                                                                                </div>
+                                                                                                            </td>
+                                                                                                            <td className="p-2 border-r border-inherit font-mono opacity-80">{u.email || '—'}</td>
+                                                                                                            <td className="p-2 border-r border-inherit text-right">
+                                                                                                                {u.is_frozen ? (
+                                                                                                                    <button
+                                                                                                                        onClick={() => handleEntUnfreezeUser(u.id)}
+                                                                                                                        disabled={entFreezingUserId === u.id}
+                                                                                                                        className="px-2 py-1 bg-emerald-500 text-black text-[9px] font-bold tracking-widest rounded hover:bg-emerald-600 disabled:opacity-50 transition-all"
+                                                                                                                    >
+                                                                                                                        {entFreezingUserId === u.id ? '...' : 'UNFREEZE'}
+                                                                                                                    </button>
+                                                                                                                ) : (
+                                                                                                                    <button
+                                                                                                                        onClick={() => handleEntFreezeUser(u.id)}
+                                                                                                                        disabled={entFreezingUserId === u.id}
+                                                                                                                        className="px-2 py-1 bg-red-500 text-white text-[9px] font-bold tracking-widest rounded hover:bg-red-650 disabled:opacity-50 transition-all"
+                                                                                                                    >
+                                                                                                                        {entFreezingUserId === u.id ? '...' : 'FREEZE'}
+                                                                                                                    </button>
+                                                                                                                )}
+                                                                                                            </td>
+                                                                                                            <td className="p-2 text-right">
+                                                                                                                <button
+                                                                                                                    onClick={() => {
+                                                                                                                        if (confirm(`Delete user "${u.name}"?`)) {
+                                                                                                                            handleEntDeleteUser(u.id);
+                                                                                                                        }
+                                                                                                                    }}
+                                                                                                                    disabled={entDeletingUserId === u.id}
+                                                                                                                    className={`p-1.5 border rounded transition-all hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 ${isDarkMode ? "border-zinc-800 text-white/40" : "border-zinc-300 text-black/40"} ${entDeletingUserId === u.id ? 'opacity-50' : ''}`}
+                                                                                                                    title="Delete user"
+                                                                                                                >
+                                                                                                                    <Trash2 className="h-3 w-3" />
+                                                                                                                </button>
+                                                                                                            </td>
+                                                                                                        </tr>
+                                                                                                    ))}
+                                                                                                </tbody>
+                                                                                            </table>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </>
+                                                                            );
+                                                                            return (
+                                                                                <>
+                                                                                    {renderUserTable(entAdmins, 'Enterprise Admins', Shield, '#10B981')}
+                                                                                    {renderUserTable(entManagers, 'Managers', Users, '#00DDDD')}
+                                                                                    {renderUserTable(entEmployees, 'Employees', Users, '#FFA500')}
+                                                                                </>
+                                                                            );
+                                                                        })()}
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </React.Fragment>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Excel Bottom Sheet Tab Bar */}
+                            <div className={`flex items-center justify-between border-x border-b p-2 text-[10px] font-mono select-none ${
+                                isDarkMode ? "border-zinc-800 bg-zinc-950 text-white" : "border-zinc-300 bg-zinc-50 text-black"
+                            }`}>
+                                {/* Tabs */}
+                                <div className="flex items-center gap-1">
+                                    <div className={`px-3 py-1 border-t-2 border-emerald-500 bg-zinc-900/30 dark:bg-zinc-950 font-bold flex items-center gap-2 border-x ${
+                                        isDarkMode ? "border-zinc-800 text-white" : "border-zinc-300 text-black"
+                                    }`}>
+                                        <Database className="h-3 w-3 text-emerald-500" />
+                                        <span>Sheet3 (Enterprises)</span>
+                                    </div>
+                                    <button className={`p-1 hover:bg-white/5 rounded transition-all opacity-50`}>
+                                        <Plus className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+
+                                {/* Real-time Pagination controls resembling Excel page navigation */}
+                                <div className="flex items-center gap-3">
+                                    <span className="text-[9px] opacity-40 uppercase tracking-widest">Page {enterprisesPage} of {enterprisesTotalPages || 1}</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            onClick={() => setEnterprisesPage(p => Math.max(1, p - 1))}
+                                            disabled={enterprisesPage === 1}
+                                            className={`p-1.5 border rounded disabled:opacity-20 transition-all ${isDarkMode ? "border-zinc-800 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-zinc-100 text-black"}`}
+                                        >
+                                            <ChevronLeft className="h-3.5 w-3.5" />
+                                        </button>
+                                        {Array.from({ length: enterprisesTotalPages }, (_, i) => i + 1)
+                                            .filter(p => p === 1 || p === enterprisesTotalPages || Math.abs(p - enterprisesPage) <= 1)
+                                            .map((pageNum, i, arr) => (
+                                                <React.Fragment key={pageNum}>
+                                                    {i > 0 && arr[i - 1] !== pageNum - 1 && <span className="opacity-20 px-1">...</span>}
+                                                    <button
+                                                        onClick={() => setEnterprisesPage(pageNum)}
+                                                        className={`px-2.5 py-1 border rounded text-[9px] font-mono transition-all ${enterprisesPage === pageNum
+                                                            ? 'bg-emerald-500 border-emerald-500 text-black font-black'
+                                                            : (isDarkMode ? 'border-zinc-800 hover:bg-white/5 opacity-40 text-white' : 'border-zinc-300 hover:bg-zinc-100 opacity-60 text-black')
+                                                            }`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                </React.Fragment>
+                                            ))
+                                        }
+                                        <button
+                                            onClick={() => setEnterprisesPage(p => Math.min(enterprisesTotalPages, p + 1))}
+                                            disabled={enterprisesPage === enterprisesTotalPages || enterprisesTotalPages === 0}
+                                            className={`p-1.5 border rounded disabled:opacity-20 transition-all ${isDarkMode ? "border-zinc-800 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-zinc-100 text-black"}`}
+                                        >
+                                            <ChevronRightIcon className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Excel Bottom Status Bar */}
+                            <div className={`flex flex-col sm:flex-row sm:items-center justify-between border-x border-b px-4 py-1.5 text-[9px] font-mono select-none ${
+                                isDarkMode ? "border-zinc-900 bg-zinc-900 text-zinc-400" : "border-zinc-300 bg-zinc-100 text-zinc-500"
+                            }`}>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                        <span className="font-bold text-emerald-500 uppercase">Ready</span>
+                                    </div>
+                                    <span>// ENTERPRISES SUMMARY: ACTIVE</span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-1 sm:mt-0">
+                                    {visibleEnterprises.length > 0 && (
+                                        <div className="flex items-center gap-3 border-r pr-4 sm:pr-6 border-inherit">
+                                            <span>SUM(ai_requests) = <b className={isDarkMode ? "text-white" : "text-black"}>{visibleEnterprises.reduce((s, e) => s + (enterpriseStats.find(item => item.school_code === e.enterprise_code)?.total_ai_requests || 0), 0)}</b></span>
+                                            <span>AVERAGE(ai_requests) = <b className={isDarkMode ? "text-white" : "text-black"}>{(visibleEnterprises.reduce((s, e) => s + (enterpriseStats.find(item => item.school_code === e.enterprise_code)?.total_ai_requests || 0), 0) / visibleEnterprises.length).toFixed(1)}</b></span>
                                         </div>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                        <span>Zoom:</span>
+                                        <span className="font-bold">100%</span>
+                                        <span className="opacity-45 select-none font-sans font-bold text-xs">- [========] +</span>
                                     </div>
                                 </div>
                             </div>
@@ -2245,11 +3419,11 @@ const Dashboard = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="p-10"
+                            className="p-4 md:p-8 lg:p-10"
                         >
-                            <div className={`border border-zinc-800/50 rounded-[3rem] overflow-hidden backdrop-blur-3xl ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
+                            <div className={`border border-zinc-800/50 rounded-[2rem] md:rounded-[3rem] overflow-hidden backdrop-blur-3xl ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
                                 }`}>
-                                <div className={`p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                <div className={`p-6 md:p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
                                     <div>
                                         <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Plans & Pricing</h2>
                                         <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>System-wide subscription tiers</p>
@@ -2263,7 +3437,7 @@ const Dashboard = () => {
                                     </button>
                                 </div>
 
-                                <div className="p-10">
+                                <div className="p-6 md:p-10">
                                     <div className="flex items-center justify-between mb-8">
                                         <h3 className={`text-lg font-display font-black uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>All Plans</h3>
                                         <button
@@ -2294,6 +3468,36 @@ const Dashboard = () => {
                     )}
                 </AnimatePresence>
             </main>
+
+            {/* Persistent Desktop Right Sidebar (Collapsible Users Selector) */}
+            {view === 'visual' && (
+                <aside 
+                    className={`hidden lg:flex flex-col h-full shrink-0 relative z-25 transition-all duration-300 overflow-hidden ${
+                        isDarkMode 
+                            ? "border-white/10 bg-black/40 bg-gradient-to-b from-zinc-950 via-black to-zinc-950" 
+                            : "border-black/10 bg-white bg-gradient-to-b from-zinc-50 via-white to-zinc-50"
+                    } backdrop-blur-3xl`}
+                    style={{
+                        width: isRightSidebarCollapsed ? "0px" : `${rightSidebarWidth}px`,
+                        padding: isRightSidebarCollapsed ? "0px" : "2rem 1.5rem",
+                        borderLeft: isRightSidebarCollapsed ? "none" : (isDarkMode ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)"),
+                        opacity: isRightSidebarCollapsed ? 0 : 1
+                    }}
+                >
+                    {!isRightSidebarCollapsed && (
+                        <>
+                            <UsersListPanel onClose={() => setIsRightSidebarCollapsed(true)} />
+                            {/* Drag Resize Handle */}
+                            <div
+                                onMouseDown={handleRightResizeMouseDown}
+                                className="absolute top-0 left-0 w-[4px] h-full cursor-col-resize hover:bg-[#00DDDD]/50 active:bg-[#00DDDD] transition-colors z-[70]"
+                            />
+                        </>
+                    )}
+                </aside>
+            )}
+        </div>
+    </div>
 
             {/* Edit/Create Plan Modal */}
             {editingPlan && (
