@@ -6,7 +6,7 @@ import {
     ChevronRight, ArrowUpRight, Globe, Shield, Zap, Table as TableIcon, LayoutDashboard,
     ChevronLeft, ChevronRight as ChevronRightIcon, LogOut, Moon, Sun, RefreshCw, Database,
     TrendingUp, ShieldCheck, Cpu, X, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Building2, Menu,
-    Info, Lock, Scale, Share2, GraduationCap
+    Info, Lock, Scale, Share2, GraduationCap, Play, Smartphone, Code2
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -1328,23 +1328,6 @@ const Dashboard = () => {
                         </div>
                     )}
                 </div>
-
-
-
-                {/* Sidebar Footer System Core */}
-                <div className="p-6 border-t border-inherit flex justify-center">
-                    {isLeftSidebarCollapsed ? (
-                        <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse shrink-0" title="Core Node Online (NODE://IND-01)" />
-                    ) : (
-                        <div className={`p-4 rounded-2xl flex items-center gap-3.5 border w-full ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"}`}>
-                            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                            <div className="flex flex-col min-w-0">
-                                <span className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Global Core Node</span>
-                                <span className="text-[10px] font-bold font-mono tracking-tight text-emerald-400 truncate">NODE://IND-01</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
                 {/* Drag Resize Handle */}
                 {!isLeftSidebarCollapsed && (
                     <div
@@ -2223,7 +2206,10 @@ const Dashboard = () => {
                                                                 editingSiteSetting.key === 'contact_info' ? 'Contact Us' : 
                                                                     editingSiteSetting.key === 'social_media_links' ? 'Social Media Links' : 
                                                                         editingSiteSetting.key === 'schools_page' ? 'Schools Page' : 
-                                                                            editingSiteSetting.key === 'b2b_page' ? 'B2B Page' : editingSiteSetting.key}
+                                                                            editingSiteSetting.key === 'b2b_page' ? 'B2B Page' : 
+                                                                                editingSiteSetting.key === 'home_page' ? 'Home Page Video' : 
+                                                                                    editingSiteSetting.key === 'plugin_page' ? 'Plugin Page' : 
+                                                                                        editingSiteSetting.key === 'mobile_app_page' ? 'Mobile App Page' : editingSiteSetting.key}
                                                 </h2>
                                                 <button
                                                     onClick={fetchData}
@@ -2410,6 +2396,24 @@ const Dashboard = () => {
                                                             }}
                                                             className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
                                                             placeholder="https://github.com/username"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {editingSiteSetting.key === 'home_page' && (
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Watch Demo Video URL (Embed Link)</label>
+                                                        <input
+                                                            value={siteFormData?.videoUrl || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, videoUrl: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="e.g. https://www.youtube.com/embed/dQw4w9WgXcQ"
                                                         />
                                                     </div>
                                                 </div>
@@ -2658,6 +2662,122 @@ const Dashboard = () => {
                                                 </div>
                                             )}
 
+                                            {editingSiteSetting.key === 'plugin_page' && (
+                                                <div className="space-y-6">
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Title</label>
+                                                        <input
+                                                            value={siteFormData?.title || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, title: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Hero Title"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Description</label>
+                                                        <textarea
+                                                            value={siteFormData?.description || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, description: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            rows={3}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Hero Description"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Button Text</label>
+                                                        <input
+                                                            value={siteFormData?.buttonText || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, buttonText: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Button Text"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Button URL Link</label>
+                                                        <input
+                                                            value={siteFormData?.buttonUrl || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, buttonUrl: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Button URL Link"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {editingSiteSetting.key === 'mobile_app_page' && (
+                                                <div className="space-y-6">
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Title</label>
+                                                        <input
+                                                            value={siteFormData?.title || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, title: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Hero Title"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Description</label>
+                                                        <textarea
+                                                            value={siteFormData?.description || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, description: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            rows={3}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Hero Description"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Button Text</label>
+                                                        <input
+                                                            value={siteFormData?.buttonText || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, buttonText: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Button Text"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Button URL Link</label>
+                                                        <input
+                                                            value={siteFormData?.buttonUrl || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, buttonUrl: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Button URL Link"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <div className="flex gap-4 pt-6 border-t border-zinc-800/30">
                                                 <button
                                                     onClick={async () => {
@@ -2689,6 +2809,39 @@ const Dashboard = () => {
                                                                 try {
                                                                     localStorage.setItem("rudranex_b2b_page", editingSiteSetting.value);
                                                                     toast.success("B2B page updated successfully (Local Storage)");
+                                                                    fetchData();
+                                                                } catch (e) {
+                                                                    console.error("Local storage save error:", e);
+                                                                    toast.error("Failed to save to local storage");
+                                                                }
+                                                                return;
+                                                            }
+                                                            if (editingSiteSetting.key === 'home_page') {
+                                                                try {
+                                                                    localStorage.setItem("rudranex_home_page", editingSiteSetting.value);
+                                                                    toast.success("Home page video updated successfully (Local Storage)");
+                                                                    fetchData();
+                                                                } catch (e) {
+                                                                    console.error("Local storage save error:", e);
+                                                                    toast.error("Failed to save to local storage");
+                                                                }
+                                                                return;
+                                                            }
+                                                            if (editingSiteSetting.key === 'plugin_page') {
+                                                                try {
+                                                                    localStorage.setItem("rudranex_plugin_page", editingSiteSetting.value);
+                                                                    toast.success("Plugin page updated successfully (Local Storage)");
+                                                                    fetchData();
+                                                                } catch (e) {
+                                                                    console.error("Local storage save error:", e);
+                                                                    toast.error("Failed to save to local storage");
+                                                                }
+                                                                return;
+                                                            }
+                                                            if (editingSiteSetting.key === 'mobile_app_page') {
+                                                                try {
+                                                                    localStorage.setItem("rudranex_mobile_app_page", editingSiteSetting.value);
+                                                                    toast.success("Mobile App page updated successfully (Local Storage)");
                                                                     fetchData();
                                                                 } catch (e) {
                                                                     console.error("Local storage save error:", e);
@@ -4016,6 +4169,9 @@ const Dashboard = () => {
                                     { key: 'social_media_links', label: 'Social Media Links', icon: Share2 },
                                     { key: 'schools_page', label: 'Schools Page', icon: GraduationCap },
                                     { key: 'b2b_page', label: 'B2B Page', icon: Briefcase },
+                                    { key: 'home_page', label: 'Home Page Video', icon: Play },
+                                    { key: 'plugin_page', label: 'Plugin Page', icon: Code2 },
+                                    { key: 'mobile_app_page', label: 'Mobile App Page', icon: Smartphone },
                                 ].map((page) => {
                                     const isActive = editingSiteSetting?.key === page.key;
                                     const Icon = page.icon;
@@ -4047,6 +4203,27 @@ const Dashboard = () => {
                                                     } catch (e) {
                                                         console.error("Local storage error:", e);
                                                     }
+                                                } else if (page.key === 'home_page') {
+                                                    try {
+                                                        const stored = localStorage.getItem("rudranex_home_page");
+                                                        if (stored) raw = stored;
+                                                    } catch (e) {
+                                                        console.error("Local storage error:", e);
+                                                    }
+                                                } else if (page.key === 'plugin_page') {
+                                                    try {
+                                                        const stored = localStorage.getItem("rudranex_plugin_page");
+                                                        if (stored) raw = stored;
+                                                    } catch (e) {
+                                                        console.error("Local storage error:", e);
+                                                    }
+                                                } else if (page.key === 'mobile_app_page') {
+                                                    try {
+                                                        const stored = localStorage.getItem("rudranex_mobile_app_page");
+                                                        if (stored) raw = stored;
+                                                    } catch (e) {
+                                                        console.error("Local storage error:", e);
+                                                    }
                                                 }
                                                 
                                                 try {
@@ -4058,6 +4235,22 @@ const Dashboard = () => {
                                                         setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
                                                     } else if (page.key === 'social_media_links') {
                                                         setSiteFormData({ twitter: parsed.twitter || '', linkedin: parsed.linkedin || '', github: parsed.github || '' });
+                                                    } else if (page.key === 'home_page') {
+                                                        setSiteFormData({ videoUrl: parsed.videoUrl || '' });
+                                                    } else if (page.key === 'plugin_page') {
+                                                        setSiteFormData({
+                                                            title: parsed.title || '',
+                                                            description: parsed.description || '',
+                                                            buttonText: parsed.buttonText || '',
+                                                            buttonUrl: parsed.buttonUrl || ''
+                                                        });
+                                                    } else if (page.key === 'mobile_app_page') {
+                                                        setSiteFormData({
+                                                            title: parsed.title || '',
+                                                            description: parsed.description || '',
+                                                            buttonText: parsed.buttonText || '',
+                                                            buttonUrl: parsed.buttonUrl || ''
+                                                        });
                                                     } else {
                                                         setSiteFormData(parsed);
                                                     }
@@ -4091,6 +4284,30 @@ const Dashboard = () => {
                                                             description: "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
                                                             linkText: "Learn More",
                                                             linkUrl: "/pricing"
+                                                        };
+                                                        setSiteFormData(defaults);
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
+                                                    } else if (page.key === 'home_page') {
+                                                        const defaults = {
+                                                            videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
+                                                        };
+                                                        setSiteFormData(defaults);
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
+                                                    } else if (page.key === 'plugin_page') {
+                                                        const defaults = {
+                                                            title: "Rudranex AI Plugin",
+                                                            description: "Bring Rudranex AI directly into your code editor. Get real-time AI assistance, smart debugging, and automated code reviews without leaving your workflow.",
+                                                            buttonText: "VS Code Marketplace",
+                                                            buttonUrl: "#"
+                                                        };
+                                                        setSiteFormData(defaults);
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
+                                                    } else if (page.key === 'mobile_app_page') {
+                                                        const defaults = {
+                                                            title: "Rudranex AI Mobile",
+                                                            description: "Take Rudranex AI wherever you go. Practice interviews, get code assistance, and learn on the move with our native mobile experience.",
+                                                            buttonText: "Download for Android",
+                                                            buttonUrl: "#"
                                                         };
                                                         setSiteFormData(defaults);
                                                         setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });

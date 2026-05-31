@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import Navbar from "@/components/ui/Navbar"
 import Footer from "@/components/ui/Footer"
 import { useTheme } from "@/lib/theme-context"
-import { Code2, Brackets, GitBranch, BugPlay, Download, ArrowRight, CheckCircle, ExternalLink } from "lucide-react"
+import { Code2, Brackets, GitBranch, BugPlay, ArrowRight, CheckCircle, ExternalLink } from "lucide-react"
 
 export default function Plugin() {
   const { isDarkMode } = useTheme()
@@ -36,14 +36,13 @@ export default function Plugin() {
 
   const features = [
     { icon: Brackets, title: "Inline Code Assist", desc: "Get AI-powered code suggestions, completions, and refactors directly inside your editor without switching context." },
-    { icon: GitBranch, title: "Multi-Editor Support", desc: "Works seamlessly with VS Code, JetBrains IDEs, Vim, Neovim, and more — pick your weapon." },
+    { icon: GitBranch, title: "Multi-Editor Support", desc: "Works seamlessly with VS Code, Vim, Neovim, and more — pick your weapon." },
     { icon: BugPlay, title: "Smart Debugging", desc: "AI-driven error analysis and fix suggestions as you code. Understand stack traces in plain English." },
     { icon: Code2, title: "Code Review AI", desc: "Automated pull request reviews with contextual feedback — catch issues before they reach production." },
   ]
 
   const editors = [
     { name: "VS Code", icon: "⬡" },
-    { name: "JetBrains", icon: "◈" },
     { name: "Vim / Neovim", icon: "▽" },
     { name: "Sublime Text", icon: "◇" },
   ]
@@ -85,13 +84,13 @@ export default function Plugin() {
               className="font-display font-bold leading-[0.9] mb-8"
               style={{ fontSize: "clamp(3rem, 8vw, 64px)", letterSpacing: "-0.04em" }}
             >
-              {pageData.title.split('\n').map((line, idx, arr) => (
+              {pageData.title.split(' ').map((word, idx, arr) => (
                 <span key={idx}>
-                  {idx > 0 && <br />}
+                  {idx > 0 && ' '}
                   {idx === arr.length - 1 ? (
-                    <span className="text-[var(--color-cyan)]">{line}</span>
+                    <span className="text-[var(--color-cyan)]">{word}</span>
                   ) : (
-                    line
+                    word
                   )}
                 </span>
               ))}
@@ -107,8 +106,6 @@ export default function Plugin() {
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <a
                 href={pageData.buttonUrl}
-                target={pageData.buttonUrl.startsWith("http") ? "_blank" : undefined}
-                rel={pageData.buttonUrl.startsWith("http") ? "noopener noreferrer" : undefined}
                 className={`flex items-center gap-3 px-8 py-4 font-sans font-semibold uppercase transition-all active:scale-95 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
                 style={{ fontSize: "13px", letterSpacing: "0.05em" }}
               >

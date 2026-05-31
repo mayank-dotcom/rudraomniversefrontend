@@ -19,7 +19,7 @@ export default function MobileApp() {
 
   useEffect(() => {
     try {
-      const local = localStorage.getItem("rudranex_mobile_page");
+      const local = localStorage.getItem("rudranex_mobile_app_page");
       if (local) {
         const parsed = JSON.parse(local);
         setPageData({
@@ -79,13 +79,13 @@ export default function MobileApp() {
               className="font-display font-bold leading-[0.9] mb-8"
               style={{ fontSize: "clamp(3rem, 8vw, 64px)", letterSpacing: "-0.04em" }}
             >
-              {pageData.title.split('\n').map((line, idx, arr) => (
+              {pageData.title.split(' ').map((word, idx, arr) => (
                 <span key={idx}>
-                  {idx > 0 && <br />}
+                  {idx > 0 && ' '}
                   {idx === arr.length - 1 ? (
-                    <span className="text-[var(--color-cyan)]">{line}</span>
+                    <span className="text-[var(--color-cyan)]">{word}</span>
                   ) : (
-                    line
+                    word
                   )}
                 </span>
               ))}
@@ -101,8 +101,6 @@ export default function MobileApp() {
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <a
                 href={pageData.buttonUrl}
-                target={pageData.buttonUrl.startsWith("http") ? "_blank" : undefined}
-                rel={pageData.buttonUrl.startsWith("http") ? "noopener noreferrer" : undefined}
                 className={`flex items-center gap-3 px-8 py-4 font-sans font-semibold uppercase transition-all active:scale-95 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
                 style={{ fontSize: "13px", letterSpacing: "0.05em" }}
               >
