@@ -2603,7 +2603,7 @@ STRICT RULES:
 
                             <div className={`relative flex border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
                                 <div className="flex-1 min-w-0 flex">
-                                    <div className="flex items-center gap-1 md:gap-2 pl-1.5 md:pl-3 pb-2.5 self-end">
+                                    <div className="flex items-center gap-1 md:gap-2 pl-1.5 md:pl-3 pt-3 pb-2.5 self-end">
                                         <button
                                             onClick={() => fileInputRef.current?.click()}
                                             disabled={isLoading || isProcessingFile}
@@ -2649,7 +2649,7 @@ STRICT RULES:
                                     />
                                 </div>
 
-                                <div className="flex items-center justify-end gap-1.5 md:gap-2 pr-1.5 md:pr-3 pb-2.5 flex-shrink-0 self-end">
+                                <div className="flex items-center justify-end gap-1.5 md:gap-2 pr-1.5 md:pr-3 pt-3 pb-2.5 flex-shrink-0 self-end">
                                     {!input.trim() && !isProcessingFile && (
                                         <div className="relative flex items-center justify-center mr-1">
                                             <AnimatePresence>
