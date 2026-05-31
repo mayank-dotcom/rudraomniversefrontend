@@ -408,8 +408,11 @@ const Chat = () => {
             const res = await listGoogleEmails({ maxResults: 50 })
             if (res.success) {
                 setGmailEmails(res.emails || [])
+                if (!res.emails || res.emails.length === 0) {
+                    setGmailError("")
+                }
             } else {
-                setGmailError("Failed to fetch emails")
+                setGmailError(res.error || "Failed to fetch emails")
             }
         } catch (e: any) {
             setGmailError(e.message || "Failed to fetch emails")
@@ -454,7 +457,7 @@ const Chat = () => {
                 setGmailError("Failed to get auth URL")
             }
         } catch (e: any) {
-            setGmailError(e.message || "Failed to connect")
+            setGmailError("Connection error: " + (e.message || "Unknown"))
         } finally {
             setGmailConnecting(false)
         }
@@ -2688,13 +2691,23 @@ STRICT RULES:
                                             )}
                                         </div>
                                         {gmailConnected && (
-                                            <button
-                                                onClick={handleDisconnectGmail}
-                                                disabled={gmailLoading}
-                                                className={`text-[8px] font-mono uppercase tracking-[0.15em] px-3 py-1.5 border ${isDarkMode ? "border-white/20 text-white/50 hover:text-white hover:border-white/50" : "border-black/20 text-black/50 hover:text-black hover:border-black/50"} transition-all disabled:opacity-50`}
-                                            >
-                                                Disconnect
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={fetchGmailEmails}
+                                                    disabled={gmailLoading}
+                                                    title="Refresh emails"
+                                                    className={`text-[8px] font-mono uppercase tracking-[0.15em] px-3 py-1.5 border ${isDarkMode ? "border-white/20 text-white/50 hover:text-white hover:border-white/50" : "border-black/20 text-black/50 hover:text-black hover:border-black/50"} transition-all disabled:opacity-50`}
+                                                >
+                                                    ↻
+                                                </button>
+                                                <button
+                                                    onClick={handleDisconnectGmail}
+                                                    disabled={gmailLoading}
+                                                    className={`text-[8px] font-mono uppercase tracking-[0.15em] px-3 py-1.5 border ${isDarkMode ? "border-white/20 text-white/50 hover:text-white hover:border-white/50" : "border-black/20 text-black/50 hover:text-black hover:border-black/50"} transition-all disabled:opacity-50`}
+                                                >
+                                                    Disconnect
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
 
