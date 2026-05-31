@@ -2900,90 +2900,6 @@ STRICT RULES:
                                         </div>
                                     )}
 
-                                    {/* ─── EMAIL DETAIL MODAL ─── */}
-                                    <AnimatePresence>
-                                        {gmailSelectedEmail && (
-                                            <motion.div
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                exit={{ opacity: 0 }}
-                                                className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8"
-                                                onClick={() => setGmailSelectedEmail(null)}
-                                            >
-                                                <div className={`absolute inset-0 ${isDarkMode ? "bg-black/70" : "bg-black/50"} backdrop-blur-sm`} />
-                                                <motion.div
-                                                    initial={{ scale: 0.92, opacity: 0, y: 20 }}
-                                                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                                                    exit={{ scale: 0.92, opacity: 0, y: 20 }}
-                                                    transition={{ type: "spring", duration: 0.4, bounce: 0.2 }}
-                                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                                    className={`relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border shadow-2xl ${isDarkMode
-                                                        ? "bg-[#0a0a0a] border-white/10"
-                                                        : "bg-[#fcfcfc] border-black/10"
-                                                        }`}
-                                                >
-                                                    {/* Header */}
-                                                    <div className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${isDarkMode ? "border-white/10 bg-[#0a0a0a]" : "border-black/10 bg-[#fcfcfc]"}`}>
-                                                        <div className="flex items-center gap-3 min-w-0">
-                                                            <div className={`p-1.5 rounded-lg shrink-0 ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
-                                                                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                                                    <rect x="2" y="4" width="20" height="16" rx="2" fill="#EA4335"/>
-                                                                    <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-                                                                </svg>
-                                                            </div>
-                                                            <h3 className={`text-[11px] font-bold font-mono uppercase tracking-[0.15em] truncate ${isDarkMode ? "text-white" : "text-black"}`}>
-                                                                Email Detail
-                                                            </h3>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => setGmailSelectedEmail(null)}
-                                                            className={`p-1.5 rounded-lg transition-all ${isDarkMode ? "hover:bg-white/10 text-white/40 hover:text-white" : "hover:bg-black/10 text-black/40 hover:text-black"}`}
-                                                        >
-                                                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Subject */}
-                                                    <div className="p-5 pb-0">
-                                                        <p className={`text-[13px] font-bold leading-snug ${isDarkMode ? "text-white" : "text-black"}`}>{gmailSelectedEmail.subject}</p>
-                                                    </div>
-
-                                                    {/* Meta */}
-                                                    <div className="p-5 pt-3">
-                                                        <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] font-mono ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-                                                            <span className="flex items-center gap-1.5">
-                                                                <span className={`text-[7px] uppercase tracking-widest ${isDarkMode ? "text-white/25" : "text-black/25"}`}>From</span>
-                                                                <span className={isDarkMode ? "text-white/70" : "text-black/70"}>{gmailSelectedEmail.from}</span>
-                                                            </span>
-                                                            <span className="flex items-center gap-1.5">
-                                                                <span className={`text-[7px] uppercase tracking-widest ${isDarkMode ? "text-white/25" : "text-black/25"}`}>Date</span>
-                                                                <span className={isDarkMode ? "text-white/60" : "text-black/60"}>{gmailSelectedEmail.date}</span>
-                                                            </span>
-                                                            {gmailSelectedEmail.to && (
-                                                                <span className="flex items-center gap-1.5">
-                                                                    <span className={`text-[7px] uppercase tracking-widest ${isDarkMode ? "text-white/25" : "text-black/25"}`}>To</span>
-                                                                    <span className={`truncate max-w-[200px] ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{gmailSelectedEmail.to}</span>
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Divider */}
-                                                    <div className={`mx-5 h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-
-                                                    {/* Body */}
-                                                    <div className="p-5">
-                                                        <div
-                                                            className={`text-[12px] leading-relaxed ${isDarkMode ? "text-white/80" : "text-black/80"} prose prose-sm max-w-none ${isDarkMode ? "prose-invert" : ""}`}
-                                                            dangerouslySetInnerHTML={{ __html: gmailSelectedEmail.body || gmailSelectedEmail.snippet || "" }}
-                                                        />
-                                                    </div>
-                                                </motion.div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
                                 </div>
                             )}
                         </div>
@@ -3122,6 +3038,92 @@ STRICT RULES:
                     {isRightSidebarCollapsed ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                 </button>
             </aside>
+
+            {/* ─── EMAIL DETAIL MODAL (root level) ─── */}
+            <AnimatePresence>
+                {gmailSelectedEmail && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-8"
+                        onClick={() => setGmailSelectedEmail(null)}
+                    >
+                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/70" : "bg-black/50"} backdrop-blur-sm`} />
+                        <motion.div
+                            initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                            transition={{ type: "spring", duration: 0.4, bounce: 0.2 }}
+                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                            className={`relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border shadow-2xl ${isDarkMode
+                                ? "bg-[#0a0a0a] border-white/10"
+                                : "bg-[#fcfcfc] border-black/10"
+                                }`}
+                        >
+                            {/* Header */}
+                            <div className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${isDarkMode ? "border-white/10 bg-[#0a0a0a]" : "border-black/10 bg-[#fcfcfc]"}`}>
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className={`p-1.5 rounded-lg shrink-0 ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
+                                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                            <rect x="2" y="4" width="20" height="16" rx="2" fill="#EA4335"/>
+                                            <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                                        </svg>
+                                    </div>
+                                    <h3 className={`text-[11px] font-bold font-mono uppercase tracking-[0.15em] truncate ${isDarkMode ? "text-white" : "text-black"}`}>
+                                        Email Detail
+                                    </h3>
+                                </div>
+                                <button
+                                    onClick={() => setGmailSelectedEmail(null)}
+                                    className={`p-1.5 rounded-lg transition-all ${isDarkMode ? "hover:bg-white/10 text-white/40 hover:text-white" : "hover:bg-black/10 text-black/40 hover:text-black"}`}
+                                >
+                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {/* Subject */}
+                            <div className="p-5 pb-0">
+                                <p className={`text-[13px] font-bold leading-snug ${isDarkMode ? "text-white" : "text-black"}`}>{gmailSelectedEmail.subject}</p>
+                            </div>
+
+                            {/* Meta */}
+                            <div className="p-5 pt-3">
+                                <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] font-mono ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                                    <span className="flex items-center gap-1.5">
+                                        <span className={`text-[7px] uppercase tracking-widest ${isDarkMode ? "text-white/25" : "text-black/25"}`}>From</span>
+                                        <span className={isDarkMode ? "text-white/70" : "text-black/70"}>{gmailSelectedEmail.from}</span>
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <span className={`text-[7px] uppercase tracking-widest ${isDarkMode ? "text-white/25" : "text-black/25"}`}>Date</span>
+                                        <span className={isDarkMode ? "text-white/60" : "text-black/60"}>{gmailSelectedEmail.date}</span>
+                                    </span>
+                                    {gmailSelectedEmail.to && (
+                                        <span className="flex items-center gap-1.5">
+                                            <span className={`text-[7px] uppercase tracking-widest ${isDarkMode ? "text-white/25" : "text-black/25"}`}>To</span>
+                                            <span className={`truncate max-w-[200px] ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{gmailSelectedEmail.to}</span>
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Divider */}
+                            <div className={`mx-5 h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                            {/* Body */}
+                            <div className="p-5">
+                                <div
+                                    className={`text-[12px] leading-relaxed ${isDarkMode ? "text-white/80" : "text-black/80"} prose prose-sm max-w-none ${isDarkMode ? "prose-invert" : ""}`}
+                                    dangerouslySetInnerHTML={{ __html: gmailSelectedEmail.body || gmailSelectedEmail.snippet || "" }}
+                                />
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Ambient Background Grid */}
             {selectedEngine !== "AI Image Lab" && (
