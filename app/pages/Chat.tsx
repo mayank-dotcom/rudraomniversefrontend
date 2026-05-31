@@ -401,12 +401,11 @@ const Chat = () => {
     }, [userRole, rightSidebarTab, isRightSidebarCollapsed, checkGmailStatus])
 
     const fetchGmailEmails = useCallback(async () => {
-        if (!gmailConnected) return
         setGmailLoading(true)
         setGmailError("")
         try {
             const { listGoogleEmails } = await import("@/lib/chat-api")
-            const res = await listGoogleEmails({ maxResults: 20 })
+            const res = await listGoogleEmails({ maxResults: 50 })
             if (res.success) {
                 setGmailEmails(res.emails || [])
             } else {
@@ -417,13 +416,30 @@ const Chat = () => {
         } finally {
             setGmailLoading(false)
         }
-    }, [gmailConnected])
+    }, [])
 
     useEffect(() => {
         if (gmailConnected && rightSidebarTab === "gmail" && !isRightSidebarCollapsed) {
             fetchGmailEmails()
         }
     }, [gmailConnected, rightSidebarTab, isRightSidebarCollapsed, fetchGmailEmails])
+
+    // Listen for Gmail connected signal from popup (via localStorage)
+    useEffect(() => {
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === "gmail_just_connected" && e.newValue) {
+                setGmailConnected(true)
+                setGmailEmail(e.newValue)
+                localStorage.removeItem("gmail_just_connected")
+                // If on Gmail tab, fetch emails
+                if (rightSidebarTab === "gmail" && !isRightSidebarCollapsed) {
+                    fetchGmailEmails()
+                }
+            }
+        }
+        window.addEventListener("storage", handleStorage)
+        return () => window.removeEventListener("storage", handleStorage)
+    }, [rightSidebarTab, isRightSidebarCollapsed, fetchGmailEmails])
 
     const handleConnectGmail = async () => {
         setGmailConnecting(true)

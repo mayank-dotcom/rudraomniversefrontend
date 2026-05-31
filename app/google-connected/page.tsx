@@ -12,11 +12,20 @@ export default function GoogleConnectedPage() {
         const params = new URLSearchParams(window.location.search)
         const emailParam = params.get("email")
         const errorParam = params.get("error")
+
         if (errorParam) {
             setStatus("error")
         } else if (emailParam) {
             setEmail(emailParam)
             setStatus("success")
+            // Notify main chat window that Gmail connected
+            try {
+                localStorage.setItem("gmail_just_connected", emailParam)
+            } catch { /* ignore */ }
+            // Auto-close popup after 2 seconds
+            setTimeout(() => {
+                try { window.close() } catch { /* ignore */ }
+            }, 2000)
         } else {
             setStatus("success")
         }
