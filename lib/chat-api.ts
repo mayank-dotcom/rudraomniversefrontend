@@ -2301,3 +2301,94 @@ export async function getGoogleEmailDetail(messageId: string) {
 export async function disconnectGoogle() {
   return googleFetch(`${API_BASE}/google/disconnect`, { method: "DELETE" }) as Promise<{ success: boolean; message?: string; error?: string }>
 }
+
+// ─── Send Email via Gmail ──────────────────────────────────────────────
+
+export async function sendGoogleEmail(payload: { to: string; subject: string; body: string; cc?: string; bcc?: string }) {
+  return googleFetch(`${API_BASE}/google/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }) as Promise<{ success: boolean; messageId?: string; threadId?: string; error?: string }>
+}
+
+// ─── Email Agent (AI Auto-Reply) APIs ─────────────────────────────────
+
+export async function getGoogleAgentContext() {
+  return googleFetch(`${API_BASE}/google/agent/context`) as Promise<{ success: boolean; context?: any; error?: string }>
+}
+
+export async function setGoogleAgentContext(payload: {
+  tone?: string; signature?: string; instructions?: string;
+  is_active?: boolean; reply_strategy?: string
+}) {
+  return googleFetch(`${API_BASE}/google/agent/context`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }) as Promise<{ success: boolean; context?: any; error?: string }>
+}
+
+export async function getGoogleAgentUnread(maxResults?: number) {
+  const query = maxResults ? `?maxResults=${maxResults}` : ''
+  return googleFetch(`${API_BASE}/google/agent/unread${query}`) as Promise<{ success: boolean; emails?: any[]; error?: string }>
+}
+
+export async function triggerGoogleAutoReply(messageId: string) {
+  return googleFetch(`${API_BASE}/google/agent/auto-reply/${messageId}`, {
+    method: "POST",
+  }) as Promise<{ success: boolean; message?: string; result?: any; error?: string }>
+}
+
+export async function triggerGoogleAutoReplyAll(maxResults?: number) {
+  return googleFetch(`${API_BASE}/google/agent/auto-reply-all`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ maxResults: maxResults || 10 }),
+  }) as Promise<{ success: boolean; message?: string; replied?: number; replies?: any[]; error?: string }>
+}
+
+export async function getGoogleAgentHistory(limit?: number) {
+  const query = limit ? `?limit=${limit}` : ''
+  return googleFetch(`${API_BASE}/google/agent/history${query}`) as Promise<{ success: boolean; history?: any[]; error?: string }>
+}
+
+// ─── Enterprise Bulk Email Agent APIs ──────────────────────────────────
+
+export async function getEnterpriseEmailConfig() {
+  return googleFetch(`${API_BASE}/enterprise/email-agent/config`) as Promise<{ success: boolean; config?: any; error?: string }>
+}
+
+export async function setEnterpriseEmailConfig(payload: {
+  default_tone?: string; default_signature?: string; default_instructions?: string;
+  allow_employee_override?: boolean; bulk_reply_limit?: number
+}) {
+  return googleFetch(`${API_BASE}/enterprise/email-agent/config`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }) as Promise<{ success: boolean; config?: any; error?: string }>
+}
+
+export async function getEnterpriseEmailEmployees(params?: {
+  class_name?: string; connected_only?: boolean; agent_active_only?: boolean
+}) {
+  const query = new URLSearchParams()
+  if (params?.class_name) query.set("class_name", params.class_name)
+  if (params?.connected_only) query.set("connected_only", "true")
+  if (params?.agent_active_only) query.set("agent_active_only", "true")
+  const qs = query.toString()
+  return googleFetch(`${API_BASE}/enterprise/email-agent/employees${qs ? `?${qs}` : ''}`) as Promise<{ success: boolean; count?: number; employees?: any[]; error?: string }>
+}
+
+export async function triggerEnterpriseBulkReply(employeeIds: string[], maxPerEmployee?: number) {
+  return googleFetch(`${API_BASE}/enterprise/email-agent/bulk-reply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ employee_ids: employeeIds, max_per_employee: maxPerEmployee || 5 }),
+  }) as Promise<{ success: boolean; message?: string; result?: any; error?: string }>
+}
+
+export async function getEnterpriseEmailStats() {
+  return googleFetch(`${API_BASE}/enterprise/email-agent/stats`) as Promise<{ success: boolean; config?: any; stats?: any; recent_logs?: any[]; error?: string }>
+}
