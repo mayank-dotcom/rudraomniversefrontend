@@ -5,7 +5,8 @@ import {
     MoreHorizontal, Plus, Briefcase, Users, Clock, CheckCircle2,
     ChevronRight, ArrowUpRight, Globe, Shield, Zap, Table as TableIcon, LayoutDashboard,
     ChevronLeft, ChevronRight as ChevronRightIcon, LogOut, Moon, Sun, RefreshCw, Database,
-    TrendingUp, ShieldCheck, Cpu, X, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Building2, Menu
+    TrendingUp, ShieldCheck, Cpu, X, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Building2, Menu,
+    Info, Lock, Scale, Share2, GraduationCap
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -2662,6 +2663,39 @@ const Dashboard = () => {
                                                     onClick={async () => {
                                                         setIsSavingSiteSetting(true);
                                                         try {
+                                                            if (editingSiteSetting.key === 'social_media_links') {
+                                                                try {
+                                                                    localStorage.setItem("rudranex_social_media_links", editingSiteSetting.value);
+                                                                    toast.success("Social links updated successfully (Local Storage)");
+                                                                    fetchData();
+                                                                } catch (e) {
+                                                                    console.error("Local storage save error:", e);
+                                                                    toast.error("Failed to save to local storage");
+                                                                }
+                                                                return;
+                                                            }
+                                                            if (editingSiteSetting.key === 'schools_page') {
+                                                                try {
+                                                                    localStorage.setItem("rudranex_schools_page", editingSiteSetting.value);
+                                                                    toast.success("Schools page updated successfully (Local Storage)");
+                                                                    fetchData();
+                                                                } catch (e) {
+                                                                    console.error("Local storage save error:", e);
+                                                                    toast.error("Failed to save to local storage");
+                                                                }
+                                                                return;
+                                                            }
+                                                            if (editingSiteSetting.key === 'b2b_page') {
+                                                                try {
+                                                                    localStorage.setItem("rudranex_b2b_page", editingSiteSetting.value);
+                                                                    toast.success("B2B page updated successfully (Local Storage)");
+                                                                    fetchData();
+                                                                } catch (e) {
+                                                                    console.error("Local storage save error:", e);
+                                                                    toast.error("Failed to save to local storage");
+                                                                }
+                                                                return;
+                                                            }
                                                             const res = await updateSiteSetting(editingSiteSetting.key, editingSiteSetting.value);
                                                             if (res.success) {
                                                                 toast.success("Page updated successfully");
@@ -3975,21 +4009,46 @@ const Dashboard = () => {
                                     </button>
                                 </div>
                                 {[
-                                    { key: 'about_us', label: 'About Us', icon: 'ℹ️' },
-                                    { key: 'privacy_policy', label: 'Privacy Policy', icon: '🔒' },
-                                    { key: 'terms_conditions', label: 'Terms of Service', icon: '📜' },
-                                    { key: 'contact_info', label: 'Contact Us', icon: '📧' },
-                                    { key: 'social_media_links', label: 'Social Media Links', icon: '🔗' },
-                                    { key: 'schools_page', label: 'Schools Page', icon: '🏫' },
-                                    { key: 'b2b_page', label: 'B2B Page', icon: '💼' },
+                                    { key: 'about_us', label: 'About Us', icon: Info },
+                                    { key: 'privacy_policy', label: 'Privacy Policy', icon: Lock },
+                                    { key: 'terms_conditions', label: 'Terms of Service', icon: Scale },
+                                    { key: 'contact_info', label: 'Contact Us', icon: Mail },
+                                    { key: 'social_media_links', label: 'Social Media Links', icon: Share2 },
+                                    { key: 'schools_page', label: 'Schools Page', icon: GraduationCap },
+                                    { key: 'b2b_page', label: 'B2B Page', icon: Briefcase },
                                 ].map((page) => {
                                     const isActive = editingSiteSetting?.key === page.key;
+                                    const Icon = page.icon;
                                     return (
                                         <button
                                             key={page.key}
                                             onClick={() => {
                                                 const setting = siteSettings.find(s => s.key === page.key);
-                                                const raw = setting?.value || '';
+                                                let raw = setting?.value || '';
+                                                
+                                                if (page.key === 'social_media_links') {
+                                                    try {
+                                                        const stored = localStorage.getItem("rudranex_social_media_links");
+                                                        if (stored) raw = stored;
+                                                    } catch (e) {
+                                                        console.error("Local storage error:", e);
+                                                    }
+                                                } else if (page.key === 'schools_page') {
+                                                    try {
+                                                        const stored = localStorage.getItem("rudranex_schools_page");
+                                                        if (stored) raw = stored;
+                                                    } catch (e) {
+                                                        console.error("Local storage error:", e);
+                                                    }
+                                                } else if (page.key === 'b2b_page') {
+                                                    try {
+                                                        const stored = localStorage.getItem("rudranex_b2b_page");
+                                                        if (stored) raw = stored;
+                                                    } catch (e) {
+                                                        console.error("Local storage error:", e);
+                                                    }
+                                                }
+                                                
                                                 try {
                                                     const parsed = JSON.parse(raw);
                                                     setEditingSiteSetting({ key: page.key, value: raw });
@@ -4049,7 +4108,7 @@ const Dashboard = () => {
                                                         : "text-black/60 hover:text-black hover:bg-black/5"
                                             }`}
                                         >
-                                            <span className="text-lg">{page.icon}</span>
+                                            <Icon className={`h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110 ${isActive ? "text-[#00DDDD]" : isDarkMode ? "text-white/40" : "text-black/50"}`} />
                                             <span className="font-display uppercase tracking-wider text-[11px] font-semibold">{page.label}</span>
                                         </button>
                                     )

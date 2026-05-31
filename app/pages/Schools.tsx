@@ -40,6 +40,27 @@ export default function Schools() {
   });
 
   useEffect(() => {
+    try {
+      const local = localStorage.getItem("rudranex_schools_page");
+      if (local) {
+        const parsed = JSON.parse(local);
+        setPageData({
+          title: parsed.title || "Empower your\nInstitution.",
+          description: parsed.description || "From personalized tutoring to automated assessments — bring the future of education to your classrooms with Rudranex AI.",
+          linkText: parsed.linkText || "Back Home",
+          linkUrl: parsed.linkUrl || "/",
+          features: Array.isArray(parsed.features) && parsed.features.length > 0 ? parsed.features : [
+            { title: "AI Tutoring", desc: "Personalized learning paths for every student powered by advanced AI models." },
+            { title: "Admin Dashboard", desc: "Full control over faculty, students, and curriculum with real-time analytics." },
+            { title: "Branding", desc: "Custom onboarding with your school code, faculty management, and roll numbers." }
+          ]
+        });
+        return;
+      }
+    } catch (e) {
+      console.error("Local storage schools fetch error:", e);
+    }
+
     getPublicSiteSettings().then(res => {
       const setting = res.settings?.find(s => s.key === "schools_page");
       if (setting?.value) {
