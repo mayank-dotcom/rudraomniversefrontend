@@ -1226,7 +1226,25 @@ const Dashboard = () => {
                         { id: 'plans', label: 'Plans', icon: Zap, action: () => setView('plans') },
                         { id: 'schools', label: 'Schools', icon: Users, action: () => { setView('schools'); fetchSchoolsData(); } },
                         { id: 'enterprises', label: 'Enterprises', icon: Building2, action: () => { setView('enterprises' as any); fetchEnterprisesData(); } },
-                        { id: 'sites', label: 'Sites', icon: FileText, action: () => setView('sites') }
+                        { id: 'sites', label: 'Sites', icon: FileText, action: () => {
+                            setView('sites');
+                            const pageKey = 'about_us';
+                            const setting = siteSettings.find(s => s.key === pageKey);
+                            const raw = setting?.value || '';
+                            setEditingSiteSetting({ key: pageKey, value: raw });
+                            try {
+                                const parsed = JSON.parse(raw);
+                                if (Array.isArray(parsed.sections) && !parsed.elements) {
+                                    setSiteFormData({ elements: parsed.sections.map((s: string) => ({ type: 'paragraph', content: s })) });
+                                } else if (parsed.description && !parsed.paragraphs) {
+                                    setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
+                                } else {
+                                    setSiteFormData(parsed);
+                                }
+                            } catch {
+                                setSiteFormData({ elements: raw.split('\n\n').filter(Boolean).map((p: string) => ({ type: 'paragraph', content: p })) });
+                            }
+                        } }
                     ] as { id: typeof view; label: string; icon: any; action: () => void }[]).map((item) => {
                         const Icon = item.icon;
                         const isActive = view === item.id;
@@ -1404,7 +1422,25 @@ const Dashboard = () => {
                                     { id: 'plans', label: 'Plans', icon: Zap, action: () => setView('plans') },
                                     { id: 'schools', label: 'Schools', icon: Users, action: () => { setView('schools'); fetchSchoolsData(); } },
                                     { id: 'enterprises', label: 'Enterprises', icon: Building2, action: () => { setView('enterprises' as any); fetchEnterprisesData(); } },
-                                    { id: 'sites', label: 'Sites', icon: FileText, action: () => setView('sites') }
+                                    { id: 'sites', label: 'Sites', icon: FileText, action: () => {
+                                        setView('sites');
+                                        const pageKey = 'about_us';
+                                        const setting = siteSettings.find(s => s.key === pageKey);
+                                        const raw = setting?.value || '';
+                                        setEditingSiteSetting({ key: pageKey, value: raw });
+                                        try {
+                                            const parsed = JSON.parse(raw);
+                                            if (Array.isArray(parsed.sections) && !parsed.elements) {
+                                                setSiteFormData({ elements: parsed.sections.map((s: string) => ({ type: 'paragraph', content: s })) });
+                                            } else if (parsed.description && !parsed.paragraphs) {
+                                                setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
+                                            } else {
+                                                setSiteFormData(parsed);
+                                            }
+                                        } catch {
+                                            setSiteFormData({ elements: raw.split('\n\n').filter(Boolean).map((p: string) => ({ type: 'paragraph', content: p })) });
+                                        }
+                                    } }
                                 ] as { id: typeof view; label: string; icon: any; action: () => void }[]).map((item) => {
                                     const Icon = item.icon;
                                     const isActive = view === item.id;
@@ -2175,89 +2211,572 @@ const Dashboard = () => {
                             exit={{ opacity: 0, y: -20 }}
                             className="p-4 md:p-8 lg:p-10"
                         >
-                            <div className={`border ${isDarkMode ? "border-zinc-800/50" : "border-zinc-300"} rounded-[2rem] md:rounded-[3rem] overflow-hidden backdrop-blur-3xl ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100"
-                                }`}>
-                                <div className={`p-6 md:p-10 border-b flex items-center justify-between ${isDarkMode ? "border-white/10" : "border-zinc-300"}`}>
-                                    <div>
-                                        <h2 className={`text-3xl font-display font-black tracking-tight uppercase ${isDarkMode ? "text-white" : "text-black"}`}>Site Pages</h2>
-                                        <p className={`text-[10px] font-mono uppercase mt-2 tracking-[0.4em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Manage About Us, Privacy Policy, Terms & Contact</p>
-                                    </div>
-                                    <button
-                                        onClick={fetchData}
-                                        className={`p-3 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-black/5 text-black"}`}
-                                    >
-                                        <RefreshCw className={`h-4 w-4 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
-                                    </button>
-                                </div>
-                                <div className="p-0">
-                                    <div className="flex flex-col">
-                                        {[
-                                            { key: 'about_us', label: 'About Us', icon: 'ℹ️' },
-                                            { key: 'privacy_policy', label: 'Privacy Policy', icon: '🔒' },
-                                            { key: 'terms_conditions', label: 'Terms of Service', icon: '📜' },
-                                            { key: 'contact_info', label: 'Contact Us', icon: '📧' },
-                                            { key: 'social_media_links', label: 'Social Media Links', icon: '🔗' },
-                                            { key: 'schools_page', label: 'Schools Page', icon: '🏫' },
-                                            { key: 'b2b_page', label: 'B2B Page', icon: '💼' },
-                                        ].map((page, index, array) => {
-                                            const setting = siteSettings.find(s => s.key === page.key)
-                                            return (
-                                                <div
-                                                    key={page.key}
-                                                    className={`flex items-center justify-between p-6 transition-all cursor-pointer group ${
-                                                        index !== array.length - 1 ? (isDarkMode ? "border-b border-white/5" : "border-b border-black/5") : ""
-                                                    } ${isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"}`}
-                                                    onClick={() => {
-                                                        const raw = setting?.value || '';
-                                                        setEditingSiteSetting({ key: page.key, value: raw });
-                                                        try {
-                                                            const parsed = JSON.parse(raw);
-                                                            if (page.key === 'about_us' && Array.isArray(parsed.sections) && !parsed.elements) {
-                                                                setSiteFormData({ elements: parsed.sections.map((s: string) => ({ type: 'paragraph', content: s })) });
-                                                            } else if (page.key === 'contact_info' && parsed.description && !parsed.paragraphs) {
-                                                                setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
-                                                            } else if (page.key === 'social_media_links' && !parsed.links) {
-                                                                setSiteFormData({ links: [] });
-                                                            } else if (page.key === 'schools_page' && !parsed.title) {
-                                                                setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '', features: [] });
-                                                            } else if (page.key === 'b2b_page' && !parsed.title) {
-                                                                setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '' });
-                                                            } else {
-                                                                setSiteFormData(parsed);
-                                                            }
-                                                        } catch {
-                                                            if (page.key === 'about_us') {
-                                                                setSiteFormData({ elements: raw.split('\n\n').filter(Boolean).map((p: string) => ({ type: 'paragraph', content: p })) });
-                                                            } else if (page.key === 'contact_info') {
-                                                                setSiteFormData({ paragraphs: raw.split('\n\n').filter(Boolean), email: '', responseTime: '' });
-                                                            } else if (page.key === 'social_media_links') {
-                                                                setSiteFormData({ links: [] });
-                                                            } else if (page.key === 'schools_page') {
-                                                                setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '', features: [] });
-                                                            } else if (page.key === 'b2b_page') {
-                                                                setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '' });
-                                                            } else {
-                                                                setSiteFormData(null);
-                                                            }
-                                                        }
-                                                    }}
+                            <div className="flex flex-col lg:flex-row gap-8">
+                                {/* Main Content Form (Left) */}
+                                <div className="flex-1 min-w-0">
+                                    {editingSiteSetting ? (
+                                        <div className="space-y-6">
+                                            <div className="flex items-center justify-between pb-4 border-b border-zinc-800/30">
+                                                <h2 className={`text-2xl font-display font-black uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
+                                                    {editingSiteSetting.key === 'about_us' ? 'About Us' :
+                                                        editingSiteSetting.key === 'privacy_policy' ? 'Privacy Policy' :
+                                                            editingSiteSetting.key === 'terms_conditions' ? 'Terms of Service' :
+                                                                editingSiteSetting.key === 'contact_info' ? 'Contact Us' : 
+                                                                    editingSiteSetting.key === 'social_media_links' ? 'Social Media Links' : 
+                                                                        editingSiteSetting.key === 'schools_page' ? 'Schools Page' : 
+                                                                            editingSiteSetting.key === 'b2b_page' ? 'B2B Page' : editingSiteSetting.key}
+                                                </h2>
+                                                <button
+                                                    onClick={fetchData}
+                                                    className={`p-2.5 rounded-full border transition-all ${isDarkMode ? "border-white/10 hover:bg-white/5 text-white" : "border-zinc-300 hover:bg-black/5 text-black"}`}
                                                 >
-                                                    <div className="flex items-center gap-4">
-                                                        <span className="text-2xl">{page.icon}</span>
-                                                        <div>
-                                                            <h3 className={`text-lg font-display font-black tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>{page.label}</h3>
-                                                            <p className={`text-[10px] font-mono line-clamp-1 leading-relaxed ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
-                                                                {setting?.value?.substring(0, 100) || 'No content yet...'}
-                                                            </p>
-                                                        </div>
+                                                    <RefreshCw className={`h-3.5 w-3.5 ${isDarkMode ? "opacity-40" : "opacity-60"}`} />
+                                                </button>
+                                            </div>
+
+                                            {editingSiteSetting.key === 'about_us' && (
+                                                <div className="space-y-4">
+                                                    {(Array.isArray(siteFormData?.elements) ? siteFormData.elements : []).map((el: any, i: number) => {
+                                                        const updateField = (field: string, val: string) => {
+                                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                                            if (next.elements && next.elements[i]) next.elements[i][field] = val;
+                                                            setSiteFormData(next);
+                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                        };
+                                                        return (
+                                                            <div key={i} className={`p-4 rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                                                <div className="flex items-center justify-between gap-3 mb-2">
+                                                                    <select
+                                                                        value={el.type || 'paragraph'}
+                                                                        onChange={(e) => updateField('type', e.target.value)}
+                                                                        className={`p-2 text-[10px] font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-black border-white/10 text-white" : "bg-white border-black/10 text-black"
+                                                                            }`}
+                                                                    >
+                                                                        <option value="heading">Heading</option>
+                                                                        <option value="subheading">Subheading</option>
+                                                                        <option value="paragraph">Paragraph</option>
+                                                                    </select>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                            next.elements = next.elements.filter((_: any, j: number) => j !== i);
+                                                                            setSiteFormData(next);
+                                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                        }}
+                                                                        className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                                <textarea
+                                                                    value={el.content || ''}
+                                                                    onChange={(e) => updateField('content', e.target.value)}
+                                                                    rows={4}
+                                                                    placeholder={el.type === 'paragraph' ? 'Paragraph text...' : el.type === 'heading' ? 'Heading text...' : 'Subheading text...'}
+                                                                    className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                                        }`}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    <button
+                                                        onClick={() => {
+                                                            const next = JSON.parse(JSON.stringify(siteFormData || {}));
+                                                            if (!next.elements) next.elements = [];
+                                                            next.elements.push({ type: 'paragraph', content: '' });
+                                                            setSiteFormData(next);
+                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                        }}
+                                                        className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                                    >
+                                                        + Add Element
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {editingSiteSetting.key === 'contact_info' && (
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Paragraphs</label>
+                                                        {(Array.isArray(siteFormData?.paragraphs) ? siteFormData.paragraphs : ['']).map((p: string, i: number) => (
+                                                            <div key={i} className="mb-2">
+                                                                <div className="flex items-center justify-between mb-1">
+                                                                    <span className={`text-[8px] font-mono ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>Paragraph {i + 1}</span>
+                                                                    {siteFormData?.paragraphs?.length > 1 && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                                next.paragraphs = next.paragraphs.filter((_: any, j: number) => j !== i);
+                                                                                setSiteFormData(next);
+                                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                            }}
+                                                                            className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
+                                                                        >
+                                                                            Remove
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                                <textarea
+                                                                    value={p}
+                                                                    onChange={(e) => {
+                                                                        const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                        if (next.paragraphs && next.paragraphs[i] !== undefined) next.paragraphs[i] = e.target.value;
+                                                                        setSiteFormData(next);
+                                                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                    }}
+                                                                    rows={3}
+                                                                    className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                                        }`}
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                        <button
+                                                            onClick={() => {
+                                                                const next = JSON.parse(JSON.stringify(siteFormData || {}));
+                                                                if (!next.paragraphs) next.paragraphs = [];
+                                                                next.paragraphs.push('');
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                                        >
+                                                            + Add Paragraph
+                                                        </button>
                                                     </div>
-                                                    <div className={`text-[10px] font-mono uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                        Edit
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Email</label>
+                                                        <input
+                                                            value={siteFormData?.email || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, email: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                                }`}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Response Time</label>
+                                                        <input
+                                                            value={siteFormData?.responseTime || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, responseTime: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                                }`}
+                                                        />
                                                     </div>
                                                 </div>
-                                            )
-                                        })}
-                                    </div>
+                                            )}
+
+                                            {editingSiteSetting.key === 'social_media_links' && (
+                                                <div className="space-y-4">
+                                                    {(Array.isArray(siteFormData?.links) ? siteFormData.links : []).map((link: any, i: number) => {
+                                                        const updateField = (field: string, val: string) => {
+                                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                                            if (next.links && next.links[i]) next.links[i][field] = val;
+                                                            setSiteFormData(next);
+                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                        };
+                                                        return (
+                                                            <div key={i} className={`p-4 rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
+                                                                            Link {i + 1}
+                                                                        </label>
+                                                                        {link.platform && (
+                                                                            <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-mono font-bold uppercase tracking-widest ${
+                                                                                isDarkMode ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-emerald-500/5 text-emerald-600 border border-emerald-500/10"
+                                                                            }`}>
+                                                                                {link.platform}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                            next.links = next.links.filter((_: any, j: number) => j !== i);
+                                                                            setSiteFormData(next);
+                                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                        }}
+                                                                        className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                                <div className="flex gap-2">
+                                                                    <input
+                                                                        value={link.platform || ''}
+                                                                        onChange={(e) => updateField('platform', e.target.value)}
+                                                                        placeholder="Platform (e.g. Twitter)"
+                                                                        className={`w-1/3 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                                    />
+                                                                    <input
+                                                                        value={link.url || ''}
+                                                                        onChange={(e) => updateField('url', e.target.value)}
+                                                                        placeholder="URL"
+                                                                        className={`w-2/3 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    <button
+                                                        onClick={() => {
+                                                            const next = JSON.parse(JSON.stringify(siteFormData || {}));
+                                                            if (!next.links) next.links = [];
+                                                            next.links.push({ platform: '', url: '' });
+                                                            setSiteFormData(next);
+                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                        }}
+                                                        className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                                    >
+                                                        + Add Link
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {editingSiteSetting.key === 'schools_page' && (
+                                                <div className="space-y-6">
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Title</label>
+                                                        <input
+                                                            value={siteFormData?.title || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, title: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Hero Title (e.g. Empower your Institution.)"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Description</label>
+                                                        <textarea
+                                                            value={siteFormData?.description || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, description: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            rows={3}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Hero Description"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Custom Link Text</label>
+                                                        <input
+                                                            value={siteFormData?.linkText || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, linkText: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="e.g. Back Home"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Custom Link URL</label>
+                                                        <input
+                                                            value={siteFormData?.linkUrl || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, linkUrl: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="e.g. /"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-4">
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Features</label>
+                                                        {(Array.isArray(siteFormData?.features) ? siteFormData.features : []).map((feature: any, i: number) => {
+                                                            const updateFeature = (field: string, val: string) => {
+                                                                const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                if (next.features && next.features[i]) next.features[i][field] = val;
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            };
+                                                            return (
+                                                                <div key={i} className={`p-4 rounded-xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <span className="text-xs font-mono">Feature {i + 1}</span>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                                next.features = next.features.filter((_: any, j: number) => j !== i);
+                                                                                setSiteFormData(next);
+                                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                            }}
+                                                                            className="text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300"
+                                                                        >
+                                                                            Remove
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <input
+                                                                            value={feature.title || ''}
+                                                                            onChange={(e) => updateFeature('title', e.target.value)}
+                                                                            placeholder="Feature Title"
+                                                                            className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                                        />
+                                                                        <textarea
+                                                                            value={feature.desc || ''}
+                                                                            onChange={(e) => updateFeature('desc', e.target.value)}
+                                                                            placeholder="Feature Description"
+                                                                            rows={2}
+                                                                            className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        <button
+                                                            onClick={() => {
+                                                                const next = JSON.parse(JSON.stringify(siteFormData || {}));
+                                                                if (!next.features) next.features = [];
+                                                                next.features.push({ title: '', desc: '' });
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                                        >
+                                                            + Add Feature
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {editingSiteSetting.key === 'b2b_page' && (
+                                                <div className="space-y-6">
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Title</label>
+                                                        <input
+                                                            value={siteFormData?.title || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, title: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Hero Title (e.g. Quiet power. Tailored access.)"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Description</label>
+                                                        <textarea
+                                                            value={siteFormData?.description || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, description: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            rows={3}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Hero Description"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Custom Link Text</label>
+                                                        <input
+                                                            value={siteFormData?.linkText || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, linkText: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="e.g. Learn More"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Custom Link URL</label>
+                                                        <input
+                                                            value={siteFormData?.linkUrl || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, linkUrl: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="e.g. /pricing"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {(editingSiteSetting.key === 'privacy_policy' || editingSiteSetting.key === 'terms_conditions') && (
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Last Updated</label>
+                                                        <input
+                                                            value={siteFormData?.lastUpdated || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, lastUpdated: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                                }`}
+                                                        />
+                                                    </div>
+                                                    {(Array.isArray(siteFormData?.sections) ? siteFormData.sections : []).map((s: any, i: number) => {
+                                                        const updateField = (field: string, val: string) => {
+                                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                                            if (next.sections && next.sections[i]) next.sections[i][field] = val;
+                                                            setSiteFormData(next);
+                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                        };
+                                                        return (
+                                                            <div key={i} className={`p-4 rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Section {i + 1}</label>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                            next.sections = next.sections.filter((_: any, j: number) => j !== i);
+                                                                            setSiteFormData(next);
+                                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                        }}
+                                                                        className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                                <input
+                                                                    value={s.title || ''}
+                                                                    onChange={(e) => updateField('title', e.target.value)}
+                                                                    placeholder="Section title"
+                                                                    className={`w-full mb-2 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                                        }`}
+                                                                />
+                                                                <textarea
+                                                                    value={s.content || ''}
+                                                                    onChange={(e) => updateField('content', e.target.value)}
+                                                                    rows={4}
+                                                                    placeholder="Section content"
+                                                                    className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                                                        }`}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    <button
+                                                        onClick={() => {
+                                                            const next = JSON.parse(JSON.stringify(siteFormData || {}));
+                                                            if (!next.sections) next.sections = [];
+                                                            next.sections.push({ title: '', content: '' });
+                                                            setSiteFormData(next);
+                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                        }}
+                                                        className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                                    >
+                                                        + Add Section
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            <div className="flex gap-4 pt-6 border-t border-zinc-800/30">
+                                                <button
+                                                    onClick={async () => {
+                                                        setIsSavingSiteSetting(true);
+                                                        try {
+                                                            const res = await updateSiteSetting(editingSiteSetting.key, editingSiteSetting.value);
+                                                            if (res.success) {
+                                                                toast.success("Page updated successfully");
+                                                                fetchData();
+                                                            } else throw new Error(res.error || "Failed to update");
+                                                        } catch (err) {
+                                                            toast.error("Error updating page: " + (err as Error).message);
+                                                        } finally {
+                                                            setIsSavingSiteSetting(false);
+                                                        }
+                                                    }}
+                                                    disabled={isSavingSiteSetting}
+                                                    className="px-8 py-3.5 bg-[#00DDDD] text-black text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl disabled:opacity-50 animate-pulse"
+                                                >
+                                                    {isSavingSiteSetting ? "SAVING..." : "SAVE CHANGES"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex-1 flex items-center justify-center font-mono opacity-50">
+                                            Select a page from the right sidebar to edit.
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Right Sidebar */}
+                                <div className={`w-full lg:w-72 flex flex-col gap-2 shrink-0 border border-zinc-800/20 lg:border-y-0 lg:border-r-0 lg:border-l ${isDarkMode ? "border-white/5" : "border-black/5"} p-6 rounded-3xl lg:rounded-none`}>
+                                    <span className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-40 block px-4 mb-3">Site Pages</span>
+                                    {[
+                                        { key: 'about_us', label: 'About Us', icon: 'ℹ️' },
+                                        { key: 'privacy_policy', label: 'Privacy Policy', icon: '🔒' },
+                                        { key: 'terms_conditions', label: 'Terms of Service', icon: '📜' },
+                                        { key: 'contact_info', label: 'Contact Us', icon: '📧' },
+                                        { key: 'social_media_links', label: 'Social Media Links', icon: '🔗' },
+                                        { key: 'schools_page', label: 'Schools Page', icon: '🏫' },
+                                        { key: 'b2b_page', label: 'B2B Page', icon: '💼' },
+                                    ].map((page) => {
+                                        const isActive = editingSiteSetting?.key === page.key;
+                                        return (
+                                            <button
+                                                key={page.key}
+                                                onClick={() => {
+                                                    const setting = siteSettings.find(s => s.key === page.key);
+                                                    const raw = setting?.value || '';
+                                                    setEditingSiteSetting({ key: page.key, value: raw });
+                                                    try {
+                                                        const parsed = JSON.parse(raw);
+                                                        if (page.key === 'about_us' && Array.isArray(parsed.sections) && !parsed.elements) {
+                                                            setSiteFormData({ elements: parsed.sections.map((s: string) => ({ type: 'paragraph', content: s })) });
+                                                        } else if (page.key === 'contact_info' && parsed.description && !parsed.paragraphs) {
+                                                            setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
+                                                        } else if (page.key === 'social_media_links' && !parsed.links) {
+                                                            setSiteFormData({ links: [] });
+                                                        } else if (page.key === 'schools_page' && !parsed.title) {
+                                                            setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '', features: [] });
+                                                        } else if (page.key === 'b2b_page' && !parsed.title) {
+                                                            setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '' });
+                                                        } else {
+                                                            setSiteFormData(parsed);
+                                                        }
+                                                    } catch {
+                                                        if (page.key === 'about_us') {
+                                                            setSiteFormData({ elements: raw.split('\n\n').filter(Boolean).map((p: string) => ({ type: 'paragraph', content: p })) });
+                                                        } else if (page.key === 'contact_info') {
+                                                            setSiteFormData({ paragraphs: raw.split('\n\n').filter(Boolean), email: '', responseTime: '' });
+                                                        } else if (page.key === 'social_media_links') {
+                                                            setSiteFormData({ links: [] });
+                                                        } else if (page.key === 'schools_page') {
+                                                            setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '', features: [] });
+                                                        } else if (page.key === 'b2b_page') {
+                                                            setSiteFormData({ title: '', description: '', linkText: '', linkUrl: '' });
+                                                        } else {
+                                                            setSiteFormData(null);
+                                                        }
+                                                    }
+                                                }}
+                                                className={`w-full flex items-center transition-all duration-300 gap-4 px-4 py-3.5 rounded-2xl text-left ${
+                                                    isActive
+                                                        ? "text-[#00DDDD] bg-[#00DDDD]/5 font-bold shadow-[inset_0_1px_1px_rgba(0,221,221,0.1)]"
+                                                        : isDarkMode
+                                                            ? "text-white/55 hover:text-white hover:bg-white/5"
+                                                            : "text-black/60 hover:text-black hover:bg-black/5"
+                                                }`}
+                                            >
+                                                <span className="text-lg">{page.icon}</span>
+                                                <span className="font-display uppercase tracking-wider text-[11px] font-semibold">{page.label}</span>
+                                            </button>
+                                        )
+                                    })}
                                 </div>
                             </div>
                         </motion.div>
@@ -3775,503 +4294,7 @@ const Dashboard = () => {
             )}
 
             {/* Site Settings Editor Modal */}
-            {editingSiteSetting && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className={`relative w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-zinc-800/50 p-6 rounded-[2rem] ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-white" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 text-black"
-                            }`}
-                    >
-                        <button
-                            onClick={() => { setEditingSiteSetting(null); setSiteFormData(null); }}
-                            className={`absolute top-4 right-4 p-2 rounded-xl transition-all ${isDarkMode ? "opacity-40 text-white hover:opacity-100 hover:bg-white/5" : "opacity-60 text-black hover:opacity-100 hover:bg-black/5"}`}
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
 
-                        <h2 className={`text-xl font-display font-black uppercase tracking-tight mb-6 ${isDarkMode ? "text-white" : "text-black"}`}>
-                            {editingSiteSetting.key === 'about_us' ? 'About Us' :
-                                editingSiteSetting.key === 'privacy_policy' ? 'Privacy Policy' :
-                                    editingSiteSetting.key === 'terms_conditions' ? 'Terms of Service' :
-                                        editingSiteSetting.key === 'contact_info' ? 'Contact Us' : 
-                                            editingSiteSetting.key === 'social_media_links' ? 'Social Media Links' : 
-                                                editingSiteSetting.key === 'schools_page' ? 'Schools Page' : 
-                                                    editingSiteSetting.key === 'b2b_page' ? 'B2B Page' : editingSiteSetting.key}
-                        </h2>
-
-                        {editingSiteSetting.key === 'about_us' && (
-                            <div className="space-y-4">
-                                {(Array.isArray(siteFormData?.elements) ? siteFormData.elements : []).map((el: any, i: number) => {
-                                    const updateField = (field: string, val: string) => {
-                                        const next = JSON.parse(JSON.stringify(siteFormData));
-                                        if (next.elements && next.elements[i]) next.elements[i][field] = val;
-                                        setSiteFormData(next);
-                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                    };
-                                    return (
-                                        <div key={i} className={`p-4 rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
-                                            <div className="flex items-center justify-between gap-3 mb-2">
-                                                <select
-                                                    value={el.type || 'paragraph'}
-                                                    onChange={(e) => updateField('type', e.target.value)}
-                                                    className={`p-2 text-[10px] font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-black border-white/10 text-white" : "bg-white border-black/10 text-black"
-                                                        }`}
-                                                >
-                                                    <option value="heading">Heading</option>
-                                                    <option value="subheading">Subheading</option>
-                                                    <option value="paragraph">Paragraph</option>
-                                                </select>
-                                                <button
-                                                    onClick={() => {
-                                                        const next = JSON.parse(JSON.stringify(siteFormData));
-                                                        next.elements = next.elements.filter((_: any, j: number) => j !== i);
-                                                        setSiteFormData(next);
-                                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                                    }}
-                                                    className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                            <textarea
-                                                value={el.content || ''}
-                                                onChange={(e) => updateField('content', e.target.value)}
-                                                rows={4}
-                                                placeholder={el.type === 'paragraph' ? 'Paragraph text...' : el.type === 'heading' ? 'Heading text...' : 'Subheading text...'}
-                                                className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                                    }`}
-                                            />
-                                        </div>
-                                    );
-                                })}
-                                <button
-                                    onClick={() => {
-                                        const next = JSON.parse(JSON.stringify(siteFormData || {}));
-                                        if (!next.elements) next.elements = [];
-                                        next.elements.push({ type: 'paragraph', content: '' });
-                                        setSiteFormData(next);
-                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                    }}
-                                    className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
-                                >
-                                    + Add Element
-                                </button>
-                            </div>
-                        )}
-
-                        {editingSiteSetting.key === 'contact_info' && (
-                            <div className="space-y-4">
-                                <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Paragraphs</label>
-                                    {(Array.isArray(siteFormData?.paragraphs) ? siteFormData.paragraphs : ['']).map((p: string, i: number) => (
-                                        <div key={i} className="mb-2">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className={`text-[8px] font-mono ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>Paragraph {i + 1}</span>
-                                                {siteFormData?.paragraphs?.length > 1 && (
-                                                    <button
-                                                        onClick={() => {
-                                                            const next = JSON.parse(JSON.stringify(siteFormData));
-                                                            next.paragraphs = next.paragraphs.filter((_: any, j: number) => j !== i);
-                                                            setSiteFormData(next);
-                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                                        }}
-                                                        className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
-                                                    >
-                                                        Remove
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <textarea
-                                                value={p}
-                                                onChange={(e) => {
-                                                    const next = JSON.parse(JSON.stringify(siteFormData));
-                                                    if (next.paragraphs && next.paragraphs[i] !== undefined) next.paragraphs[i] = e.target.value;
-                                                    setSiteFormData(next);
-                                                    setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                                }}
-                                                rows={3}
-                                                className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                                    }`}
-                                            />
-                                        </div>
-                                    ))}
-                                    <button
-                                        onClick={() => {
-                                            const next = JSON.parse(JSON.stringify(siteFormData || {}));
-                                            if (!next.paragraphs) next.paragraphs = [];
-                                            next.paragraphs.push('');
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
-                                    >
-                                        + Add Paragraph
-                                    </button>
-                                </div>
-                                <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Email</label>
-                                    <input
-                                        value={siteFormData?.email || ''}
-                                        onChange={(e) => {
-                                            const next = { ...siteFormData, email: e.target.value };
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                            }`}
-                                    />
-                                </div>
-                                <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Response Time</label>
-                                    <input
-                                        value={siteFormData?.responseTime || ''}
-                                        onChange={(e) => {
-                                            const next = { ...siteFormData, responseTime: e.target.value };
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                            }`}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {editingSiteSetting.key === 'social_media_links' && (
-                            <div className="space-y-4">
-                                {(Array.isArray(siteFormData?.links) ? siteFormData.links : []).map((link: any, i: number) => {
-                                    const updateField = (field: string, val: string) => {
-                                        const next = JSON.parse(JSON.stringify(siteFormData));
-                                        if (next.links && next.links[i]) next.links[i][field] = val;
-                                        setSiteFormData(next);
-                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                    };
-                                    return (
-                                        <div key={i} className={`p-4 rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Link {i + 1}</label>
-                                                <button
-                                                    onClick={() => {
-                                                        const next = JSON.parse(JSON.stringify(siteFormData));
-                                                        next.links = next.links.filter((_: any, j: number) => j !== i);
-                                                        setSiteFormData(next);
-                                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                                    }}
-                                                    className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <input
-                                                    value={link.platform || ''}
-                                                    onChange={(e) => updateField('platform', e.target.value)}
-                                                    placeholder="Platform (e.g. Twitter)"
-                                                    className={`w-1/3 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                                />
-                                                <input
-                                                    value={link.url || ''}
-                                                    onChange={(e) => updateField('url', e.target.value)}
-                                                    placeholder="URL"
-                                                    className={`w-2/3 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                                />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                <button
-                                    onClick={() => {
-                                        const next = JSON.parse(JSON.stringify(siteFormData || {}));
-                                        if (!next.links) next.links = [];
-                                        next.links.push({ platform: '', url: '' });
-                                        setSiteFormData(next);
-                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                    }}
-                                    className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
-                                >
-                                    + Add Link
-                                </button>
-                            </div>
-                        )}
-
-                        {editingSiteSetting.key === 'schools_page' && (
-                            <div className="space-y-6">
-                                <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Title</label>
-                                    <input
-                                        value={siteFormData?.title || ''}
-                                        onChange={(e) => {
-                                            const next = { ...siteFormData, title: e.target.value };
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                        placeholder="Hero Title (e.g. Empower your Institution.)"
-                                    />
-                                </div>
-                                <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Description</label>
-                                    <textarea
-                                        value={siteFormData?.description || ''}
-                                        onChange={(e) => {
-                                            const next = { ...siteFormData, description: e.target.value };
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        rows={3}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                        placeholder="Hero Description"
-                                    />
-                                </div>
-                                <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Custom Link Text</label>
-                                    <input
-                                        value={siteFormData?.linkText || ''}
-                                        onChange={(e) => {
-                                            const next = { ...siteFormData, linkText: e.target.value };
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                        placeholder="e.g. Back Home"
-                                    />
-                                </div>
-                                <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Custom Link URL</label>
-                                    <input
-                                        value={siteFormData?.linkUrl || ''}
-                                        onChange={(e) => {
-                                            const next = { ...siteFormData, linkUrl: e.target.value };
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                        placeholder="e.g. /"
-                                    />
-                                </div>
-                                <div className="space-y-4">
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Features</label>
-                                    {(Array.isArray(siteFormData?.features) ? siteFormData.features : []).map((feature: any, i: number) => {
-                                        const updateFeature = (field: string, val: string) => {
-                                            const next = JSON.parse(JSON.stringify(siteFormData));
-                                            if (next.features && next.features[i]) next.features[i][field] = val;
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        };
-                                        return (
-                                            <div key={i} className={`p-4 rounded-xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-xs font-mono">Feature {i + 1}</span>
-                                                    <button
-                                                        onClick={() => {
-                                                            const next = JSON.parse(JSON.stringify(siteFormData));
-                                                            next.features = next.features.filter((_: any, j: number) => j !== i);
-                                                            setSiteFormData(next);
-                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                                        }}
-                                                        className="text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300"
-                                                    >
-                                                        Remove
-                                                    </button>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <input
-                                                        value={feature.title || ''}
-                                                        onChange={(e) => updateFeature('title', e.target.value)}
-                                                        placeholder="Feature Title"
-                                                        className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                                    />
-                                                    <textarea
-                                                        value={feature.desc || ''}
-                                                        onChange={(e) => updateFeature('desc', e.target.value)}
-                                                        placeholder="Feature Description"
-                                                        rows={2}
-                                                        className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                                    />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                    <button
-                                        onClick={() => {
-                                            const next = JSON.parse(JSON.stringify(siteFormData || {}));
-                                            if (!next.features) next.features = [];
-                                            next.features.push({ title: '', desc: '' });
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
-                                    >
-                                        + Add Feature
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {editingSiteSetting.key === 'b2b_page' && (
-                            <div className="space-y-6">
-                                <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Title</label>
-                                    <input
-                                        value={siteFormData?.title || ''}
-                                        onChange={(e) => {
-                                            const next = { ...siteFormData, title: e.target.value };
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                        placeholder="Hero Title (e.g. Quiet power. Tailored access.)"
-                                    />
-                                </div>
-                                <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Description</label>
-                                    <textarea
-                                        value={siteFormData?.description || ''}
-                                        onChange={(e) => {
-                                            const next = { ...siteFormData, description: e.target.value };
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        rows={3}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                        placeholder="Hero Description"
-                                    />
-                                </div>
-                                <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Custom Link Text</label>
-                                    <input
-                                        value={siteFormData?.linkText || ''}
-                                        onChange={(e) => {
-                                            const next = { ...siteFormData, linkText: e.target.value };
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                        placeholder="e.g. Learn More"
-                                    />
-                                </div>
-                                <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Custom Link URL</label>
-                                    <input
-                                        value={siteFormData?.linkUrl || ''}
-                                        onChange={(e) => {
-                                            const next = { ...siteFormData, linkUrl: e.target.value };
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
-                                        placeholder="e.g. /pricing"
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {(editingSiteSetting.key === 'privacy_policy' || editingSiteSetting.key === 'terms_conditions') && (
-                            <div className="space-y-4">
-                                <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Last Updated</label>
-                                    <input
-                                        value={siteFormData?.lastUpdated || ''}
-                                        onChange={(e) => {
-                                            const next = { ...siteFormData, lastUpdated: e.target.value };
-                                            setSiteFormData(next);
-                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                        }}
-                                        className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                            }`}
-                                    />
-                                </div>
-                                {(Array.isArray(siteFormData?.sections) ? siteFormData.sections : []).map((s: any, i: number) => {
-                                    const updateField = (field: string, val: string) => {
-                                        const next = JSON.parse(JSON.stringify(siteFormData));
-                                        if (next.sections && next.sections[i]) next.sections[i][field] = val;
-                                        setSiteFormData(next);
-                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                    };
-                                    return (
-                                        <div key={i} className={`p-4 rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Section {i + 1}</label>
-                                                <button
-                                                    onClick={() => {
-                                                        const next = JSON.parse(JSON.stringify(siteFormData));
-                                                        next.sections = next.sections.filter((_: any, j: number) => j !== i);
-                                                        setSiteFormData(next);
-                                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                                    }}
-                                                    className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                            <input
-                                                value={s.title || ''}
-                                                onChange={(e) => updateField('title', e.target.value)}
-                                                placeholder="Section title"
-                                                className={`w-full mb-2 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                                    }`}
-                                            />
-                                            <textarea
-                                                value={s.content || ''}
-                                                onChange={(e) => updateField('content', e.target.value)}
-                                                rows={4}
-                                                placeholder="Section content"
-                                                className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                                    }`}
-                                            />
-                                        </div>
-                                    );
-                                })}
-                                <button
-                                    onClick={() => {
-                                        const next = JSON.parse(JSON.stringify(siteFormData || {}));
-                                        if (!next.sections) next.sections = [];
-                                        next.sections.push({ title: '', content: '' });
-                                        setSiteFormData(next);
-                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
-                                    }}
-                                    className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
-                                >
-                                    + Add Section
-                                </button>
-                            </div>
-                        )}
-
-                        <div className="flex gap-3 mt-6">
-                            <button
-                                onClick={() => { setEditingSiteSetting(null); setSiteFormData(null); }}
-                                className={`flex-1 py-3 border text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl ${isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"
-                                    }`}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={async () => {
-                                    setIsSavingSiteSetting(true);
-                                    try {
-                                        const res = await updateSiteSetting(editingSiteSetting.key, editingSiteSetting.value);
-                                        if (res.success) {
-                                            toast.success("Page updated successfully");
-                                            setEditingSiteSetting(null);
-                                            setSiteFormData(null);
-                                            fetchData();
-                                        } else throw new Error(res.error || "Failed to update");
-                                    } catch (err) {
-                                        toast.error("Error updating page: " + (err as Error).message);
-                                    } finally {
-                                        setIsSavingSiteSetting(false);
-                                    }
-                                }}
-                                disabled={isSavingSiteSetting}
-                                className="flex-1 py-3 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.3em] font-bold hover:scale-[1.02] transition-all rounded-xl disabled:opacity-50"
-                            >
-                                {isSavingSiteSetting ? "SAVING..." : "SAVE CHANGES"}
-                            </button>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
 
             {/* Create School Admin Modal */}
             {showCreateSchoolAdminModal && (
