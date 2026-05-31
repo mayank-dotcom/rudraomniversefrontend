@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import Navbar from "@/components/ui/Navbar"
 import Footer from "@/components/ui/Footer"
@@ -8,6 +9,30 @@ import { Code2, Brackets, GitBranch, BugPlay, Download, ArrowRight, CheckCircle,
 
 export default function Plugin() {
   const { isDarkMode } = useTheme()
+
+  const [pageData, setPageData] = useState({
+    title: "Rudranex AI Plugin",
+    description: "Bring Rudranex AI directly into your code editor. Get real-time AI assistance, smart debugging, and automated code reviews without leaving your workflow.",
+    buttonText: "VS Code Marketplace",
+    buttonUrl: "#"
+  });
+
+  useEffect(() => {
+    try {
+      const local = localStorage.getItem("rudranex_plugin_page");
+      if (local) {
+        const parsed = JSON.parse(local);
+        setPageData({
+          title: parsed.title || "Rudranex AI Plugin",
+          description: parsed.description || "Bring Rudranex AI directly into your code editor. Get real-time AI assistance, smart debugging, and automated code reviews without leaving your workflow.",
+          buttonText: parsed.buttonText || "VS Code Marketplace",
+          buttonUrl: parsed.buttonUrl || "#"
+        });
+      }
+    } catch (e) {
+      console.error("Local storage plugin fetch error:", e);
+    }
+  }, []);
 
   const features = [
     { icon: Brackets, title: "Inline Code Assist", desc: "Get AI-powered code suggestions, completions, and refactors directly inside your editor without switching context." },
@@ -60,34 +85,36 @@ export default function Plugin() {
               className="font-display font-bold leading-[0.9] mb-8"
               style={{ fontSize: "clamp(3rem, 8vw, 64px)", letterSpacing: "-0.04em" }}
             >
-              Rudranex AI{" "}
-              <span className="text-[var(--color-cyan)]">Plugin</span>
+              {pageData.title.split('\n').map((line, idx, arr) => (
+                <span key={idx}>
+                  {idx > 0 && <br />}
+                  {idx === arr.length - 1 ? (
+                    <span className="text-[var(--color-cyan)]">{line}</span>
+                  ) : (
+                    line
+                  )}
+                </span>
+              ))}
             </h1>
 
             <p
               className={`text-base md:text-lg max-w-2xl leading-relaxed mb-12 ${isDarkMode ? "text-white/50" : "text-black/50"}`}
               style={{ fontSize: "16px" }}
             >
-              Bring Rudranex AI directly into your code editor. Get real-time AI assistance, smart debugging, and automated code reviews without leaving your workflow.
+              {pageData.description}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <a
-                href="#"
+                href={pageData.buttonUrl}
+                target={pageData.buttonUrl.startsWith("http") ? "_blank" : undefined}
+                rel={pageData.buttonUrl.startsWith("http") ? "noopener noreferrer" : undefined}
                 className={`flex items-center gap-3 px-8 py-4 font-sans font-semibold uppercase transition-all active:scale-95 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
                 style={{ fontSize: "13px", letterSpacing: "0.05em" }}
               >
                 <ExternalLink className="h-5 w-5" />
-                VS Code Marketplace
+                {pageData.buttonText}
                 <ArrowRight className="h-4 w-4" />
-              </a>
-              <a
-                href="#"
-                className={`flex items-center gap-3 px-8 py-4 font-sans font-semibold uppercase border transition-all active:scale-95 ${isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"}`}
-                style={{ fontSize: "13px", letterSpacing: "0.05em" }}
-              >
-                <Download className="h-4 w-4" />
-                JetBrains Marketplace
               </a>
             </div>
           </motion.div>

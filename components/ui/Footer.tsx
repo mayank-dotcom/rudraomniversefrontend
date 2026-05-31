@@ -81,7 +81,7 @@ export default function Footer() {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-16 md:gap-24">
                         {[
                             { heading: "Company", links: [{ label: "About Us", href: "/about" }, { label: "Privacy Policy", href: "/privacy" }, { label: "Terms of Service", href: "/terms" }, { label: "Contact Us", href: "/contact" }] },
-                            { heading: "Platforms", links: [{ label: "For Schools", href: "/schools" }, { label: "For B2B", href: "/pricing" }, { label: "Pricing", href: "/pricing" }] },
+                            { heading: "Platforms", links: [{ label: "For Schools", href: "/schools" }, { label: "For B2B", href: "/b2b" }, { label: "Pricing", href: "/pricing" }] },
                             { heading: "Social", links: [{ label: "X / Twitter", href: socialLinks.twitter }, { label: "LinkedIn", href: socialLinks.linkedin }, { label: "GitHub", href: socialLinks.github }] },
                         ].map((col) => (
                             <div key={col.heading} className="flex flex-col gap-5">

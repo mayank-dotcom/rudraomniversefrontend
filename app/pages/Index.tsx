@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/ui/Navbar";
 import FeatureCard from "@/components/ui/FeatureCard";
 import AuthModal from "@/components/ui/AuthModal";
@@ -12,6 +12,22 @@ import { isAuthenticated } from "@/lib/auth";
 const Index = () => {
     const { isDarkMode } = useTheme();
     const [showAuth, setShowAuth] = useState(false);
+    const [demoVideoUrl, setDemoVideoUrl] = useState("https://www.youtube.com/embed/dQw4w9WgXcQ");
+    const [showDemoModal, setShowDemoModal] = useState(false);
+
+    useEffect(() => {
+        try {
+            const local = localStorage.getItem("rudranex_home_page");
+            if (local) {
+                const parsed = JSON.parse(local);
+                if (parsed.videoUrl) {
+                    setDemoVideoUrl(parsed.videoUrl);
+                }
+            }
+        } catch (e) {
+            console.error("Local storage fetch demo video error:", e);
+        }
+    }, []);
 
     const handleStartFree = () => {
         if (isAuthenticated()) {
@@ -123,6 +139,7 @@ const Index = () => {
                                 Start Free <span>→</span>
                             </button>
                             <button
+                                onClick={() => setShowDemoModal(true)}
                                 className={`px-12 py-4 border font-sans font-semibold uppercase transition-all active:scale-95 ${isDarkMode ? "border-white/30 text-white hover:bg-white/5" : "border-black/15 text-black hover:bg-black/5"}`}
                                 style={{ fontSize: "14px", letterSpacing: "0.05em" }}
                             >
@@ -354,6 +371,52 @@ const Index = () => {
             </section>
 
             <Footer />
+
+            {/* ═══════════════════════════════════════
+                DEMO VIDEO MODAL
+            ═══════════════════════════════════════ */}
+            <AnimatePresence>
+                {showDemoModal && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10">
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowDemoModal(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                        />
+                        
+                        {/* Modal Panel */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className={`relative w-full max-w-5xl aspect-video rounded-[2rem] overflow-hidden border border-zinc-800/50 shadow-2xl bg-black`}
+                        >
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setShowDemoModal(false)}
+                                className="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-black/60 text-white hover:bg-white/20 transition-all border border-white/10"
+                                title="Close Video"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" stroke="white" />
+                                </svg>
+                            </button>
+                            
+                            <iframe
+                                src={demoVideoUrl}
+                                title="Rudranex Demo Video"
+                                className="w-full h-full"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                            />
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
