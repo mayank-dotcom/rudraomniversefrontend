@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Navbar from "@/components/ui/Navbar";
 import Footer from "@/components/ui/Footer";
 import { ThemeProvider } from "@/lib/theme-context";
-import { Check, Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, ArrowRight } from "lucide-react";
+import { Check, Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, ArrowRight, Volume2, Mic, Sparkles } from "lucide-react";
 import { getPlansList, Plan, getPlanStrikeOff, getPublicSiteSettings } from "@/lib/chat-api";
 import { toast } from "sonner";
 import { useTheme } from "@/lib/theme-context";
@@ -163,7 +163,7 @@ const PricingContent = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border-l border-t border-blue-500 dark:border-white/20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {plans.map((plan, i) => {
                             const Icon = getPlanIcon(plan.plan_name || '');
                             const tag = getPlanTag(plan.plan_name || '');
@@ -175,7 +175,7 @@ const PricingContent = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.8, delay: i * 0.1 }}
-                                    className={`relative p-10 flex flex-col border-r border-b border-blue-500 dark:border-white/20 group transition-all duration-500 ${isPro ? (isDarkMode ? "bg-[#0d0d0d]" : "bg-white") : (isDarkMode ? "bg-transparent" : "bg-transparent")}`}
+                                    className={`relative p-10 flex flex-col border ${isDarkMode ? "border-white/20" : "border-black/10"} group transition-all duration-500 ${isPro ? (isDarkMode ? "bg-[#0d0d0d]" : "bg-white") : (isDarkMode ? "bg-transparent" : "bg-transparent")}`}
                                 >
                                     {/* Plan Tag — Technical Label style */}
                                     <div className="flex justify-between items-center mb-16">
@@ -222,17 +222,20 @@ const PricingContent = () => {
                                     </div>
 
                                     {/* Features Grid */}
-                                    <div className="flex-1 space-y-6 mb-16">
+                                    <div className="flex-1 space-y-5 mb-16">
                                         {[
-                                            { icon: Zap, label: "Chat Limit", value: plan.daily_chat_limit },
-                                            { icon: Code, label: "Coding Limit", value: plan.daily_coding_limit },
-                                            { icon: ImageIcon, label: "Vision Limit", value: plan.daily_vision_limit },
-                                            { icon: ImageIcon, label: "Monthly Images", value: plan.monthly_image_limit },
+                                            { icon: Zap, label: "Daily Chat", value: plan.daily_chat_limit },
+                                            { icon: Code, label: "Coding", value: plan.daily_coding_limit },
+                                            { icon: ImageIcon, label: "Vision", value: plan.daily_vision_limit },
+                                            { icon: ImageIcon, label: "Images/mo", value: plan.monthly_image_limit },
+                                            { icon: Sparkles, label: "Flux/mo", value: plan.monthly_flux_limit },
+                                            { icon: Volume2, label: "TTS", value: plan.daily_tts_limit },
+                                            { icon: Mic, label: "STT", value: plan.daily_stt_limit },
                                         ].map((feature, idx) => (
                                             <div key={idx} className="flex items-center gap-4">
                                                 <feature.icon className={`h-4 w-4 shrink-0 ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
                                                 <p className={`text-[13px] font-medium ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
-                                                    <span className={isDarkMode ? "text-white/60" : "text-black/70"}>{feature.label}:</span> {feature.value || 0}
+                                                    <span className={isDarkMode ? "text-white/60" : "text-black/70"}>{feature.label}:</span> {feature.value ?? 0}
                                                 </p>
                                             </div>
                                         ))}

@@ -1,13 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Navbar from "@/components/ui/Navbar"
 import Footer from "@/components/ui/Footer"
 import { useTheme } from "@/lib/theme-context"
+import { getPublicSiteSettings } from "@/lib/chat-api"
 import { MessageSquare, Mail, Clock, Send, CheckCircle, Bug } from "lucide-react"
 
 const API_BASE = process.env.NEXT_PUBLIC_BASE_URL!
+
+const DEFAULT_TITLE = "We're Here to\nHelp."
+const DEFAULT_DESC = "Having trouble? Have a suggestion? Our support team typically responds within 24 hours. You can also email us directly at hello@rudranex.ai."
+const DEFAULT_EMAIL = "hello@rudranex.ai"
+const DEFAULT_RESPONSE_TIME = "Usually within 24 hours"
 
 const SUPPORT_CATEGORIES = [
     { value: "general", label: "General Inquiry" },
@@ -20,6 +26,10 @@ const SUPPORT_CATEGORIES = [
 
 export default function Support() {
     const { isDarkMode } = useTheme()
+    const [pageTitle, setPageTitle] = useState(DEFAULT_TITLE)
+    const [pageDesc, setPageDesc] = useState(DEFAULT_DESC)
+    const [pageEmail, setPageEmail] = useState(DEFAULT_EMAIL)
+    const [pageResponseTime, setPageResponseTime] = useState(DEFAULT_RESPONSE_TIME)
     const [name, setName] = useState("")
     const [email, setEmail] = useState("")
     const [category, setCategory] = useState("general")
@@ -28,6 +38,37 @@ export default function Support() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
     const [success, setSuccess] = useState(false)
+
+    useEffect(() => {
+        try {
+            const local = localStorage.getItem("rudranex_support_page")
+            if (local) {
+                const parsed = JSON.parse(local)
+                if (parsed.title) setPageTitle(parsed.title)
+                if (parsed.description) setPageDesc(parsed.description)
+                if (parsed.email) setPageEmail(parsed.email)
+                if (parsed.responseTime) setPageResponseTime(parsed.responseTime)
+                return
+            }
+        } catch (e) {
+            console.error("Local storage support fetch error:", e)
+        }
+
+        getPublicSiteSettings().then(res => {
+            const setting = res.settings?.find(s => s.key === "support_page")
+            if (setting?.value) {
+                try {
+                    const parsed = JSON.parse(setting.value)
+                    if (parsed.title) setPageTitle(parsed.title)
+                    if (parsed.description) setPageDesc(parsed.description)
+                    if (parsed.email) setPageEmail(parsed.email)
+                    if (parsed.responseTime) setPageResponseTime(parsed.responseTime)
+                } catch (e) {
+                    console.error("Error parsing support settings", e)
+                }
+            }
+        }).catch(() => {})
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -72,12 +113,18 @@ export default function Support() {
                             className="font-display font-bold leading-none mb-6"
                             style={{ fontSize: "clamp(3.5rem, 8vw, 72px)", letterSpacing: "-0.04em" }}
                         >
-                            We&apos;re Here to<br />
-                            <span className="italic text-[var(--color-cyan)]">Help.</span>
+                            {pageTitle.split('\n').map((line, idx, arr) => (
+                                <span key={idx}>
+                                    {idx > 0 && <br />}
+                                    {idx === arr.length - 1 ? (
+                                        <span className="italic text-[var(--color-cyan)]">{line}</span>
+                                    ) : line}
+                                </span>
+                            ))}
                         </h1>
 
                         <p className={`text-base md:text-lg max-w-2xl leading-relaxed mb-16 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-                            Having trouble? Have a suggestion? Our support team typically responds within 24 hours. You can also email us directly at <span className="text-[var(--color-cyan)]">hello@rudranex.ai</span>.
+                            {pageDesc}
                         </p>
 
                         <div className={`h-px w-full ${isDarkMode ? "bg-white/10" : "bg-black/10"} mb-20`} />
@@ -90,7 +137,7 @@ export default function Support() {
                                     </div>
                                     <div>
                                         <p className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>Email</p>
-                                        <p className="text-lg font-medium">hello@rudranex.ai</p>
+                                        <p className="text-lg font-medium">{pageEmail}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-6 group">
@@ -99,7 +146,7 @@ export default function Support() {
                                     </div>
                                     <div>
                                         <p className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>Response Time</p>
-                                        <p className="text-lg font-medium">Usually within 24 hours</p>
+                                        <p className="text-lg font-medium">{pageResponseTime}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-6 group">

@@ -6,7 +6,7 @@ import {
     ChevronRight, ArrowUpRight, Globe, Shield, Zap, Table as TableIcon, LayoutDashboard,
     ChevronLeft, ChevronRight as ChevronRightIcon, LogOut, Moon, Sun, RefreshCw, Database,
     TrendingUp, ShieldCheck, Cpu, X, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Building2, Menu,
-    Info, Lock, Scale, Share2, GraduationCap, Play, Smartphone, Code2
+    Info, Lock, Scale, Share2, GraduationCap, Play, Smartphone, Code2, HelpCircle, Headphones
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -2209,7 +2209,9 @@ const Dashboard = () => {
                                                                             editingSiteSetting.key === 'b2b_page' ? 'B2B Page' : 
                                                                                 editingSiteSetting.key === 'home_page' ? 'Home Page Video' : 
                                                                                     editingSiteSetting.key === 'plugin_page' ? 'Plugin Page' : 
-                                                                                        editingSiteSetting.key === 'mobile_app_page' ? 'Mobile App Page' : editingSiteSetting.key}
+                                                                                        editingSiteSetting.key === 'mobile_app_page' ? 'Mobile App Page' : 
+                                                                                         editingSiteSetting.key === 'faq_page' ? 'FAQ Page' : 
+                                                                                             editingSiteSetting.key === 'support_page' ? 'Support Page' : editingSiteSetting.key}
                                                 </h2>
                                                 <button
                                                     onClick={fetchData}
@@ -2778,6 +2780,189 @@ const Dashboard = () => {
                                                 </div>
                                             )}
 
+                                            {editingSiteSetting.key === 'faq_page' && (
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Title</label>
+                                                        <textarea
+                                                            value={siteFormData?.title || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, title: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            rows={3}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Description</label>
+                                                        <textarea
+                                                            value={siteFormData?.description || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, description: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            rows={3}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-4">
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>FAQ Categories</label>
+                                                        {(Array.isArray(siteFormData?.categories) ? siteFormData.categories : []).map((cat: any, ci: number) => (
+                                                            <div key={ci} className={`p-4 rounded-xl ${isDarkMode ? "bg-white/5" : "bg-black/5"} space-y-3`}>
+                                                                <div className="flex items-center justify-between">
+                                                                    <input
+                                                                        value={cat.category || ''}
+                                                                        onChange={(e) => {
+                                                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                            next.categories[ci].category = e.target.value;
+                                                                            setSiteFormData(next);
+                                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                        }}
+                                                                        placeholder="Category name"
+                                                                        className={`flex-1 p-2 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-black border-white/10 text-white" : "bg-white border-black/10 text-black"}`}
+                                                                    />
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                            next.categories = next.categories.filter((_: any, j: number) => j !== ci);
+                                                                            setSiteFormData(next);
+                                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                        }}
+                                                                        className={`ml-2 text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
+                                                                    >
+                                                                        Remove Category
+                                                                    </button>
+                                                                </div>
+                                                                {(Array.isArray(cat.questions) ? cat.questions : []).map((q: any, qi: number) => (
+                                                                    <div key={qi} className={`p-3 rounded-lg ${isDarkMode ? "bg-black/30" : "bg-white/30"} space-y-2`}>
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-30 text-white" : "opacity-50 text-black"}`}>Q{qi + 1}</span>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                                    next.categories[ci].questions = next.categories[ci].questions.filter((_: any, j: number) => j !== qi);
+                                                                                    setSiteFormData(next);
+                                                                                    setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                                }}
+                                                                                className={`text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300 transition`}
+                                                                            >
+                                                                                Remove
+                                                                            </button>
+                                                                        </div>
+                                                                        <input
+                                                                            value={q.q || ''}
+                                                                            onChange={(e) => {
+                                                                                const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                                next.categories[ci].questions[qi].q = e.target.value;
+                                                                                setSiteFormData(next);
+                                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                            }}
+                                                                            placeholder="Question"
+                                                                            className={`w-full p-2 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-black border-white/10 text-white" : "bg-white border-black/10 text-black"}`}
+                                                                        />
+                                                                        <textarea
+                                                                            value={q.a || ''}
+                                                                            onChange={(e) => {
+                                                                                const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                                next.categories[ci].questions[qi].a = e.target.value;
+                                                                                setSiteFormData(next);
+                                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                            }}
+                                                                            rows={3}
+                                                                            placeholder="Answer"
+                                                                            className={`w-full p-2 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-black border-white/10 text-white" : "bg-white border-black/10 text-black"}`}
+                                                                        />
+                                                                    </div>
+                                                                ))}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                        next.categories[ci].questions = [...(next.categories[ci].questions || []), { q: '', a: '' }];
+                                                                        setSiteFormData(next);
+                                                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                    }}
+                                                                    className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                                                >
+                                                                    + Add Question
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                        <button
+                                                            onClick={() => {
+                                                                const next = JSON.parse(JSON.stringify(siteFormData || {}));
+                                                                if (!next.categories) next.categories = [];
+                                                                next.categories.push({ category: '', questions: [{ q: '', a: '' }] });
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                                        >
+                                                            + Add Category
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {editingSiteSetting.key === 'support_page' && (
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Title</label>
+                                                        <textarea
+                                                            value={siteFormData?.title || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, title: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            rows={3}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Description</label>
+                                                        <textarea
+                                                            value={siteFormData?.description || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, description: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            rows={3}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Contact Email</label>
+                                                        <input
+                                                            value={siteFormData?.email || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, email: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="hello@rudranex.ai"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Response Time Text</label>
+                                                        <input
+                                                            value={siteFormData?.responseTime || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, responseTime: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Usually within 24 hours"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <div className="flex gap-4 pt-6 border-t border-zinc-800/30">
                                                 <button
                                                     onClick={async () => {
@@ -2842,6 +3027,28 @@ const Dashboard = () => {
                                                                 try {
                                                                     localStorage.setItem("rudranex_mobile_app_page", editingSiteSetting.value);
                                                                     toast.success("Mobile App page updated successfully (Local Storage)");
+                                                                    fetchData();
+                                                                } catch (e) {
+                                                                    console.error("Local storage save error:", e);
+                                                                    toast.error("Failed to save to local storage");
+                                                                }
+                                                                return;
+                                                            }
+                                                            if (editingSiteSetting.key === 'faq_page') {
+                                                                try {
+                                                                    localStorage.setItem("rudranex_faq_page", editingSiteSetting.value);
+                                                                    toast.success("FAQ page updated successfully (Local Storage)");
+                                                                    fetchData();
+                                                                } catch (e) {
+                                                                    console.error("Local storage save error:", e);
+                                                                    toast.error("Failed to save to local storage");
+                                                                }
+                                                                return;
+                                                            }
+                                                            if (editingSiteSetting.key === 'support_page') {
+                                                                try {
+                                                                    localStorage.setItem("rudranex_support_page", editingSiteSetting.value);
+                                                                    toast.success("Support page updated successfully (Local Storage)");
                                                                     fetchData();
                                                                 } catch (e) {
                                                                     console.error("Local storage save error:", e);
@@ -4172,6 +4379,8 @@ const Dashboard = () => {
                                     { key: 'home_page', label: 'Home Page Video', icon: Play },
                                     { key: 'plugin_page', label: 'Plugin Page', icon: Code2 },
                                     { key: 'mobile_app_page', label: 'Mobile App Page', icon: Smartphone },
+                                    { key: 'faq_page', label: 'FAQ Page', icon: HelpCircle },
+                                    { key: 'support_page', label: 'Support Page', icon: Headphones },
                                 ].map((page) => {
                                     const isActive = editingSiteSetting?.key === page.key;
                                     const Icon = page.icon;
@@ -4220,6 +4429,20 @@ const Dashboard = () => {
                                                 } else if (page.key === 'mobile_app_page') {
                                                     try {
                                                         const stored = localStorage.getItem("rudranex_mobile_app_page");
+                                                        if (stored) raw = stored;
+                                                    } catch (e) {
+                                                        console.error("Local storage error:", e);
+                                                    }
+                                                } else if (page.key === 'faq_page') {
+                                                    try {
+                                                        const stored = localStorage.getItem("rudranex_faq_page");
+                                                        if (stored) raw = stored;
+                                                    } catch (e) {
+                                                        console.error("Local storage error:", e);
+                                                    }
+                                                } else if (page.key === 'support_page') {
+                                                    try {
+                                                        const stored = localStorage.getItem("rudranex_support_page");
                                                         if (stored) raw = stored;
                                                     } catch (e) {
                                                         console.error("Local storage error:", e);
@@ -4308,6 +4531,31 @@ const Dashboard = () => {
                                                             description: "Take Rudranex AI wherever you go. Practice interviews, get code assistance, and learn on the move with our native mobile experience.",
                                                             buttonText: "Download for Android",
                                                             buttonUrl: "#"
+                                                        };
+                                                        setSiteFormData(defaults);
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
+                                                    } else if (page.key === 'faq_page') {
+                                                        const defaults = {
+                                                            title: "Frequently Asked\nQuestions.",
+                                                            description: "Everything you need to know about Rudranex AI. Can't find what you're looking for? Reach out to our support team.",
+                                                            categories: [
+                                                                { category: "General", questions: [
+                                                                    { q: "What is Rudranex AI?", a: "Rudranex AI is an advanced AI co-pilot designed for students, developers, and enterprises." },
+                                                                    { q: "Is Rudranex free to use?", a: "Yes! We offer a Free Trial plan with daily chat, coding, and vision limits." }
+                                                                ]},
+                                                                { category: "Account & Billing", questions: [
+                                                                    { q: "How do I create an account?", a: "You can sign up using your mobile number via OTP verification, or use Google/GitHub." }
+                                                                ]}
+                                                            ]
+                                                        };
+                                                        setSiteFormData(defaults);
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
+                                                    } else if (page.key === 'support_page') {
+                                                        const defaults = {
+                                                            title: "We're Here to\nHelp.",
+                                                            description: "Having trouble? Have a suggestion? Our support team typically responds within 24 hours.",
+                                                            email: "hello@rudranex.ai",
+                                                            responseTime: "Usually within 24 hours"
                                                         };
                                                         setSiteFormData(defaults);
                                                         setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });

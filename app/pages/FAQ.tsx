@@ -1,13 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Navbar from "@/components/ui/Navbar"
 import Footer from "@/components/ui/Footer"
 import { useTheme } from "@/lib/theme-context"
+import { getPublicSiteSettings } from "@/lib/chat-api"
 import { ChevronDown, Search } from "lucide-react"
 
-const FAQ_ITEMS = [
+const DEFAULT_TITLE = "Frequently Asked\nQuestions."
+const DEFAULT_DESC = "Everything you need to know about Rudranex AI. Can't find what you're looking for? Reach out to our support team."
+const DEFAULT_CATEGORIES: { category: string; questions: { q: string; a: string }[] }[] = [
     {
         category: "General",
         questions: [
@@ -51,12 +54,44 @@ const FAQ_ITEMS = [
             { q: "What is the clipboard sync feature?", a: "Clipboard sync allows you to copy text on one device and paste it on another seamlessly. It works across web, mobile, and IDE plugins when you're logged into the same account." },
         ]
     }
-];
+]
 
 export default function FAQ() {
     const { isDarkMode } = useTheme()
     const [openItems, setOpenItems] = useState<Set<string>>(new Set())
     const [searchQuery, setSearchQuery] = useState("")
+    const [pageTitle, setPageTitle] = useState(DEFAULT_TITLE)
+    const [pageDesc, setPageDesc] = useState(DEFAULT_DESC)
+    const [categories, setCategories] = useState(DEFAULT_CATEGORIES)
+
+    useEffect(() => {
+        try {
+            const local = localStorage.getItem("rudranex_faq_page")
+            if (local) {
+                const parsed = JSON.parse(local)
+                if (parsed.title) setPageTitle(parsed.title)
+                if (parsed.description) setPageDesc(parsed.description)
+                if (Array.isArray(parsed.categories)) setCategories(parsed.categories)
+                return
+            }
+        } catch (e) {
+            console.error("Local storage FAQ fetch error:", e)
+        }
+
+        getPublicSiteSettings().then(res => {
+            const setting = res.settings?.find(s => s.key === "faq_page")
+            if (setting?.value) {
+                try {
+                    const parsed = JSON.parse(setting.value)
+                    if (parsed.title) setPageTitle(parsed.title)
+                    if (parsed.description) setPageDesc(parsed.description)
+                    if (Array.isArray(parsed.categories)) setCategories(parsed.categories)
+                } catch (e) {
+                    console.error("Error parsing FAQ settings", e)
+                }
+            }
+        }).catch(() => {})
+    }, [])
 
     const toggleItem = (key: string) => {
         setOpenItems(prev => {
@@ -67,7 +102,7 @@ export default function FAQ() {
         })
     }
 
-    const filteredCategories = FAQ_ITEMS.map(cat => ({
+    const filteredCategories = categories.map(cat => ({
         ...cat,
         questions: cat.questions.filter(
             item => item.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -97,12 +132,18 @@ export default function FAQ() {
                             className="font-display font-bold leading-none mb-6"
                             style={{ fontSize: "clamp(3.5rem, 8vw, 72px)", letterSpacing: "-0.04em" }}
                         >
-                            Frequently Asked<br />
-                            <span className="italic text-[var(--color-cyan)]">Questions.</span>
+                            {pageTitle.split('\n').map((line, idx, arr) => (
+                                <span key={idx}>
+                                    {idx > 0 && <br />}
+                                    {idx === arr.length - 1 ? (
+                                        <span className="italic text-[var(--color-cyan)]">{line}</span>
+                                    ) : line}
+                                </span>
+                            ))}
                         </h1>
 
                         <p className={`text-base md:text-lg max-w-2xl leading-relaxed mb-16 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-                            Everything you need to know about Rudranex AI. Can&apos;t find what you&apos;re looking for? Reach out to our support team.
+                            {pageDesc}
                         </p>
 
                         <div className={`relative mb-20 ${isDarkMode ? "text-white" : "text-black"}`}>
