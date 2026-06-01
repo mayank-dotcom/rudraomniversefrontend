@@ -1201,6 +1201,21 @@ export default function LibraryPage() {
                               </div>
                             </div>
 
+                            {/* Center Move to Folder button on hover */}
+                            <div
+                              className={`absolute inset-0 flex items-center justify-center transition-all duration-300 z-10 ${
+                                hoveredId === asset.id ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none"
+                              }`}
+                            >
+                              <button
+                                onClick={(e) => { e.preventDefault(); setMoveAssetId(asset.id); setIsMoveModalOpen(true); }}
+                                className="p-3 rounded-full bg-black/50 border border-white/20 text-white/80 hover:bg-[var(--color-cyan)] hover:text-black hover:border-[var(--color-cyan)] transition-all duration-200 shadow-lg backdrop-blur-sm"
+                                title="Move to Folder"
+                              >
+                                <Move className="h-5 w-5" />
+                              </button>
+                            </div>
+
                             {/* Hover action bar: visibility (own only), copy, share, download */}
                             <div
                               className={`absolute bottom-0 left-0 right-0 flex items-center justify-center gap-2 px-3 py-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent transition-all duration-300 z-10 ${
