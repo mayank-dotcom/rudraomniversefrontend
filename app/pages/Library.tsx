@@ -789,17 +789,7 @@ export default function LibraryPage() {
                 </button>
               )}
 
-              <Link
-                href="/chat"
-                className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${
-                  isDarkMode
-                    ? "bg-white/5 border-white/10 text-white hover:bg-white/10"
-                    : "bg-white border-black/10 text-black hover:bg-black/[0.03] shadow-sm"
-                }`}
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Back to Chat</span>
-              </Link>
+
             </div>
           </div>
 
@@ -1245,23 +1235,6 @@ export default function LibraryPage() {
                 : "bg-white/90 border-black/10 shadow-[0_10px_30px_rgba(0,0,0,0.08)] hover:border-black/20"
             }`}>
               
-              {/* Left action Plus Button */}
-              <button
-                onClick={() => {
-                  const p = prompt("Copy custom prompt context to load into workspace:")
-                  if (p && p.trim()) {
-                    setSearchQuery(p.trim());
-                    toast.success("Loaded prompt query.");
-                  }
-                }}
-                className={`h-9 w-9 rounded-full border flex items-center justify-center shrink-0 transition-all select-none ${
-                  isDarkMode ? "bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10" : "bg-black/5 border-black/10 text-black/60 hover:text-black hover:bg-black/10"
-                }`}
-                title="Input Search Filter Prompt"
-              >
-                <Plus className="h-4.5 w-4.5" />
-              </button>
-
               {/* Middle Configurations Pills */}
               <div className={`hidden lg:flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-0.5 select-none text-[10px] font-sans font-medium shrink-0 ${
                 isDarkMode ? "text-white/50" : "text-black/60"
@@ -1287,7 +1260,7 @@ export default function LibraryPage() {
                     isDarkMode ? "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10" : "bg-black/5 border-black/5 hover:bg-black/10 hover:border-black/10"
                   }`}
                 >
-                  <Maximize2 className="rotate-45 h-3 w-3 text-white/40" />
+                  <Maximize2 className={`rotate-45 h-3 w-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
                   <span>Ratio: {aspectRatio}</span>
                 </button>
 
@@ -1298,7 +1271,7 @@ export default function LibraryPage() {
                     isDarkMode ? "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10" : "bg-black/5 border-black/5 hover:bg-black/10 hover:border-black/10"
                   }`}
                 >
-                  <Eye className="h-3 w-3 text-white/40" />
+                  <Eye className={`h-3 w-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
                   <span>{resolution}</span>
                 </button>
 
@@ -1309,7 +1282,7 @@ export default function LibraryPage() {
                     isDarkMode ? "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10" : "bg-black/5 border-black/5 hover:bg-black/10 hover:border-black/10"
                   }`}
                 >
-                  <Clock className="h-3 w-3 text-white/40" />
+                  <Clock className={`h-3 w-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
                   <span>{duration}</span>
                 </button>
 
@@ -1323,9 +1296,9 @@ export default function LibraryPage() {
                   <span>{motionSpeed}</span>
                 </button>
 
-                <div className="h-4 w-[1px] bg-white/10 mx-1" />
+                <div className={`h-4 w-[1px] mx-1 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
                 <span title="Presets & Filters" className="flex items-center">
-                  <HelpCircle className="h-4.5 w-4.5 text-white/20 hover:text-white/50 cursor-pointer transition-colors" />
+                  <HelpCircle className={`h-4.5 w-4.5 cursor-pointer transition-colors ${isDarkMode ? "text-white/20 hover:text-white/50" : "text-black/30 hover:text-black/60"}`} />
                 </span>
               </div>
 
@@ -1333,7 +1306,7 @@ export default function LibraryPage() {
               <div className={`flex-1 flex items-center border transition-all rounded-full px-3 py-1 ml-1 max-w-[450px] ${
                 isDarkMode ? "bg-white/[0.03] border-white/5 focus-within:border-white/20" : "bg-black/[0.03] border-black/5 focus-within:border-black/20"
               }`}>
-                <Search className="h-3.5 w-3.5 text-white/30 mr-2 shrink-0" />
+                <Search className={`h-3.5 w-3.5 mr-2 shrink-0 ${isDarkMode ? "text-white/30" : "text-black/40"}`} />
                 
                 <input
                   type="text"
@@ -1348,7 +1321,7 @@ export default function LibraryPage() {
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
-                    className="p-1 text-white/40 hover:text-white/80 shrink-0"
+                    className={`p-1 shrink-0 ${isDarkMode ? "text-white/40 hover:text-white/80" : "text-black/40 hover:text-black/80"}`}
                   >
                     <X className="h-3 w-3" />
                   </button>
