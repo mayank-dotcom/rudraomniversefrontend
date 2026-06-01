@@ -2403,11 +2403,27 @@ export interface LibraryAsset {
   prompt: string | null
   is_public: boolean
   created_at: string
+  gallery_id?: string | null
 }
 
 export interface LibraryAssetsResponse {
   success: boolean
   assets: LibraryAsset[]
+  error?: string
+}
+
+export interface LibraryGallery {
+  id: string
+  name: string
+  is_public: boolean
+  created_at: string
+  asset_count?: number
+  owner_name?: string
+}
+
+export interface LibraryGalleriesResponse {
+  success: boolean
+  galleries: LibraryGallery[]
   error?: string
 }
 
@@ -2468,3 +2484,100 @@ export async function deleteLibraryAsset(id: string) {
   }
   return data
 }
+
+export async function createLibraryGallery(name: string, isPublic: boolean = false) {
+  const res = await fetch(`${API_BASE}/library/galleries`, {
+    method: "POST",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name, is_public: isPublic }),
+  })
+  const data = await parseJson<{ success: boolean; gallery: LibraryGallery; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to create gallery.")
+  }
+  return data
+}
+
+export async function getLibraryGalleries() {
+  const res = await fetch(`${API_BASE}/library/galleries`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<LibraryGalleriesResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch galleries.")
+  }
+  return data
+}
+
+export async function getPublicLibraryGalleries() {
+  const res = await fetch(`${API_BASE}/library/public-galleries`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<LibraryGalleriesResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch public shared galleries.")
+  }
+  return data
+}
+
+export async function updateLibraryGallery(id: string, updates: { name?: string; is_public?: boolean }) {
+  const res = await fetch(`${API_BASE}/library/galleries/${id}`, {
+    method: "PATCH",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updates),
+  })
+  const data = await parseJson<{ success: boolean; gallery: LibraryGallery; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to update gallery.")
+  }
+  return data
+}
+
+export async function deleteLibraryGallery(id: string) {
+  const res = await fetch(`${API_BASE}/library/galleries/${id}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to delete gallery.")
+  }
+  return data
+}
+
+export async function assignAssetToGallery(assetId: string, galleryId: string | null) {
+  const res = await fetch(`${API_BASE}/library/assets/${assetId}/gallery`, {
+    method: "PATCH",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ gallery_id: galleryId }),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to assign asset to gallery.")
+  }
+  return data
+}
+
+export async function getPublicGalleryAssets(galleryId: string) {
+  const res = await fetch(`${API_BASE}/library/public-galleries/${galleryId}/assets`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<LibraryAssetsResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch gallery assets.")
+  }
+  return data
+}
+
