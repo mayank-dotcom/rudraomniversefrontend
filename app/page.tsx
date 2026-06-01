@@ -19,6 +19,8 @@ import About from "./pages/About";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Contact from "./pages/Contact";
+import FAQ from "./pages/FAQ";
+import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
@@ -41,6 +43,8 @@ const AppContent = () => (
                         <Route path="/terms" element={<Terms />} />
                         <Route path="/contact" element={<Contact />} />
                         <Route path="/schools" element={<Schools />} />
+                        <Route path="/faq" element={<FAQ />} />
+                        <Route path="/support" element={<Support />} />
                         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
 
                         <Route path="*" element={<NotFound />} />

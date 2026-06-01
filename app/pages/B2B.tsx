@@ -81,11 +81,11 @@ export default function B2B() {
     setLoading(true)
     setError("")
     try {
-      const res = await fetch(`${API_BASE}/request/admin`, {
+      const res = await fetch(`${API_BASE}/request/enterprise`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          school_name: enterpriseName.trim(), // API binds company/school name to school_name
+          enterprise_name: enterpriseName.trim(),
           admin_name: adminName.trim(),
           admin_email: adminEmail.trim(),
           admin_password: adminPassword,

@@ -2234,14 +2234,14 @@ STRICT RULES:
                                                             <button
                                                                 onClick={() => handleDownloadImage(msg.content)}
                                                                 title="Download Image"
-                                                                className="absolute bottom-4 right-4 p-3 rounded-full bg-black/80 hover:bg-black text-white hover:text-[#00DDDD] border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1.5 hover:scale-105 active:scale-95"
+                                                                className="absolute top-4 right-4 p-3 rounded-full bg-black/80 hover:bg-black text-white hover:text-[#00DDDD] border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1.5 hover:scale-105 active:scale-95"
                                                             >
                                                                 <FileDown className="h-4 w-4" />
                                                                 <span className="text-[10px] font-mono uppercase tracking-wider font-bold pr-1">Download</span>
                                                             </button>
                                                         </div>
                                                     ) : (
-                                                        <MarkdownRenderer content={msg.content} isDarkMode={isDarkMode} />
+                                                        <MarkdownRenderer content={msg.content} isDarkMode={isDarkMode} onDownloadImage={handleDownloadImage} />
                                                     )}
 
                                                     {msg.role === "assistant" && responseTime !== null && i === messages.length - 1 && (

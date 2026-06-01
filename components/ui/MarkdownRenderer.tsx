@@ -8,10 +8,11 @@ import rehypeKatex from "rehype-katex";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "katex/dist/katex.min.css";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, FileDown } from "lucide-react";
 interface MarkdownRendererProps {
     content: string;
     isDarkMode: boolean;
+    onDownloadImage?: (url: string, filename?: string) => void;
 }
 
 function CodeBlock({ code, language, isDarkMode }: { code: string; language: string; isDarkMode: boolean }) {
@@ -94,7 +95,7 @@ function CodeBlock({ code, language, isDarkMode }: { code: string; language: str
   )
 }
 
-function MermaidImage({ code }: { code: string }) {
+function MermaidImage({ code, onDownloadImage }: { code: string; onDownloadImage?: (url: string, filename?: string) => void }) {
     const src = React.useMemo(() => {
         try {
             const base64 = btoa(unescape(encodeURIComponent(code)));
@@ -107,14 +108,24 @@ function MermaidImage({ code }: { code: string }) {
     if (!src) return null;
 
     return (
-        <span className="block my-4">
+        <span className="block my-4 relative group/img-wrapper">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={src} alt="Mermaid diagram" className="max-w-full h-auto rounded-lg" />
+            {onDownloadImage && (
+                <button
+                    onClick={() => onDownloadImage(src)}
+                    title="Download Image"
+                    className="absolute top-2 right-2 p-2 rounded-full bg-black/80 hover:bg-black text-white hover:text-[#00DDDD] border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1 hover:scale-105 active:scale-95"
+                >
+                    <FileDown className="h-3.5 w-3.5" />
+                    <span className="text-[9px] font-mono uppercase tracking-wider font-bold pr-0.5">Download</span>
+                </button>
+            )}
         </span>
     );
 }
 
-export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRendererProps) {
+export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage }: MarkdownRendererProps) {
     const processedContent = React.useMemo(() => {
         let processed = content;
         processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$');
@@ -188,9 +199,19 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                         if (!src || typeof src !== "string") return null;
                         if (src === "image_url" || src === "placeholder" || src === "") return null;
                         return (
-                            <span className="block my-4">
+                            <span className="block my-4 relative group/img-wrapper">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={src} alt={alt || ""} className="max-w-full h-auto rounded-lg" />
+                                {onDownloadImage && (
+                                    <button
+                                        onClick={() => onDownloadImage(src)}
+                                        title="Download Image"
+                                        className="absolute top-2 right-2 p-2 rounded-full bg-black/80 hover:bg-black text-white hover:text-[#00DDDD] border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1 hover:scale-105 active:scale-95"
+                                    >
+                                        <FileDown className="h-3.5 w-3.5" />
+                                        <span className="text-[9px] font-mono uppercase tracking-wider font-bold pr-0.5">Download</span>
+                                    </button>
+                                )}
                             </span>
                         );
                     },
@@ -213,7 +234,7 @@ export default function MarkdownRenderer({ content, isDarkMode }: MarkdownRender
                         const lang = match?.[1] || "";
 
                         if (lang === "mermaid") {
-                            return <MermaidImage code={String(children)} />;
+                            return <MermaidImage code={String(children)} onDownloadImage={onDownloadImage} />;
                         }
 
                         return (
