@@ -38,16 +38,6 @@ export default function Refund() {
     const data = useMemo(() => parseRefund(raw), [raw]);
 
     useEffect(() => {
-        try {
-            const local = localStorage.getItem("rudranex_refund_policy");
-            if (local) {
-                setRaw(local);
-                return;
-            }
-        } catch (e) {
-            console.error("Local storage refund policy load error:", e);
-        }
-
         getPublicSiteSettings().then(res => {
             const setting = res.settings?.find(s => s.key === "refund_policy");
             if (setting?.value) setRaw(setting.value);

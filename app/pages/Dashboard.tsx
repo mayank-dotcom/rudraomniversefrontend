@@ -3086,17 +3086,6 @@ const Dashboard = () => {
                                                                 }
                                                                 return;
                                                             }
-                                                            if (editingSiteSetting.key === 'refund_policy') {
-                                                                try {
-                                                                    localStorage.setItem("rudranex_refund_policy", editingSiteSetting.value);
-                                                                    toast.success("Refund Policy updated successfully (Local Storage)");
-                                                                    fetchData();
-                                                                } catch (e) {
-                                                                    console.error("Local storage save error:", e);
-                                                                    toast.error("Failed to save to local storage");
-                                                                }
-                                                                return;
-                                                            }
                                                             const res = await updateSiteSetting(editingSiteSetting.key, editingSiteSetting.value);
                                                             if (res.success) {
                                                                 toast.success("Page updated successfully");
@@ -4486,13 +4475,6 @@ const Dashboard = () => {
                                                 } else if (page.key === 'support_page') {
                                                     try {
                                                         const stored = localStorage.getItem("rudranex_support_page");
-                                                        if (stored) raw = stored;
-                                                    } catch (e) {
-                                                        console.error("Local storage error:", e);
-                                                    }
-                                                } else if (page.key === 'refund_policy') {
-                                                    try {
-                                                        const stored = localStorage.getItem("rudranex_refund_policy");
                                                         if (stored) raw = stored;
                                                     } catch (e) {
                                                         console.error("Local storage error:", e);
