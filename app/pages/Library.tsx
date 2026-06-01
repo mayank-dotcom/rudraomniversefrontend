@@ -1355,7 +1355,7 @@ export default function LibraryPage() {
           </div>
 
           {/* ================= FLOATING FILTER BAR ================= */}
-          <div className="fixed bottom-6 left-[calc(50%+128px)] -translate-x-1/2 flex flex-col items-center gap-3 z-40 max-w-[800px] w-[90%] md:w-[60%] shrink-0">
+          <div className="fixed bottom-6 left-[calc(50%+128px)] -translate-x-1/2 flex flex-col items-center gap-3 z-40 max-w-[1000px] w-[95%] md:w-[80%] shrink-0">
             
             {/* Presets pop-up window floating above pill */}
             <AnimatePresence>
