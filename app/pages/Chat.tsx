@@ -6,7 +6,7 @@ import {
     Send, Bot, User, LogOut, MessageSquare, Plus, Search,
     ChevronLeft, ChevronRight, Moon, Sun, GraduationCap,
     UserCog, Mic, ChevronUp,
-    ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Clock, Trash2, Inbox,
+    ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Check, Clock, Trash2, Inbox,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
     Swords, CheckCircle, XCircle, Code, Zap, Pause
 } from "lucide-react";
@@ -234,6 +234,7 @@ const Chat = () => {
     const [generatedPaper, setGeneratedPaper] = useState<string | null>(null);
     const [paperConfig, setPaperConfig] = useState<MockPaperConfig | null>(null);
     const [isGeneratingPaper, setIsGeneratingPaper] = useState(false);
+    const [copiedMsgIndex, setCopiedMsgIndex] = useState<number | null>(null);
     const [mcqQuestions, setMcqQuestions] = useState<MCQQuestion[] | null>(null);
     const [mcqExamType, setMcqExamType] = useState("");
     const [mcqSession, setMcqSession] = useState<{
@@ -679,8 +680,12 @@ const Chat = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [showEngineSelect]);
 
-    const copyToClipboard = (text: string) => {
+    const copyToClipboard = (text: string, index?: number) => {
         navigator.clipboard.writeText(text);
+        if (index !== undefined) {
+            setCopiedMsgIndex(index);
+            setTimeout(() => setCopiedMsgIndex(null), 2000);
+        }
     };
 
     const downloadAsPdf = (title: string, content: string) => {
@@ -2263,10 +2268,14 @@ STRICT RULES:
                                                     {msg.role === "user" ? (
                                                         <>
                                                             <button onClick={() => setInput(msg.content)} title="Edit & resend" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
-                                                                <Edit3 className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                    <Edit3 className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => copyToClipboard(msg.content)} title="Copy message" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
-                                                                <Copy className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                            <button onClick={() => copyToClipboard(msg.content, i)} title="Copy message" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
+                                                                {copiedMsgIndex === i ? (
+                                                                    <Check className="h-5 w-5 text-green-400 scale-110" />
+                                                                ) : (
+                                                                    <Copy className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                                )}
                                                             </button>
                                                         </>
                                                     ) : (
@@ -2289,10 +2298,14 @@ STRICT RULES:
                                                                     : (isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-red-400 hover:scale-105" : "text-white/60 hover:text-white hover:scale-105") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-red-600 hover:scale-105" : "text-black/60 hover:text-black hover:scale-105"))
                                                                     }`}
                                                             >
-                                                                <ThumbsDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                                                                                                    <ThumbsDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
-                                                            <button onClick={() => copyToClipboard(msg.content)} title="Copy message" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
-                                                                <Copy className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                            <button onClick={() => copyToClipboard(msg.content, i)} title="Copy message" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
+                                                                {copiedMsgIndex === i ? (
+                                                                    <Check className="h-5 w-5 text-green-400 scale-110" />
+                                                                ) : (
+                                                                    <Copy className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                                )}
                                                             </button>
                                                             <button onClick={() => retryMessage(i)} title="Regenerate" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
                                                                 <RotateCcw className="h-5 w-5 group-hover:scale-110 transition-transform" />
@@ -3021,26 +3034,6 @@ STRICT RULES:
                                             </div>
                                         </div>
                                     </div>
-                                    </div>
-
-                                    <div className="space-y-2 mb-8">
-                                        <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                                            <div className="h-full w-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]" />
-                                        </div>
-                                        <div className="flex justify-between text-[8px] font-mono uppercase opacity-70">
-                                            <span>Backend</span>
-                                            <span className="text-[#00DDDD]">Stable</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2 mb-8">
-                                        <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                                            <div className="h-full w-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]" />
-                                        </div>
-                                        <div className="flex justify-between text-[8px] font-mono uppercase opacity-70">
-                                            <span>Frontend</span>
-                                            <span className="text-[#00DDDD]">Stable</span>
-                                        </div>
                                     </div>
 
                                     <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : ""}`}>

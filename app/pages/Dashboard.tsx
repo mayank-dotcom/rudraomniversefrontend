@@ -70,6 +70,10 @@ const PlanCard = ({ plan, isDarkMode, onEdit }: { plan: any, isDarkMode: boolean
                     <span>Daily STT</span>
                     <span className="font-bold">{plan.daily_stt_limit || 0}</span>
                 </div>
+                <div className="flex justify-between border-t pt-2 mt-2">
+                    <span>Token Limit</span>
+                    <span className="font-bold">{plan.tokens_limit || plan.daily_chat_limit || 0}</span>
+                </div>
             </div>
 
             {(() => {
@@ -1727,6 +1731,24 @@ const Dashboard = () => {
                                                     isDarkMode={isDarkMode}
                                                 />
                                             </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+                                                <StatCard
+                                                    title="Token Usage"
+                                                    value={`${selectedUser.subscription.tokens_used} / ${selectedUser.subscription.tokens_limit}`}
+                                                    icon={Zap}
+                                                    color="#00DDDD"
+                                                    subtext={`${Math.min((selectedUser.subscription.tokens_used / (selectedUser.subscription.tokens_limit || 1)) * 100, 100).toFixed(0)}% consumed`}
+                                                    isDarkMode={isDarkMode}
+                                                />
+                                                <StatCard
+                                                    title="Token Burn Rate"
+                                                    value={`${((selectedUser.subscription.daily_chats + selectedUser.subscription.daily_codings + selectedUser.subscription.daily_visions + selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt) / (selectedUser.subscription.tokens_limit || 1) * 100).toFixed(1)}%`}
+                                                    icon={TrendingUp}
+                                                    color="#f59e0b"
+                                                    subtext="Daily consumption"
+                                                    isDarkMode={isDarkMode}
+                                                />
+                                            </div>
 
                                             {/* Visualization Section */}
                                             <div className="grid grid-cols-12 gap-8">
@@ -1747,14 +1769,14 @@ const Dashboard = () => {
                                                     <div className="flex flex-wrap justify-center gap-16 lg:justify-between px-6">
                                                         <ProgressCircle
                                                             value={selectedUser.subscription.daily_chats}
-                                                            limit={selectedUser.subscription.tokens_limit}
+                                                            limit={selectedUser.subscription.daily_chat_limit || 1}
                                                             label="Daily Chat"
                                                             color="#10b981"
                                                             isDarkMode={isDarkMode}
                                                         />
                                                         <ProgressCircle
                                                             value={selectedUser.subscription.monthly_images + selectedUser.subscription.monthly_flux}
-                                                            limit={selectedUser.subscription.images_limit}
+                                                            limit={selectedUser.subscription.images_limit || 1}
                                                             label="Image Lab"
                                                             color="#8b5cf6"
                                                             isDarkMode={isDarkMode}
@@ -1764,6 +1786,13 @@ const Dashboard = () => {
                                                             limit={Math.max(selectedUser.subscription.daily_coding_limit + selectedUser.subscription.daily_vision_limit, 1)}
                                                             label="AI Engine Load"
                                                             color="#f59e0b"
+                                                            isDarkMode={isDarkMode}
+                                                        />
+                                                        <ProgressCircle
+                                                            value={selectedUser.subscription.tokens_used}
+                                                            limit={selectedUser.subscription.tokens_limit || 1}
+                                                            label="Token Usage"
+                                                            color="#00DDDD"
                                                             isDarkMode={isDarkMode}
                                                         />
                                                     </div>
@@ -1776,7 +1805,7 @@ const Dashboard = () => {
                                                             <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] ${isDarkMode ? "text-white" : "text-black"}`}>User Efficiency</h3>
                                                         </div>
                                                         <p className={`text-[10px] font-mono uppercase leading-relaxed tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>
-                                                            Chat usage: <b>{selectedUser.subscription.daily_chats}/{selectedUser.subscription.tokens_limit}</b> daily • {selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt > 0 ? `Audio: ${selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt} uses • ` : ''}Images: {selectedUser.subscription.monthly_images + selectedUser.subscription.monthly_flux}/{selectedUser.subscription.images_limit} monthly
+                                                            Token usage: <b>{selectedUser.subscription.tokens_used}/{selectedUser.subscription.tokens_limit}</b> • Chat: {selectedUser.subscription.daily_chats}/{selectedUser.subscription.daily_chat_limit} daily • {selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt > 0 ? `Audio: ${selectedUser.subscription.daily_tts + selectedUser.subscription.daily_stt} uses • ` : ''}Images: {selectedUser.subscription.monthly_images + selectedUser.subscription.monthly_flux}/{selectedUser.subscription.images_limit} monthly
                                                         </p>
                                                     </div>
 
@@ -4641,17 +4670,18 @@ const Dashboard = () => {
                                                             const formData = new FormData(e.target as HTMLFormElement);
                                                             if (editingPlan.id === 'new') {
                                                                 setIsCreatingPlan(true);
-                                                                createPlan({
-                                                                    plan_name: formData.get('plan_name') as string,
-                                                                    price_inr: Number(formData.get('price_inr')),
-                                                                    daily_chat_limit: Number(formData.get('daily_chat_limit')),
-                                                                    daily_coding_limit: Number(formData.get('daily_coding_limit')),
-                                                                    daily_vision_limit: Number(formData.get('daily_vision_limit')),
-                                                                    monthly_image_limit: Number(formData.get('monthly_image_limit')),
-                                                                    monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
-                                                                    daily_tts_limit: Number(formData.get('daily_tts_limit')),
-                                                                    daily_stt_limit: Number(formData.get('daily_stt_limit'))
-                                                                 }).then((res) => {
+                                                                 createPlan({
+                                                                     plan_name: formData.get('plan_name') as string,
+                                                                     price_inr: Number(formData.get('price_inr')),
+                                                                     daily_chat_limit: Number(formData.get('daily_chat_limit')),
+                                                                     daily_coding_limit: Number(formData.get('daily_coding_limit')),
+                                                                     daily_vision_limit: Number(formData.get('daily_vision_limit')),
+                                                                     monthly_image_limit: Number(formData.get('monthly_image_limit')),
+                                                                     monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
+                                                                     daily_tts_limit: Number(formData.get('daily_tts_limit')),
+                                                                     daily_stt_limit: Number(formData.get('daily_stt_limit')),
+                                                                     tokens_limit: Number(formData.get('tokens_limit'))
+                                                                  }).then((res) => {
                                                                         const newPlanId = res?.plan?.id?.toString()
                                                                         if (newPlanId) {
                                                                             setPlanFeatures(newPlanId, selectedFeatures)
@@ -4670,17 +4700,18 @@ const Dashboard = () => {
                                                                         setIsCreatingPlan(false);
                                                                     });
                                                             } else {
-                                                                handleUpdatePlan(editingPlan.id?.toString() || '', {
-                                                                    plan_name: formData.get('plan_name') as string,
-                                                                    price_inr: Number(formData.get('price_inr')),
-                                                                    daily_chat_limit: Number(formData.get('daily_chat_limit')),
-                                                                    daily_coding_limit: Number(formData.get('daily_coding_limit')),
-                                                                    daily_vision_limit: Number(formData.get('daily_vision_limit')),
-                                                                    monthly_image_limit: Number(formData.get('monthly_image_limit')),
-                                                                    monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
-                                                                    daily_tts_limit: Number(formData.get('daily_tts_limit')),
-                                                                    daily_stt_limit: Number(formData.get('daily_stt_limit'))
-                                                                });
+                                                                 handleUpdatePlan(editingPlan.id?.toString() || '', {
+                                                                     plan_name: formData.get('plan_name') as string,
+                                                                     price_inr: Number(formData.get('price_inr')),
+                                                                     daily_chat_limit: Number(formData.get('daily_chat_limit')),
+                                                                     daily_coding_limit: Number(formData.get('daily_coding_limit')),
+                                                                     daily_vision_limit: Number(formData.get('daily_vision_limit')),
+                                                                     monthly_image_limit: Number(formData.get('monthly_image_limit')),
+                                                                     monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
+                                                                     daily_tts_limit: Number(formData.get('daily_tts_limit')),
+                                                                     daily_stt_limit: Number(formData.get('daily_stt_limit')),
+                                                                     tokens_limit: Number(formData.get('tokens_limit'))
+                                                                 });
                                                                 setPlanFeatures(editingPlan.id?.toString() || '', selectedFeatures);
                                                                 if (strikeOffEnabled && strikeOffPrice > 0) {
                                                                     setPlanStrikeOff(editingPlan.id?.toString() || '', { price_inr: strikeOffPrice })
@@ -4791,6 +4822,17 @@ const Dashboard = () => {
                                             }`}
                                     />
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Token Limit</label>
+                                <input
+                                    name="tokens_limit"
+                                    type="number"
+                                    defaultValue={editingPlan.tokens_limit || editingPlan.daily_chat_limit || 0}
+                                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                        }`}
+                                />
                             </div>
 
                             {/* Available Modes / Features */}
