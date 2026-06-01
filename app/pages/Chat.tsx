@@ -2344,7 +2344,10 @@ STRICT RULES:
                 </main>
 
                 {/* Input Bar */}
-                <div className={`${isMobile ? "fixed" : "absolute"} ${isMobile ? "bottom-[10px]" : "bottom-0"} left-0 right-0 z-50 p-4 md:p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}>
+                <div 
+                    className={`${isMobile ? "fixed" : "absolute"} ${isMobile ? "bottom-[10px]" : ""} left-0 right-0 z-50 p-4 md:p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}
+                    style={isMobile ? undefined : { bottom: '-2px' }}
+                >
                     <div className={`w-full max-w-4xl relative mb-4 md:mb-0`}>
                         <div className="relative">
                             {/* File Preview */}
