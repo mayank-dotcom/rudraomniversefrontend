@@ -49,7 +49,8 @@ import {
   Edit2,
   FolderOpen,
   Download,
-  Share2
+  Share2,
+  Move
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -111,7 +112,7 @@ export default function LibraryPage() {
   const [duration, setDuration] = useState<"5s" | "10s" | "15s">("5s")
   const [motionSpeed, setMotionSpeed] = useState<"2v" | "4v" | "8v">("2v")
   const [searchQuery, setSearchQuery] = useState("")
-  const [favorites, setFavorites] = useState<string[]>([])
+  const [savedIds, setSavedIds] = useState<string[]>([])
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [isUploadDragging, setIsUploadDragging] = useState(false)
   const [uploadedAssets, setUploadedAssets] = useState<LibraryAsset[]>([])
@@ -124,6 +125,8 @@ export default function LibraryPage() {
   const [publicGalleryAssets, setPublicGalleryAssets] = useState<LibraryAsset[]>([])
   const [isFetchingPublicGalleryAssets, setIsFetchingPublicGalleryAssets] = useState(false)
   const [showcaseTab, setShowcaseTab] = useState<"assets" | "galleries">("assets")
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false)
+  const [moveAssetId, setMoveAssetId] = useState<string | null>(null)
   
   // Fetch assets and galleries from backend
   const fetchAssets = useCallback(async () => {
@@ -183,11 +186,11 @@ export default function LibraryPage() {
     }
     fetchAssets()
     
-    // Load local storage favorites
-    const savedFavs = localStorage.getItem("rudra_library_favorites")
-    if (savedFavs) {
+    // Load local storage saved
+    const savedItems = localStorage.getItem("rudra_library_saved")
+    if (savedItems) {
       try {
-        setFavorites(JSON.parse(savedFavs))
+        setSavedIds(JSON.parse(savedItems))
       } catch (e) {}
     }
   }, [fetchAssets, router])
@@ -243,19 +246,19 @@ export default function LibraryPage() {
     }
   }
 
-  // Toggling Favorites (stored in localStorage)
-  const toggleFavorite = (id: string, assetUrl?: string) => {
+  // Toggling Saved (stored in localStorage)
+  const toggleSaved = (id: string, assetUrl?: string) => {
     let updated: string[] = []
-    if (favorites.includes(id)) {
-      updated = favorites.filter((favId) => favId !== id)
-      toast.success("Removed from Favorites.")
+    if (savedIds.includes(id)) {
+      updated = savedIds.filter((sId) => sId !== id)
+      toast.success("Removed from Saved.")
     } else {
-      updated = [...favorites, id]
-      toast.success("Added to Favorites.")
-      if (assetUrl) handleDownloadImage(assetUrl, `favorite-${id}`)
+      updated = [...savedIds, id]
+      toast.success("Saved!")
+      if (assetUrl) handleDownloadImage(assetUrl, `saved-${id}`)
     }
-    setFavorites(updated)
-    localStorage.setItem("rudra_library_favorites", JSON.stringify(updated))
+    setSavedIds(updated)
+    localStorage.setItem("rudra_library_saved", JSON.stringify(updated))
   }
 
   // Download image to device
@@ -276,17 +279,13 @@ export default function LibraryPage() {
     }
   }
 
-  // Share image via Web Share API or copy link
-  const handleShareImage = async (url: string, title = "Check this out!") => {
-    if (navigator.share) {
-      try { await navigator.share({ title, url }) } catch {}
-    } else {
-      try {
-        await navigator.clipboard.writeText(url)
-        toast.success("Link copied to clipboard.")
-      } catch {
-        toast.error("Could not copy link.")
-      }
+  // Share image via clipboard (reliable for all asset types)
+  const handleShareImage = async (url: string, title = "Library Image") => {
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success("Image link copied to clipboard.")
+    } catch {
+      toast.error("Could not copy link.")
     }
   }
 
@@ -501,9 +500,8 @@ export default function LibraryPage() {
       case "featured": pool = FEATURED_ASSETS; break
       case "recent": pool = assets.slice(0, 4); break
       case "public_showcase": pool = publicAssets.filter((asset) => asset.gallery_id === null); break
-      case "favorites": pool = [...FEATURED_ASSETS, ...assets, ...uploadedAssets].filter((asset) => favorites.includes(asset.id)); break
       case "uploads": pool = uploadedAssets; break
-      case "saved": pool = [...FEATURED_ASSETS, ...assets].filter((_, index) => index % 2 === 0); break
+      case "saved": pool = [...FEATURED_ASSETS, ...assets, ...uploadedAssets].filter((asset) => savedIds.includes(asset.id)); break
       case "gallery": pool = assets.filter((asset) => asset.gallery_id === selectedGalleryId); break
       case "public_gallery": pool = publicGalleryAssets; break
       case "all": default: pool = [...uploadedAssets, ...assets]; break
@@ -513,7 +511,7 @@ export default function LibraryPage() {
       pool = pool.filter((asset) => asset.prompt?.toLowerCase().includes(q))
     }
     return pool
-  }, [activeCategory, assets, publicAssets, uploadedAssets, favorites, searchQuery, selectedGalleryId, publicGalleryAssets])
+  }, [activeCategory, assets, publicAssets, uploadedAssets, savedIds, searchQuery, selectedGalleryId, publicGalleryAssets])
 
   // Get active CSS filter for presets
   const getPresetFilterClass = () => {
@@ -626,9 +624,18 @@ export default function LibraryPage() {
               >
                 <div className="flex items-center gap-2.5">
                   <Bookmark className="h-3.5 w-3.5" />
-                  <span>Saved Templates</span>
+                  <span>Saved</span>
                 </div>
-                {activeCategory === "saved" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
+                <div className="flex items-center gap-1">
+                  {savedIds.length > 0 && (
+                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
+                      isDarkMode ? "bg-[var(--color-cyan)]/10 text-[var(--color-cyan)]" : "bg-cyan-500/10 text-cyan-700"
+                    }`}>
+                      {savedIds.length}
+                    </span>
+                  )}
+                  {activeCategory === "saved" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
+                </div>
               </button>
             </div>
 
@@ -656,21 +663,6 @@ export default function LibraryPage() {
                   <span>My Gallery</span>
                 </div>
                 {activeCategory === "all" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
-              </button>
-
-              <button
-                onClick={() => { setActiveCategory("favorites"); setIsUploadDragging(false); setSelectedGalleryId(null); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium font-sans transition-all duration-200 ${
-                  activeCategory === "favorites"
-                    ? (isDarkMode ? "bg-white/5 text-[var(--color-cyan)] border border-white/5" : "bg-black/5 text-cyan-600 border border-black/5")
-                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black/50 hover:text-black hover:bg-black/[0.02]")
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Heart className="h-3.5 w-3.5" />
-                  <span>Favorites</span>
-                </div>
-                {activeCategory === "favorites" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
               </button>
 
             </div>
@@ -757,7 +749,6 @@ export default function LibraryPage() {
                   {activeCategory === "recent" && "Recent"}
                   {activeCategory === "saved" && "Saved"}
                   {activeCategory === "all" && "My Gallery"}
-                  {activeCategory === "favorites" && "Favorites"}
                   {activeCategory === "uploads" && "Uploads"}
                   {activeCategory === "gallery" && "Folder"}
                   {activeCategory === "public_gallery" && "Shared Folder"}
@@ -769,9 +760,8 @@ export default function LibraryPage() {
                   {activeCategory === "featured" && "Featured Concept Showcase"}
                   {activeCategory === "public_showcase" && "Community Shared Prompts"}
                   {activeCategory === "recent" && "Your Recent Render Prompts"}
-                  {activeCategory === "saved" && "Saved Concept Templates"}
+                  {activeCategory === "saved" && `Saved (${savedIds.length})`}
                   {activeCategory === "all" && "My Private Gallery"}
-                  {activeCategory === "favorites" && "Bookmarked Prompts"}
                   {activeCategory === "uploads" && "Local Upload Repository"}
                   {activeCategory === "gallery" && (
                     <>
@@ -1159,17 +1149,21 @@ export default function LibraryPage() {
                               loading="lazy"
                             />
 
-                            {/* Top Action Indicators (Save, Share, Heart, and Visibility) */}
+                            {/* Top Action Indicators (Heart and Visibility) */}
                             <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none select-none z-20">
                               {/* Visibility badge */}
                               <div className="flex gap-1.5">
-                                <span className="px-2 py-0.5 bg-black/60 backdrop-blur-md border border-white/10 rounded-full text-[9px] font-mono uppercase tracking-wider text-white/80">
+                                <span className={`px-2 py-0.5 backdrop-blur-md border rounded-full text-[9px] font-mono uppercase tracking-wider ${
+                                  isDarkMode ? "bg-black/60 border-white/10 text-white/80" : "bg-white/80 border-black/10 text-black/80"
+                                }`}>
                                   {asset.id.startsWith("feat-") ? "Featured" : asset.id.startsWith("uploaded-") ? "Upload" : "Library"}
                                 </span>
                                 
                                 {/* Personal visibility status */}
                                 {!asset.id.startsWith("feat-") && (
-                                  <span className={`px-2 py-0.5 bg-black/60 backdrop-blur-md border border-white/10 rounded-full text-[9px] font-mono uppercase tracking-wider text-white/80 flex items-center gap-1`}>
+                                  <span className={`px-2 py-0.5 backdrop-blur-md border rounded-full text-[9px] font-mono uppercase tracking-wider flex items-center gap-1 ${
+                                    isDarkMode ? "bg-black/60 border-white/10 text-white/80" : "bg-white/80 border-black/10 text-black/80"
+                                  }`}>
                                     {asset.is_public ? (
                                       <>
                                         <Globe className="h-2.5 w-2.5 text-sky-400" />
@@ -1187,30 +1181,16 @@ export default function LibraryPage() {
                               
                               <div className="flex items-center gap-1.5 pointer-events-auto">
                                 <button
-                                  onClick={(e) => { e.preventDefault(); handleDownloadImage(asset.asset_url, asset.id); }}
-                                  className="p-1.5 rounded-full border backdrop-blur-md transition-all duration-200 active:scale-90 bg-black/60 border-white/10 text-white/50 hover:text-emerald-400 hover:border-emerald-400/50"
-                                  title="Save Image"
-                                >
-                                  <Download className="h-3 w-3" />
-                                </button>
-
-                                <button
-                                  onClick={(e) => { e.preventDefault(); handleShareImage(asset.asset_url, asset.prompt || "Library Image"); }}
-                                  className="p-1.5 rounded-full border backdrop-blur-md transition-all duration-200 active:scale-90 bg-black/60 border-white/10 text-white/50 hover:text-sky-400 hover:border-sky-400/50"
-                                  title="Share Image"
-                                >
-                                  <Share2 className="h-3 w-3" />
-                                </button>
-
-                                <button
-                                  onClick={(e) => { e.preventDefault(); toggleFavorite(asset.id, asset.asset_url); }}
+                                  onClick={(e) => { e.preventDefault(); toggleSaved(asset.id, asset.asset_url); }}
                                   className={`p-1.5 rounded-full border backdrop-blur-md pointer-events-auto transition-all duration-200 active:scale-90 ${
-                                    favorites.includes(asset.id)
-                                      ? "bg-rose-500 border-rose-400 text-white scale-110 shadow-lg shadow-rose-500/20"
-                                      : "bg-black/60 border-white/10 text-white/50 hover:text-rose-400 hover:border-rose-400/50"
+                                    savedIds.includes(asset.id)
+                                      ? "bg-[var(--color-cyan)] border-[var(--color-cyan)] text-black scale-110 shadow-lg shadow-cyan-500/30"
+                                      : isDarkMode
+                                        ? "bg-black/60 border-white/10 text-white/50 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
+                                        : "bg-white/80 border-black/10 text-black/50 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
                                   }`}
                                 >
-                                  <Heart className={`h-3 w-3 ${favorites.includes(asset.id) ? "fill-white" : ""}`} />
+                                  <Heart className={`h-3 w-3 ${savedIds.includes(asset.id) ? "fill-current" : ""}`} />
                                 </button>
                               </div>
                             </div>
@@ -1235,24 +1215,19 @@ export default function LibraryPage() {
                                 </span>
 
                                 <div className="flex items-center gap-1">
-                                  {/* Folder assignment dropdown */}
-                                  {isOwnAsset && galleries.length > 0 && (
-                                    <select
-                                      value={asset.gallery_id || ""}
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        handleMoveAssetToGallery(asset.id, val === "" ? null : val);
-                                      }}
-                                      className="text-[9px] font-sans bg-black/80 border border-white/10 rounded px-1.5 py-1 text-white/70 hover:text-white focus:outline-none max-w-[80px] cursor-pointer mr-1"
-                                      title="Add to folder"
+                                  {/* Move to Folder button */}
+                                  {isOwnAsset && (
+                                    <button
+                                      onClick={(e) => { e.preventDefault(); setMoveAssetId(asset.id); setIsMoveModalOpen(true); }}
+                                      className={`p-1.5 transition-colors rounded border ${
+                                        isDarkMode
+                                          ? "bg-white/5 border-white/10 text-white/60 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
+                                          : "bg-black/5 border-black/10 text-black/60 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
+                                      }`}
+                                      title="Move to Folder"
                                     >
-                                      <option value="" className="bg-[#0f0f14] text-white/40">No Folder</option>
-                                      {galleries.map((g) => (
-                                        <option key={g.id} value={g.id} className="bg-[#0f0f14] text-white">
-                                          {g.name}
-                                        </option>
-                                      ))}
-                                    </select>
+                                      <Move className="h-3 w-3" />
+                                    </button>
                                   )}
 
                                   {/* Visibility Toggle button (Only for own assets) */}
@@ -1260,10 +1235,12 @@ export default function LibraryPage() {
                                     <button
                                       onClick={(e) => { e.preventDefault(); handleToggleVisibility(asset.id, asset.is_public); }}
                                       disabled={togglingVisibilityId === asset.id}
-                                      className={`p-1.5 rounded border border-white/5 transition-colors ${
+                                      className={`p-1.5 rounded border transition-colors ${
                                         asset.is_public
-                                          ? "bg-sky-500/20 text-sky-400 hover:bg-sky-500/30"
-                                          : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+                                          ? "bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 border-sky-400/20"
+                                          : isDarkMode
+                                            ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                            : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
                                       }`}
                                       title={asset.is_public ? "Make Private" : "Make Public"}
                                     >
@@ -1280,7 +1257,11 @@ export default function LibraryPage() {
                                   {/* Copy prompt */}
                                   <button
                                     onClick={() => handleCopyPrompt(asset.prompt || "", asset.id)}
-                                    className="p-1.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors rounded border border-white/5"
+                                    className={`p-1.5 transition-colors rounded border ${
+                                      isDarkMode
+                                        ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                        : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
+                                    }`}
                                     title="Copy Prompt to Clipboard"
                                   >
                                     {copiedId === asset.id ? (
@@ -1296,7 +1277,11 @@ export default function LibraryPage() {
                                       setSearchQuery(asset.prompt || "");
                                       toast.success("Prompt loaded into filter input.");
                                     }}
-                                    className="p-1.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors rounded border border-white/5"
+                                    className={`p-1.5 transition-colors rounded border ${
+                                      isDarkMode
+                                        ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                        : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
+                                    }`}
                                     title="Load Prompt to Filter input"
                                   >
                                     <Plus className="h-3 w-3" />
@@ -1308,7 +1293,11 @@ export default function LibraryPage() {
                                       e.preventDefault();
                                       handleDownloadImage(asset.asset_url, asset.id);
                                     }}
-                                    className="p-1.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors rounded border border-white/5"
+                                    className={`p-1.5 transition-colors rounded border ${
+                                      isDarkMode
+                                        ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                        : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
+                                    }`}
                                     title="Save Image"
                                   >
                                     <Download className="h-3 w-3" />
@@ -1320,7 +1309,11 @@ export default function LibraryPage() {
                                       e.preventDefault();
                                       handleShareImage(asset.asset_url, asset.prompt || "Library Image");
                                     }}
-                                    className="p-1.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors rounded border border-white/5"
+                                    className={`p-1.5 transition-colors rounded border ${
+                                      isDarkMode
+                                        ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                        : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
+                                    }`}
                                     title="Share Image"
                                   >
                                     <Share2 className="h-3 w-3" />
@@ -1331,13 +1324,17 @@ export default function LibraryPage() {
                                     <button
                                       onClick={() => handleDelete(asset.id)}
                                       disabled={deletingId === asset.id}
-                                      className="p-1.5 bg-white/5 hover:bg-red-500/80 hover:text-white transition-colors rounded border border-white/5 group/del"
+                                      className={`p-1.5 transition-colors rounded border group/del ${
+                                        isDarkMode
+                                          ? "bg-white/5 border-white/10 text-white/60 hover:bg-red-500/80 hover:text-white"
+                                          : "bg-black/5 border-black/10 text-black/60 hover:bg-red-500/80 hover:text-white"
+                                      }`}
                                       title="Delete from Library"
                                     >
                                       {deletingId === asset.id ? (
-                                        <Loader2 className="h-3 w-3 text-white animate-spin" />
+                                        <Loader2 className="h-3 w-3 animate-spin" />
                                       ) : (
-                                        <Trash2 className="h-3 w-3 text-white/45 group-hover/del:text-white" />
+                                        <Trash2 className="h-3 w-3 opacity-45 group-hover/del:opacity-100" />
                                       )}
                                     </button>
                                   )}
@@ -1526,6 +1523,91 @@ export default function LibraryPage() {
 
         </main>
       </div>
+
+      {/* Move to Folder Modal */}
+      {isMoveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { setIsMoveModalOpen(false); setMoveAssetId(null); }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`w-80 rounded-2xl border shadow-2xl overflow-hidden ${
+              isDarkMode ? "bg-[#0e0e12] border-white/10" : "bg-white border-black/10"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={`flex items-center justify-between px-5 py-4 border-b ${
+              isDarkMode ? "border-white/5" : "border-black/5"
+            }`}>
+              <h3 className="text-sm font-semibold font-sans">Move to Folder</h3>
+              <button
+                onClick={() => { setIsMoveModalOpen(false); setMoveAssetId(null); }}
+                className={`p-1 rounded-lg transition-colors ${
+                  isDarkMode ? "text-white/40 hover:bg-white/10 hover:text-white" : "text-black/40 hover:bg-black/10 hover:text-black"
+                }`}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-3 max-h-64 overflow-y-auto">
+              {/* My Gallery (remove from folder) */}
+              <button
+                onClick={() => {
+                  if (moveAssetId) handleMoveAssetToGallery(moveAssetId, null);
+                  setIsMoveModalOpen(false);
+                  setMoveAssetId(null);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-sans transition-all ${
+                  isDarkMode
+                    ? "text-white/70 hover:bg-white/5 hover:text-white"
+                    : "text-black/70 hover:bg-black/5 hover:text-black"
+                }`}
+              >
+                <ImageIcon className="h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-semibold">My Gallery</p>
+                  <p className={`text-[10px] mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Remove from folder</p>
+                </div>
+              </button>
+              <div className={`my-1 mx-4 h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+              {/* Custom Folders */}
+              {galleries.length === 0 ? (
+                <p className={`text-[11px] px-4 py-3 italic ${isDarkMode ? "text-white/20" : "text-black/30"}`}>
+                  No folders created yet.
+                </p>
+              ) : (
+                galleries.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => {
+                      if (moveAssetId) handleMoveAssetToGallery(moveAssetId, g.id);
+                      setIsMoveModalOpen(false);
+                      setMoveAssetId(null);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-sans transition-all ${
+                      isDarkMode
+                        ? "text-white/70 hover:bg-white/5 hover:text-white"
+                        : "text-black/70 hover:bg-black/5 hover:text-black"
+                    }`}
+                  >
+                    {g.is_public ? (
+                      <FolderOpen className="h-4 w-4 shrink-0 text-sky-400" />
+                    ) : (
+                      <Folder className="h-4 w-4 shrink-0 text-amber-500/80" />
+                    )}
+                    <div>
+                      <p className="font-semibold">{g.name}</p>
+                      <p className={`text-[10px] mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                        {g.asset_count || 0} images {g.is_public ? "• Public" : "• Private"}
+                      </p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
     </div>
   )
 }
