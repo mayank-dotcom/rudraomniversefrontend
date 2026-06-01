@@ -2401,6 +2401,7 @@ export interface LibraryAsset {
   asset_type: "image" | "diagram"
   asset_url: string
   prompt: string | null
+  is_public: boolean
   created_at: string
 }
 
@@ -2418,6 +2419,34 @@ export async function getLibraryAssets() {
   const data = await parseJson<LibraryAssetsResponse>(res)
   if (!res.ok || !data.success) {
     throw new Error(data.error || "Failed to fetch library assets.")
+  }
+  return data
+}
+
+export async function getPublicLibraryAssets() {
+  const res = await fetch(`${API_BASE}/library/public-assets`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<LibraryAssetsResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch public assets.")
+  }
+  return data
+}
+
+export async function toggleAssetVisibility(id: string, isPublic: boolean) {
+  const res = await fetch(`${API_BASE}/library/assets/${id}/visibility`, {
+    method: "PATCH",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ is_public: isPublic }),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to update visibility.")
   }
   return data
 }
