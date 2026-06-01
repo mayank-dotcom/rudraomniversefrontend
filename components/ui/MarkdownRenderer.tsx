@@ -193,6 +193,7 @@ export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage 
             <ReactMarkdown
                 remarkPlugins={[[remarkMath, { singleDollar: true, doubleDollar: true }], remarkGfm]}
                 rehypePlugins={[[rehypeKatex, { trust: true, strict: false }]]}
+                urlTransform={(url) => url}
                 components={{
                     img(props) {
                         const { src, alt } = props;
