@@ -15,6 +15,9 @@ import {
   deleteLibraryGallery,
   assignAssetToGallery,
   getPublicGalleryAssets,
+  getSavedAssetIds,
+  saveAsset,
+  unsaveAsset,
   type LibraryAsset,
   type LibraryGallery
 } from "@/lib/chat-api"
@@ -178,7 +181,7 @@ export default function LibraryPage() {
     }
   }, [router])
 
-  // Initialize Auth & Favorites
+  // Initialize Auth & fetch saved IDs from DB
   useEffect(() => {
     if (!isAuthenticated()) {
       router.replace("/auth/login")
@@ -186,13 +189,8 @@ export default function LibraryPage() {
     }
     fetchAssets()
     
-    // Load local storage saved
-    const savedItems = localStorage.getItem("rudra_library_saved")
-    if (savedItems) {
-      try {
-        setSavedIds(JSON.parse(savedItems))
-      } catch (e) {}
-    }
+    // Fetch saved asset IDs from DB
+    getSavedAssetIds().then(setSavedIds).catch(() => {})
   }, [fetchAssets, router])
 
   // Handle Deleting Asset
@@ -246,19 +244,27 @@ export default function LibraryPage() {
     }
   }
 
-  // Toggling Saved (stored in localStorage)
-  const toggleSaved = (id: string, assetUrl?: string) => {
-    let updated: string[] = []
+  // Toggling Saved (DB-backed)
+  const toggleSaved = async (asset: LibraryAsset) => {
+    const id = asset.id
     if (savedIds.includes(id)) {
-      updated = savedIds.filter((sId) => sId !== id)
-      toast.success("Removed from Saved.")
+      try {
+        await unsaveAsset(id)
+        setSavedIds((prev) => prev.filter((sId) => sId !== id))
+        toast.success("Removed from Saved.")
+      } catch {
+        toast.error("Failed to unsave.")
+      }
     } else {
-      updated = [...savedIds, id]
-      toast.success("Saved!")
-      if (assetUrl) handleDownloadImage(assetUrl, `saved-${id}`)
+      try {
+        await saveAsset(id, asset.asset_type, asset.asset_url, asset.prompt || "")
+        setSavedIds((prev) => [...prev, id])
+        toast.success("Saved!")
+        if (asset.asset_url) handleDownloadImage(asset.asset_url, `saved-${id}`)
+      } catch {
+        toast.error("Failed to save.")
+      }
     }
-    setSavedIds(updated)
-    localStorage.setItem("rudra_library_saved", JSON.stringify(updated))
   }
 
   // Download image to device
@@ -1181,7 +1187,7 @@ export default function LibraryPage() {
                               
                               <div className="flex items-center gap-1.5 pointer-events-auto">
                                 <button
-                                  onClick={(e) => { e.preventDefault(); toggleSaved(asset.id, asset.asset_url); }}
+                                  onClick={(e) => { e.preventDefault(); toggleSaved(asset); }}
                                   className={`p-1.5 rounded-full border backdrop-blur-md pointer-events-auto transition-all duration-200 active:scale-90 ${
                                     savedIds.includes(asset.id)
                                       ? "bg-[var(--color-cyan)] border-[var(--color-cyan)] text-black scale-110 shadow-lg shadow-cyan-500/30"
@@ -1191,40 +1197,6 @@ export default function LibraryPage() {
                                   }`}
                                 >
                                   <Heart className={`h-3 w-3 ${savedIds.includes(asset.id) ? "fill-current" : ""}`} />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Always-visible bottom action bar: Copy, Download, Share */}
-                            <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 py-2 bg-gradient-to-t from-black/80 via-black/50 to-transparent pointer-events-none z-20">
-                              <span className="text-white/30 text-[7px] font-mono uppercase tracking-wider pointer-events-none">
-                                {formatDate(asset.created_at)}
-                              </span>
-                              <div className="flex items-center gap-1 pointer-events-auto">
-                                <button
-                                  onClick={(e) => { e.preventDefault(); handleCopyPrompt(asset.prompt || "", asset.id); }}
-                                  className={`p-1 rounded border transition-colors ${
-                                    copiedId === asset.id
-                                      ? "border-emerald-400/50 text-emerald-400 bg-emerald-500/10"
-                                      : "border-white/10 text-white/50 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)] bg-black/40"
-                                  }`}
-                                  title="Copy Prompt"
-                                >
-                                  {copiedId === asset.id ? <Check className="h-2.5 w-2.5" /> : <Copy className="h-2.5 w-2.5" />}
-                                </button>
-                                <button
-                                  onClick={(e) => { e.preventDefault(); handleDownloadImage(asset.asset_url, asset.id); }}
-                                  className="p-1 rounded border border-white/10 text-white/50 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)] bg-black/40 transition-colors"
-                                  title="Save Image"
-                                >
-                                  <Download className="h-2.5 w-2.5" />
-                                </button>
-                                <button
-                                  onClick={(e) => { e.preventDefault(); handleShareImage(asset.asset_url, asset.prompt || "Library Image"); }}
-                                  className="p-1 rounded border border-white/10 text-white/50 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)] bg-black/40 transition-colors"
-                                  title="Share Image"
-                                >
-                                  <Share2 className="h-2.5 w-2.5" />
                                 </button>
                               </div>
                             </div>

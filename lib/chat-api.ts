@@ -2581,3 +2581,42 @@ export async function getPublicGalleryAssets(galleryId: string) {
   return data
 }
 
+// ── Saved Assets (bookmarks) ────────────────────────────────────────────
+
+export async function getSavedAssetIds() {
+  const res = await fetch(`${API_BASE}/library/saved-assets`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; saved_ids?: string[]; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch saved assets.")
+  }
+  return data.saved_ids || []
+}
+
+export async function saveAsset(assetId: string, assetType: string, assetUrl: string, prompt: string) {
+  const res = await fetch(`${API_BASE}/library/saved-assets/${assetId}/save`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ asset_type: assetType, asset_url: assetUrl, prompt }),
+  })
+  const data = await parseJson<{ success: boolean; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to save asset.")
+  }
+  return data
+}
+
+export async function unsaveAsset(assetId: string) {
+  const res = await fetch(`${API_BASE}/library/saved-assets/${assetId}/unsave`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to unsave asset.")
+  }
+  return data
+}
+
