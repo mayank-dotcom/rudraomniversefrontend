@@ -125,24 +125,53 @@ export default function LibraryPage() {
   
   // Fetch assets and galleries from backend
   const fetchAssets = useCallback(async () => {
+    const fetchWithRetry = async (
+      fn: () => Promise<any>,
+      retries = 2
+    ) => {
+      for (let i = 0; i <= retries; i++) {
+        try {
+          return await fn()
+        } catch (err: any) {
+          const msg = err?.message?.toLowerCase() || ""
+          const isAuthError = msg.includes("auth") || msg.includes("unavail") || msg.includes("401") || msg.includes("unauthorized")
+          if (i < retries && isAuthError) {
+            await new Promise(r => setTimeout(r, 1000 * (i + 1)))
+            continue
+          }
+          throw err
+        }
+      }
+      throw new Error("Max retries exceeded")
+    }
+
+    let hasError = false
     try {
-      const data = await getLibraryAssets()
-      setAssets(data.assets)
-      
-      const pubData = await getPublicLibraryAssets()
-      setPublicAssets(pubData.assets)
-
-      const galleriesData = await getLibraryGalleries()
-      setGalleries(galleriesData.galleries)
-
-      const pubGalleriesData = await getPublicLibraryGalleries()
-      setPublicGalleries(pubGalleriesData.galleries)
+      const [data, pubData, galleriesData, pubGalleriesData] = await Promise.all([
+        fetchWithRetry(() => getLibraryAssets()).catch((err: any) => { hasError = true; return null }),
+        fetchWithRetry(() => getPublicLibraryAssets()).catch((err: any) => { hasError = true; return null }),
+        fetchWithRetry(() => getLibraryGalleries()).catch((err: any) => { hasError = true; return null }),
+        fetchWithRetry(() => getPublicLibraryGalleries()).catch((err: any) => { hasError = true; return null }),
+      ])
+      if (data) setAssets(data.assets)
+      if (pubData) setPublicAssets(pubData.assets)
+      if (galleriesData) setGalleries(galleriesData.galleries)
+      if (pubGalleriesData) setPublicGalleries(pubGalleriesData.galleries)
+      if (hasError) {
+        toast.error("Some library data failed to load. Refresh to try again.")
+      }
     } catch (err: any) {
-      toast.error(err.message || "Failed to load image library.")
+      const msg = err?.message?.toLowerCase() || ""
+      if (msg.includes("auth") || msg.includes("unavail") || msg.includes("401") || msg.includes("unauthorized")) {
+        toast.error("Auth service unavailable. Redirecting to login...")
+        setTimeout(() => router.replace("/auth/login"), 1500)
+      } else {
+        toast.error(err.message || "Failed to load image library.")
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [router])
 
   // Initialize Auth & Favorites
   useEffect(() => {
