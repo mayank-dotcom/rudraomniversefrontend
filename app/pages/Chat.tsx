@@ -2676,7 +2676,7 @@ STRICT RULES:
                                         }}
                                         placeholder={isProcessingFile ? "Processing file..." : typedPlaceholder}
                                         rows={1}
-                                        className={`flex-1 min-w-0 bg-transparent resize-none no-scrollbar ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} py-2.5 pl-2 text-base focus:outline-none`}
+                                        className={`flex-1 min-w-0 bg-transparent resize-none no-scrollbar ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} pt-4 pb-1 pl-2 text-base focus:outline-none`}
                                         style={{ maxHeight: '40vh' }}
                                     />
                                 </div>

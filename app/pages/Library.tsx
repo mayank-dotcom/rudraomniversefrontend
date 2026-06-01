@@ -501,16 +501,6 @@ export default function LibraryPage() {
         }`}>
           
           <div className="p-5 flex flex-col gap-7">
-            {/* Header */}
-            <div className="flex items-center gap-3 px-1">
-              <div className="h-6 w-6 rounded-full bg-gradient-to-tr from-[var(--color-cyan)] to-indigo-500 flex items-center justify-center shadow-[0_0_12px_rgba(0,221,221,0.2)]">
-                <Sparkles className="h-3.5 w-3.5 text-black" />
-              </div>
-              <span className={`font-display font-semibold tracking-wider text-xs uppercase ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
-                Rudra Omniverse
-              </span>
-            </div>
-
             {/* Explore Section */}
             <div className="flex flex-col gap-1.5">
               <span className={`text-[9px] font-mono tracking-widest uppercase px-2.5 mb-1 block ${isDarkMode ? "text-white/20" : "text-black/35"}`}>
@@ -619,20 +609,6 @@ export default function LibraryPage() {
                 {activeCategory === "favorites" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
               </button>
 
-              <button
-                onClick={() => { setActiveCategory("uploads"); setIsUploadDragging(false); setSelectedGalleryId(null); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium font-sans transition-all duration-200 ${
-                  activeCategory === "uploads"
-                    ? (isDarkMode ? "bg-white/5 text-[var(--color-cyan)] border border-white/5" : "bg-black/5 text-cyan-600 border border-black/5")
-                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black/50 hover:text-black hover:bg-black/[0.02]")
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Upload className="h-3.5 w-3.5" />
-                  <span>My Uploads</span>
-                </div>
-                {activeCategory === "uploads" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
-              </button>
             </div>
 
             {/* Custom Database Galleries list */}
