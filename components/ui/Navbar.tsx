@@ -24,6 +24,7 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
     const navLinks = [
         { label: "Features", href: "/#features" },
         { label: "Pricing", href: "/pricing" },
+        { label: "Library", href: "/library" },
         { label: "FAQ", href: "/faq" },
         { label: "Support", href: "/support" },
         { label: "Schools", href: "/schools" },

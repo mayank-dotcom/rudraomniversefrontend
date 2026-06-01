@@ -13,6 +13,7 @@ import AuthSelection from "./pages/AuthSelection";
 import StudentLogin from "./pages/StudentLogin";
 import SchoolAdminLogin from "./pages/SchoolAdminLogin";
 import SchoolFacultyLogin from "./pages/SchoolFacultyLogin";
+import Library from "./pages/Library";
 
 import Schools from "./pages/Schools";
 import About from "./pages/About";
@@ -45,6 +46,7 @@ const AppContent = () => (
                         <Route path="/schools" element={<Schools />} />
                         <Route path="/faq" element={<FAQ />} />
                         <Route path="/support" element={<Support />} />
+                        <Route path="/library" element={<Library />} />
                         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
 
                         <Route path="*" element={<NotFound />} />

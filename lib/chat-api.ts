@@ -2393,3 +2393,49 @@ export async function triggerEnterpriseBulkReply(employeeIds: string[], maxPerEm
 export async function getEnterpriseEmailStats() {
   return googleFetch(`${API_BASE}/enterprise/email-agent/stats`) as Promise<{ success: boolean; config?: any; stats?: any; recent_logs?: any[]; error?: string }>
 }
+
+// ── Library / User Assets ──────────────────────────────────────────────
+
+export interface LibraryAsset {
+  id: string
+  asset_type: "image" | "diagram"
+  asset_url: string
+  prompt: string | null
+  created_at: string
+}
+
+export interface LibraryAssetsResponse {
+  success: boolean
+  assets: LibraryAsset[]
+  error?: string
+}
+
+export async function getLibraryAssets() {
+  const res = await fetch(`${API_BASE}/library/assets`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<LibraryAssetsResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch library assets.")
+  }
+  return data
+}
+
+export interface DeleteLibraryAssetResponse {
+  success: boolean
+  message?: string
+  error?: string
+}
+
+export async function deleteLibraryAsset(id: string) {
+  const res = await fetch(`${API_BASE}/library/assets/${id}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<DeleteLibraryAssetResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to delete asset.")
+  }
+  return data
+}
