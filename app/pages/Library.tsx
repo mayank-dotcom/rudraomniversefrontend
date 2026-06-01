@@ -130,6 +130,7 @@ export default function LibraryPage() {
   const [showcaseTab, setShowcaseTab] = useState<"assets" | "galleries">("assets")
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false)
   const [moveAssetId, setMoveAssetId] = useState<string | null>(null)
+  const [expandedAsset, setExpandedAsset] = useState<LibraryAsset | null>(null)
   
   // Fetch assets and galleries from backend
   const fetchAssets = useCallback(async () => {
@@ -503,7 +504,7 @@ export default function LibraryPage() {
   const activeAssets = useMemo(() => {
     let pool: LibraryAsset[] = []
     switch (activeCategory) {
-      case "featured": pool = FEATURED_ASSETS; break
+      case "featured": pool = [...FEATURED_ASSETS, ...publicAssets]; break
       case "recent": pool = assets.slice(0, 4); break
       case "public_showcase": pool = publicAssets.filter((asset) => asset.gallery_id === null); break
       case "uploads": pool = uploadedAssets; break
@@ -1149,8 +1150,9 @@ export default function LibraryPage() {
                             <img
                               src={asset.asset_url}
                               alt={asset.prompt || "Concept visual"}
-                              className={`w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-105 ${getPresetFilterClass()}`}
+                              className={`w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-105 cursor-pointer ${getPresetFilterClass()}`}
                               loading="lazy"
+                              onClick={() => setExpandedAsset(asset)}
                             />
 
                             {/* Top Action Indicators (Heart and Visibility) */}
@@ -1464,10 +1466,7 @@ export default function LibraryPage() {
                   <span>{motionSpeed}</span>
                 </button>
 
-                <div className={`h-4 w-[1px] mx-1 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
-                <span title="Presets & Filters" className="flex items-center">
-                  <HelpCircle className={`h-4.5 w-4.5 cursor-pointer transition-colors ${isDarkMode ? "text-white/20 hover:text-white/50" : "text-black/30 hover:text-black/60"}`} />
-                </span>
+
               </div>
 
               {/* Text search & prompt composer wrapper */}
@@ -1602,6 +1601,36 @@ export default function LibraryPage() {
         </div>
       )}
 
+      {/* Expanded Image Modal */}
+      <AnimatePresence>
+        {expandedAsset && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 md:p-10"
+            onClick={() => setExpandedAsset(null)}
+          >
+            <button
+              onClick={() => setExpandedAsset(null)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors z-10"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            <motion.img
+              key={expandedAsset.asset_url}
+              src={expandedAsset.asset_url}
+              alt={expandedAsset.prompt || "Expanded view"}
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
