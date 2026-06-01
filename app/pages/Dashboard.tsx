@@ -2232,15 +2232,16 @@ const Dashboard = () => {
                                                     {editingSiteSetting.key === 'about_us' ? 'About Us' :
                                                         editingSiteSetting.key === 'privacy_policy' ? 'Privacy Policy' :
                                                             editingSiteSetting.key === 'terms_conditions' ? 'Terms of Service' :
-                                                                editingSiteSetting.key === 'contact_info' ? 'Contact Us' : 
-                                                                    editingSiteSetting.key === 'social_media_links' ? 'Social Media Links' : 
-                                                                        editingSiteSetting.key === 'schools_page' ? 'Schools Page' : 
-                                                                            editingSiteSetting.key === 'b2b_page' ? 'B2B Page' : 
-                                                                                editingSiteSetting.key === 'home_page' ? 'Home Page Video' : 
-                                                                                    editingSiteSetting.key === 'plugin_page' ? 'Plugin Page' : 
-                                                                                        editingSiteSetting.key === 'mobile_app_page' ? 'Mobile App Page' : 
-                                                                                         editingSiteSetting.key === 'faq_page' ? 'FAQ Page' : 
-                                                                                             editingSiteSetting.key === 'support_page' ? 'Support Page' : editingSiteSetting.key}
+                                                                editingSiteSetting.key === 'refund_policy' ? 'Refund Policy' :
+                                                                    editingSiteSetting.key === 'contact_info' ? 'Contact Us' : 
+                                                                        editingSiteSetting.key === 'social_media_links' ? 'Social Media Links' : 
+                                                                            editingSiteSetting.key === 'schools_page' ? 'Schools Page' : 
+                                                                                editingSiteSetting.key === 'b2b_page' ? 'B2B Page' : 
+                                                                                    editingSiteSetting.key === 'home_page' ? 'Home Page Video' : 
+                                                                                        editingSiteSetting.key === 'plugin_page' ? 'Plugin Page' : 
+                                                                                            editingSiteSetting.key === 'mobile_app_page' ? 'Mobile App Page' : 
+                                                                                             editingSiteSetting.key === 'faq_page' ? 'FAQ Page' : 
+                                                                                                 editingSiteSetting.key === 'support_page' ? 'Support Page' : editingSiteSetting.key}
                                                 </h2>
                                                 <button
                                                     onClick={fetchData}
@@ -2622,7 +2623,7 @@ const Dashboard = () => {
                                                 </div>
                                             )}
 
-                                            {(editingSiteSetting.key === 'privacy_policy' || editingSiteSetting.key === 'terms_conditions') && (
+                                            {(editingSiteSetting.key === 'privacy_policy' || editingSiteSetting.key === 'terms_conditions' || editingSiteSetting.key === 'refund_policy') && (
                                                 <div className="space-y-4">
                                                     <div>
                                                         <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Last Updated</label>
@@ -4401,6 +4402,7 @@ const Dashboard = () => {
                                     { key: 'about_us', label: 'About Us', icon: Info },
                                     { key: 'privacy_policy', label: 'Privacy Policy', icon: Lock },
                                     { key: 'terms_conditions', label: 'Terms of Service', icon: Scale },
+                                    { key: 'refund_policy', label: 'Refund Policy', icon: Shield },
                                     { key: 'contact_info', label: 'Contact Us', icon: Mail },
                                     { key: 'social_media_links', label: 'Social Media Links', icon: Share2 },
                                     { key: 'schools_page', label: 'Schools Page', icon: GraduationCap },
@@ -4585,6 +4587,45 @@ const Dashboard = () => {
                                                             description: "Having trouble? Have a suggestion? Our support team typically responds within 24 hours.",
                                                             email: "hello@rudranex.ai",
                                                             responseTime: "Usually within 24 hours"
+                                                        };
+                                                        setSiteFormData(defaults);
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
+                                                    } else if (page.key === 'privacy_policy') {
+                                                        const defaults = {
+                                                            lastUpdated: "May 2026",
+                                                            sections: [
+                                                                { title: "1. Information We Collect", content: "We collect only the data necessary to provide our services: account information (name, email), chat messages and uploaded files for AI processing, and basic usage analytics to improve performance." },
+                                                                { title: "2. How We Use Your Data", content: "Your data is used exclusively to process AI requests, generate responses, and improve your experience. We do not sell your data to third parties. Chat history is stored to provide session continuity and can be deleted at any time." },
+                                                                { title: "3. Data Security", content: "We use industry-standard encryption for data in transit and at rest. API keys and authentication tokens are stored securely and never exposed client-side beyond what is necessary." },
+                                                                { title: "4. Your Rights", content: "You have the right to access, correct, or delete your personal data at any time. Contact us at privacy@rudranex.ai for any data-related requests." },
+                                                                { title: "5. Contact", content: "For questions about this policy, reach out to privacy@rudranex.ai." }
+                                                            ]
+                                                        };
+                                                        setSiteFormData(defaults);
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
+                                                    } else if (page.key === 'terms_conditions') {
+                                                        const defaults = {
+                                                            lastUpdated: "May 2026",
+                                                            sections: [
+                                                                { title: "1. Acceptance of Terms", content: "By accessing or using Rudranex AI, you agree to be bound by these Terms of Service. If you do not agree, do not use our services." },
+                                                                { title: "2. Description of Service", content: "Rudranex AI provides AI-powered tools for students including chat-based tutoring, interview simulation, resume analysis, PDF intelligence, and vision-based problem solving. These tools are provided \"as is\" without warranty of any kind." },
+                                                                { title: "3. User Obligations", content: "You agree to use the service responsibly and not to misuse the AI systems for any illegal, harmful, or unauthorized purposes. You are responsible for maintaining the confidentiality of your account credentials." },
+                                                                { title: "4. Limitation of Liability", content: "Rudranex AI shall not be liable for any indirect, incidental, or consequential damages arising from the use of our services. Our total liability is limited to the amount paid by you in the past 12 months." },
+                                                                { title: "5. Changes to Terms", content: "We reserve the right to modify these terms at any time. Users will be notified of material changes via email or through the platform." }
+                                                            ]
+                                                        };
+                                                        setSiteFormData(defaults);
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
+                                                    } else if (page.key === 'refund_policy') {
+                                                        const defaults = {
+                                                            lastUpdated: "June 2026",
+                                                            sections: [
+                                                                { title: "1. Scope of Refunds", content: "We offer refunds for subscription purchases and digital assets under specific terms, such as service disruption, technical billing errors, or accidental duplicate transactions reported within 7 days of purchase." },
+                                                                { title: "2. Ineligibility Criteria", content: "Refunds are generally not issued for fully or partially consumed AI credits or generation tokens, active custom plans that have been fully set up, or accounts flagged and suspended for violating our Terms of Service." },
+                                                                { title: "3. Processing Timeframe", content: "Once a refund is approved by our billing department, it will be processed and credited back to your original payment method within 5 to 7 business days." },
+                                                                { title: "4. Subscription Cancellations", content: "You may cancel your auto-renewing subscriptions at any time through the billing tab in your user profile dashboard. Upon cancellation, your premium access will remain active until the end of your current billing period." },
+                                                                { title: "5. Billing Queries & Support", content: "For any queries, chargeback disputes, or to submit a refund request, please email our support team directly at billing@rudranex.ai with your registered email and transaction ID." }
+                                                            ]
                                                         };
                                                         setSiteFormData(defaults);
                                                         setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
