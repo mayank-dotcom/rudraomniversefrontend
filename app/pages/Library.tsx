@@ -578,7 +578,7 @@ export default function LibraryPage() {
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Sparkles className="h-3.5 w-3.5" />
+                  <Sparkles className={`h-3.5 w-3.5 ${activeCategory === "featured" ? "text-[var(--color-cyan)]" : ""}`} />
                   <span>Featured Feed</span>
                 </div>
                 {activeCategory === "featured" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
@@ -593,7 +593,7 @@ export default function LibraryPage() {
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Globe className="h-3.5 w-3.5 text-sky-500/80" />
+                  <Globe className={`h-3.5 w-3.5 ${activeCategory === "public_showcase" ? "text-[var(--color-cyan)]" : "text-sky-500/80"}`} />
                   <span>Community Showcase</span>
                 </div>
                 {activeCategory === "public_showcase" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
@@ -623,7 +623,7 @@ export default function LibraryPage() {
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Bookmark className="h-3.5 w-3.5" />
+                  <Bookmark className={`h-3.5 w-3.5 ${activeCategory === "saved" ? "text-[var(--color-cyan)]" : ""}`} />
                   <span>Saved</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -659,7 +659,7 @@ export default function LibraryPage() {
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <ImageIcon className="h-3.5 w-3.5" />
+                  <ImageIcon className={`h-3.5 w-3.5 ${activeCategory === "all" ? "text-[var(--color-cyan)]" : ""}`} />
                   <span>My Gallery</span>
                 </div>
                 {activeCategory === "all" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
@@ -693,7 +693,7 @@ export default function LibraryPage() {
                   >
                     <div className="flex items-center gap-2.5 truncate">
                       {activeCategory === "gallery" && selectedGalleryId === g.id ? (
-                        <FolderOpen className={`h-3.5 w-3.5 shrink-0 ${g.is_public ? "text-sky-400" : "text-amber-500/80"}`} />
+                        <FolderOpen className={`h-3.5 w-3.5 shrink-0 ${g.is_public ? "text-[var(--color-cyan)]" : "text-amber-500/80"}`} />
                       ) : (
                         <Folder className={`h-3.5 w-3.5 shrink-0 ${g.is_public ? "text-sky-400/60" : "text-amber-500/60"}`} />
                       )}
@@ -992,8 +992,8 @@ export default function LibraryPage() {
                           <div className="p-3 bg-gradient-to-tr from-sky-500/20 to-indigo-500/20 rounded-xl text-sky-400">
                             <FolderOpen className="h-6 w-6" />
                           </div>
-                          <span className="text-[10px] font-mono opacity-50 px-2 py-0.5 bg-black/25 rounded-full flex items-center gap-1">
-                            <Globe className="h-2.5 w-2.5 text-sky-400" />
+                          <span className="text-[10px] font-mono px-2 py-0.5 bg-black/25 rounded-full flex items-center gap-1 text-[var(--color-cyan)]">
+                            <Globe className="h-2.5 w-2.5 text-[var(--color-cyan)]" />
                             <span>Shared</span>
                           </span>
                         </div>
@@ -1191,6 +1191,40 @@ export default function LibraryPage() {
                                   }`}
                                 >
                                   <Heart className={`h-3 w-3 ${savedIds.includes(asset.id) ? "fill-current" : ""}`} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Always-visible bottom action bar: Copy, Download, Share */}
+                            <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 py-2 bg-gradient-to-t from-black/80 via-black/50 to-transparent pointer-events-none z-20">
+                              <span className="text-white/30 text-[7px] font-mono uppercase tracking-wider pointer-events-none">
+                                {formatDate(asset.created_at)}
+                              </span>
+                              <div className="flex items-center gap-1 pointer-events-auto">
+                                <button
+                                  onClick={(e) => { e.preventDefault(); handleCopyPrompt(asset.prompt || "", asset.id); }}
+                                  className={`p-1 rounded border transition-colors ${
+                                    copiedId === asset.id
+                                      ? "border-emerald-400/50 text-emerald-400 bg-emerald-500/10"
+                                      : "border-white/10 text-white/50 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)] bg-black/40"
+                                  }`}
+                                  title="Copy Prompt"
+                                >
+                                  {copiedId === asset.id ? <Check className="h-2.5 w-2.5" /> : <Copy className="h-2.5 w-2.5" />}
+                                </button>
+                                <button
+                                  onClick={(e) => { e.preventDefault(); handleDownloadImage(asset.asset_url, asset.id); }}
+                                  className="p-1 rounded border border-white/10 text-white/50 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)] bg-black/40 transition-colors"
+                                  title="Save Image"
+                                >
+                                  <Download className="h-2.5 w-2.5" />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.preventDefault(); handleShareImage(asset.asset_url, asset.prompt || "Library Image"); }}
+                                  className="p-1 rounded border border-white/10 text-white/50 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)] bg-black/40 transition-colors"
+                                  title="Share Image"
+                                >
+                                  <Share2 className="h-2.5 w-2.5" />
                                 </button>
                               </div>
                             </div>
