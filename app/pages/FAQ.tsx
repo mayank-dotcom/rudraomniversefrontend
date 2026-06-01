@@ -65,19 +65,6 @@ export default function FAQ() {
     const [categories, setCategories] = useState(DEFAULT_CATEGORIES)
 
     useEffect(() => {
-        try {
-            const local = localStorage.getItem("rudranex_faq_page")
-            if (local) {
-                const parsed = JSON.parse(local)
-                if (parsed.title) setPageTitle(parsed.title)
-                if (parsed.description) setPageDesc(parsed.description)
-                if (Array.isArray(parsed.categories)) setCategories(parsed.categories)
-                return
-            }
-        } catch (e) {
-            console.error("Local storage FAQ fetch error:", e)
-        }
-
         getPublicSiteSettings().then(res => {
             const setting = res.settings?.find(s => s.key === "faq_page")
             if (setting?.value) {

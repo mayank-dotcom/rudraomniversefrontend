@@ -13,21 +13,6 @@ export default function Footer() {
     });
 
     useEffect(() => {
-        try {
-            const local = localStorage.getItem("rudranex_social_media_links");
-            if (local) {
-                const parsed = JSON.parse(local);
-                setSocialLinks({
-                    twitter: parsed.twitter || "#",
-                    linkedin: parsed.linkedin || "#",
-                    github: parsed.github || "#"
-                });
-                return;
-            }
-        } catch (e) {
-            console.error("Local storage footer fetch error:", e);
-        }
-
         getPublicSiteSettings().then(res => {
             const setting = res.settings?.find(s => s.key === "social_media_links");
             if (setting?.value) {

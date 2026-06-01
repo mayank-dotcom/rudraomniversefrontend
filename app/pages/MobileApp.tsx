@@ -6,6 +6,7 @@ import Navbar from "@/components/ui/Navbar"
 import Footer from "@/components/ui/Footer"
 import { useTheme } from "@/lib/theme-context"
 import { Smartphone, Cpu, Sparkles, Calendar, Download, CheckCircle } from "lucide-react"
+import { getPublicSiteSettings } from "@/lib/chat-api"
 
 export default function MobileApp() {
   const { isDarkMode } = useTheme()
@@ -18,20 +19,22 @@ export default function MobileApp() {
   });
 
   useEffect(() => {
-    try {
-      const local = localStorage.getItem("rudranex_mobile_app_page");
-      if (local) {
-        const parsed = JSON.parse(local);
-        setPageData({
-          title: parsed.title || "Rudranex AI Mobile",
-          description: parsed.description || "Take Rudranex AI wherever you go. Practice interviews, get code assistance, and learn on the move with our native mobile experience.",
-          buttonText: parsed.buttonText || "Download for Android",
-          buttonUrl: parsed.buttonUrl || "#"
-        });
+    getPublicSiteSettings().then(res => {
+      const setting = res.settings?.find(s => s.key === "mobile_app_page");
+      if (setting?.value) {
+        try {
+          const parsed = JSON.parse(setting.value);
+          setPageData({
+            title: parsed.title || "Rudranex AI Mobile",
+            description: parsed.description || "Take Rudranex AI wherever you go. Practice interviews, get code assistance, and learn on the move with our native mobile experience.",
+            buttonText: parsed.buttonText || "Download for Android",
+            buttonUrl: parsed.buttonUrl || "#"
+          });
+        } catch (e) {
+          console.error("Error parsing mobile page settings", e);
+        }
       }
-    } catch (e) {
-      console.error("Local storage mobile fetch error:", e);
-    }
+    }).catch(() => {});
   }, []);
 
   const features = [

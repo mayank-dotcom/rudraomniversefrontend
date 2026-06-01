@@ -8,6 +8,7 @@ import AuthModal from "@/components/ui/AuthModal";
 import Footer from "@/components/ui/Footer";
 import { useTheme } from "@/lib/theme-context";
 import { isAuthenticated } from "@/lib/auth";
+import { getPublicSiteSettings } from "@/lib/chat-api";
 
 const Index = () => {
     const { isDarkMode } = useTheme();
@@ -16,17 +17,19 @@ const Index = () => {
     const [showDemoModal, setShowDemoModal] = useState(false);
 
     useEffect(() => {
-        try {
-            const local = localStorage.getItem("rudranex_home_page");
-            if (local) {
-                const parsed = JSON.parse(local);
-                if (parsed.videoUrl) {
-                    setDemoVideoUrl(parsed.videoUrl);
+        getPublicSiteSettings().then(res => {
+            const setting = res.settings?.find(s => s.key === "home_page");
+            if (setting?.value) {
+                try {
+                    const parsed = JSON.parse(setting.value);
+                    if (parsed.videoUrl) {
+                        setDemoVideoUrl(parsed.videoUrl);
+                    }
+                } catch (e) {
+                    console.error("Error parsing home page settings", e);
                 }
             }
-        } catch (e) {
-            console.error("Local storage fetch demo video error:", e);
-        }
+        }).catch(() => {});
     }, []);
 
     const handleStartFree = () => {

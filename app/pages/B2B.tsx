@@ -40,23 +40,6 @@ export default function B2B() {
   });
 
   useEffect(() => {
-    try {
-      const local = localStorage.getItem("rudranex_b2b_page");
-      if (local) {
-        const parsed = JSON.parse(local);
-        setPageData(prev => ({
-          ...prev,
-          title: parsed.title || "Quiet power.\nTailored access.",
-          description: parsed.description || "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
-          linkText: parsed.linkText || "Learn More",
-          linkUrl: parsed.linkUrl || "/pricing"
-        }));
-        return;
-      }
-    } catch (e) {
-      console.error("Local storage B2B fetch error:", e);
-    }
-
     getPublicSiteSettings().then(res => {
       const setting = res.settings?.find(s => s.key === "b2b_page");
       if (setting?.value) {

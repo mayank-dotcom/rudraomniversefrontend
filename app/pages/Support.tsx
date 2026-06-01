@@ -40,20 +40,6 @@ export default function Support() {
     const [success, setSuccess] = useState(false)
 
     useEffect(() => {
-        try {
-            const local = localStorage.getItem("rudranex_support_page")
-            if (local) {
-                const parsed = JSON.parse(local)
-                if (parsed.title) setPageTitle(parsed.title)
-                if (parsed.description) setPageDesc(parsed.description)
-                if (parsed.email) setPageEmail(parsed.email)
-                if (parsed.responseTime) setPageResponseTime(parsed.responseTime)
-                return
-            }
-        } catch (e) {
-            console.error("Local storage support fetch error:", e)
-        }
-
         getPublicSiteSettings().then(res => {
             const setting = res.settings?.find(s => s.key === "support_page")
             if (setting?.value) {

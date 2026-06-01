@@ -6,6 +6,7 @@ import Navbar from "@/components/ui/Navbar"
 import Footer from "@/components/ui/Footer"
 import { useTheme } from "@/lib/theme-context"
 import { Code2, Brackets, GitBranch, BugPlay, ArrowRight, CheckCircle, ExternalLink } from "lucide-react"
+import { getPublicSiteSettings } from "@/lib/chat-api"
 
 export default function Plugin() {
   const { isDarkMode } = useTheme()
@@ -18,20 +19,22 @@ export default function Plugin() {
   });
 
   useEffect(() => {
-    try {
-      const local = localStorage.getItem("rudranex_plugin_page");
-      if (local) {
-        const parsed = JSON.parse(local);
-        setPageData({
-          title: parsed.title || "Rudranex AI Plugin",
-          description: parsed.description || "Bring Rudranex AI directly into your code editor. Get real-time AI assistance, smart debugging, and automated code reviews without leaving your workflow.",
-          buttonText: parsed.buttonText || "VS Code Marketplace",
-          buttonUrl: parsed.buttonUrl || "#"
-        });
+    getPublicSiteSettings().then(res => {
+      const setting = res.settings?.find(s => s.key === "plugin_page");
+      if (setting?.value) {
+        try {
+          const parsed = JSON.parse(setting.value);
+          setPageData({
+            title: parsed.title || "Rudranex AI Plugin",
+            description: parsed.description || "Bring Rudranex AI directly into your code editor. Get real-time AI assistance, smart debugging, and automated code reviews without leaving your workflow.",
+            buttonText: parsed.buttonText || "VS Code Marketplace",
+            buttonUrl: parsed.buttonUrl || "#"
+          });
+        } catch (e) {
+          console.error("Error parsing plugin page settings", e);
+        }
       }
-    } catch (e) {
-      console.error("Local storage plugin fetch error:", e);
-    }
+    }).catch(() => {});
   }, []);
 
   const features = [
