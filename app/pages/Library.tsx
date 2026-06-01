@@ -47,7 +47,9 @@ import {
   Lock,
   Info,
   Edit2,
-  FolderOpen
+  FolderOpen,
+  Download,
+  Share2
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -242,7 +244,7 @@ export default function LibraryPage() {
   }
 
   // Toggling Favorites (stored in localStorage)
-  const toggleFavorite = (id: string) => {
+  const toggleFavorite = (id: string, assetUrl?: string) => {
     let updated: string[] = []
     if (favorites.includes(id)) {
       updated = favorites.filter((favId) => favId !== id)
@@ -250,9 +252,42 @@ export default function LibraryPage() {
     } else {
       updated = [...favorites, id]
       toast.success("Added to Favorites.")
+      if (assetUrl) handleDownloadImage(assetUrl, `favorite-${id}`)
     }
     setFavorites(updated)
     localStorage.setItem("rudra_library_favorites", JSON.stringify(updated))
+  }
+
+  // Download image to device
+  const handleDownloadImage = async (url: string, filename = "image") => {
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = blobUrl
+      a.download = `${filename}.${blob.type.split("/")[1] || "jpg"}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      window.open(url, "_blank")
+    }
+  }
+
+  // Share image via Web Share API or copy link
+  const handleShareImage = async (url: string, title = "Check this out!") => {
+    if (navigator.share) {
+      try { await navigator.share({ title, url }) } catch {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(url)
+        toast.success("Link copied to clipboard.")
+      } catch {
+        toast.error("Could not copy link.")
+      }
+    }
   }
 
   const formatDate = (dateStr: string) => {
@@ -745,42 +780,85 @@ export default function LibraryPage() {
                         const currentGallery = galleries.find(g => g.id === selectedGalleryId);
                         if (!currentGallery) return null;
                         return (
-                          <div className="flex items-center gap-1.5 ml-2">
-                            {/* Toggle visibility */}
-                            <button
-                              onClick={() => handleToggleGalleryVisibility(currentGallery.id, currentGallery.is_public)}
-                              className={`p-1.5 rounded border transition-colors ${
-                                currentGallery.is_public
-                                  ? "bg-sky-500/10 border-sky-400/20 text-sky-400 hover:bg-sky-500/20"
-                                  : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                              }`}
-                              title={currentGallery.is_public ? "Set Gallery Private" : "Set Gallery Public"}
-                            >
-                              {currentGallery.is_public ? (
-                                <Globe className="h-3.5 w-3.5" />
-                              ) : (
-                                <Lock className="h-3.5 w-3.5" />
-                              )}
-                            </button>
+                            <div className="flex items-center gap-1.5 ml-2">
+                              {/* Toggle visibility */}
+                              <button
+                                onClick={() => handleToggleGalleryVisibility(currentGallery.id, currentGallery.is_public)}
+                                className={`p-1.5 rounded border transition-colors ${
+                                  currentGallery.is_public
+                                    ? "bg-sky-500/10 border-sky-400/20 text-sky-400 hover:bg-sky-500/20"
+                                    : isDarkMode
+                                      ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                      : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
+                                }`}
+                                title={currentGallery.is_public ? "Set Gallery Private" : "Set Gallery Public"}
+                              >
+                                {currentGallery.is_public ? (
+                                  <Globe className="h-3.5 w-3.5" />
+                                ) : (
+                                  <Lock className="h-3.5 w-3.5" />
+                                )}
+                              </button>
 
-                            {/* Rename */}
-                            <button
-                              onClick={() => handleRenameGallery(currentGallery.id, currentGallery.name)}
-                              className="p-1.5 rounded border bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
-                              title="Rename Gallery"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
+                              {/* Rename */}
+                              <button
+                                onClick={() => handleRenameGallery(currentGallery.id, currentGallery.name)}
+                                className={`p-1.5 rounded border transition-colors ${
+                                  isDarkMode
+                                    ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                    : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
+                                }`}
+                                title="Rename Gallery"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
 
-                            {/* Delete */}
-                            <button
-                              onClick={() => handleDeleteGallery(currentGallery.id)}
-                              className="p-1.5 rounded border bg-white/5 border-white/10 text-white/60 hover:bg-red-500/80 hover:text-white transition-colors"
-                              title="Delete Gallery"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
+                              {/* Share Gallery */}
+                              <button
+                                onClick={() => handleShareImage(
+                                  `${window.location.origin}/library?gallery=${currentGallery.id}`,
+                                  currentGallery.name
+                                )}
+                                className={`p-1.5 rounded border transition-colors ${
+                                  isDarkMode
+                                    ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                    : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
+                                }`}
+                                title="Share Gallery"
+                              >
+                                <Share2 className="h-3.5 w-3.5" />
+                              </button>
+
+                              {/* Save Gallery */}
+                              <button
+                                onClick={() => {
+                                  const galleryAssetIds = assets.filter(a => a.gallery_id === currentGallery.id);
+                                  galleryAssetIds.forEach(a => handleDownloadImage(a.asset_url, a.id));
+                                  toast.success(`Saving ${galleryAssetIds.length} images...`);
+                                }}
+                                className={`p-1.5 rounded border transition-colors ${
+                                  isDarkMode
+                                    ? "bg-white/5 border-white/10 text-white/60 hover:bg-emerald-500/80 hover:text-white"
+                                    : "bg-black/5 border-black/10 text-black/60 hover:bg-emerald-500/80 hover:text-white"
+                                }`}
+                                title="Save All Images"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </button>
+
+                              {/* Delete */}
+                              <button
+                                onClick={() => handleDeleteGallery(currentGallery.id)}
+                                className={`p-1.5 rounded border transition-colors ${
+                                  isDarkMode
+                                    ? "bg-white/5 border-white/10 text-white/60 hover:bg-red-500/80 hover:text-white"
+                                    : "bg-black/5 border-black/10 text-black/60 hover:bg-red-500/80 hover:text-white"
+                                }`}
+                                title="Delete Gallery"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                         );
                       })()}
                     </>
@@ -891,7 +969,7 @@ export default function LibraryPage() {
           <div className="relative">
               {activeCategory === "public_showcase" && showcaseTab === "galleries" ? (
               /* Community Shared Galleries Grid view */
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {publicGalleries.length === 0 ? (
                   <div className={`col-span-full flex flex-col items-center justify-center py-20 border rounded-2xl ${
                     isDarkMode ? "border-white/[0.04] bg-white/[0.01]" : "border-black/[0.04] bg-black/[0.01]"
@@ -906,39 +984,67 @@ export default function LibraryPage() {
                   publicGalleries.map((g) => (
                     <motion.div
                       key={g.id}
-                      onClick={() => {
-                        setSelectedPublicGalleryId(g.id);
-                        setActiveCategory("public_gallery");
-                        fetchPublicGalleryAssetsCallback(g.id);
-                      }}
-                      className={`p-5 rounded-2xl border cursor-pointer select-none transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl ${
+                      className={`p-5 rounded-2xl border select-none transition-all duration-300 ${
                         isDarkMode
                           ? "bg-white/[0.02] border-white/5 hover:bg-white/[0.04] hover:border-white/10"
                           : "bg-white border-black/5 hover:border-black/10 shadow-sm"
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="p-3 bg-gradient-to-tr from-sky-500/20 to-indigo-500/20 rounded-xl text-sky-400">
-                          <FolderOpen className="h-6 w-6" />
+                      <div
+                        onClick={() => {
+                          setSelectedPublicGalleryId(g.id);
+                          setActiveCategory("public_gallery");
+                          fetchPublicGalleryAssetsCallback(g.id);
+                        }}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="p-3 bg-gradient-to-tr from-sky-500/20 to-indigo-500/20 rounded-xl text-sky-400">
+                            <FolderOpen className="h-6 w-6" />
+                          </div>
+                          <span className="text-[10px] font-mono opacity-50 px-2 py-0.5 bg-black/25 rounded-full flex items-center gap-1">
+                            <Globe className="h-2.5 w-2.5 text-sky-400" />
+                            <span>Shared</span>
+                          </span>
                         </div>
-                        <span className="text-[10px] font-mono opacity-50 px-2 py-0.5 bg-black/25 rounded-full flex items-center gap-1">
-                          <Globe className="h-2.5 w-2.5 text-sky-400" />
-                          <span>Shared</span>
-                        </span>
+                        
+                        <h3 className="font-display font-semibold text-sm mb-1 truncate">
+                          {g.name}
+                        </h3>
+                        
+                        <p className={`text-[10px] font-mono mb-4 ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
+                          Created by <strong>{g.owner_name || "Community User"}</strong>
+                        </p>
                       </div>
-                      
-                      <h3 className="font-display font-semibold text-sm mb-1 truncate">
-                        {g.name}
-                      </h3>
-                      
-                      <p className={`text-[10px] font-mono mb-4 ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
-                        Created by <strong>{g.owner_name || "Community User"}</strong>
-                      </p>
 
                       <div className="flex items-center justify-between border-t border-white/5 pt-3">
-                        <span className="text-[10px] font-mono text-[var(--color-cyan)]">
-                          {g.asset_count || 0} image prompts
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-[var(--color-cyan)]">
+                            {g.asset_count || 0} image prompts
+                          </span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${window.location.origin}/library?gallery=${g.id}`); toast.success("Folder link copied to clipboard."); }}
+                            className={`p-1.5 rounded-lg border transition-all ${
+                              isDarkMode
+                                ? "bg-white/5 border-white/10 text-white/50 hover:text-emerald-400 hover:border-emerald-400/50"
+                                : "bg-black/5 border-black/10 text-black/50 hover:text-emerald-600"
+                            }`}
+                            title="Save Folder Link"
+                          >
+                            <Download className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleShareImage(`${window.location.origin}/library?gallery=${g.id}`, g.name); }}
+                            className={`p-1.5 rounded-lg border transition-all ${
+                              isDarkMode
+                                ? "bg-white/5 border-white/10 text-white/50 hover:text-sky-400 hover:border-sky-400/50"
+                                : "bg-black/5 border-black/10 text-black/50 hover:text-sky-600"
+                            }`}
+                            title="Share Folder"
+                          >
+                            <Share2 className="h-3 w-3" />
+                          </button>
+                        </div>
                         <ChevronRight className="h-4 w-4 text-white/35" />
                       </div>
                     </motion.div>
@@ -1024,7 +1130,7 @@ export default function LibraryPage() {
                 ) : (
                   
                   /* ================= CORE PHOTO IMAGE GRID ================= */
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <AnimatePresence mode="popLayout">
                       {activeAssets.map((asset, i) => {
                         const isOwnAsset = !asset.id.startsWith("feat-") && activeCategory !== "public_showcase" && activeCategory !== "public_gallery";
@@ -1053,7 +1159,7 @@ export default function LibraryPage() {
                               loading="lazy"
                             />
 
-                            {/* Top Action Indicators (Heart and Visibility / Ownership) */}
+                            {/* Top Action Indicators (Save, Share, Heart, and Visibility) */}
                             <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none select-none z-20">
                               {/* Visibility badge */}
                               <div className="flex gap-1.5">
@@ -1079,16 +1185,34 @@ export default function LibraryPage() {
                                 )}
                               </div>
                               
-                              <button
-                                onClick={(e) => { e.preventDefault(); toggleFavorite(asset.id); }}
-                                className={`p-1.5 rounded-full border backdrop-blur-md pointer-events-auto transition-all duration-200 active:scale-90 ${
-                                  favorites.includes(asset.id)
-                                    ? "bg-rose-500 border-rose-400 text-white scale-110 shadow-lg shadow-rose-500/20"
-                                    : "bg-black/60 border-white/10 text-white/50 hover:text-white hover:border-white/20"
-                                }`}
-                              >
-                                <Heart className={`h-3 w-3 ${favorites.includes(asset.id) ? "fill-white" : ""}`} />
-                              </button>
+                              <div className="flex items-center gap-1.5 pointer-events-auto">
+                                <button
+                                  onClick={(e) => { e.preventDefault(); handleDownloadImage(asset.asset_url, asset.id); }}
+                                  className="p-1.5 rounded-full border backdrop-blur-md transition-all duration-200 active:scale-90 bg-black/60 border-white/10 text-white/50 hover:text-emerald-400 hover:border-emerald-400/50"
+                                  title="Save Image"
+                                >
+                                  <Download className="h-3 w-3" />
+                                </button>
+
+                                <button
+                                  onClick={(e) => { e.preventDefault(); handleShareImage(asset.asset_url, asset.prompt || "Library Image"); }}
+                                  className="p-1.5 rounded-full border backdrop-blur-md transition-all duration-200 active:scale-90 bg-black/60 border-white/10 text-white/50 hover:text-sky-400 hover:border-sky-400/50"
+                                  title="Share Image"
+                                >
+                                  <Share2 className="h-3 w-3" />
+                                </button>
+
+                                <button
+                                  onClick={(e) => { e.preventDefault(); toggleFavorite(asset.id, asset.asset_url); }}
+                                  className={`p-1.5 rounded-full border backdrop-blur-md pointer-events-auto transition-all duration-200 active:scale-90 ${
+                                    favorites.includes(asset.id)
+                                      ? "bg-rose-500 border-rose-400 text-white scale-110 shadow-lg shadow-rose-500/20"
+                                      : "bg-black/60 border-white/10 text-white/50 hover:text-rose-400 hover:border-rose-400/50"
+                                  }`}
+                                >
+                                  <Heart className={`h-3 w-3 ${favorites.includes(asset.id) ? "fill-white" : ""}`} />
+                                </button>
+                              </div>
                             </div>
 
                             {/* Hover prompt and control Overlay */}
@@ -1176,6 +1300,30 @@ export default function LibraryPage() {
                                     title="Load Prompt to Filter input"
                                   >
                                     <Plus className="h-3 w-3" />
+                                  </button>
+
+                                  {/* Download button */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleDownloadImage(asset.asset_url, asset.id);
+                                    }}
+                                    className="p-1.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors rounded border border-white/5"
+                                    title="Save Image"
+                                  >
+                                    <Download className="h-3 w-3" />
+                                  </button>
+
+                                  {/* Share button */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleShareImage(asset.asset_url, asset.prompt || "Library Image");
+                                    }}
+                                    className="p-1.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors rounded border border-white/5"
+                                    title="Share Image"
+                                  >
+                                    <Share2 className="h-3 w-3" />
                                   </button>
 
                                   {/* Trash button (Only if own asset) */}
