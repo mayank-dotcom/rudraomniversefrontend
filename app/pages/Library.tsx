@@ -1201,141 +1201,57 @@ export default function LibraryPage() {
                               </div>
                             </div>
 
-                            {/* Hover prompt and control Overlay */}
+                            {/* Hover action bar: visibility (own only), copy, share, download */}
                             <div
-                              className={`absolute inset-0 bg-gradient-to-t from-black/95 via-black/75 to-black/20 flex flex-col justify-end p-4 transition-all duration-300 z-10 ${
-                                hoveredId === asset.id ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3 pointer-events-none"
+                              className={`absolute bottom-0 left-0 right-0 flex items-center justify-center gap-2 px-3 py-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent transition-all duration-300 z-10 ${
+                                hoveredId === asset.id ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
                               }`}
                             >
-                              {/* Prompt Description */}
-                              <div className="max-h-[50%] overflow-y-auto mb-3 custom-scrollbar pr-1">
-                                <p className="text-white/90 text-[11px] font-sans leading-relaxed text-left selection:bg-[var(--color-cyan)] selection:text-black">
-                                  {asset.prompt || "No prompt details."}
-                                </p>
-                              </div>
-
-                              {/* Actions */}
-                              <div className="flex items-center justify-end pt-3 select-none">
-                                <div className="flex items-center gap-1">
-                                  {/* Move to Folder button */}
-                                  <button
-                                    onClick={(e) => { e.preventDefault(); setMoveAssetId(asset.id); setIsMoveModalOpen(true); }}
-                                    className={`p-1.5 transition-colors rounded border ${
-                                      isDarkMode
-                                        ? "bg-white/5 border-white/10 text-white/60 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
-                                        : "bg-black/5 border-black/10 text-black/60 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
-                                    }`}
-                                    title="Move to Folder"
-                                  >
-                                    <Move className="h-3 w-3" />
-                                  </button>
-
-                                  {/* Visibility Toggle button */}
-                                  <button
-                                    onClick={(e) => { e.preventDefault(); handleToggleVisibility(asset.id, asset.is_public); }}
-                                    disabled={togglingVisibilityId === asset.id}
-                                    className={`p-1.5 rounded border transition-colors ${
-                                      asset.is_public
-                                        ? "bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 border-sky-400/20"
-                                        : isDarkMode
-                                          ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                                          : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
-                                    }`}
-                                    title={asset.is_public ? "Make Private" : "Make Public"}
-                                  >
-                                    {togglingVisibilityId === asset.id ? (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : asset.is_public ? (
-                                      <Globe className="h-3 w-3" />
-                                    ) : (
-                                      <Lock className="h-3 w-3" />
-                                    )}
-                                  </button>
-
-                                  {/* Copy prompt */}
-                                  <button
-                                    onClick={() => handleCopyPrompt(asset.prompt || "", asset.id)}
-                                    className={`p-1.5 transition-colors rounded border ${
-                                      isDarkMode
-                                        ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                                        : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
-                                    }`}
-                                    title="Copy Prompt to Clipboard"
-                                  >
-                                    {copiedId === asset.id ? (
-                                      <Check className="h-3 w-3 text-emerald-400" />
-                                    ) : (
-                                      <Copy className="h-3 w-3" />
-                                    )}
-                                  </button>
-
-                                  {/* Load Prompt to Search Bar */}
-                                  <button
-                                    onClick={() => {
-                                      setSearchQuery(asset.prompt || "");
-                                      toast.success("Prompt loaded into filter input.");
-                                    }}
-                                    className={`p-1.5 transition-colors rounded border ${
-                                      isDarkMode
-                                        ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                                        : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
-                                    }`}
-                                    title="Load Prompt to Filter input"
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </button>
-
-                                  {/* Download button */}
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      handleDownloadImage(asset.asset_url, asset.id);
-                                    }}
-                                    className={`p-1.5 transition-colors rounded border ${
-                                      isDarkMode
-                                        ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                                        : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
-                                    }`}
-                                    title="Save Image"
-                                  >
-                                    <Download className="h-3 w-3" />
-                                  </button>
-
-                                  {/* Share button */}
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      handleShareImage(asset.asset_url, asset.prompt || "Library Image");
-                                    }}
-                                    className={`p-1.5 transition-colors rounded border ${
-                                      isDarkMode
-                                        ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                                        : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
-                                    }`}
-                                    title="Share Image"
-                                  >
-                                    <Share2 className="h-3 w-3" />
-                                  </button>
-
-                                  {/* Trash button */}
-                                  <button
-                                    onClick={() => handleDelete(asset.id)}
-                                    disabled={deletingId === asset.id}
-                                    className={`p-1.5 transition-colors rounded border group/del ${
-                                      isDarkMode
-                                        ? "bg-white/5 border-white/10 text-white/60 hover:bg-red-500/80 hover:text-white"
-                                        : "bg-black/5 border-black/10 text-black/60 hover:bg-red-500/80 hover:text-white"
-                                    }`}
-                                    title="Delete from Library"
-                                  >
-                                    {deletingId === asset.id ? (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="h-3 w-3 opacity-45 group-hover/del:opacity-100" />
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
+                              {!asset.id.startsWith("feat-") && (
+                                <button
+                                  onClick={(e) => { e.preventDefault(); handleToggleVisibility(asset.id, asset.is_public); }}
+                                  disabled={togglingVisibilityId === asset.id}
+                                  className={`p-1.5 rounded border transition-colors ${
+                                    asset.is_public
+                                      ? "bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 border-sky-400/20"
+                                      : "bg-white/10 border-white/20 text-white/70 hover:bg-white/20"
+                                  }`}
+                                  title={asset.is_public ? "Make Private" : "Make Public"}
+                                >
+                                  {togglingVisibilityId === asset.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : asset.is_public ? (
+                                    <Globe className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <Lock className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                              )}
+                              <button
+                                onClick={(e) => { e.preventDefault(); handleCopyPrompt(asset.prompt || "", asset.id); }}
+                                className={`p-1.5 rounded border transition-colors ${
+                                  copiedId === asset.id
+                                    ? "border-emerald-400/50 text-emerald-400 bg-emerald-500/10"
+                                    : "bg-white/10 border-white/20 text-white/70 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
+                                }`}
+                                title="Copy Prompt"
+                              >
+                                {copiedId === asset.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                              </button>
+                              <button
+                                onClick={(e) => { e.preventDefault(); handleDownloadImage(asset.asset_url, asset.id); }}
+                                className="p-1.5 rounded border bg-white/10 border-white/20 text-white/70 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)] transition-colors"
+                                title="Download"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.preventDefault(); handleShareImage(asset.asset_url, asset.prompt || "Library Image"); }}
+                                className="p-1.5 rounded border bg-white/10 border-white/20 text-white/70 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)] transition-colors"
+                                title="Share"
+                              >
+                                <Share2 className="h-3.5 w-3.5" />
+                              </button>
                             </div>
                           </motion.div>
                         )
