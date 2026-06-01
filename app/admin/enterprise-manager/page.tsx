@@ -6,6 +6,7 @@ import {
   RefreshCw, LogOut, CheckCircle2, X, Cpu, TrendingUp, ShieldCheck, Database, Zap,
   Briefcase, Award, BarChart3, Clock, AlertTriangle, ArrowUpRight, Download
 } from "lucide-react"
+import { useTheme } from "@/lib/theme-context"
 import { removeApiKey, getApiKey } from "@/lib/auth"
 import {
   getEnterpriseStats, getEnterpriseEmployees, createEnterpriseEmployee,
@@ -18,6 +19,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 
 export default function EnterpriseManagerPage() {
+  const { isDarkMode } = useTheme()
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   
   // Tab control
@@ -330,7 +332,9 @@ export default function EnterpriseManagerPage() {
 
   if (isAuthenticated === null) {
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center font-mono text-white">
+      <div className={`min-h-screen flex items-center justify-center font-mono transition-colors duration-300 ${
+        isDarkMode ? "bg-[#050505] text-white" : "bg-[#f8f9fa] text-black"
+      }`}>
         <div className="flex flex-col items-center gap-4">
           <RefreshCw className="h-8 w-8 text-[#00DDDD] animate-spin" />
           <span className="text-[10px] uppercase tracking-[0.4em] opacity-40">Syncing node key...</span>
@@ -340,12 +344,20 @@ export default function EnterpriseManagerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#00DDDD] selection:text-black relative overflow-x-hidden pb-12">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(0,221,221,0.02),transparent_50%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.005)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.005)_1px,transparent_1px)] bg-[size:100px_100px] pointer-events-none" />
+    <div className={`min-h-screen font-sans selection:bg-[#00DDDD] selection:text-black relative overflow-x-hidden pb-12 transition-colors duration-300 ${
+      isDarkMode ? "bg-[#050505] text-white" : "bg-[#f8f9fa] text-black"
+    }`}>
+      <div className={`absolute inset-0 pointer-events-none transition-colors duration-300 ${
+        isDarkMode ? "bg-[radial-gradient(ellipse_at_top_right,rgba(0,221,221,0.02),transparent_50%)]" : ""
+      }`} />
+      <div className={`absolute inset-0 bg-[size:100px_100px] pointer-events-none transition-opacity duration-300 ${
+        isDarkMode ? "bg-[linear-gradient(rgba(255,255,255,0.005)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.005)_1px,transparent_1px)]" : "opacity-0"
+      }`} />
 
       {/* NAVBAR */}
-      <nav className="h-20 flex items-center justify-between px-6 md:px-12 border-b border-white/5 bg-black/50 backdrop-blur-2xl sticky top-0 z-[100]">
+      <nav className={`h-20 flex items-center justify-between px-6 md:px-12 border-b sticky top-0 z-[100] transition-colors duration-300 ${
+        isDarkMode ? "border-white/5 bg-black/50 backdrop-blur-2xl" : "border-black/5 bg-white/80 backdrop-blur-2xl shadow-sm"
+      }`}>
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-2xl bg-[#00DDDD]/20 border border-[#00DDDD]/30 flex items-center justify-center">
             <Users className="h-5 w-5 text-[#00DDDD]" />
@@ -383,7 +395,9 @@ export default function EnterpriseManagerPage() {
 
       {/* TABS */}
       <div className="max-w-[1600px] mx-auto px-6 md:px-12 mt-8">
-        <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+        <div className={`flex items-center gap-3 border-b pb-4 transition-colors duration-300 ${
+          isDarkMode ? "border-white/5" : "border-black/5"
+        }`}>
           {[
             { id: "dashboard", label: "Overview", icon: Cpu },
             { id: "employees", label: "Employees Roster", icon: Users },
@@ -833,11 +847,15 @@ export default function EnterpriseManagerPage() {
 
       {/* ─── CREATION MODAL ─── */}
       {showCreateEmpModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
+        <div className={`fixed inset-0 z-[200] flex items-center justify-center p-6 transition-colors duration-300 ${
+          isDarkMode ? "bg-black/70" : "bg-white/80"
+        } backdrop-blur-sm`}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative w-full max-w-md border border-white/10 p-6 rounded-[2.5rem] bg-[#0a0a0a] text-white"
+            className={`relative w-full max-w-md border p-6 rounded-[2.5rem] transition-colors duration-300 ${
+              isDarkMode ? "border-white/10 bg-[#0a0a0a] text-white" : "border-black/10 bg-white text-black"
+            }`}
           >
             <button
               onClick={() => setShowCreateEmpModal(false)}
@@ -923,11 +941,15 @@ export default function EnterpriseManagerPage() {
 
       {/* ─── EDIT EMPLOYEE MODAL ─── */}
       {editingEmployee && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
+        <div className={`fixed inset-0 z-[200] flex items-center justify-center p-6 transition-colors duration-300 ${
+          isDarkMode ? "bg-black/70" : "bg-white/80"
+        } backdrop-blur-sm`}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative w-full max-w-sm border border-white/10 p-6 rounded-[2.5rem] bg-[#0c0c0c] text-white"
+            className={`relative w-full max-w-sm border p-6 rounded-[2.5rem] transition-colors duration-300 ${
+              isDarkMode ? "border-white/10 bg-[#0c0c0c] text-white" : "border-black/10 bg-white text-black"
+            }`}
           >
             <button
               onClick={() => setEditingEmployee(null)}
@@ -984,11 +1006,15 @@ export default function EnterpriseManagerPage() {
 
       {/* ─── DEEP PROFILE INSPECTOR MODAL ─── */}
       {inspectorEmployeeId && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+        <div className={`fixed inset-0 z-[200] flex items-center justify-center p-6 transition-colors duration-300 ${
+          isDarkMode ? "bg-black/80" : "bg-white/80"
+        } backdrop-blur-sm`}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative w-full max-w-xl border border-white/10 p-6 rounded-[2.5rem] bg-[#0c0c0c] text-white flex flex-col justify-between overflow-y-auto max-h-[85vh] custom-scrollbar"
+            className={`relative w-full max-w-xl border p-6 rounded-[2.5rem] flex flex-col justify-between overflow-y-auto max-h-[85vh] custom-scrollbar transition-colors duration-300 ${
+              isDarkMode ? "border-white/10 bg-[#0c0c0c] text-white" : "border-black/10 bg-white text-black"
+            }`}
           >
             <button
               onClick={() => setInspectorEmployeeId(null)}

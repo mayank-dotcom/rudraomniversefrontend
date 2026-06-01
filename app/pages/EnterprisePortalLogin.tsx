@@ -7,10 +7,35 @@ import { Building2, Lock, User, Briefcase, Users, Shield, KeyRound, Smartphone }
 import Navbar from "@/components/ui/Navbar"
 import { loginEnterprise, loginByAdminCode } from "@/lib/chat-api"
 import { setApiKey, setUserInfo, setUserRole } from "@/lib/auth"
+import { useTheme } from "@/lib/theme-context"
 
 type RoleTab = "admin" | "manager" | "employee"
 
+function InputGroup({ icon: Icon, placeholder, value, onChange, type, isDarkMode, accentColor }: {
+    icon: any; placeholder: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; type: string; isDarkMode: boolean; accentColor: string
+}) {
+    const focusBorder = accentColor === "purple" ? "focus:border-purple-500/50" : "focus:border-orange-500/50"
+    return (
+        <div className="relative group">
+            <Icon className={`absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors ${isDarkMode ? "text-white/20 group-focus-within:text-white/60" : "text-black/20 group-focus-within:text-black/60"}`} />
+            <input
+                type={type}
+                placeholder={placeholder}
+                value={value}
+                onChange={onChange}
+                className={`w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest border rounded-2xl focus:outline-none transition-all placeholder:opacity-40 ${
+                    isDarkMode
+                        ? "bg-white/5 border-white/5 text-white focus:border-white/30 placeholder:text-white/40"
+                        : "bg-white border-black/10 text-black focus:border-black/30 placeholder:text-black/40 shadow-sm"
+                } ${focusBorder}`}
+                required
+            />
+        </div>
+    )
+}
+
 export default function EnterprisePortalLogin() {
+    const { isDarkMode } = useTheme()
     const [roleTab, setRoleTab] = useState<RoleTab>("admin")
     const [adminCode, setAdminCode] = useState("")
     const [password, setPassword] = useState("")
@@ -65,7 +90,9 @@ export default function EnterprisePortalLogin() {
     const accentColor = isEmployee ? "purple" : isManager ? "blue" : "orange"
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-white selection:text-black font-sans">
+        <div className={`min-h-screen transition-colors duration-300 selection:bg-[var(--color-cyan)] selection:text-black font-sans ${
+            isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-[#f8f9fa] text-black"
+        }`}>
             <div className="absolute inset-0 noise opacity-[0.02] pointer-events-none" />
 
             <Navbar onAuthClick={() => window.location.href = "/"} />
@@ -76,11 +103,13 @@ export default function EnterprisePortalLogin() {
                         <div className={`h-16 w-16 rounded-2xl flex items-center justify-center mx-auto mb-6 ${accentColor === "purple" ? "bg-purple-500/10 border border-purple-500/20" : accentColor === "blue" ? "bg-blue-500/10 border border-blue-500/20" : "bg-orange-500/10 border border-orange-500/20"}`}>
                             <Building2 className={`h-8 w-8 ${accentColor === "purple" ? "text-purple-500" : accentColor === "blue" ? "text-blue-500" : "text-orange-500"}`} />
                         </div>
-                        <h2 className="font-display font-black text-4xl tracking-tighter text-white mb-2">Enterprise Portal</h2>
-                        <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/40">Sign in to your enterprise account</p>
+                        <h2 className={`font-display font-black text-4xl tracking-tighter mb-2 ${isDarkMode ? "text-white" : "text-black"}`}>Enterprise Portal</h2>
+                        <p className={`text-[10px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Sign in to your enterprise account</p>
                     </div>
 
-                    <div className="flex mb-8 bg-white/5 border border-white/5 rounded-2xl p-1">
+                    <div className={`flex mb-8 border rounded-2xl p-1 transition-colors ${
+                        isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                    }`}>
                         {([
                             { key: "admin" as RoleTab, label: "Admin", icon: Shield, color: "orange" },
                             { key: "manager" as RoleTab, label: "Manager", icon: Briefcase, color: "blue" },
@@ -92,7 +121,7 @@ export default function EnterprisePortalLogin() {
                                 <button
                                     key={key}
                                     onClick={() => { setRoleTab(key); setError("") }}
-                                    className={`flex-1 py-3 text-[10px] font-mono uppercase tracking-[0.15em] font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${isActive ? activeClass + " shadow-lg" : "text-white/30 hover:text-white/60"}`}
+                                    className={`flex-1 py-3 text-[10px] font-mono uppercase tracking-[0.15em] font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${isActive ? activeClass + " shadow-lg" : isDarkMode ? "text-white/30 hover:text-white/60" : "text-black/30 hover:text-black/60"}`}
                                 >
                                     <Icon className="h-3.5 w-3.5" />
                                     {label}
@@ -110,64 +139,14 @@ export default function EnterprisePortalLogin() {
 
                         {isEmployee ? (
                             <>
-                                <div className="relative group">
-                                    <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-                                    <input
-                                        type="tel"
-                                        placeholder="MOBILE NUMBER (WITH COUNTRY CODE)"
-                                        value={mobileNumber}
-                                        onChange={(e) => setMobileNumber(e.target.value)}
-                                        className="w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-white/20"
-                                        required
-                                    />
-                                </div>
-                                <div className="relative group">
-                                    <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-                                    <input
-                                        type="text"
-                                        placeholder="ENTERPRISE CODE"
-                                        value={enterpriseCode}
-                                        onChange={(e) => setEnterpriseCode(e.target.value)}
-                                        className="w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-white/20"
-                                        required
-                                    />
-                                </div>
-                                <div className="relative group">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-                                    <input
-                                        type="password"
-                                        placeholder="PASSWORD"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-white/20"
-                                        required
-                                    />
-                                </div>
+                                <InputGroup icon={Smartphone} placeholder="MOBILE NUMBER (WITH COUNTRY CODE)" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} type="tel" isDarkMode={isDarkMode} accentColor="purple" />
+                                <InputGroup icon={KeyRound} placeholder="ENTERPRISE CODE" value={enterpriseCode} onChange={(e) => setEnterpriseCode(e.target.value)} type="text" isDarkMode={isDarkMode} accentColor="purple" />
+                                <InputGroup icon={Lock} placeholder="PASSWORD" value={password} onChange={(e) => setPassword(e.target.value)} type="password" isDarkMode={isDarkMode} accentColor="purple" />
                             </>
                         ) : (
                             <>
-                                <div className="relative group">
-                                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-                                    <input
-                                        type="text"
-                                        placeholder="ADMIN CODE"
-                                        value={adminCode}
-                                        onChange={(e) => setAdminCode(e.target.value)}
-                                        className="w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-orange-500/50 transition-all placeholder:text-white/20"
-                                        required
-                                    />
-                                </div>
-                                <div className="relative group">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 group-focus-within:text-white/60 transition-colors" />
-                                    <input
-                                        type="password"
-                                        placeholder="PASSWORD"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full pl-12 pr-6 py-4 text-xs font-mono tracking-widest bg-white/5 border border-white/5 rounded-2xl focus:outline-none focus:border-orange-500/50 transition-all placeholder:text-white/20"
-                                        required
-                                    />
-                                </div>
+                                <InputGroup icon={Shield} placeholder="ADMIN CODE" value={adminCode} onChange={(e) => setAdminCode(e.target.value)} type="text" isDarkMode={isDarkMode} accentColor="orange" />
+                                <InputGroup icon={Lock} placeholder="PASSWORD" value={password} onChange={(e) => setPassword(e.target.value)} type="password" isDarkMode={isDarkMode} accentColor="orange" />
                             </>
                         )}
 

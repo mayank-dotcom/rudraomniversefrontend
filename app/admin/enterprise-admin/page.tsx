@@ -6,6 +6,7 @@ import {
   Lock, Mail, User, TrendingUp, LogOut, Activity, FileText, CheckCircle2, X,
   ChevronRight, ArrowUpRight, ShieldCheck, Database, Zap, Download, ChevronLeft, ArrowUpDown
 } from "lucide-react"
+import { useTheme } from "@/lib/theme-context"
 import { removeApiKey, getApiKey } from "@/lib/auth"
 import {
   getEnterpriseStats, getEnterpriseManagers, createEnterpriseManager,
@@ -17,6 +18,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 
 export default function EnterpriseAdminPage() {
+  const { isDarkMode } = useTheme()
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   
   // Tab control
@@ -305,7 +307,9 @@ export default function EnterpriseAdminPage() {
 
   if (isAuthenticated === null) {
     return (
-      <div className="min-h-screen bg-[#060606] flex items-center justify-center font-mono text-white">
+      <div className={`min-h-screen flex items-center justify-center font-mono transition-colors duration-300 ${
+        isDarkMode ? "bg-[#060606] text-white" : "bg-[#f8f9fa] text-black"
+      }`}>
         <div className="flex flex-col items-center gap-4">
           <RefreshCw className="h-8 w-8 text-orange-500 animate-spin" />
           <span className="text-[10px] uppercase tracking-[0.4em] opacity-40">Verifying Handshake...</span>
@@ -315,12 +319,20 @@ export default function EnterpriseAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060606] text-white font-sans selection:bg-orange-500 selection:text-black relative overflow-x-hidden pb-12">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(249,115,22,0.03),transparent_50%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.005)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.005)_1px,transparent_1px)] bg-[size:100px_100px] pointer-events-none" />
+    <div className={`min-h-screen font-sans selection:bg-orange-500 selection:text-black relative overflow-x-hidden pb-12 transition-colors duration-300 ${
+      isDarkMode ? "bg-[#060606] text-white" : "bg-[#f8f9fa] text-black"
+    }`}>
+      <div className={`absolute inset-0 pointer-events-none transition-colors duration-300 ${
+        isDarkMode ? "bg-[radial-gradient(ellipse_at_top_right,rgba(249,115,22,0.03),transparent_50%)]" : ""
+      }`} />
+      <div className={`absolute inset-0 bg-[size:100px_100px] pointer-events-none transition-opacity duration-300 ${
+        isDarkMode ? "bg-[linear-gradient(rgba(255,255,255,0.005)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.005)_1px,transparent_1px)]" : "opacity-0"
+      }`} />
 
       {/* HEADER NAVBAR */}
-      <nav className="h-20 flex items-center justify-between px-6 md:px-12 border-b border-white/5 bg-black/50 backdrop-blur-2xl sticky top-0 z-[100]">
+      <nav className={`h-20 flex items-center justify-between px-6 md:px-12 border-b sticky top-0 z-[100] transition-colors duration-300 ${
+        isDarkMode ? "border-white/5 bg-black/50 backdrop-blur-2xl" : "border-black/5 bg-white/80 backdrop-blur-2xl shadow-sm"
+      }`}>
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-2xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
@@ -896,11 +908,15 @@ export default function EnterpriseAdminPage() {
 
       {/* ─── CREATION MODAL ─── */}
       {showCreateManagerModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
+        <div className={`fixed inset-0 z-[200] flex items-center justify-center p-6 transition-colors duration-300 ${
+          isDarkMode ? "bg-black/70" : "bg-white/80"
+        } backdrop-blur-sm`}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative w-full max-w-md border border-white/10 p-6 rounded-[2.5rem] bg-[#0c0c0c] text-white"
+            className={`relative w-full max-w-md border p-6 rounded-[2.5rem] transition-colors duration-300 ${
+              isDarkMode ? "border-white/10 bg-[#0c0c0c] text-white" : "border-black/10 bg-white text-black"
+            }`}
           >
             <button
               onClick={() => setShowCreateManagerModal(false)}
