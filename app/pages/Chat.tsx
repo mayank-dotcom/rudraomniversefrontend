@@ -43,7 +43,6 @@ import MCQQuizView from "@/components/MCQQuizView";
 import type { MCQQuestion } from "@/components/MCQQuizView";
 import PersonaModal, { type Persona } from "@/components/PersonaModal";
 import BattleArenaModal from "@/components/BattleArenaModal";
-import ImageLibraryModal from "@/components/ImageLibraryModal";
 import { GraduationCap as MockIcon } from "lucide-react";
 import WelcomeBox from "@/components/ui/WelcomeBox";
 
@@ -231,7 +230,6 @@ const Chat = () => {
     const [isMockPaperModalOpen, setIsMockPaperModalOpen] = useState(false);
     const [isPersonaModalOpen, setIsPersonaModalOpen] = useState(false);
     const [isBattleArenaModalOpen, setIsBattleArenaModalOpen] = useState(false);
-    const [isLibraryOpen, setIsLibraryOpen] = useState(false);
     const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
     const [generatedPaper, setGeneratedPaper] = useState<string | null>(null);
     const [paperConfig, setPaperConfig] = useState<MockPaperConfig | null>(null);
@@ -1783,6 +1781,22 @@ STRICT RULES:
                                             </button>
                                         )
                                     })}
+                                    {/* Library section */}
+                                    {sidebarWidth > 120 && (
+                                        <div className={`mx-2 my-3 h-px ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
+                                    )}
+                                    <Link
+                                        href="/library"
+                                        className={`w-full flex items-center gap-3 p-3 text-xs transition-all ${isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5"}`}
+                                    >
+                                        <BookOpen className={`h-4 w-4 flex-shrink-0 ${isDarkMode ? "text-white" : "text-black"}`} />
+                                        {sidebarWidth > 120 && (
+                                            <div className="flex items-center justify-between w-full min-w-0">
+                                                <span className="truncate font-medium">Image Library</span>
+                                                <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/30" : "text-black"}`}>v1.0</span>
+                                            </div>
+                                        )}
+                                    </Link>
                                 </div>
                             )}
                         </div>
@@ -2396,18 +2410,6 @@ STRICT RULES:
                             {selectedEngine === "AI Image Lab" && (
                                 <div className="hidden sm:block mb-3 w-full">
                                     <div className="flex flex-row flex-nowrap gap-1.5 md:gap-2 overflow-x-auto no-scrollbar w-full pb-1 scroll-smooth px-0.5 md:px-1">
-                                        <button
-                                            onClick={() => setIsLibraryOpen(true)}
-                                            className={`group flex items-center gap-1.5 md:gap-2 px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-sans font-medium tracking-wide rounded-full border-2 transition-all duration-300 flex-shrink-0 ${
-                                                isDarkMode
-                                                    ? "border-[#00DDDD]/50 text-[#00DDDD] hover:bg-[#00DDDD]/10 hover:border-[#00DDDD]"
-                                                    : "border-[#00DDDD]/50 text-[#00DDDD] hover:bg-[#00DDDD]/10 hover:border-[#00DDDD]"
-                                            }`}
-                                        >
-                                            <BookOpen className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                                            <span className="whitespace-nowrap font-bold">Library</span>
-                                        </button>
-                                        <div className={`w-px self-stretch my-0.5 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
                                         {IMAGE_STYLES.map((style) => {
                                             const isSelected = selectedImageStyle === style.id;
                                             return (
@@ -3697,12 +3699,6 @@ STRICT RULES:
                 isDarkMode={isDarkMode}
             />
 
-            {/* Image Library Modal */}
-            <ImageLibraryModal
-                isOpen={isLibraryOpen}
-                onClose={() => setIsLibraryOpen(false)}
-                isDarkMode={isDarkMode}
-            />
         </div>
     );
 };
