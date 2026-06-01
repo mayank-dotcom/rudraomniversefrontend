@@ -1129,8 +1129,6 @@ export default function LibraryPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <AnimatePresence mode="popLayout">
                       {activeAssets.map((asset, i) => {
-                        const isOwnAsset = !asset.id.startsWith("feat-") && activeCategory !== "public_showcase" && activeCategory !== "public_gallery";
-                        
                         return (
                           <motion.div
                             key={asset.id}
@@ -1214,51 +1212,43 @@ export default function LibraryPage() {
                                 </p>
                               </div>
 
-                              {/* Date and actions */}
-                              <div className="flex items-center justify-between border-t border-white/10 pt-3 select-none">
-                                <span className="text-white/35 text-[8.5px] font-mono uppercase tracking-wider">
-                                  {formatDate(asset.created_at)}
-                                </span>
-
+                              {/* Actions */}
+                              <div className="flex items-center justify-end pt-3 select-none">
                                 <div className="flex items-center gap-1">
                                   {/* Move to Folder button */}
-                                  {isOwnAsset && (
-                                    <button
-                                      onClick={(e) => { e.preventDefault(); setMoveAssetId(asset.id); setIsMoveModalOpen(true); }}
-                                      className={`p-1.5 transition-colors rounded border ${
-                                        isDarkMode
-                                          ? "bg-white/5 border-white/10 text-white/60 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
-                                          : "bg-black/5 border-black/10 text-black/60 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
-                                      }`}
-                                      title="Move to Folder"
-                                    >
-                                      <Move className="h-3 w-3" />
-                                    </button>
-                                  )}
+                                  <button
+                                    onClick={(e) => { e.preventDefault(); setMoveAssetId(asset.id); setIsMoveModalOpen(true); }}
+                                    className={`p-1.5 transition-colors rounded border ${
+                                      isDarkMode
+                                        ? "bg-white/5 border-white/10 text-white/60 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
+                                        : "bg-black/5 border-black/10 text-black/60 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
+                                    }`}
+                                    title="Move to Folder"
+                                  >
+                                    <Move className="h-3 w-3" />
+                                  </button>
 
-                                  {/* Visibility Toggle button (Only for own assets) */}
-                                  {isOwnAsset && (
-                                    <button
-                                      onClick={(e) => { e.preventDefault(); handleToggleVisibility(asset.id, asset.is_public); }}
-                                      disabled={togglingVisibilityId === asset.id}
-                                      className={`p-1.5 rounded border transition-colors ${
-                                        asset.is_public
-                                          ? "bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 border-sky-400/20"
-                                          : isDarkMode
-                                            ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                                            : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
-                                      }`}
-                                      title={asset.is_public ? "Make Private" : "Make Public"}
-                                    >
-                                      {togglingVisibilityId === asset.id ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                      ) : asset.is_public ? (
-                                        <Globe className="h-3 w-3" />
-                                      ) : (
-                                        <Lock className="h-3 w-3" />
-                                      )}
-                                    </button>
-                                  )}
+                                  {/* Visibility Toggle button */}
+                                  <button
+                                    onClick={(e) => { e.preventDefault(); handleToggleVisibility(asset.id, asset.is_public); }}
+                                    disabled={togglingVisibilityId === asset.id}
+                                    className={`p-1.5 rounded border transition-colors ${
+                                      asset.is_public
+                                        ? "bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 border-sky-400/20"
+                                        : isDarkMode
+                                          ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                          : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
+                                    }`}
+                                    title={asset.is_public ? "Make Private" : "Make Public"}
+                                  >
+                                    {togglingVisibilityId === asset.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : asset.is_public ? (
+                                      <Globe className="h-3 w-3" />
+                                    ) : (
+                                      <Lock className="h-3 w-3" />
+                                    )}
+                                  </button>
 
                                   {/* Copy prompt */}
                                   <button
@@ -1325,25 +1315,23 @@ export default function LibraryPage() {
                                     <Share2 className="h-3 w-3" />
                                   </button>
 
-                                  {/* Trash button (Only if own asset) */}
-                                  {isOwnAsset && (
-                                    <button
-                                      onClick={() => handleDelete(asset.id)}
-                                      disabled={deletingId === asset.id}
-                                      className={`p-1.5 transition-colors rounded border group/del ${
-                                        isDarkMode
-                                          ? "bg-white/5 border-white/10 text-white/60 hover:bg-red-500/80 hover:text-white"
-                                          : "bg-black/5 border-black/10 text-black/60 hover:bg-red-500/80 hover:text-white"
-                                      }`}
-                                      title="Delete from Library"
-                                    >
-                                      {deletingId === asset.id ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                      ) : (
-                                        <Trash2 className="h-3 w-3 opacity-45 group-hover/del:opacity-100" />
-                                      )}
-                                    </button>
-                                  )}
+                                  {/* Trash button */}
+                                  <button
+                                    onClick={() => handleDelete(asset.id)}
+                                    disabled={deletingId === asset.id}
+                                    className={`p-1.5 transition-colors rounded border group/del ${
+                                      isDarkMode
+                                        ? "bg-white/5 border-white/10 text-white/60 hover:bg-red-500/80 hover:text-white"
+                                        : "bg-black/5 border-black/10 text-black/60 hover:bg-red-500/80 hover:text-white"
+                                    }`}
+                                    title="Delete from Library"
+                                  >
+                                    {deletingId === asset.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-3 w-3 opacity-45 group-hover/del:opacity-100" />
+                                    )}
+                                  </button>
                                 </div>
                               </div>
                             </div>
