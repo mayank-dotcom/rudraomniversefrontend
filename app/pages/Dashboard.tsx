@@ -6,7 +6,7 @@ import {
     ChevronRight, ArrowUpRight, Globe, Shield, Zap, Table as TableIcon, LayoutDashboard,
     ChevronLeft, ChevronRight as ChevronRightIcon, LogOut, Moon, Sun, RefreshCw, Database,
     TrendingUp, ShieldCheck, Cpu, X, Copy, Check, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Building2, Menu,
-    Info, Lock, Scale, Share2, GraduationCap, Play, Smartphone, Code2, HelpCircle, Headphones
+    Info, Lock, Scale, Share2, GraduationCap, Play, Smartphone, Code2, HelpCircle, Headphones, Phone
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -2234,8 +2234,10 @@ const Dashboard = () => {
                                                             editingSiteSetting.key === 'terms_conditions' ? 'Terms of Service' :
                                                                 editingSiteSetting.key === 'refund_policy' ? 'Refund Policy' :
                                                                     editingSiteSetting.key === 'contact_info' ? 'Contact Us' : 
-                                                                        editingSiteSetting.key === 'social_media_links' ? 'Social Media Links' : 
-                                                                            editingSiteSetting.key === 'schools_page' ? 'Schools Page' : 
+                                                                     editingSiteSetting.key === 'social_media_links' ? 'Social Media Links' : 
+                                                                             editingSiteSetting.key === 'footer_text' ? 'Footer Text' : 
+                                                                                 editingSiteSetting.key === 'footer_contact' ? 'Footer Contact' : 
+                                                                             editingSiteSetting.key === 'schools_page' ? 'Schools Page' : 
                                                                                 editingSiteSetting.key === 'b2b_page' ? 'B2B Page' : 
                                                                                     editingSiteSetting.key === 'home_page' ? 'Home Page Video' : 
                                                                                         editingSiteSetting.key === 'plugin_page' ? 'Plugin Page' : 
@@ -2389,7 +2391,7 @@ const Dashboard = () => {
                                                 </div>
                                             )}
 
-                                            {editingSiteSetting.key === 'footer_settings' && (
+                                            {editingSiteSetting.key === 'footer_text' && (
                                                 <div className="space-y-4">
                                                     <div>
                                                         <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Footer Description / Tagline Content</label>
@@ -2405,6 +2407,11 @@ const Dashboard = () => {
                                                             placeholder="Rudranex is an advanced AI co-pilot designed..."
                                                         />
                                                     </div>
+                                                </div>
+                                            )}
+
+                                            {editingSiteSetting.key === 'footer_contact' && (
+                                                <div className="space-y-4">
                                                     <div>
                                                         <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Contact Email (Mail Us)</label>
                                                         <input
@@ -3069,7 +3076,17 @@ const Dashboard = () => {
                                                     onClick={async () => {
                                                         setIsSavingSiteSetting(true);
                                                         try {
-                                                            const res = await updateSiteSetting(editingSiteSetting.key, editingSiteSetting.value);
+                                                            let targetKey = editingSiteSetting.key;
+                                                            let targetValue = editingSiteSetting.value;
+                                                            if (targetKey === 'footer_text' || targetKey === 'footer_contact') {
+                                                                const existing = siteSettings.find(s => s.key === 'footer_settings');
+                                                                const existingParsed = existing?.value ? JSON.parse(existing.value) : {};
+                                                                const formParsed = JSON.parse(targetValue);
+                                                                const merged = { ...existingParsed, ...formParsed };
+                                                                targetKey = 'footer_settings';
+                                                                targetValue = JSON.stringify(merged);
+                                                            }
+                                                            const res = await updateSiteSetting(targetKey, targetValue);
                                                             if (res.success) {
                                                                 toast.success("Page updated successfully");
                                                                 fetchData();
@@ -4389,7 +4406,8 @@ const Dashboard = () => {
                                     { key: 'refund_policy', label: 'Refund Policy', icon: Shield },
                                     { key: 'contact_info', label: 'Contact Us', icon: Mail },
                                     { key: 'social_media_links', label: 'Social Media Links', icon: Share2 },
-                                    { key: 'footer_settings', label: 'Footer Settings', icon: Settings },
+                                    { key: 'footer_text', label: 'Footer Text', icon: FileText },
+                                    { key: 'footer_contact', label: 'Footer Contact', icon: Phone },
                                     { key: 'schools_page', label: 'Schools Page', icon: GraduationCap },
                                     { key: 'b2b_page', label: 'B2B Page', icon: Briefcase },
                                     { key: 'home_page', label: 'Home Page Video', icon: Play },
@@ -4404,7 +4422,8 @@ const Dashboard = () => {
                                         <button
                                             key={page.key}
                                             onClick={() => {
-                                                const setting = siteSettings.find(s => s.key === page.key);
+                                                const lookupKey = (page.key === 'footer_text' || page.key === 'footer_contact') ? 'footer_settings' : page.key;
+                                                const setting = siteSettings.find(s => s.key === lookupKey);
                                                 let raw = setting?.value || '';
                                                 
                                                 try {
@@ -4416,9 +4435,12 @@ const Dashboard = () => {
                                                         setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
                                                     } else if (page.key === 'social_media_links') {
                                                         setSiteFormData({ twitter: parsed.twitter || '', linkedin: parsed.linkedin || '', github: parsed.github || '' });
-                                                    } else if (page.key === 'footer_settings') {
+                                                    } else if (page.key === 'footer_text') {
                                                         setSiteFormData({
-                                                            description: parsed.description || 'Rudranex is an advanced AI co-pilot designed for clinical practitioners and medical scholars. Experience high-precision diagnostic support, interactive clinical battle arenas, and state-of-the-art medical resources.',
+                                                            description: parsed.description || 'Rudranex is an advanced AI co-pilot designed for clinical practitioners and medical scholars. Experience high-precision diagnostic support, interactive clinical battle arenas, and state-of-the-art medical resources.'
+                                                        });
+                                                    } else if (page.key === 'footer_contact') {
+                                                        setSiteFormData({
                                                             email: parsed.email || 'hello@rudranex.ai',
                                                             location: parsed.location || 'Rudra Labs, AI Innovation Center, Hyderabad, India.',
                                                             techSupportPhone: parsed.techSupportPhone || '+91 97124 45459',
@@ -4453,9 +4475,12 @@ const Dashboard = () => {
                                                     } else if (page.key === 'social_media_links') {
                                                         setSiteFormData({ twitter: '', linkedin: '', github: '' });
                                                         setEditingSiteSetting({ key: page.key, value: JSON.stringify({ twitter: '', linkedin: '', github: '' }) });
-                                                    } else if (page.key === 'footer_settings') {
+                                                    } else if (page.key === 'footer_text') {
+                                                        const defaults = { description: 'Rudranex is an advanced AI co-pilot designed for clinical practitioners and medical scholars. Experience high-precision diagnostic support, interactive clinical battle arenas, and state-of-the-art medical resources.' };
+                                                        setSiteFormData(defaults);
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
+                                                    } else if (page.key === 'footer_contact') {
                                                         const defaults = {
-                                                            description: 'Rudranex is an advanced AI co-pilot designed for clinical practitioners and medical scholars. Experience high-precision diagnostic support, interactive clinical battle arenas, and state-of-the-art medical resources.',
                                                             email: 'hello@rudranex.ai',
                                                             location: 'Rudra Labs, AI Innovation Center, Hyderabad, India.',
                                                             techSupportPhone: '+91 97124 45459',
