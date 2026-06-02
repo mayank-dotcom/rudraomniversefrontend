@@ -1,19 +1,90 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Navbar from "@/components/ui/Navbar";
 import Footer from "@/components/ui/Footer";
 import { ThemeProvider } from "@/lib/theme-context";
 import { Check, Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, ArrowRight, Volume2, Mic, Sparkles } from "lucide-react";
-import { getPlansList, Plan, getPlanStrikeOff, getPublicSiteSettings } from "@/lib/chat-api";
+import { getPlansList, Plan, getPlanStrikeOff, getPublicSiteSettings, createPaymentOrder, verifyPayment } from "@/lib/chat-api";
+import { getApiKey } from "@/lib/auth";
 import { toast } from "sonner";
 import { useTheme } from "@/lib/theme-context";
+
+declare global {
+  interface Window {
+    Razorpay: any
+  }
+}
 
 const PricingContent = () => {
     const { isDarkMode } = useTheme();
     const [plans, setPlans] = useState<Plan[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
+
+    const handleSubscribe = useCallback(async (plan: Plan) => {
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            toast.error("Please log in first to subscribe to a plan.");
+            return;
+        }
+
+        setProcessingPlanId(String(plan.id));
+        try {
+            const order = await createPaymentOrder(plan.id);
+
+            if (!window.Razorpay) {
+                await new Promise<void>((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                    script.onload = () => resolve();
+                    script.onerror = () => reject(new Error('Failed to load Razorpay SDK'));
+                    document.body.appendChild(script);
+                });
+            }
+
+            const options = {
+                key: order.key_id,
+                amount: order.amount,
+                currency: order.currency,
+                name: 'Rudranex AI',
+                description: (plan as any).plan_name || 'Subscription',
+                order_id: order.order_id,
+                handler: async function (response: any) {
+                    try {
+                        const result = await verifyPayment({
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_signature: response.razorpay_signature,
+                        });
+                        if (result.success) {
+                            toast.success(`Plan upgraded to ${result.plan}!`);
+                        }
+                    } catch (err: any) {
+                        toast.error(err.message || "Payment verification failed");
+                    }
+                },
+                modal: {
+                    ondismiss: function () {
+                        toast.info("Checkout cancelled");
+                    }
+                },
+                theme: { color: '#00DDDD' }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (resp: any) {
+                toast.error(resp.error?.description || "Payment failed");
+            });
+            rzp.open();
+        } catch (err: any) {
+            toast.error(err.message || "Failed to initiate payment");
+        } finally {
+            setProcessingPlanId(null);
+        }
+    }, []);
 
     const [pageData, setPageData] = useState<{
         title: string;
@@ -226,11 +297,13 @@ const PricingContent = () => {
                                     </div>
 
                                     {/* Button — 14px Semi-Bold */}
-                                    <button 
-                                        className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 ${isPro ? (isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90") : (isDarkMode ? "border border-white/10 text-white hover:bg-white/5" : "border border-black/10 text-black hover:bg-black/5")}`}
+                                    <button
+                                        onClick={() => handleSubscribe(plan)}
+                                        disabled={processingPlanId === String(plan.id) || plan.price_inr === 0}
+                                        className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isPro ? (isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90") : (isDarkMode ? "border border-white/10 text-white hover:bg-white/5" : "border border-black/10 text-black hover:bg-black/5")}`}
                                         style={{ fontSize: "11px", letterSpacing: "0.2em" }}
                                     >
-                                        {plan.price_inr === 0 ? "Current Plan" : "Select Plan"}
+                                        {processingPlanId === String(plan.id) ? "Processing..." : plan.price_inr === 0 ? "Current Plan" : "Select Plan"}
                                     </button>
                                 </motion.div>
                             )

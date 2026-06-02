@@ -116,6 +116,55 @@ export async function getPlansList() {
   return data
 }
 
+// ─── Payment / Razorpay ───
+
+export interface CreateOrderResponse {
+  success: boolean
+  order_id: string
+  amount: number
+  currency: string
+  receipt: string
+  key_id?: string
+  error?: string
+}
+
+export interface VerifyPaymentResponse {
+  success: boolean
+  message: string
+  plan: string
+  error?: string
+}
+
+export async function createPaymentOrder(plan_id: string | number) {
+  const res = await fetch(`${API_BASE}/payment/create-order`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ plan_id }),
+  })
+  const data = await parseJson<CreateOrderResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to create payment order")
+  }
+  return data
+}
+
+export async function verifyPayment(payload: {
+  razorpay_payment_id: string
+  razorpay_order_id: string
+  razorpay_signature: string
+}) {
+  const res = await fetch(`${API_BASE}/payment/verify-payment`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<VerifyPaymentResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Payment verification failed")
+  }
+  return data
+}
+
 export async function updateTokens(userId: string, newLimit: number) {
   // Backend doesn't have a direct token update endpoint
   // We'll need to add this to admin routes
