@@ -63,16 +63,17 @@ export default function Footer() {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-16 md:gap-24">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-16 md:gap-24">
                         {[
-                            { heading: "Company", links: [{ label: "About Us", href: "/about" }, { label: "FAQ", href: "/faq" }, { label: "Support", href: "/support" }, { label: "Privacy Policy", href: "/privacy" }, { label: "Terms of Service", href: "/terms" }, { label: "Refund Policy", href: "/refund-policy" }, { label: "Contact Us", href: "/contact" }] },
+                            { heading: "Company", links: [{ label: "About Us", href: "/about" }, { label: "FAQ", href: "/faq" }, { label: "Support", href: "/support" }, { label: "Contact Us", href: "/contact" }] },
+                            { heading: "Policy", links: [{ label: "Privacy Policy", href: "/privacy" }, { label: "Terms of Service", href: "/terms" }, { label: "Refund Policy", href: "/refund-policy" }] },
                             { heading: "Platforms", links: [{ label: "For Schools", href: "/schools" }, { label: "For B2B", href: "/b2b" }, { label: "Pricing", href: "/pricing" }] },
                             { heading: "Social", links: [{ label: "X / Twitter", href: socialLinks.twitter, icon: "twitter" }, { label: "LinkedIn", href: socialLinks.linkedin, icon: "linkedin" }, { label: "GitHub", href: socialLinks.github, icon: "github" }] },
                         ].map((col) => (
                             <div key={col.heading} className="flex flex-col gap-5">
                                 {/* Technical Label for column headers */}
                                 <span
-                                    className={`font-sans font-bold uppercase ${isDarkMode ? "text-white/20" : "text-black/20"} mb-2`}
+                                    className={`font-sans font-bold uppercase ${isDarkMode ? "text-white/80" : "text-black/80"} mb-2`}
                                     style={{ fontSize: "11px", letterSpacing: "0.1em" }}
                                 >
                                     {col.heading}

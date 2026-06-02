@@ -19,12 +19,12 @@ const FeatureCard = ({ title, description, index, tag }: FeatureCardProps) => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: index * 0.08 }}
-            className={`group relative flex flex-col p-8 md:p-9 h-full transition-all duration-500 ${isDarkMode ? "bg-[#0d0d0d] hover:bg-[#111]" : "bg-white hover:bg-gray-50"}`}
+            className={`group relative flex flex-col p-8 md:p-9 h-full transition-all duration-500 border-2 ${isDarkMode ? "bg-[#0d0d0d] hover:bg-[#111] border-white/20" : "bg-white hover:bg-gray-50 border-black"}`}
         >
             {/* Top Bar — Technical Labels (11px Bold, 0.1em) */}
             <div className="flex items-center justify-end mb-14">
                 <span
-                    className={`font-sans font-bold uppercase border px-3 py-1 ${isDarkMode ? "text-white/25 border-white/10" : "text-black/25 border-black/10"}`}
+                    className={`font-sans font-bold uppercase border px-3 py-1 bg-[#00DDDD] text-black border-[#00DDDD] shadow-[0_0_12px_rgba(0,221,221,0.6)]`}
                     style={{ fontSize: "11px", letterSpacing: "0.1em" }}
                 >
                     {tag}

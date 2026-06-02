@@ -1774,7 +1774,6 @@ STRICT RULES:
                                                             ) : (
                                                                 <XCircle className="h-3.5 w-3.5 text-red-400" />
                                                             )}
-                                                            <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/30" : "text-black"}`}>{engine.version}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -2756,10 +2755,7 @@ STRICT RULES:
                                                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                                     className={`absolute bottom-full right-0 mb-4 w-72 ${isDarkMode ? "bg-[#0d0d0d] border-white" : "bg-white border-black"} border p-2 shadow-2xl z-50`}
                                                 >
-                                                    <div className="px-4 py-3 border-b border-black/10 flex justify-between items-center mb-2">
-                                                        <span className={`text-[10px] font-mono font-bold ${isDarkMode ? "text-white" : "text-black"} tracking-[0.2em]`}>SELECT AI ENGINE</span>
-                                                        <span className={`px-2 py-0.5 ${isDarkMode ? "bg-white/10 text-white" : "bg-black/5 text-black/60"} text-[8px] font-mono rounded`}>FREE</span>
-                                                    </div>
+
                                                     <div className="space-y-1">
                                                         {visibleEngines.map((engine) => {
                                                             const featureId = getFeatureIdForEngine(engine.name)
