@@ -51,7 +51,6 @@ export default function Footer() {
                                 >
                                     RUDRANEX
                                 </span>
-                                <span className={`font-serif italic text-2xl ${isDarkMode ? "text-white/20" : "text-black/20"}`}> ai</span>
                             </div>
                         </div>
                         {/* Technical Label — 11px Bold, 0.1em */}
@@ -127,7 +126,7 @@ export default function Footer() {
                     </div>
                 </div>
 
-                <div className={`flex justify-center items-center border-t ${isDarkMode ? "border-white/5" : "border-black/5"} pt-6`}>
+                <div className={`flex justify-center items-center border-t ${isDarkMode ? "border-white/5" : "border-black/5"} pt-4 pb-2`}>
                     <p
                         className={`font-sans font-bold uppercase text-center ${isDarkMode ? "text-white/20" : "text-black/20"}`}
                         style={{ fontSize: "11px", letterSpacing: "0.1em" }}
