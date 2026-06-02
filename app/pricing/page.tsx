@@ -190,39 +190,44 @@ const PricingContent = () => {
         const list = [
             { keywords: ['free'], multiplier: '0.02x', tokens: '1K', features: [] as { icon: any; label: string; value: string }[] },
             { keywords: ['motion'], multiplier: '1x', tokens: '50K', features: [
-                { icon: ImageIcon, label: 'Images', value: '2' },
-                { icon: Scan, label: 'OCR', value: '5' },
-                { icon: Puzzle, label: 'Extensions', value: '5' },
-                { icon: Volume2, label: 'TTS', value: '1 Min' },
-                { icon: Mic, label: 'STT', value: '1 Min' },
+                { icon: Zap, label: 'Tokens', value: '1x' },
+                { icon: ImageIcon, label: 'Images', value: '1x' },
+                { icon: Scan, label: 'OCR', value: '1x' },
+                { icon: Puzzle, label: 'Feature Ext.', value: '1x' },
+                { icon: Volume2, label: 'TTS', value: '1x' },
+                { icon: Mic, label: 'STT', value: '1x' },
             ]},
             { keywords: ['speed'], multiplier: '10x', tokens: '500K', features: [
-                { icon: ImageIcon, label: 'Images', value: '6' },
-                { icon: Scan, label: 'OCR', value: '15' },
-                { icon: Puzzle, label: 'Extensions', value: '15' },
-                { icon: Volume2, label: 'TTS', value: '5 Min' },
-                { icon: Mic, label: 'STT', value: '5 Min' },
+                { icon: Zap, label: 'Tokens', value: '10x' },
+                { icon: ImageIcon, label: 'Images', value: '3x' },
+                { icon: Scan, label: 'OCR', value: '3x' },
+                { icon: Puzzle, label: 'Feature Ext.', value: '3x' },
+                { icon: Volume2, label: 'TTS', value: '5x' },
+                { icon: Mic, label: 'STT', value: '5x' },
             ]},
             { keywords: ['velocity'], multiplier: '16x', tokens: '800K', features: [
-                { icon: ImageIcon, label: 'Images', value: '15' },
-                { icon: Scan, label: 'OCR', value: '30' },
-                { icon: Puzzle, label: 'Extensions', value: '30' },
-                { icon: Volume2, label: 'TTS', value: '10 Min' },
-                { icon: Mic, label: 'STT', value: '10 Min' },
+                { icon: Zap, label: 'Tokens', value: '16x' },
+                { icon: ImageIcon, label: 'Images', value: '7.5x' },
+                { icon: Scan, label: 'OCR', value: '6x' },
+                { icon: Puzzle, label: 'Feature Ext.', value: '6x' },
+                { icon: Volume2, label: 'TTS', value: '10x' },
+                { icon: Mic, label: 'STT', value: '10x' },
             ]},
             { keywords: ['acceleration'], multiplier: '20x', tokens: '1M', features: [
-                { icon: ImageIcon, label: 'Images', value: '50' },
-                { icon: Scan, label: 'OCR', value: '60' },
-                { icon: Puzzle, label: 'Extensions', value: '60' },
-                { icon: Volume2, label: 'TTS', value: '60 Min' },
-                { icon: Mic, label: 'STT', value: '60 Min' },
+                { icon: Zap, label: 'Tokens', value: '20x' },
+                { icon: ImageIcon, label: 'Images', value: '25x' },
+                { icon: Scan, label: 'OCR', value: '12x' },
+                { icon: Puzzle, label: 'Feature Ext.', value: '12x' },
+                { icon: Volume2, label: 'TTS', value: '60x' },
+                { icon: Mic, label: 'STT', value: '60x' },
             ]},
             { keywords: ['agenc', 'heavy duty', 'enterprise'], multiplier: '100x', tokens: '5M', features: [
-                { icon: ImageIcon, label: 'Images', value: '500' },
-                { icon: Scan, label: 'OCR', value: '1000' },
-                { icon: Puzzle, label: 'Extensions', value: '1000' },
-                { icon: Volume2, label: 'TTS', value: '500 Min' },
-                { icon: Mic, label: 'STT', value: '500 Min' },
+                { icon: Zap, label: 'Tokens', value: '100x' },
+                { icon: ImageIcon, label: 'Images', value: '250x' },
+                { icon: Scan, label: 'OCR', value: '200x' },
+                { icon: Puzzle, label: 'Feature Ext.', value: '200x' },
+                { icon: Volume2, label: 'TTS', value: '500x' },
+                { icon: Mic, label: 'STT', value: '500x' },
             ]},
         ];
         const lower = planName.toLowerCase();
@@ -348,53 +353,31 @@ const PricingContent = () => {
                                     <div className="flex-1 space-y-5 mb-16">
                                         {(() => {
                                             const md = getMultiplierData(plan.plan_name || '');
-                                            if (md) {
-                                                return (
-                                                    <>
-                                                        <div className="mb-6">
-                                                            <span className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px", letterSpacing: "0.1em" }}>
-                                                                Plan Tokens Multiplier
-                                                            </span>
-                                                            <div className="mt-2">
-                                                                <span className="font-display font-bold tracking-tight text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
-                                                                    {md.multiplier}
-                                                                </span>
-                                                                <p className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/40"}`} style={{ fontSize: "11px" }}>
-                                                                    {md.tokens} Tokens
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        {md.features.map((f, idx) => (
-                                                            <div key={idx} className="flex items-center gap-4">
-                                                                <f.icon className={`h-4 w-4 shrink-0 ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
-                                                                <p className={`text-[13px] font-medium ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
-                                                                    <span className={isDarkMode ? "text-white/60" : "text-black/70"}>{f.label}:</span> {f.value}
-                                                                </p>
-                                                            </div>
-                                                        ))}
-                                                    </>
-                                                );
-                                            }
-                                            return (
+                                            return md ? (
                                                 <>
-                                                    {[
-                                                        { icon: Zap, label: "Daily Chat", value: plan.daily_chat_limit },
-                                                        { icon: Code, label: "Coding", value: plan.daily_coding_limit },
-                                                        { icon: ImageIcon, label: "Vision", value: plan.daily_vision_limit },
-                                                        { icon: ImageIcon, label: "Images/mo", value: plan.monthly_image_limit },
-                                                        { icon: Sparkles, label: "Flux/mo", value: plan.monthly_flux_limit },
-                                                        { icon: Volume2, label: "TTS", value: plan.daily_tts_limit },
-                                                        { icon: Mic, label: "STT", value: plan.daily_stt_limit },
-                                                    ].map((feature, idx) => (
+                                                    <div className="mb-6">
+                                                        <span className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px", letterSpacing: "0.1em" }}>
+                                                            Plan Tokens Multiplier
+                                                        </span>
+                                                        <div className="mt-2">
+                                                            <span className="font-display font-bold tracking-tight text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
+                                                                {md.multiplier}
+                                                            </span>
+                                                            <p className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/40"}`} style={{ fontSize: "11px" }}>
+                                                                {md.tokens} Tokens
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    {md.features.map((f, idx) => (
                                                         <div key={idx} className="flex items-center gap-4">
-                                                            <feature.icon className={`h-4 w-4 shrink-0 ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
+                                                            <f.icon className={`h-4 w-4 shrink-0 ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
                                                             <p className={`text-[13px] font-medium ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
-                                                                <span className={isDarkMode ? "text-white/60" : "text-black/70"}>{feature.label}:</span> {feature.value ?? 0}
+                                                                <span className={isDarkMode ? "text-white/60" : "text-black/70"}>{f.label}:</span> {f.value}
                                                             </p>
                                                         </div>
                                                     ))}
                                                 </>
-                                            );
+                                            ) : null;
                                         })()}
                                     </div>
 
