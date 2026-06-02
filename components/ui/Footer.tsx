@@ -59,8 +59,8 @@ export default function Footer() {
         <footer className={`py-16 md:py-24 border-t transition-colors duration-300 ${isDarkMode ? "bg-[#0a0a0a] border-white/5 text-white" : "bg-[#fdfdfd] border-black/5 text-black"}`}>
             <div className="container mx-auto px-6 md:px-12 max-w-7xl">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 mb-16 md:mb-24">
-                    {/* Left Section - occupies 7 columns on desktop */}
-                    <div className="lg:col-span-7 flex flex-col gap-12">
+                    {/* Left Section - occupies 8 columns on desktop */}
+                    <div className="lg:col-span-8 flex flex-col gap-12">
                         {/* Brand & Logo */}
                         <div className="flex flex-col gap-5">
                             <div className="flex items-center gap-3">
@@ -211,8 +211,8 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    {/* Right Section - 5 columns on desktop, with top border on mobile and left border on desktop */}
-                    <div className={`lg:col-span-5 flex flex-col gap-8 pt-12 lg:pt-0 lg:pl-12 border-t lg:border-t-0 lg:border-l ${isDarkMode ? "border-white/5 animate-fade-in" : "border-black/10"}`}>
+                    {/* Right Section - 4 columns on desktop, with top border on mobile and left border on desktop */}
+                    <div className={`lg:col-span-4 flex flex-col gap-8 pt-12 lg:pt-0 lg:pl-12 border-t lg:border-t-0 lg:border-l ${isDarkMode ? "border-white/5 animate-fade-in" : "border-black/10"}`}>
                         
                         {/* Connect with Us */}
                         <div className="flex flex-col gap-5">
