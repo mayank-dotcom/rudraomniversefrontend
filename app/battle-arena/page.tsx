@@ -38,13 +38,13 @@ function ArenaContent() {
     const [topic, setTopic] = useState(searchParams.get("topic") || "");
     const [difficulty, setDifficulty] = useState(searchParams.get("difficulty") || "medium");
     const [questionCount, setQuestionCount] = useState(parseInt(searchParams.get("count") || "5"));
+    const [timePerQuestion, setTimePerQuestion] = useState(parseInt(searchParams.get("time") || "30"));
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
     const [answers, setAnswers] = useState<number[]>([]);
     const [correctCount, setCorrectCount] = useState(0);
-    const [startTime, setStartTime] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState(0);
     const [isStarting, setIsStarting] = useState(false);
     const [copied, setCopied] = useState(false);
@@ -58,8 +58,6 @@ function ArenaContent() {
     const audioBufferRef = useRef<AudioBuffer | null>(null);
 
     const { isDarkMode, toggleTheme } = useTheme();
-
-    const QUESTION_TIME = 30;
 
     useEffect(() => {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -121,6 +119,7 @@ function ArenaContent() {
                     questionCount: parseInt(searchParams.get("count") || "5"),
                     difficulty: searchParams.get("difficulty") || "medium",
                     adminName: searchParams.get("name") || "",
+                    timePerQuestion: parseInt(searchParams.get("time") || "30"),
                 });
             } else if (searchParams.get("code")) {
                 socket.emit("join_arena", {
@@ -133,11 +132,13 @@ function ArenaContent() {
         socket.on("arena_created", (arena) => {
             setLobbyCode(arena.code);
             setParticipants(arena.participants);
+            if (arena.timePerQuestion) setTimePerQuestion(arena.timePerQuestion);
         });
 
         socket.on("arena_joined", (arena) => {
             setLobbyCode(arena.code);
             setParticipants(arena.participants);
+            if (arena.timePerQuestion) setTimePerQuestion(arena.timePerQuestion);
         });
 
         socket.on("participant_joined", (data) => {
@@ -154,12 +155,13 @@ function ArenaContent() {
 
         socket.on("arena_started", (data) => {
             setQuestions(data.questions);
-            setStartTime(data.startTime);
             setPhase("active");
             setCurrentQuestionIndex(0);
             setSelectedAnswer(null);
             setAnswers(new Array(data.questions.length).fill(-1));
-            setTimeLeft(QUESTION_TIME);
+            const tpq = data.timePerQuestion || timePerQuestion;
+            setTimePerQuestion(tpq);
+            setTimeLeft(tpq);
             setHasSubmitted(false);
         });
 
@@ -225,21 +227,20 @@ function ArenaContent() {
             setTimeout(() => {
                 setCurrentQuestionIndex((prev) => prev + 1);
                 setSelectedAnswer(null);
-                setTimeLeft(QUESTION_TIME);
+                setTimeLeft(timePerQuestion);
             }, 1000);
         } else {
-            const totalTime = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
             const finalScore = correctCount + (selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
             setHasSubmitted(true);
             setTimeout(() => {
                 socket.emit("submit_answer", {
                     lobbyCode,
                     score: finalScore,
-                    timeTaken: totalTime,
+                    timeTaken: 0,
                 });
             }, 1500);
         }
-    }, [currentQuestionIndex, selectedAnswer, questions, answers, correctCount, startTime, lobbyCode]);
+    }, [currentQuestionIndex, selectedAnswer, questions, answers, correctCount, lobbyCode, timePerQuestion]);
 
     const handleStart = () => {
         socketRef.current?.emit("start_arena", lobbyCode);
@@ -587,9 +588,8 @@ function ArenaContent() {
                                     const answered = answers.filter(a => a !== -1).length + (selectedAnswer !== null ? 1 : 0);
                                     const correct = correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
                                     const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
-                                    const elapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
                                     return (
-                                        <div className="grid grid-cols-3 gap-3">
+                                        <div className="grid grid-cols-2 gap-3">
                                             <div className={`border p-3 sm:p-4 rounded-2xl ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
                                                 <span className={`text-[8px] font-mono uppercase tracking-[0.2em] block mb-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Accuracy</span>
                                                 <span className="text-base sm:text-lg font-black">{accuracy}%</span>
@@ -597,10 +597,6 @@ function ArenaContent() {
                                             <div className={`border p-3 sm:p-4 rounded-2xl ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
                                                 <span className={`text-[8px] font-mono uppercase tracking-[0.2em] block mb-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Correct</span>
                                                 <span className="text-base sm:text-lg font-black">{correct}/{answered}</span>
-                                            </div>
-                                            <div className={`border p-3 sm:p-4 rounded-2xl ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
-                                                <span className={`text-[8px] font-mono uppercase tracking-[0.2em] block mb-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Time</span>
-                                                <span className="text-base sm:text-lg font-black">{elapsed}s</span>
                                             </div>
                                         </div>
                                     );
@@ -651,7 +647,6 @@ function ArenaContent() {
                                     const answered = answers.filter(a => a !== -1).length + (selectedAnswer !== null ? 1 : 0);
                                     const correct = correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
                                     const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
-                                    const elapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
                                     return (
                                         <div className={`border p-5 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
                                             <div className="flex items-center gap-2 mb-4">
@@ -670,10 +665,6 @@ function ArenaContent() {
                                                 <div className="flex justify-between items-center">
                                                     <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Remaining</span>
                                                     <span className="text-sm font-black">{questions.length - currentQuestionIndex - (selectedAnswer !== null ? 1 : 0)}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center">
-                                                    <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Elapsed</span>
-                                                    <span className="text-sm font-black">{elapsed}s</span>
                                                 </div>
                                             </div>
                                         </div>

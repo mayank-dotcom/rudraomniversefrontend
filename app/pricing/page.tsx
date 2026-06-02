@@ -409,10 +409,17 @@ const PricingContent = () => {
 
                                 <button
                                     onClick={() => setUseCoins(!useCoins)}
-                                    className={`w-full flex items-center justify-between px-4 py-3 text-[11px] font-mono uppercase tracking-[0.15em] transition-all active:scale-[0.98] border ${useCoins ? (isDarkMode ? "border-[#00DDDD]/50 bg-[#00DDDD]/5 text-[#00DDDD]" : "border-[#00DDDD]/70 bg-[#00DDDD]/5 text-[#00DDDD]") : (isDarkMode ? "border-white/10 text-white/50 hover:border-white/20" : "border-black/10 text-black/50 hover:border-black/20")}`}
+                                    className={`upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(0,221,221,0.5)] transition-all duration-300 flex items-center justify-between px-4`}
                                 >
-                                    <span>{useCoins ? "Using coins" : "Use your coins"}</span>
-                                    <span>{useCoins ? `-₹${savings}` : `${walletBalance} available`}</span>
+                                    <div className="bubble-layer bubble-1"></div>
+                                    <div className="bubble-layer bubble-2"></div>
+                                    <div className="bubble-layer bubble-3"></div>
+                                    <div className="bubble-layer bubble-4"></div>
+                                    <div className="bubble-layer bubble-5"></div>
+                                    <div className="bubble-layer bubble-6"></div>
+                                    <div className="bubble-layer bubble-7"></div>
+                                    <span className="z-15">{useCoins ? "Using coins" : "Use your coins"}</span>
+                                    <span className="z-15">{useCoins ? `-₹${savings}` : `${walletBalance} available`}</span>
                                 </button>
 
                                 {useCoins && savings > 0 && (

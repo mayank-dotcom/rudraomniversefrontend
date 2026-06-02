@@ -1056,9 +1056,9 @@ const Chat = () => {
         };
     }, [selectedEngine]);
 
-    const handleBattleArenaHost = (config: { adminName: string; topic: string; difficulty: string; questionCount: number }) => {
+    const handleBattleArenaHost = (config: { adminName: string; topic: string; difficulty: string; questionCount: number; timePerQuestion: number }) => {
         setIsBattleArenaModalOpen(false);
-        window.location.href = `/battle-arena?host=true&name=${encodeURIComponent(config.adminName)}&topic=${encodeURIComponent(config.topic)}&difficulty=${config.difficulty}&count=${config.questionCount}`;
+        window.location.href = `/battle-arena?host=true&name=${encodeURIComponent(config.adminName)}&topic=${encodeURIComponent(config.topic)}&difficulty=${config.difficulty}&count=${config.questionCount}&time=${config.timePerQuestion}`;
     };
 
     const handleBattleArenaJoin = (config: { lobbyCode: string; participantName: string }) => {

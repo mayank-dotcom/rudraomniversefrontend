@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Swords, Key, User, BookOpen, ListOrdered, Signal, Trophy, TrendingUp, History } from "lucide-react";
+import { X, Swords, Key, User, BookOpen, ListOrdered, Signal, Clock, Trophy, TrendingUp, History } from "lucide-react";
 import Link from "next/link";
 
 interface BattleArenaModalProps {
@@ -17,6 +17,7 @@ export interface HostConfig {
     topic: string;
     difficulty: string;
     questionCount: number;
+    timePerQuestion: number;
 }
 
 export interface JoinConfig {
@@ -48,6 +49,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
         topic: "",
         difficulty: "medium",
         questionCount: 5,
+        timePerQuestion: 30,
     });
     const [joinConfig, setJoinConfig] = useState<JoinConfig>({
         lobbyCode: "",
@@ -179,7 +181,7 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-4">
                                     <div className="space-y-4">
                                         <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black"}`}>
                                             <Signal className="h-3 w-3" />
@@ -211,6 +213,20 @@ const BattleArenaModal: React.FC<BattleArenaModalProps> = ({ isOpen, onClose, on
                                                 setHostConfig({ ...hostConfig, questionCount: parseInt(e.target.value) || 5 });
                                                 playSwordSound();
                                             }}
+                                            className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black text-black"} border rounded-2xl focus:outline-none`}
+                                        />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black"}`}>
+                                            <Clock className="h-3 w-3" />
+                                            <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Time/Q</span>
+                                        </div>
+                                        <input
+                                            type="number"
+                                            min={10}
+                                            max={120}
+                                            value={hostConfig.timePerQuestion}
+                                            onChange={(e) => setHostConfig({ ...hostConfig, timePerQuestion: parseInt(e.target.value) || 30 })}
                                             className={`w-full p-4 text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black text-black"} border rounded-2xl focus:outline-none`}
                                         />
                                     </div>
