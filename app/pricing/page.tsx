@@ -31,13 +31,16 @@ const PricingContent = () => {
             return;
         }
 
+        const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+        if (!razorpayKeyId) {
+            toast.error("Payment gateway is not configured. Please contact support.");
+            setProcessingPlanId(null);
+            return;
+        }
+
         setProcessingPlanId(String(plan.id));
         try {
             const order = await createPaymentOrder(plan.id);
-
-            if (!order.key_id) {
-                throw new Error("Payment gateway is not configured. Please contact support.");
-            }
 
             if (!window.Razorpay) {
                 await new Promise<void>((resolve, reject) => {
@@ -50,7 +53,7 @@ const PricingContent = () => {
             }
 
             const options = {
-                key: order.key_id,
+                key: razorpayKeyId,
                 amount: order.amount,
                 currency: order.currency,
                 name: 'Rudranex AI',

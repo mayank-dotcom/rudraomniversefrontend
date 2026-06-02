@@ -124,7 +124,6 @@ export interface CreateOrderResponse {
   amount: number
   currency: string
   receipt: string
-  key_id?: string
   error?: string
 }
 
