@@ -7,7 +7,7 @@ import {
   ChevronRight, ArrowUpRight, ShieldCheck, Database, Zap, Download, ChevronLeft, ArrowUpDown,
   Sun, Moon
 } from "lucide-react"
-import { useTheme } from "@/lib/theme-context"
+import { ThemeProvider, useTheme } from "@/lib/theme-context"
 import { removeApiKey, getApiKey } from "@/lib/auth"
 import {
   getEnterpriseStats, getEnterpriseManagers, createEnterpriseManager,
@@ -18,7 +18,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 
-export default function EnterpriseAdminPage() {
+function EnterpriseAdminPageInner() {
   const { isDarkMode, toggleTheme } = useTheme()
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   
@@ -1193,4 +1193,8 @@ export default function EnterpriseAdminPage() {
       )}
     </div>
   )
+}
+
+export default function EnterpriseAdminPage() {
+  return <ThemeProvider><EnterpriseAdminPageInner /></ThemeProvider>
 }

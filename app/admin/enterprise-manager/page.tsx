@@ -7,7 +7,7 @@ import {
   Briefcase, Award, BarChart3, Clock, AlertTriangle, ArrowUpRight, Download,
   Sun, Moon
 } from "lucide-react"
-import { useTheme } from "@/lib/theme-context"
+import { ThemeProvider, useTheme } from "@/lib/theme-context"
 import { removeApiKey, getApiKey } from "@/lib/auth"
 import {
   getEnterpriseStats, getEnterpriseEmployees, createEnterpriseEmployee,
@@ -19,7 +19,7 @@ import { getLocalEmployees, addLocalEmployee, updateLocalEmployee, removeLocalEm
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 
-export default function EnterpriseManagerPage() {
+function EnterpriseManagerPageInner() {
   const { isDarkMode, toggleTheme } = useTheme()
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   
@@ -1133,4 +1133,8 @@ export default function EnterpriseManagerPage() {
       )}
     </div>
   )
+}
+
+export default function EnterpriseManagerPage() {
+  return <ThemeProvider><EnterpriseManagerPageInner /></ThemeProvider>
 }
