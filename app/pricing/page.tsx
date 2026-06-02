@@ -35,6 +35,10 @@ const PricingContent = () => {
         try {
             const order = await createPaymentOrder(plan.id);
 
+            if (!order.key_id) {
+                throw new Error("Payment gateway is not configured. Please contact support.");
+            }
+
             if (!window.Razorpay) {
                 await new Promise<void>((resolve, reject) => {
                     const script = document.createElement('script');
