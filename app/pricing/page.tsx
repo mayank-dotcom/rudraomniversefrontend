@@ -5,8 +5,8 @@ import { motion } from "framer-motion";
 import Navbar from "@/components/ui/Navbar";
 import Footer from "@/components/ui/Footer";
 import { ThemeProvider } from "@/lib/theme-context";
-import { Check, Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, ArrowRight, Volume2, Mic, Sparkles, Wallet, X, Coins } from "lucide-react";
-import { getPlansList, Plan, getPlanStrikeOff, getPublicSiteSettings, createPaymentOrder, verifyPayment, getWalletProfile, buyPlanWithCoins } from "@/lib/chat-api";
+import { Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, ArrowRight, Volume2, Mic, Sparkles, X, Coins } from "lucide-react";
+import { getPlansList, Plan, getPlanStrikeOff, getPublicSiteSettings, createPaymentOrder, verifyPayment, getWalletProfile } from "@/lib/chat-api";
 import { getApiKey } from "@/lib/auth";
 import { toast } from "sonner";
 import { useTheme } from "@/lib/theme-context";
@@ -27,7 +27,6 @@ const PricingContent = () => {
 
     const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
     const [useCoins, setUseCoins] = useState(false);
-    const [isProcessingCoinPayment, setIsProcessingCoinPayment] = useState(false);
 
     useEffect(() => {
         const apiKey = getApiKey();
@@ -38,7 +37,7 @@ const PricingContent = () => {
         }
     }, []);
 
-    const handleRazorpayPayment = useCallback(async (plan: Plan) => {
+    const handleRazorpayPayment = useCallback(async (plan: Plan, coinsToUse: number = 0) => {
         const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
         if (!razorpayKeyId) {
             toast.error("Payment gateway is not configured. Please contact support.");
@@ -47,7 +46,7 @@ const PricingContent = () => {
 
         setProcessingPlanId(String(plan.id));
         try {
-            const order = await createPaymentOrder(plan.id);
+            const order = await createPaymentOrder(plan.id, coinsToUse > 0 ? coinsToUse : undefined);
 
             if (!window.Razorpay) {
                 await new Promise<void>((resolve, reject) => {
@@ -75,6 +74,7 @@ const PricingContent = () => {
                         });
                         if (result.success) {
                             toast.success(`Plan upgraded to ${result.plan}!`);
+                            setWalletBalance(prev => prev !== null ? prev - coinsToUse : prev);
                             setCheckoutPlan(null);
                         }
                     } catch (err: any) {
@@ -98,22 +98,6 @@ const PricingContent = () => {
             toast.error(err.message || "Failed to initiate payment");
         } finally {
             setProcessingPlanId(null);
-        }
-    }, []);
-
-    const handleCoinPurchase = useCallback(async (plan: Plan) => {
-        setIsProcessingCoinPayment(true);
-        try {
-            const result = await buyPlanWithCoins(plan.id);
-            if (result.success) {
-                toast.success(`Plan upgraded to ${plan.plan_name || 'Unknown'} with coins!`);
-                setWalletBalance(prev => prev !== null ? prev - Number(plan.price_inr || plan.price) : prev);
-                setCheckoutPlan(null);
-            }
-        } catch (err: any) {
-            toast.error(err.message || "Failed to purchase with coins");
-        } finally {
-            setIsProcessingCoinPayment(false);
         }
     }, []);
 
@@ -363,7 +347,14 @@ const PricingContent = () => {
             </section>
 
             {/* Checkout Modal */}
-            {checkoutPlan && (
+            {checkoutPlan && (() => {
+                const planPrice = Number(checkoutPlan.price_inr || checkoutPlan.price);
+                const maxCoins = walletBalance !== null ? Math.min(walletBalance, planPrice - 1) : 0;
+                const coinsToUse = useCoins ? Math.min(maxCoins, walletBalance || 0) : 0;
+                const discountedPrice = planPrice - coinsToUse;
+                const savings = coinsToUse;
+
+                return (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8">
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setCheckoutPlan(null)} />
                     <motion.div
@@ -384,70 +375,91 @@ const PricingContent = () => {
                         <h3 className="font-display font-bold text-xl uppercase mb-2">
                             {checkoutPlan.plan_name}
                         </h3>
+
+                        {/* Price Display */}
                         <div className="flex items-baseline gap-2 mb-6">
-                            <span className="font-display font-bold tracking-tight" style={{ fontSize: "32px" }}>
-                                ₹{Number(checkoutPlan.price_inr || checkoutPlan.price).toLocaleString()}
-                            </span>
+                            {useCoins && savings > 0 ? (
+                                <>
+                                    <span className="font-display font-bold tracking-tight line-through opacity-40" style={{ fontSize: "32px" }}>
+                                        ₹{planPrice.toLocaleString()}
+                                    </span>
+                                    <span className="font-display font-bold tracking-tight text-[var(--color-cyan)]" style={{ fontSize: "32px" }}>
+                                        ₹{discountedPrice.toLocaleString()}
+                                    </span>
+                                </>
+                            ) : (
+                                <span className="font-display font-bold tracking-tight" style={{ fontSize: "32px" }}>
+                                    ₹{planPrice.toLocaleString()}
+                                </span>
+                            )}
                             <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
                                 /mo
                             </span>
                         </div>
 
+                        {/* Wallet & Coin Discount */}
                         {walletBalance !== null && walletBalance > 0 && (
                             <div className={`p-4 mb-6 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
                                 <div className="flex items-center gap-2 mb-3">
                                     <Coins className={`h-4 w-4 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
                                     <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                        Wallet Balance
+                                        Wallet — {walletBalance} coins
                                     </span>
                                 </div>
-                                <p className="font-display font-bold text-lg">{walletBalance} coins</p>
-                                <p className={`text-[10px] mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                    1 coin = ₹1 discount
-                                </p>
-                                {walletBalance >= Number(checkoutPlan.price_inr || checkoutPlan.price) && (
-                                    <button
-                                        onClick={() => setUseCoins(!useCoins)}
-                                        className={`mt-3 flex items-center gap-2 px-4 py-2 text-[9px] font-mono font-bold uppercase tracking-[0.2em] transition-all active:scale-95 ${useCoins
-                                            ? (isDarkMode ? "bg-white text-black" : "bg-black text-white")
-                                            : (isDarkMode ? "border border-white/20 text-white/60" : "border border-black/20 text-black/60")}`}
-                                    >
-                                        <Check className={`h-3 w-3 ${useCoins ? "opacity-100" : "opacity-0"}`} />
-                                        {useCoins ? "Coins Applied" : "Use Wallet Coins"}
-                                    </button>
+
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max={maxCoins}
+                                        value={useCoins ? coinsToUse : 0}
+                                        onChange={(e) => setUseCoins(parseInt(e.target.value) > 0)}
+                                        className="flex-1 h-1 accent-[#00DDDD]"
+                                    />
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max={maxCoins}
+                                        value={useCoins ? coinsToUse : 0}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value) || 0;
+                                            setUseCoins(val > 0);
+                                        }}
+                                        className={`w-16 px-2 py-1 text-center text-[11px] font-mono border ${isDarkMode ? "bg-transparent border-white/20 text-white" : "bg-transparent border-black/20 text-black"} focus:outline-none focus:border-[#00DDDD]`}
+                                    />
+                                </div>
+
+                                {useCoins && savings > 0 && (
+                                    <p className={`text-[10px] mt-2 ${isDarkMode ? "text-green-400/80" : "text-green-600/80"}`}>
+                                        Saving ₹{savings} with {savings} coin{savings > 1 ? 's' : ''}
+                                    </p>
                                 )}
-                                {walletBalance < Number(checkoutPlan.price_inr || checkoutPlan.price) && (
-                                    <p className={`text-[10px] mt-2 ${isDarkMode ? "text-amber-400/70" : "text-amber-600/70"}`}>
-                                        You need {Number(checkoutPlan.price_inr || checkoutPlan.price) - walletBalance} more coins to buy with coins.
+                                {walletBalance >= planPrice && (
+                                    <p className={`text-[9px] font-mono mt-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                        Tip: You can also buy directly with coins from the Wallet section.
                                     </p>
                                 )}
                             </div>
                         )}
 
-                        {walletBalance !== null && walletBalance >= Number(checkoutPlan.price_inr || checkoutPlan.price) && useCoins && (
-                            <button
-                                onClick={() => handleCoinPurchase(checkoutPlan)}
-                                disabled={isProcessingCoinPayment}
-                                className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed mb-3 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
-                                style={{ fontSize: "11px", letterSpacing: "0.2em" }}
-                            >
-                                {isProcessingCoinPayment ? "Processing..." : `Buy with Coins (₹0)`}
-                            </button>
-                        )}
-
-                        {(!useCoins || walletBalance === null || walletBalance < Number(checkoutPlan.price_inr || checkoutPlan.price)) && (
-                            <button
-                                onClick={() => { setCheckoutPlan(null); handleRazorpayPayment(checkoutPlan) }}
-                                disabled={processingPlanId === String(checkoutPlan.id)}
-                                className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
-                                style={{ fontSize: "11px", letterSpacing: "0.2em" }}
-                            >
-                                {processingPlanId === String(checkoutPlan.id) ? "Processing..." : `Pay ₹${Number(checkoutPlan.price_inr || checkoutPlan.price).toLocaleString()} via Razorpay`}
-                            </button>
-                        )}
+                        {/* Pay Button */}
+                        <button
+                            onClick={() => { setCheckoutPlan(null); handleRazorpayPayment(checkoutPlan, useCoins ? coinsToUse : 0) }}
+                            disabled={processingPlanId === String(checkoutPlan.id)}
+                            className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
+                            style={{ fontSize: "11px", letterSpacing: "0.2em" }}
+                        >
+                            {processingPlanId === String(checkoutPlan.id)
+                                ? "Processing..."
+                                : useCoins && savings > 0
+                                    ? `Pay ₹${discountedPrice.toLocaleString()} via Razorpay`
+                                    : `Pay ₹${planPrice.toLocaleString()} via Razorpay`
+                            }
+                        </button>
                     </motion.div>
                 </div>
-            )}
+                );
+            })()}
 
             <Footer />
         </div>

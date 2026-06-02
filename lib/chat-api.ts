@@ -124,6 +124,7 @@ export interface CreateOrderResponse {
   amount: number
   currency: string
   receipt: string
+  coins_redeemed?: number
   error?: string
 }
 
@@ -134,11 +135,15 @@ export interface VerifyPaymentResponse {
   error?: string
 }
 
-export async function createPaymentOrder(plan_id: string | number) {
+export async function createPaymentOrder(plan_id: string | number, coins_to_redeem?: number) {
+  const body: any = { plan_id }
+  if (coins_to_redeem && coins_to_redeem > 0) {
+    body.coins_to_redeem = coins_to_redeem
+  }
   const res = await fetch(`${API_BASE}/payment/create-order`, {
     method: "POST",
     headers: getHeaders(),
-    body: JSON.stringify({ plan_id }),
+    body: JSON.stringify(body),
   })
   const data = await parseJson<CreateOrderResponse>(res)
   if (!res.ok || !data.success) {
