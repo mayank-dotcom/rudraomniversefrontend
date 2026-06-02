@@ -4,7 +4,8 @@ import React, { useState, useEffect, useMemo, useRef } from "react"
 import {
   Bell, Users, User, Mail, Plus, Trash2, Edit2, Upload, Search, FileText, Activity,
   RefreshCw, LogOut, CheckCircle2, X, Cpu, TrendingUp, ShieldCheck, Database, Zap,
-  Briefcase, Award, BarChart3, Clock, AlertTriangle, ArrowUpRight, Download
+  Briefcase, Award, BarChart3, Clock, AlertTriangle, ArrowUpRight, Download,
+  Sun, Moon
 } from "lucide-react"
 import { useTheme } from "@/lib/theme-context"
 import { removeApiKey, getApiKey } from "@/lib/auth"
@@ -19,7 +20,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 
 export default function EnterpriseManagerPage() {
-  const { isDarkMode } = useTheme()
+  const { isDarkMode, toggleTheme } = useTheme()
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   
   // Tab control
@@ -374,14 +375,22 @@ export default function EnterpriseManagerPage() {
 
         <div className="flex items-center gap-4">
           <button
+            onClick={toggleTheme}
+            className={`h-10 w-10 border rounded-2xl flex items-center justify-center transition-all ${isDarkMode ? "border-white/5 hover:border-white/10 hover:bg-white/5" : "border-black/5 hover:border-black/10 hover:bg-black/5"}`}
+            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {isDarkMode ? <Sun className="h-4 w-4 opacity-40" /> : <Moon className="h-4 w-4 opacity-40" />}
+          </button>
+
+          <button
             onClick={fetchAllData}
-            className="h-10 w-10 border border-white/5 hover:border-white/10 hover:bg-white/5 rounded-2xl flex items-center justify-center transition-all group"
+            className={`h-10 w-10 border rounded-2xl flex items-center justify-center transition-all group ${isDarkMode ? "border-white/5 hover:border-white/10 hover:bg-white/5" : "border-black/5 hover:border-black/10 hover:bg-black/5"}`}
             title="Refresh Registry"
           >
-            <RefreshCw className="h-4 w-4 opacity-40 group-hover:opacity-100 group-hover:rotate-180 transition-all duration-500" />
+            <RefreshCw className={`h-4 w-4 opacity-40 group-hover:opacity-100 group-hover:rotate-180 transition-all duration-500 ${isDarkMode ? "" : "text-black"}`} />
           </button>
           
-          <div className="h-8 w-[1px] bg-white/15" />
+          <div className={`h-8 w-[1px] ${isDarkMode ? "bg-white/15" : "bg-black/15"}`} />
 
           <button
             onClick={handleLogout}
