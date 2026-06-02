@@ -8,7 +8,7 @@ import {
     UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Check, Clock, Trash2, Inbox,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
-    Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen
+    Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet
 } from "lucide-react";
 import Link from "next/link";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
@@ -45,6 +45,7 @@ import PersonaModal, { type Persona } from "@/components/PersonaModal";
 import BattleArenaModal from "@/components/BattleArenaModal";
 import { GraduationCap as MockIcon } from "lucide-react";
 import WelcomeBox from "@/components/ui/WelcomeBox";
+import WalletPanel from "@/components/ui/WalletPanel";
 
 interface Message {
     role: "user" | "assistant" | "system";
@@ -246,7 +247,7 @@ const Chat = () => {
     const [showDots, setShowDots] = useState(false);
     const [responseTime, setResponseTime] = useState<number | null>(null);
     const [sidebarTab, setSidebarTab] = useState<"history" | "modes">("history");
-    const [rightSidebarTab, setRightSidebarTab] = useState<"usage" | "gmail">("usage");
+    const [rightSidebarTab, setRightSidebarTab] = useState<"usage" | "gmail" | "wallet">("usage");
     const [gmailConnected, setGmailConnected] = useState(false);
     const [gmailEmail, setGmailEmail] = useState("");
     const [gmailEmails, setGmailEmails] = useState<any[]>([]);
@@ -2850,6 +2851,17 @@ STRICT RULES:
                             >
                                 Usage
                             </button>
+                            {userRole !== "employee" && (
+                                <button
+                                    onClick={() => setRightSidebarTab("wallet")}
+                                    className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 ${rightSidebarTab === "wallet"
+                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")}`}
+                                >
+                                    <Wallet className="h-3 w-3" />
+                                    Wallet
+                                </button>
+                            )}
                             {userRole === "employee" && (
                                 <button
                                     onClick={() => setRightSidebarTab("gmail")}
@@ -3051,19 +3063,25 @@ STRICT RULES:
                                     </div>
                                     </div>
 
-                                    <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : ""}`}>
-                                        <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(0,221,221,0.5)] transition-all duration-300">
-                                            <div className="bubble-layer bubble-1"></div>
-                                            <div className="bubble-layer bubble-2"></div>
-                                            <div className="bubble-layer bubble-3"></div>
-                                            <div className="bubble-layer bubble-4"></div>
-                                            <div className="bubble-layer bubble-5"></div>
-                                            <div className="bubble-layer bubble-6"></div>
-                                            <div className="bubble-layer bubble-7"></div>
-                                            <span>Upgrade Now</span>
-                                        </button>
-                                    </Link>
+                                    {userRole !== "employee" && (
+                                        <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : ""}`}>
+                                            <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(0,221,221,0.5)] transition-all duration-300">
+                                                <div className="bubble-layer bubble-1"></div>
+                                                <div className="bubble-layer bubble-2"></div>
+                                                <div className="bubble-layer bubble-3"></div>
+                                                <div className="bubble-layer bubble-4"></div>
+                                                <div className="bubble-layer bubble-5"></div>
+                                                <div className="bubble-layer bubble-6"></div>
+                                                <div className="bubble-layer bubble-7"></div>
+                                                <span>Upgrade Now</span>
+                                            </button>
+                                        </Link>
+                                    )}
                                 </>
+                            )}
+
+                            {rightSidebarTab === "wallet" && userRole !== "employee" && (
+                                <WalletPanel isDarkMode={isDarkMode} isMobile={isMobile} />
                             )}
 
                             {rightSidebarTab === "gmail" && userRole === "employee" && (
@@ -3296,6 +3314,15 @@ STRICT RULES:
                                 <div className={`absolute inset-0 rounded-sm border ${isDarkMode ? 'border-white' : 'border-black'} pointer-events-none`} />
                             </div>
 
+                            {userRole !== "employee" && (
+                                <button
+                                    onClick={() => { setRightSidebarTab("wallet"); setIsRightSidebarCollapsed(false) }}
+                                    title="Wallet"
+                                    className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative cursor-pointer hover:scale-110 transition-all ${rightSidebarTab === "wallet" && !isRightSidebarCollapsed ? "ring-1 ring-white" : ""}`}
+                                >
+                                    <Wallet className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
+                                </button>
+                            )}
                             {userRole === "employee" && (
                                 <button
                                     onClick={() => { setRightSidebarTab("gmail"); setIsRightSidebarCollapsed(false) }}
@@ -3419,20 +3446,22 @@ STRICT RULES:
                         </div>
 
                         {/* Bottom: Mini Cyan Upgrade Button */}
-                        <div className="w-full flex items-center justify-center px-2 pb-10">
-                            <Link href="/pricing" title="Upgrade Now" className="block cursor-pointer">
-                                <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-[rgba(0,221,221,0.2)]`}>
-                                    <div className="bubble-layer bubble-1"></div>
-                                    <div className="bubble-layer bubble-2"></div>
-                                    <div className="bubble-layer bubble-3"></div>
-                                    <div className="bubble-layer bubble-4"></div>
-                                    <div className="bubble-layer bubble-5"></div>
-                                    <div className="bubble-layer bubble-6"></div>
-                                    <div className="bubble-layer bubble-7"></div>
-                                    <Zap className="h-5 w-5 text-black relative z-10 fill-black" />
-                                </button>
-                            </Link>
-                        </div>
+                        {userRole !== "employee" && (
+                            <div className="w-full flex items-center justify-center px-2 pb-10">
+                                <Link href="/pricing" title="Upgrade Now" className="block cursor-pointer">
+                                    <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-[rgba(0,221,221,0.2)]`}>
+                                        <div className="bubble-layer bubble-1"></div>
+                                        <div className="bubble-layer bubble-2"></div>
+                                        <div className="bubble-layer bubble-3"></div>
+                                        <div className="bubble-layer bubble-4"></div>
+                                        <div className="bubble-layer bubble-5"></div>
+                                        <div className="bubble-layer bubble-6"></div>
+                                        <div className="bubble-layer bubble-7"></div>
+                                        <Zap className="h-5 w-5 text-black relative z-10 fill-black" />
+                                    </button>
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 )}
 

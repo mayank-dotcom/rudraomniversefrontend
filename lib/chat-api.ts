@@ -1,6 +1,6 @@
 "use client"
 
-import { getApiKey, getAdminKey } from "@/lib/auth"
+import { getApiKey, getAdminKey, getUserInfo } from "@/lib/auth"
 
 const API_BASE = process.env.NEXT_PUBLIC_BASE_URL!
 
@@ -160,6 +160,83 @@ export async function verifyPayment(payload: {
   const data = await parseJson<VerifyPaymentResponse>(res)
   if (!res.ok || !data.success) {
     throw new Error(data.error || "Payment verification failed")
+  }
+  return data
+}
+
+// ─── Wallet & Referral ───
+
+export interface WalletTransaction {
+  id: number | string
+  type: string
+  amount: number
+  description: string
+  reference_id?: string
+  created_at: string
+}
+
+export interface WalletProfileResponse {
+  success: boolean
+  referral_code?: string
+  invited_friends: number
+  successful_referrals: number
+  wallet_balance: number
+  total_earned: number
+  total_redeemed: number
+  recent_transactions?: WalletTransaction[]
+  error?: string
+}
+
+export async function getWalletProfile() {
+  const res = await fetch(`${API_BASE}/user/wallet-profile`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<WalletProfileResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch wallet profile")
+  }
+  return data
+}
+
+export interface ReferralStatsResponse {
+  success: boolean
+  my_referral_code: string
+  total_referrals: number
+  paid_referrals: number
+  discount_percent: number
+  referrals_for_free_plan: number
+  error?: string
+}
+
+export async function getReferralStats() {
+  const res = await fetch(`${API_BASE}/referrals/stats`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<ReferralStatsResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch referral stats")
+  }
+  return data
+}
+
+export async function applyReferralCode(referralCode: string) {
+  const apiKey = getApiKey()
+  if (!apiKey) throw new Error("Not authenticated")
+  const userInfo = getUserInfo()
+  const res = await fetch(`${API_BASE}/auth/register/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      api_key: apiKey,
+      name: userInfo?.name || "User",
+      referral_code: referralCode,
+    }),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to apply referral code")
   }
   return data
 }
