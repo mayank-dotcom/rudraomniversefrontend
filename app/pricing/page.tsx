@@ -349,25 +349,12 @@ const PricingContent = () => {
                                         </div>
                                     </div>
 
-                                    {/* Multiplier & Features */}
+                                    {/* Features */}
                                     <div className="flex-1 space-y-5 mb-16">
                                         {(() => {
                                             const md = getMultiplierData(plan.plan_name || '');
                                             return md ? (
                                                 <>
-                                                    <div className="mb-6">
-                                                        <span className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px", letterSpacing: "0.1em" }}>
-                                                            Plan Tokens Multiplier
-                                                        </span>
-                                                        <div className="mt-2">
-                                                            <span className="font-display font-bold tracking-tight text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
-                                                                {md.multiplier}
-                                                            </span>
-                                                            <p className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/40"}`} style={{ fontSize: "11px" }}>
-                                                                {md.tokens} Tokens
-                                                            </p>
-                                                        </div>
-                                                    </div>
                                                     {md.features.map((f, idx) => (
                                                         <div key={idx} className="flex items-center gap-4">
                                                             <f.icon className={`h-4 w-4 shrink-0 ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
