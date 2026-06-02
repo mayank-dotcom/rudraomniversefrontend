@@ -13,12 +13,20 @@ export default function Footer() {
         github: "#"
     });
 
+    const [footerData, setFooterData] = useState({
+        description: "Rudranex is an advanced AI co-pilot designed for clinical practitioners and medical scholars. Experience high-precision diagnostic support, interactive clinical battle arenas, and state-of-the-art medical resources.",
+        email: "hello@rudranex.ai",
+        location: "Rudra Labs, AI Innovation Center, Hyderabad, India.",
+        techSupportPhone: "+91 97124 45459",
+        enterprisePhone: "+91 63593 02924"
+    });
+
     useEffect(() => {
         getPublicSiteSettings().then(res => {
-            const setting = res.settings?.find(s => s.key === "social_media_links");
-            if (setting?.value) {
+            const socialSetting = res.settings?.find(s => s.key === "social_media_links");
+            if (socialSetting?.value) {
                 try {
-                    const parsed = JSON.parse(setting.value);
+                    const parsed = JSON.parse(socialSetting.value);
                     setSocialLinks({
                         twitter: parsed.twitter || "#",
                         linkedin: parsed.linkedin || "#",
@@ -28,13 +36,29 @@ export default function Footer() {
                     console.error("Error parsing social links", e);
                 }
             }
+
+            const footerSetting = res.settings?.find(s => s.key === "footer_settings");
+            if (footerSetting?.value) {
+                try {
+                    const parsed = JSON.parse(footerSetting.value);
+                    setFooterData({
+                        description: parsed.description || "Rudranex is an advanced AI co-pilot designed for clinical practitioners and medical scholars. Experience high-precision diagnostic support, interactive clinical battle arenas, and state-of-the-art medical resources.",
+                        email: parsed.email || "hello@rudranex.ai",
+                        location: parsed.location || "Rudra Labs, AI Innovation Center, Hyderabad, India.",
+                        techSupportPhone: parsed.techSupportPhone || "+91 97124 45459",
+                        enterprisePhone: parsed.enterprisePhone || "+91 63593 02924"
+                    });
+                } catch (e) {
+                    console.error("Error parsing footer settings", e);
+                }
+            }
         }).catch(() => {});
     }, []);
 
     return (
-        <footer className={`py-20 border-t transition-colors duration-300 ${isDarkMode ? "bg-[#0a0a0a] border-white/5 text-white" : "bg-[#fdfdfd] border-black/5 text-black"}`}>
+        <footer className={`py-16 md:py-24 border-t transition-colors duration-300 ${isDarkMode ? "bg-[#0a0a0a] border-white/5 text-white" : "bg-[#fdfdfd] border-black/5 text-black"}`}>
             <div className="container mx-auto px-6 md:px-12 max-w-7xl">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 mb-20">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 mb-16 md:mb-24">
                     {/* Left Section - occupies 7 columns on desktop */}
                     <div className="lg:col-span-7 flex flex-col gap-12">
                         {/* Brand & Logo */}
@@ -58,12 +82,12 @@ export default function Footer() {
                             </p>
                             
                             <p className={`max-w-xl text-[13px] leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/60"}`}>
-                                Rudranex is an advanced AI co-pilot designed for clinical practitioners and medical scholars. Experience high-precision diagnostic support, interactive clinical battle arenas, and state-of-the-art medical resources.
+                                {footerData.description}
                             </p>
                         </div>
 
-                        {/* Link Grid - 3 columns */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
+                        {/* Link Grid - 3 columns on tablet/desktop, 2 columns on mobile */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-10">
                             {[
                                 { 
                                     heading: "Company", 
@@ -125,7 +149,7 @@ export default function Footer() {
                             ))}
                         </div>
 
-                        {/* Bottom of Left Section: Feedback + Social Links */}
+                        {/* Bottom of Left Section: Feedback + Social Links (Fully Responsive) */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8 pt-8 border-t border-dashed border-current/10">
                             <div className="flex flex-col gap-2 max-w-sm">
                                 <h4 className={`text-sm font-bold uppercase tracking-wider ${isDarkMode ? "text-white" : "text-black"}`}>
@@ -136,11 +160,11 @@ export default function Footer() {
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-6 shrink-0">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6 shrink-0 w-full sm:w-auto">
                                 {/* Feedback Button */}
                                 <a
                                     href="/support"
-                                    className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-300 ${
+                                    className={`flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-300 w-full sm:w-auto text-center ${
                                         isDarkMode 
                                             ? "bg-white text-black hover:bg-white/95" 
                                             : "bg-black text-white hover:bg-black/95"
@@ -150,7 +174,7 @@ export default function Footer() {
                                 </a>
 
                                 {/* Social Links */}
-                                <div className="flex items-center gap-3.5">
+                                <div className="flex items-center justify-center sm:justify-end gap-3.5 w-full sm:w-auto">
                                     {[
                                         { 
                                             label: "Twitter", 
@@ -187,8 +211,8 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    {/* Right Section - occupies 5 columns on desktop, with left border */}
-                    <div className={`lg:col-span-5 flex flex-col gap-8 lg:pl-12 lg:border-l ${isDarkMode ? "border-white/5" : "border-black/10"}`}>
+                    {/* Right Section - 5 columns on desktop, with top border on mobile and left border on desktop */}
+                    <div className={`lg:col-span-5 flex flex-col gap-8 pt-12 lg:pt-0 lg:pl-12 border-t lg:border-t-0 lg:border-l ${isDarkMode ? "border-white/5 animate-fade-in" : "border-black/10"}`}>
                         
                         {/* Connect with Us */}
                         <div className="flex flex-col gap-5">
@@ -199,7 +223,7 @@ export default function Footer() {
                             <div className="flex flex-col gap-4">
                                 {/* Mail Card */}
                                 <a
-                                    href="mailto:hello@rudranex.ai"
+                                    href={`mailto:${footerData.email}`}
                                     className={`flex items-start gap-4 p-4 rounded-xl border transition-all duration-300 hover:scale-[1.01] ${
                                         isDarkMode 
                                             ? "bg-white/[0.03] border-white/5 hover:bg-white/[0.05]" 
@@ -216,7 +240,7 @@ export default function Footer() {
                                             Mail Us
                                         </span>
                                         <span className={`text-[14px] font-semibold break-all ${isDarkMode ? "text-white" : "text-black"}`}>
-                                            hello@rudranex.ai
+                                            {footerData.email}
                                         </span>
                                     </div>
                                 </a>
@@ -239,7 +263,7 @@ export default function Footer() {
                                             Find Us Here
                                         </span>
                                         <span className={`text-[13px] font-medium leading-relaxed ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
-                                            Rudra Labs, AI Innovation Center, Hyderabad, India.
+                                            {footerData.location}
                                         </span>
                                     </div>
                                 </div>
@@ -256,8 +280,8 @@ export default function Footer() {
 
                             <div className="flex flex-col gap-3">
                                 {[
-                                    { name: "Technical Support", phone: "+91 97124 45459" },
-                                    { name: "Enterprise Queries", phone: "+91 63593 02924" }
+                                    { name: "Technical Support", phone: footerData.techSupportPhone },
+                                    { name: "Enterprise Queries", phone: footerData.enterprisePhone }
                                 ].map((support) => (
                                     <a
                                         key={support.name}
@@ -289,33 +313,29 @@ export default function Footer() {
                     </div>
                 </div>
 
-                {/* Footer Bottom Bar */}
-                <div className={`flex flex-col md:flex-row items-center justify-between border-t ${isDarkMode ? "border-white/5" : "border-black/10"} pt-6 pb-2 gap-4`}>
-                    <p className={`font-sans font-bold uppercase text-center md:text-left ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "11px", letterSpacing: "0.1em" }}>
+                {/* Footer Bottom Bar (Highly Optimized with clean wrap constraints) */}
+                <div className={`flex flex-col lg:flex-row items-center justify-between border-t ${isDarkMode ? "border-white/5" : "border-black/10"} pt-8 pb-2 gap-6`}>
+                    <p className={`font-sans font-bold uppercase text-center lg:text-left ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "11px", letterSpacing: "0.1em" }}>
                         © 2026 Rudranex AI Systems. All rights reserved.
                     </p>
-                    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+                    <div className="flex flex-wrap items-center justify-center lg:justify-end gap-x-6 gap-y-3">
                         {[
                             { label: "Terms of use", href: "/terms" },
                             { label: "Privacy Policies", href: "/privacy" },
                             { label: "Copyright & Disclaimer", href: "/terms" },
                             { label: "Refund Policy", href: "/refund-policy" },
                             { label: "Cookie Policy", href: "/privacy" }
-                        ].map((item, idx, arr) => (
-                            <div key={item.label} className="flex items-center">
-                                <a
-                                    href={item.href}
-                                    className={`font-sans font-bold uppercase transition-colors duration-200 hover:underline ${
-                                        isDarkMode ? "text-white/20 hover:text-white" : "text-black/30 hover:text-black"
-                                    }`}
-                                    style={{ fontSize: "11px", letterSpacing: "0.1em" }}
-                                >
-                                    {item.label}
-                                </a>
-                                {idx < arr.length - 1 && (
-                                    <span className={`mx-3 select-none ${isDarkMode ? "text-white/10" : "text-black/10"}`}>|</span>
-                                )}
-                            </div>
+                        ].map((item) => (
+                            <a
+                                key={item.label}
+                                href={item.href}
+                                className={`font-sans font-bold uppercase transition-colors duration-205 hover:underline ${
+                                    isDarkMode ? "text-white/25 hover:text-white" : "text-black/35 hover:text-black"
+                                }`}
+                                style={{ fontSize: "11px", letterSpacing: "0.1em" }}
+                            >
+                                {item.label}
+                            </a>
                         ))}
                     </div>
                 </div>

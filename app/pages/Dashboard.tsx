@@ -2389,6 +2389,77 @@ const Dashboard = () => {
                                                 </div>
                                             )}
 
+                                            {editingSiteSetting.key === 'footer_settings' && (
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Footer Description / Tagline Content</label>
+                                                        <textarea
+                                                            value={siteFormData?.description || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, description: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            rows={3}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Rudranex is an advanced AI co-pilot designed..."
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Contact Email (Mail Us)</label>
+                                                        <input
+                                                            value={siteFormData?.email || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, email: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="hello@rudranex.ai"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Office Location Address</label>
+                                                        <input
+                                                            value={siteFormData?.location || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, location: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Rudra Labs, AI Innovation Center..."
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Technical Support Phone Number</label>
+                                                        <input
+                                                            value={siteFormData?.techSupportPhone || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, techSupportPhone: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="+91 97124 45459"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Enterprise Queries Phone Number</label>
+                                                        <input
+                                                            value={siteFormData?.enterprisePhone || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, enterprisePhone: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="+91 63593 02924"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {editingSiteSetting.key === 'social_media_links' && (
                                                 <div className="space-y-4">
                                                     <div>
@@ -4318,6 +4389,7 @@ const Dashboard = () => {
                                     { key: 'refund_policy', label: 'Refund Policy', icon: Shield },
                                     { key: 'contact_info', label: 'Contact Us', icon: Mail },
                                     { key: 'social_media_links', label: 'Social Media Links', icon: Share2 },
+                                    { key: 'footer_settings', label: 'Footer Settings', icon: Settings },
                                     { key: 'schools_page', label: 'Schools Page', icon: GraduationCap },
                                     { key: 'b2b_page', label: 'B2B Page', icon: Briefcase },
                                     { key: 'home_page', label: 'Home Page Video', icon: Play },
@@ -4344,6 +4416,14 @@ const Dashboard = () => {
                                                         setSiteFormData({ paragraphs: [parsed.description], email: parsed.email || '', responseTime: parsed.responseTime || '' });
                                                     } else if (page.key === 'social_media_links') {
                                                         setSiteFormData({ twitter: parsed.twitter || '', linkedin: parsed.linkedin || '', github: parsed.github || '' });
+                                                    } else if (page.key === 'footer_settings') {
+                                                        setSiteFormData({
+                                                            description: parsed.description || 'Rudranex is an advanced AI co-pilot designed for clinical practitioners and medical scholars. Experience high-precision diagnostic support, interactive clinical battle arenas, and state-of-the-art medical resources.',
+                                                            email: parsed.email || 'hello@rudranex.ai',
+                                                            location: parsed.location || 'Rudra Labs, AI Innovation Center, Hyderabad, India.',
+                                                            techSupportPhone: parsed.techSupportPhone || '+91 97124 45459',
+                                                            enterprisePhone: parsed.enterprisePhone || '+91 63593 02924'
+                                                        });
                                                     } else if (page.key === 'home_page') {
                                                         setSiteFormData({ videoUrl: parsed.videoUrl || '' });
                                                     } else if (page.key === 'plugin_page') {
@@ -4373,6 +4453,16 @@ const Dashboard = () => {
                                                     } else if (page.key === 'social_media_links') {
                                                         setSiteFormData({ twitter: '', linkedin: '', github: '' });
                                                         setEditingSiteSetting({ key: page.key, value: JSON.stringify({ twitter: '', linkedin: '', github: '' }) });
+                                                    } else if (page.key === 'footer_settings') {
+                                                        const defaults = {
+                                                            description: 'Rudranex is an advanced AI co-pilot designed for clinical practitioners and medical scholars. Experience high-precision diagnostic support, interactive clinical battle arenas, and state-of-the-art medical resources.',
+                                                            email: 'hello@rudranex.ai',
+                                                            location: 'Rudra Labs, AI Innovation Center, Hyderabad, India.',
+                                                            techSupportPhone: '+91 97124 45459',
+                                                            enterprisePhone: '+91 63593 02924'
+                                                        };
+                                                        setSiteFormData(defaults);
+                                                        setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
                                                     } else if (page.key === 'schools_page') {
                                                         const defaults = {
                                                             title: "Empower your\nInstitution.",
