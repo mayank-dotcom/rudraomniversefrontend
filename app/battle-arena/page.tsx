@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState, useCallback } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { motion } from "framer-motion";
-import { Swords, Users, Clock, Trophy, ArrowLeft, Copy, Check, Play, Loader2, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, AlertTriangle, Eye, Moon, Sun } from "lucide-react";
+import { Swords, Users, Clock, Trophy, Copy, Check, Play, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, AlertTriangle, Eye, Moon, Sun } from "lucide-react";
 import { getApiKey } from "@/lib/auth";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart as ReLineChart, Line } from "recharts";
 import { ThemeProvider, useTheme } from "@/lib/theme-context";
@@ -57,6 +57,17 @@ function ArenaContent() {
     const audioCtxRef = useRef<AudioContext | null>(null);
     const audioBufferRef = useRef<AudioBuffer | null>(null);
 
+    // ── Server-sync timer refs (shared across closure boundaries) ──
+    const questionStartTimeRef = useRef<number>(0);
+    const questionDurationRef = useRef<number>(30);
+    const selectedAnswerRef = useRef<number | null>(null);
+    const currentQuestionIndexRef = useRef<number>(0);
+    const questionsRef = useRef<Question[]>([]);
+    const correctCountRef = useRef<number>(0);
+    const answersRef = useRef<number[]>([]);
+    const hasTimerEmittedRef = useRef<boolean>(false);
+    const lobbyCodeRef = useRef<string>(searchParams.get("code") || "");
+
     const { isDarkMode, toggleTheme } = useTheme();
 
     useEffect(() => {
@@ -107,6 +118,10 @@ function ArenaContent() {
         const socket = io(SOCKET_URL, {
             query: apiKey ? { auth_token: apiKey } : {},
             transports: ["websocket", "polling"],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
         });
 
         socketRef.current = socket;
@@ -131,14 +146,22 @@ function ArenaContent() {
 
         socket.on("arena_created", (arena) => {
             setLobbyCode(arena.code);
+            lobbyCodeRef.current = arena.code;
             setParticipants(arena.participants);
-            if (arena.timePerQuestion) setTimePerQuestion(arena.timePerQuestion);
+            if (arena.timePerQuestion) {
+                setTimePerQuestion(arena.timePerQuestion);
+                questionDurationRef.current = arena.timePerQuestion;
+            }
         });
 
         socket.on("arena_joined", (arena) => {
             setLobbyCode(arena.code);
+            lobbyCodeRef.current = arena.code;
             setParticipants(arena.participants);
-            if (arena.timePerQuestion) setTimePerQuestion(arena.timePerQuestion);
+            if (arena.timePerQuestion) {
+                setTimePerQuestion(arena.timePerQuestion);
+                questionDurationRef.current = arena.timePerQuestion;
+            }
         });
 
         socket.on("participant_joined", (data) => {
@@ -154,15 +177,46 @@ function ArenaContent() {
         });
 
         socket.on("arena_started", (data) => {
+            const tpq = data.timePerQuestion || 30;
+            // Init all refs
+            questionsRef.current = data.questions;
+            correctCountRef.current = 0;
+            currentQuestionIndexRef.current = 0;
+            selectedAnswerRef.current = null;
+            answersRef.current = new Array(data.questions.length).fill(-1);
+            hasTimerEmittedRef.current = false;
+            questionDurationRef.current = tpq;
+            questionStartTimeRef.current = 0; // will be set by question_timer_start
+            // Update state
             setQuestions(data.questions);
             setPhase("active");
             setCurrentQuestionIndex(0);
             setSelectedAnswer(null);
             setAnswers(new Array(data.questions.length).fill(-1));
-            const tpq = data.timePerQuestion || timePerQuestion;
             setTimePerQuestion(tpq);
             setTimeLeft(tpq);
+            setCorrectCount(0);
             setHasSubmitted(false);
+        });
+
+        // ── Server-authoritative per-question timer sync ──────────────────
+        socket.on("question_timer_start", (data: { questionIndex: number; serverTime: number; duration: number }) => {
+            const { questionIndex, serverTime, duration } = data;
+            // Sync server timestamp refs
+            questionStartTimeRef.current = serverTime;
+            questionDurationRef.current = duration;
+            hasTimerEmittedRef.current = false;
+            // Calculate time already elapsed since server fired
+            const elapsed = Math.floor((Date.now() - serverTime) / 1000);
+            const remaining = Math.max(0, duration - elapsed);
+            // Update UI state
+            setCurrentQuestionIndex(questionIndex);
+            currentQuestionIndexRef.current = questionIndex;
+            setSelectedAnswer(null);
+            selectedAnswerRef.current = null;
+            setHasSubmitted(false);
+            setTimeLeft(remaining);
+            setTimePerQuestion(duration);
         });
 
         socket.on("participant_progress", (updatedParticipants) => {
@@ -180,8 +234,19 @@ function ArenaContent() {
             socket.disconnect();
         });
 
-        socket.on("disconnect", () => {
-            setError("Connection lost. Reconnecting...");
+        socket.on("disconnect", (reason: string) => {
+            // Only show error for unexpected disconnects, not manual quit
+            if (reason !== "io client disconnect") {
+                setError("Connection lost. Reconnecting...");
+            }
+        });
+
+        socket.on("reconnect", () => {
+            setError(null);
+        });
+
+        socket.on("reconnect_failed", () => {
+            setError("Connection failed. Please refresh the page.");
         });
 
         return () => {
@@ -189,58 +254,55 @@ function ArenaContent() {
         };
     }, []);
 
+    // ── Display timer: re-calculate from server timestamp every 500ms ──
     useEffect(() => {
-        if (phase !== "active" || timeLeft <= 0) return;
-        const timer = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) return 0;
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(timer);
-    }, [phase, timeLeft, currentQuestionIndex, hasSubmitted]);
+        if (phase !== "active") return;
+        const interval = setInterval(() => {
+            if (questionStartTimeRef.current <= 0) return;
+            const elapsed = Math.floor((Date.now() - questionStartTimeRef.current) / 1000);
+            const remaining = Math.max(0, questionDurationRef.current - elapsed);
+            setTimeLeft(remaining);
 
-    useEffect(() => {
-        if (phase === "active" && timeLeft === 0 && !hasSubmitted && questions.length > 0) {
-            submitAnswer();
-        }
-    }, [timeLeft, phase, hasSubmitted, questions.length]);
+            // When timer hits 0: finalize this question's answer and emit score
+            if (remaining === 0 && !hasTimerEmittedRef.current) {
+                hasTimerEmittedRef.current = true;
+                const curIndex = currentQuestionIndexRef.current;
+                const curAnswer = selectedAnswerRef.current;
+
+                // Record answer
+                const newAnswers = [...answersRef.current];
+                newAnswers[curIndex] = curAnswer ?? -1;
+                answersRef.current = newAnswers;
+                setAnswers([...newAnswers]);
+
+                // Update correct count
+                if (curAnswer !== null && curAnswer === questionsRef.current[curIndex]?.correctOptionIndex) {
+                    correctCountRef.current += 1;
+                    setCorrectCount(correctCountRef.current);
+                }
+
+                // Emit running score to server so leaderboard is accurate
+                socketRef.current?.emit("update_score", {
+                    lobbyCode: lobbyCodeRef.current,
+                    score: correctCountRef.current,
+                });
+
+                // If this was the last question, show waiting state
+                if (curIndex >= questionsRef.current.length - 1) {
+                    setHasSubmitted(true);
+                }
+            }
+        }, 500);
+        return () => clearInterval(interval);
+    }, [phase]);
 
     const handleSelectAnswer = (optionIndex: number) => {
         if (selectedAnswer !== null) return;
         setSelectedAnswer(optionIndex);
+        selectedAnswerRef.current = optionIndex;
+        // Optimistically emit score if this is a correct answer
+        // (final authoritative emit happens when timer hits 0 via interval)
     };
-
-    const submitAnswer = useCallback(() => {
-        const socket = socketRef.current;
-        if (!socket) return;
-
-        const newAnswers = [...answers];
-        newAnswers[currentQuestionIndex] = selectedAnswer ?? -1;
-        setAnswers(newAnswers);
-
-        if (selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex) {
-            setCorrectCount((prev) => prev + 1);
-        }
-
-        if (currentQuestionIndex < questions.length - 1) {
-            setTimeout(() => {
-                setCurrentQuestionIndex((prev) => prev + 1);
-                setSelectedAnswer(null);
-                setTimeLeft(timePerQuestion);
-            }, 1000);
-        } else {
-            const finalScore = correctCount + (selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
-            setHasSubmitted(true);
-            setTimeout(() => {
-                socket.emit("submit_answer", {
-                    lobbyCode,
-                    score: finalScore,
-                    timeTaken: 0,
-                });
-            }, 1500);
-        }
-    }, [currentQuestionIndex, selectedAnswer, questions, answers, correctCount, lobbyCode, timePerQuestion]);
 
     const handleStart = () => {
         socketRef.current?.emit("start_arena", lobbyCode);

@@ -284,14 +284,14 @@ const Chat = () => {
     const [planFeatures, setPlanFeaturesState] = useState<string[]>([]);
 
     const engines = [
-        { name: "Student Mode", endpoint: "/chat", version: "1.0", icon: GraduationCap },
-        { name: "Assistant Mode", endpoint: "/chat", version: "1.0", icon: Bot },
+        { name: "Student Mode", endpoint: "/chat", icon: GraduationCap },
+        { name: "Assistant Mode", endpoint: "/chat", icon: Bot },
 
-        { name: "Interview Prep", endpoint: "/tools/interview", version: "1.0", icon: UserCog },
-        { name: "Mock Paper Generator", endpoint: "/chat", version: "1.0", icon: MockIcon },
-        { name: "Persona Mode", endpoint: "/chat", version: "1.0", icon: Sparkles },
-        { name: "AI Image Lab", endpoint: "/features/image/generate", version: "1.0", icon: ImageIcon },
-        { name: "Battle Arena", endpoint: "/battle-arena", version: "1.0", icon: Swords },
+        { name: "Interview Prep", endpoint: "/tools/interview", icon: UserCog },
+        { name: "Mock Paper Generator", endpoint: "/chat", icon: MockIcon },
+        { name: "Persona Mode", endpoint: "/chat", icon: Sparkles },
+        { name: "AI Image Lab", endpoint: "/features/image/generate", icon: ImageIcon },
+        { name: "Battle Arena", endpoint: "/battle-arena", icon: Swords },
     ];
 
     const employeeRestrictedEngines = ["Student Mode", "Interview Prep", "Mock Paper Generator", "Battle Arena"];
@@ -2799,7 +2799,6 @@ STRICT RULES:
                                                                         ) : (
                                                                             <XCircle className="h-3.5 w-3.5 text-red-400" />
                                                                         )}
-                                                                        <span className={`text-[10px] font-mono font-bold ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{engine.version}</span>
                                                                     </div>
                                                                 </button>
                                                             )
