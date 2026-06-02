@@ -5,8 +5,8 @@ import { motion } from "framer-motion";
 import Navbar from "@/components/ui/Navbar";
 import Footer from "@/components/ui/Footer";
 import { ThemeProvider } from "@/lib/theme-context";
-import { Check, Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, ArrowRight, Volume2, Mic, Sparkles } from "lucide-react";
-import { getPlansList, Plan, getPlanStrikeOff, getPublicSiteSettings, createPaymentOrder, verifyPayment } from "@/lib/chat-api";
+import { Check, Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, ArrowRight, Volume2, Mic, Sparkles, Wallet, X, Coins } from "lucide-react";
+import { getPlansList, Plan, getPlanStrikeOff, getPublicSiteSettings, createPaymentOrder, verifyPayment, getWalletProfile, buyPlanWithCoins } from "@/lib/chat-api";
 import { getApiKey } from "@/lib/auth";
 import { toast } from "sonner";
 import { useTheme } from "@/lib/theme-context";
@@ -21,20 +21,27 @@ const PricingContent = () => {
     const { isDarkMode } = useTheme();
     const [plans, setPlans] = useState<Plan[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
     const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
 
-    const handleSubscribe = useCallback(async (plan: Plan) => {
-        const apiKey = getApiKey();
-        if (!apiKey) {
-            toast.error("Please log in first to subscribe to a plan.");
-            return;
-        }
+    const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
+    const [useCoins, setUseCoins] = useState(false);
+    const [isProcessingCoinPayment, setIsProcessingCoinPayment] = useState(false);
 
+    useEffect(() => {
+        const apiKey = getApiKey();
+        if (apiKey) {
+            getWalletProfile()
+                .then(data => setWalletBalance(data.wallet_balance))
+                .catch(() => {});
+        }
+    }, []);
+
+    const handleRazorpayPayment = useCallback(async (plan: Plan) => {
         const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
         if (!razorpayKeyId) {
             toast.error("Payment gateway is not configured. Please contact support.");
-            setProcessingPlanId(null);
             return;
         }
 
@@ -68,6 +75,7 @@ const PricingContent = () => {
                         });
                         if (result.success) {
                             toast.success(`Plan upgraded to ${result.plan}!`);
+                            setCheckoutPlan(null);
                         }
                     } catch (err: any) {
                         toast.error(err.message || "Payment verification failed");
@@ -91,6 +99,32 @@ const PricingContent = () => {
         } finally {
             setProcessingPlanId(null);
         }
+    }, []);
+
+    const handleCoinPurchase = useCallback(async (plan: Plan) => {
+        setIsProcessingCoinPayment(true);
+        try {
+            const result = await buyPlanWithCoins(plan.id);
+            if (result.success) {
+                toast.success(`Plan upgraded to ${plan.plan_name || 'Unknown'} with coins!`);
+                setWalletBalance(prev => prev !== null ? prev - Number(plan.price_inr || plan.price) : prev);
+                setCheckoutPlan(null);
+            }
+        } catch (err: any) {
+            toast.error(err.message || "Failed to purchase with coins");
+        } finally {
+            setIsProcessingCoinPayment(false);
+        }
+    }, []);
+
+    const handleSelectPlan = useCallback((plan: Plan) => {
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            toast.error("Please log in first to subscribe to a plan.");
+            return;
+        }
+        setCheckoutPlan(plan);
+        setUseCoins(false);
     }, []);
 
     const [pageData, setPageData] = useState<{
@@ -305,7 +339,7 @@ const PricingContent = () => {
 
                                     {/* Button — 14px Semi-Bold */}
                                     <button
-                                        onClick={() => handleSubscribe(plan)}
+                                        onClick={() => handleSelectPlan(plan)}
                                         disabled={processingPlanId === String(plan.id) || plan.price_inr === 0}
                                         className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isPro ? (isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90") : (isDarkMode ? "border border-white/10 text-white hover:bg-white/5" : "border border-black/10 text-black hover:bg-black/5")}`}
                                         style={{ fontSize: "11px", letterSpacing: "0.2em" }}
@@ -327,6 +361,93 @@ const PricingContent = () => {
                     </div>
                 </div>
             </section>
+
+            {/* Checkout Modal */}
+            {checkoutPlan && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8">
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setCheckoutPlan(null)} />
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className={`relative w-full max-w-md ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/10"} border p-8`}
+                    >
+                        <button
+                            onClick={() => setCheckoutPlan(null)}
+                            className={`absolute top-4 right-4 ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"}`}
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+
+                        <span className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/30" : "text-black/30"} block mb-1`}>
+                            Checkout
+                        </span>
+                        <h3 className="font-display font-bold text-xl uppercase mb-2">
+                            {checkoutPlan.plan_name}
+                        </h3>
+                        <div className="flex items-baseline gap-2 mb-6">
+                            <span className="font-display font-bold tracking-tight" style={{ fontSize: "32px" }}>
+                                ₹{Number(checkoutPlan.price_inr || checkoutPlan.price).toLocaleString()}
+                            </span>
+                            <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                /mo
+                            </span>
+                        </div>
+
+                        {walletBalance !== null && walletBalance > 0 && (
+                            <div className={`p-4 mb-6 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Coins className={`h-4 w-4 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
+                                    <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                        Wallet Balance
+                                    </span>
+                                </div>
+                                <p className="font-display font-bold text-lg">{walletBalance} coins</p>
+                                <p className={`text-[10px] mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                    1 coin = ₹1 discount
+                                </p>
+                                {walletBalance >= Number(checkoutPlan.price_inr || checkoutPlan.price) && (
+                                    <button
+                                        onClick={() => setUseCoins(!useCoins)}
+                                        className={`mt-3 flex items-center gap-2 px-4 py-2 text-[9px] font-mono font-bold uppercase tracking-[0.2em] transition-all active:scale-95 ${useCoins
+                                            ? (isDarkMode ? "bg-white text-black" : "bg-black text-white")
+                                            : (isDarkMode ? "border border-white/20 text-white/60" : "border border-black/20 text-black/60")}`}
+                                    >
+                                        <Check className={`h-3 w-3 ${useCoins ? "opacity-100" : "opacity-0"}`} />
+                                        {useCoins ? "Coins Applied" : "Use Wallet Coins"}
+                                    </button>
+                                )}
+                                {walletBalance < Number(checkoutPlan.price_inr || checkoutPlan.price) && (
+                                    <p className={`text-[10px] mt-2 ${isDarkMode ? "text-amber-400/70" : "text-amber-600/70"}`}>
+                                        You need {Number(checkoutPlan.price_inr || checkoutPlan.price) - walletBalance} more coins to buy with coins.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {walletBalance !== null && walletBalance >= Number(checkoutPlan.price_inr || checkoutPlan.price) && useCoins && (
+                            <button
+                                onClick={() => handleCoinPurchase(checkoutPlan)}
+                                disabled={isProcessingCoinPayment}
+                                className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed mb-3 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
+                                style={{ fontSize: "11px", letterSpacing: "0.2em" }}
+                            >
+                                {isProcessingCoinPayment ? "Processing..." : `Buy with Coins (₹0)`}
+                            </button>
+                        )}
+
+                        {(!useCoins || walletBalance === null || walletBalance < Number(checkoutPlan.price_inr || checkoutPlan.price)) && (
+                            <button
+                                onClick={() => { setCheckoutPlan(null); handleRazorpayPayment(checkoutPlan) }}
+                                disabled={processingPlanId === String(checkoutPlan.id)}
+                                className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
+                                style={{ fontSize: "11px", letterSpacing: "0.2em" }}
+                            >
+                                {processingPlanId === String(checkoutPlan.id) ? "Processing..." : `Pay ₹${Number(checkoutPlan.price_inr || checkoutPlan.price).toLocaleString()} via Razorpay`}
+                            </button>
+                        )}
+                    </motion.div>
+                </div>
+            )}
 
             <Footer />
         </div>

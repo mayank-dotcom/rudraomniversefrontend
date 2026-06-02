@@ -241,6 +241,28 @@ export async function applyReferralCode(referralCode: string) {
   return data
 }
 
+export interface BuyPlanResponse {
+  success: boolean
+  message: string
+  payable_amount: number
+  discount_applied: number
+  tokens_remaining: number
+  error?: string
+}
+
+export async function buyPlanWithCoins(plan_id: string | number) {
+  const res = await fetch(`${API_BASE}/plans/buy`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ plan_id, use_credits: true }),
+  })
+  const data = await parseJson<BuyPlanResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to purchase plan")
+  }
+  return data
+}
+
 export async function updateTokens(userId: string, newLimit: number) {
   // Backend doesn't have a direct token update endpoint
   // We'll need to add this to admin routes
