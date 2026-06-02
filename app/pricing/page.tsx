@@ -407,34 +407,20 @@ const PricingContent = () => {
                                     </span>
                                 </div>
 
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max={maxCoins}
-                                        value={useCoins ? coinsToUse : 0}
-                                        onChange={(e) => setUseCoins(parseInt(e.target.value) > 0)}
-                                        className="flex-1 h-1 accent-[#00DDDD]"
-                                    />
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max={maxCoins}
-                                        value={useCoins ? coinsToUse : 0}
-                                        onChange={(e) => {
-                                            const val = parseInt(e.target.value) || 0;
-                                            setUseCoins(val > 0);
-                                        }}
-                                        className={`w-16 px-2 py-1 text-center text-[11px] font-mono border ${isDarkMode ? "bg-transparent border-white/20 text-white" : "bg-transparent border-black/20 text-black"} focus:outline-none focus:border-[#00DDDD]`}
-                                    />
-                                </div>
+                                <button
+                                    onClick={() => setUseCoins(!useCoins)}
+                                    className={`w-full flex items-center justify-between px-4 py-3 text-[11px] font-mono uppercase tracking-[0.15em] transition-all active:scale-[0.98] border ${useCoins ? (isDarkMode ? "border-[#00DDDD]/50 bg-[#00DDDD]/5 text-[#00DDDD]" : "border-[#00DDDD]/70 bg-[#00DDDD]/5 text-[#00DDDD]") : (isDarkMode ? "border-white/10 text-white/50 hover:border-white/20" : "border-black/10 text-black/50 hover:border-black/20")}`}
+                                >
+                                    <span>{useCoins ? "Using coins" : "Use your coins"}</span>
+                                    <span>{useCoins ? `-₹${savings}` : `${walletBalance} available`}</span>
+                                </button>
 
                                 {useCoins && savings > 0 && (
                                     <p className={`text-[10px] mt-2 ${isDarkMode ? "text-green-400/80" : "text-green-600/80"}`}>
-                                        Saving ₹{savings} with {savings} coin{savings > 1 ? 's' : ''}
+                                        Saving ₹{savings} — {discountedPrice > 0 ? `Pay ₹${discountedPrice}` : "Free"}
                                     </p>
                                 )}
-                                {walletBalance >= planPrice && (
+                                {walletBalance >= planPrice && !useCoins && (
                                     <p className={`text-[9px] font-mono mt-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
                                         Tip: You can also buy directly with coins from the Wallet section.
                                     </p>
