@@ -127,28 +127,13 @@ export default function Footer() {
                     </div>
                 </div>
 
-                <div className={`flex flex-col md:flex-row justify-between items-center gap-6 border-t ${isDarkMode ? "border-white/5" : "border-black/5"} pt-10`}>
+                <div className={`flex justify-center items-center border-t ${isDarkMode ? "border-white/5" : "border-black/5"} pt-6`}>
                     <p
-                        className={`font-sans font-bold uppercase ${isDarkMode ? "text-white/20" : "text-black/20"}`}
+                        className={`font-sans font-bold uppercase text-center ${isDarkMode ? "text-white/20" : "text-black/20"}`}
                         style={{ fontSize: "11px", letterSpacing: "0.1em" }}
                     >
                         © 2026 Rudranex AI Systems. All rights reserved.
                     </p>
-                    <div className="flex items-center gap-4">
-                        <span
-                            className={`font-sans font-bold uppercase ${isDarkMode ? "text-white/30" : "text-black/30"}`}
-                            style={{ fontSize: "11px", letterSpacing: "0.1em" }}
-                        >
-                            Manual Interface
-                        </span>
-                        <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)] shadow-[0_0_8px_var(--color-cyan)]" />
-                        <span
-                            className="font-sans font-bold uppercase text-[var(--color-cyan)]"
-                            style={{ fontSize: "11px", letterSpacing: "0.1em" }}
-                        >
-                            System Online
-                        </span>
-                    </div>
                 </div>
             </div>
         </footer>
