@@ -122,7 +122,7 @@ export default function OnboardingWalkthrough({
     }
   }, [currentStep, isOpen, isMobile, setIsSidebarCollapsed, setIsRightSidebarCollapsed]);
 
-  // Track target element bounding rect in real-time (runs update on every animation frame)
+  // Track target element bounding rect in real-time
   useEffect(() => {
     const stepConfig = steps[currentStep];
     const selector = stepConfig?.targetSelector;
@@ -162,25 +162,26 @@ export default function OnboardingWalkthrough({
     };
   }, [currentStep, steps]);
 
-  // Calculate coordinates for floating tooltip card based on highlighted element and placement
+  // Calculate coordinates for floating tooltip based on highlighted element and placement
   useEffect(() => {
     const stepConfig = steps[currentStep];
     if (!stepConfig) return;
 
+    const cardWidth = 340; // width of card text area + optional horizontal arrow
+    const cardHeight = 200; // estimated height of card text area + vertical arrow
+
     if (!rect || stepConfig.placement === "center") {
-      // Center placement (e.g. step 0 and step 6)
+      // Center placement
       setCoords({
-        x: window.innerWidth / 2 - 160, // card is 320px wide
-        y: window.innerHeight / 2 - 120, // estimated card half-height
+        x: window.innerWidth / 2 - cardWidth / 2,
+        y: window.innerHeight / 2 - cardHeight / 2,
         placement: "center",
       });
       return;
     }
 
     const placement = stepConfig.placement;
-    const gap = 16;
-    const cardWidth = 320;
-    const cardHeight = 220; // approximate estimation
+    const gap = 20;
     let x = 0;
     let y = 0;
 
@@ -198,8 +199,8 @@ export default function OnboardingWalkthrough({
       y = rect.top + rect.height / 2 - cardHeight / 2;
     }
 
-    // Keep tooltip within screen boundaries with some padding
-    const padding = 12;
+    // Keep tooltip within screen boundaries
+    const padding = 16;
     if (x < padding) x = padding;
     if (x + cardWidth > window.innerWidth - padding) {
       x = window.innerWidth - cardWidth - padding;
@@ -244,39 +245,18 @@ export default function OnboardingWalkthrough({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[100] overflow-hidden pointer-events-none select-none">
-          {/* Backdrop with cutout mask */}
+          {/* Backdrop with cutout mask (fully transparent to remove highlight box) */}
           <svg className="absolute inset-0 w-full h-full pointer-events-auto">
-            <defs>
-              <mask id="walkthrough-mask">
-                {/* Screen mask coverage */}
-                <rect x="0" y="0" width="100%" height="100%" fill="white" />
-                {/* Cutout hole */}
-                {rect && (
-                  <motion.rect
-                    animate={{
-                      x: rect.left - 8,
-                      y: rect.top - 8,
-                      width: rect.width + 16,
-                      height: rect.height + 16,
-                    }}
-                    transition={{ type: "spring", stiffness: 140, damping: 20 }}
-                    rx="12"
-                    fill="black"
-                  />
-                )}
-              </mask>
-            </defs>
             <rect
               x="0"
               y="0"
               width="100%"
               height="100%"
-              fill="rgba(0, 0, 0, 0.75)"
-              mask="url(#walkthrough-mask)"
+              fill="rgba(0, 0, 0, 0)"
             />
           </svg>
 
-          {/* Floating Tooltip Card */}
+          {/* Floating borderless content & bouncing neon pointers */}
           {coords && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -287,72 +267,137 @@ export default function OnboardingWalkthrough({
                 position: "fixed",
                 top: 0,
                 left: 0,
-                width: "320px",
+                width: "340px",
               }}
-              className="pointer-events-auto bg-[#0a0a0af0] border-2 border-[#00DDDD]/30 text-white rounded-2xl p-5 shadow-[0_10px_50px_rgba(0,221,221,0.15)] backdrop-blur-md flex flex-col font-sans"
+              className="pointer-events-auto text-white flex flex-col font-sans select-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]"
             >
-              {/* Progress Bar (at top of card) */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-white/5 overflow-hidden rounded-t-2xl">
-                <motion.div
-                  animate={{ width: `${progressPercentage}%` }}
-                  className="h-full bg-[#00DDDD]"
-                  transition={{ duration: 0.3 }}
-                />
-              </div>
-
-              {/* Header Info */}
-              <div className="flex items-center justify-between mb-4 mt-1">
-                <span className="text-[8px] font-mono tracking-[0.25em] text-[#00DDDD] uppercase">
-                  RUDRANEX TOUR // STEP {String(currentStep + 1).padStart(2, "0")}
-                </span>
-                <button
-                  onClick={handleClose}
-                  className="p-1 hover:bg-white/5 hover:text-[#00DDDD] transition-all rounded"
-                  title="Skip Tour"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              {/* Title & Description */}
-              <div className="flex-1 mb-6">
-                <h3 className="text-sm font-bold tracking-tight mb-2 flex items-center gap-2">
-                  {currentStep === 0 && <Sparkles className="h-4 w-4 text-[#00DDDD] animate-pulse" />}
-                  {currentStep === steps.length - 1 && <CheckCircle className="h-4 w-4 text-[#00DDDD]" />}
-                  {steps[currentStep].title}
-                </h3>
-                <p className="text-xs text-white/70 leading-relaxed font-sans font-light">
-                  {steps[currentStep].description}
-                </p>
-              </div>
-
-              {/* Navigation Controls */}
-              <div className="flex items-center justify-between pt-3 border-t border-white/10">
-                <button
-                  onClick={handleClose}
-                  className="text-[10px] font-mono uppercase tracking-widest text-white/40 hover:text-white transition-colors"
-                >
-                  Skip
-                </button>
-
-                <div className="flex items-center gap-2">
-                  {currentStep > 0 && (
-                    <button
-                      onClick={handleBack}
-                      className="px-3 py-1.5 border border-white/10 hover:border-white/20 text-white rounded-lg flex items-center justify-center gap-1.5 transition-all text-xs font-mono uppercase tracking-wider"
-                    >
-                      <ArrowLeft className="h-3 w-3" /> Back
-                    </button>
-                  )}
-                  <button
-                    onClick={handleNext}
-                    className="px-4 py-2 bg-white text-black hover:bg-[#00DDDD] hover:shadow-[0_0_15px_rgba(0,221,221,0.4)] hover:scale-105 active:scale-95 text-xs font-bold font-mono uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 transition-all"
+              {/* Pointer Arrow: TOP (pointing UP to target) */}
+              {coords.placement === "bottom" && (
+                <div className="w-full flex justify-center mb-3">
+                  <motion.div
+                    animate={{ y: [-4, 2, -4] }}
+                    transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+                    className="text-[#00DDDD] drop-shadow-[0_0_8px_rgba(0,221,221,0.8)]"
                   >
-                    {currentStep === steps.length - 1 ? "Finish" : "Next"}{" "}
-                    <ArrowRight className="h-3 w-3" />
-                  </button>
+                    <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 4l-8 8h6v8h4v-8h6z" />
+                    </svg>
+                  </motion.div>
                 </div>
+              )}
+
+              <div className="flex gap-4 items-start">
+                {/* Pointer Arrow: LEFT (pointing LEFT to target) */}
+                {coords.placement === "right" && (
+                  <div className="flex items-center h-full pt-1">
+                    <motion.div
+                      animate={{ x: [-4, 2, -4] }}
+                      transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+                      className="text-[#00DDDD] shrink-0 drop-shadow-[0_0_8px_rgba(0,221,221,0.8)]"
+                    >
+                      <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                        <path d="M4 12l8-8v6h8v4h-8v6z" />
+                      </svg>
+                    </motion.div>
+                  </div>
+                )}
+
+                {/* Minimal Content Wrapper (transparent and borderless) */}
+                <div className="flex-1 bg-transparent p-5 border-none shadow-none">
+                  {/* Progress Line */}
+                  <div className="w-full h-0.5 bg-white/10 mb-4 rounded-full overflow-hidden">
+                    <motion.div
+                      animate={{ width: `${progressPercentage}%` }}
+                      className="h-full bg-[#00DDDD]"
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+
+                  {/* Header Info */}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[8px] font-mono tracking-[0.25em] text-[#00DDDD] uppercase">
+                      RUDRANEX TOUR // STEP {String(currentStep + 1).padStart(2, "0")}
+                    </span>
+                    <button
+                      onClick={handleClose}
+                      className="p-1 hover:bg-white/5 hover:text-[#00DDDD] transition-all rounded"
+                      title="Skip Tour"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Title & Description */}
+                  <div className="mb-5">
+                    <h3 className="text-sm font-bold tracking-tight mb-2 flex items-center gap-2 text-white">
+                      {currentStep === 0 && <Sparkles className="h-4 w-4 text-[#00DDDD] animate-pulse" />}
+                      {currentStep === steps.length - 1 && <CheckCircle className="h-4 w-4 text-[#00DDDD]" />}
+                      {steps[currentStep].title}
+                    </h3>
+                    <p className="text-xs text-white/95 leading-relaxed font-sans font-light">
+                      {steps[currentStep].description}
+                    </p>
+                  </div>
+
+                  {/* Navigation Controls */}
+                  <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                    <button
+                      onClick={handleClose}
+                      className="text-[10px] font-mono uppercase tracking-widest text-white/40 hover:text-white transition-colors"
+                    >
+                      Skip
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      {currentStep > 0 && (
+                        <button
+                          onClick={handleBack}
+                          className="px-3 py-1.5 border border-white/10 hover:border-white/20 text-white rounded-lg flex items-center justify-center gap-1.5 transition-all text-xs font-mono uppercase tracking-wider bg-black/40 backdrop-blur-xs"
+                        >
+                          <ArrowLeft className="h-3 w-3" /> Back
+                        </button>
+                      )}
+                      <button
+                        onClick={handleNext}
+                        className="px-4 py-2 bg-[#00DDDD] text-black hover:bg-[#00c5c5] hover:shadow-[0_0_15px_rgba(0,221,221,0.5)] hover:scale-105 active:scale-95 text-xs font-bold font-mono uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        {currentStep === steps.length - 1 ? "Finish" : "Next"}{" "}
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pointer Arrow: RIGHT (pointing RIGHT to target) */}
+                {coords.placement === "left" && (
+                  <div className="flex items-center h-full pt-1">
+                    <motion.div
+                      animate={{ x: [2, -4, 2] }}
+                      transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+                      className="text-[#00DDDD] shrink-0 drop-shadow-[0_0_8px_rgba(0,221,221,0.8)]"
+                    >
+                      <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                        <path d="M20 12l-8-8v6H4v4h8v6z" />
+                      </svg>
+                    </motion.div>
+                  </div>
+                )}
               </div>
+
+              {/* Pointer Arrow: BOTTOM (pointing DOWN to target) */}
+              {coords.placement === "top" && (
+                <div className="w-full flex justify-center mt-3">
+                  <motion.div
+                    animate={{ y: [2, -4, 2] }}
+                    transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+                    className="text-[#00DDDD] drop-shadow-[0_0_8px_rgba(0,221,221,0.8)]"
+                  >
+                    <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 20l-8-8h6V4h4v8h6z" />
+                    </svg>
+                  </motion.div>
+                </div>
+              )}
             </motion.div>
           )}
         </div>
