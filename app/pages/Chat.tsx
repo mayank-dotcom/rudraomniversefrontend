@@ -2273,11 +2273,19 @@ STRICT RULES:
                                                             {msg.content}
                                                         </p>
                                                     ) : isImageContent(msg.content) ? (
-                                                        <div className="relative group/img-wrapper max-w-[400px]">
+                                                        <div className={`relative group/img-wrapper ${
+                                                            selectedEngine === "AI Image Lab"
+                                                                ? "max-w-[450px]"
+                                                                : "max-w-[280px] md:max-w-[320px]"
+                                                        }`}>
                                                             <img
                                                                 src={msg.content}
                                                                 alt="Generated image"
-                                                                className="w-full max-h-[300px] object-contain rounded-2xl border border-white/10 shadow-2xl transition-transform duration-300 group-hover/img-wrapper:scale-[1.01]"
+                                                                className={`w-full object-contain rounded-2xl border border-white/10 shadow-2xl transition-transform duration-300 group-hover/img-wrapper:scale-[1.01] ${
+                                                                    selectedEngine === "AI Image Lab"
+                                                                        ? "max-h-[350px]"
+                                                                        : "max-h-[200px] md:max-h-[240px]"
+                                                                }`}
                                                             />
                                                             <button
                                                                 onClick={() => handleDownloadImage(msg.content)}
@@ -2289,7 +2297,12 @@ STRICT RULES:
                                                             </button>
                                                         </div>
                                                     ) : (
-                                                        <MarkdownRenderer content={msg.content} isDarkMode={isDarkMode} onDownloadImage={handleDownloadImage} />
+                                                        <MarkdownRenderer 
+                                                            content={msg.content} 
+                                                            isDarkMode={isDarkMode} 
+                                                            onDownloadImage={handleDownloadImage}
+                                                            isImageCompact={selectedEngine !== "AI Image Lab"}
+                                                        />
                                                     )}
 
                                                     {msg.role === "assistant" && responseTime !== null && i === messages.length - 1 && (

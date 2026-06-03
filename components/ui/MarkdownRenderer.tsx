@@ -13,6 +13,7 @@ interface MarkdownRendererProps {
     content: string;
     isDarkMode: boolean;
     onDownloadImage?: (url: string, filename?: string) => void;
+    isImageCompact?: boolean;
 }
 
 function CodeBlock({ code, language, isDarkMode }: { code: string; language: string; isDarkMode: boolean }) {
@@ -125,7 +126,7 @@ function MermaidImage({ code, onDownloadImage }: { code: string; onDownloadImage
     );
 }
 
-export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage }: MarkdownRendererProps) {
+export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage, isImageCompact }: MarkdownRendererProps) {
     const processedContent = React.useMemo(() => {
         let processed = content;
         processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$');
@@ -200,9 +201,19 @@ export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage 
                         if (!src || typeof src !== "string") return null;
                         if (src === "image_url" || src === "placeholder" || src === "") return null;
                         return (
-                            <span className="block my-4 relative group/img-wrapper">
+                            <span className={`block my-4 relative group/img-wrapper ${
+                                isImageCompact ? "max-w-[280px] md:max-w-[320px]" : "max-w-full"
+                            }`}>
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={src} alt={alt || ""} className="max-w-full h-auto rounded-lg" />
+                                <img
+                                    src={src}
+                                    alt={alt || ""}
+                                    className={`rounded-lg object-contain border border-white/10 shadow-lg ${
+                                        isImageCompact
+                                            ? "w-full max-h-[200px] md:max-h-[240px]"
+                                            : "max-w-full h-auto"
+                                    }`}
+                                />
                                 {onDownloadImage && (
                                     <button
                                         onClick={() => onDownloadImage(src)}
