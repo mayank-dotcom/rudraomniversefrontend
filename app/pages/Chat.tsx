@@ -1827,6 +1827,24 @@ STRICT RULES:
                                     </div>
                                 </button>
                                 </div>
+                                <button
+                                    onClick={() => {
+                                        removeApiKey();
+                                        removeUserInfo();
+                                        removeUserRole();
+                                        removeSchoolName();
+                                        removeEnterpriseName();
+                                        setStoredActiveChatId(null);
+                                        setAuthed(false);
+                                        setUserName("");
+                                        setUserEmail("");
+                                        window.location.href = "/";
+                                    }}
+                                    title="Logout"
+                                    className={`w-full flex items-center justify-center gap-3 p-3 border-2 ${isDarkMode ? "border-white bg-white/5 text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-white" : "border-black bg-white text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-black"}`}
+                                >
+                                    <LogOut className={`h-3 w-3 ${isDarkMode ? "text-white" : "text-black"}`} /> {sidebarWidth > 120 && "Logout session"}
+                                </button>
                             </div>
                         )}
                     </div>
