@@ -250,15 +250,15 @@ export default function SchoolFacultyAdminPage() {
       {/* Top Navigation */}
       <nav className={`h-20 flex items-center justify-between px-10 border-b ${isDarkMode ? "border-white/5 bg-black/80" : "border-black/5 bg-white/80"} backdrop-blur-2xl sticky top-0 z-[100]`}>
         <div className="flex items-center gap-12">
-          <Link href="/" className="flex items-center gap-4 group">
-            <div className={`h-6 w-6 ${isDarkMode ? "bg-white" : "bg-black"} flex items-center justify-center transition-transform group-hover:rotate-45`}>
+          <div className="flex items-center gap-4">
+            <div className={`h-6 w-6 ${isDarkMode ? "bg-white" : "bg-black"} flex items-center justify-center`}>
               <div className={`h-1.5 w-1.5 ${isDarkMode ? "bg-black" : "bg-white"}`} />
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="font-display font-black tracking-tighter text-xl">RUDRANEX</span>
-              <span className="font-serif italic opacity-40 text-xl tracking-tighter">faculty</span>
+              <span className="font-display font-black tracking-tighter text-xl">{stats.school_name || "RUDRANEX"}</span>
+              <span className="font-serif italic opacity-40 text-xl tracking-tighter">{stats.school_code ? `${stats.school_code}` : "faculty"}</span>
             </div>
-          </Link>
+          </div>
 
           <div className={`flex items-center gap-1 p-1 rounded-2xl border ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}>
             <button

@@ -848,10 +848,17 @@ export interface SchoolStatsResponse {
   school_code?: string
   total_students?: string | number
   total_faculty?: string | number
+  total_nodes?: number
+  global_engagement?: string
   faculty_stats?: FacultyStats
+  enrollment_trends?: any[]
+  token_economy?: { monthly_burn: string; burn_rate: string; efficiency: string }
+  resource_allocation?: { compute: number; storage: number; network: number }
+  student_limit?: number
+  total_quota_assigned?: number
   node_distribution?: Array<{ assigned_class: string; activity_count: number }>
   engagement_distribution?: Array<{ action: string; count: number }>
-  leaderboard?: Array<{ name: string; daily_chats: number }>
+  footer?: { token_index: string; active_sessions: number; uptime: string }
   error?: string
 }
 

@@ -27,7 +27,19 @@ export default function SchoolAdminPage() {
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [faculty, setFaculty] = useState<SchoolFacultyMember[]>([])
   const [students, setStudents] = useState<SchoolStudent[]>([])
-  const [stats, setStats] = useState<{ total_students: number; total_faculty: number; leaderboard: Array<{ name: string; daily_chats: number }> }>({
+  const [stats, setStats] = useState<{
+    total_students: number
+    total_faculty: number
+    school_name?: string
+    school_code?: string
+    total_nodes?: number
+    global_engagement?: string
+    token_economy?: { monthly_burn: string; burn_rate: string; efficiency: string }
+    resource_allocation?: { compute: number; storage: number; network: number }
+    student_limit?: number
+    total_quota_assigned?: number
+    leaderboard: Array<{ name: string; daily_chats: number }>
+  }>({
     total_students: 0,
     total_faculty: 0,
     leaderboard: [],
@@ -68,10 +80,24 @@ export default function SchoolAdminPage() {
         getFrozenUsers().catch(() => ({ success: true, frozen_users: [] as { user_id: string }[] })),
       ])
 
+      const studentList = studentsRes.students || []
+      const leaderboard = [...studentList]
+        .sort((a, b) => (Number(b.total_score || 0)) - (Number(a.total_score || 0)))
+        .slice(0, 10)
+        .map((s) => ({ name: s.name, daily_chats: Number(s.total_score || 0) }))
+
       setStats({
         total_students: Number(statsRes.total_students || 0),
         total_faculty: Number(statsRes.total_faculty || 0),
-        leaderboard: statsRes.leaderboard || [],
+        school_name: statsRes.school_name,
+        school_code: statsRes.school_code,
+        total_nodes: statsRes.total_nodes,
+        global_engagement: statsRes.global_engagement,
+        token_economy: statsRes.token_economy,
+        resource_allocation: statsRes.resource_allocation,
+        student_limit: statsRes.student_limit,
+        total_quota_assigned: statsRes.total_quota_assigned,
+        leaderboard,
       })
       setFaculty(facultyRes.faculty || [])
       setStudents(studentsRes.students || [])
@@ -270,15 +296,15 @@ export default function SchoolAdminPage() {
       {/* Top Navigation */}
       <nav className={`h-20 flex items-center justify-between px-10 border-b ${isDarkMode ? "border-white/30 bg-black/80" : "border-black/5 bg-white/80"} backdrop-blur-2xl sticky top-0 z-[100]`}>
         <div className="flex items-center gap-12">
-          <Link href="/" className="flex items-center gap-4 group">
-            <div className={`h-6 w-6 ${isDarkMode ? "bg-white" : "bg-black"} flex items-center justify-center transition-transform group-hover:rotate-45`}>
+          <div className="flex items-center gap-4">
+            <div className={`h-6 w-6 ${isDarkMode ? "bg-white" : "bg-black"} flex items-center justify-center`}>
               <div className={`h-1.5 w-1.5 ${isDarkMode ? "bg-black" : "bg-white"}`} />
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="font-display font-black tracking-tighter text-xl">RUDRANEX</span>
-              <span className="font-serif italic opacity-40 text-xl tracking-tighter">school</span>
+              <span className="font-display font-black tracking-tighter text-xl">{stats.school_name || "RUDRANEX"}</span>
+              <span className="font-serif italic opacity-40 text-xl tracking-tighter">{stats.school_code ? `${stats.school_code}` : "school"}</span>
             </div>
-          </Link>
+          </div>
 
           <div className={`flex items-center gap-1 p-1 rounded-2xl border ${isDarkMode ? "border-white/30 bg-white/5" : "border-black/10 bg-black/5"}`}>
             <button
