@@ -208,7 +208,7 @@ const Chat = () => {
     const [messages, setMessages] = useState<Message[]>(getWelcomeMessages);
     const [input, setInput] = useState("");
     const [sidebarWidth, setSidebarWidth] = useState(260);
-    const [rightSidebarWidth, setRightSidebarWidth] = useState(260);
+    const [rightSidebarWidth, setRightSidebarWidth] = useState(340);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
     const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(true);
     const [isResizingLeft, setIsResizingLeft] = useState(false);
