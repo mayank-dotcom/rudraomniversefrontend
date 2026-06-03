@@ -1826,40 +1826,7 @@ STRICT RULES:
                                         {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
                                     </div>
                                 </button>
-                                <button
-                                    onClick={() => {
-                                        removeApiKey();
-                                        removeUserInfo();
-                                        removeUserRole();
-                                        removeSchoolName();
-                                        removeEnterpriseName();
-                                        setStoredActiveChatId(null);
-                                        setAuthed(false);
-                                        setUserName("");
-                                        setUserEmail("");
-                                        window.location.href = "/";
-                                    }}
-                                    title="Logout"
-                                    className={`w-full flex items-center justify-center gap-3 p-3 border-2 ${isDarkMode ? "border-white bg-white/5 text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-white" : "border-black bg-white text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-black"}`}
-                                >
-                                    <LogOut className={`h-3 w-3 ${isDarkMode ? "text-white" : "text-black"}`} /> {sidebarWidth > 120 && "Logout session"}
-                                </button>
                                 </div>
-                                <button
-                                    onClick={() => {
-                                        removeApiKey();
-                                        removeUserInfo();
-                                        setStoredActiveChatId(null);
-                                        setAuthed(false);
-                                        setUserName("");
-                                        setUserEmail("");
-                                        window.location.href = "/";
-                                    }}
-                                    title="Logout"
-                                    className={`w-full flex items-center justify-center gap-3 p-3 border-2 ${isDarkMode ? "border-white bg-white/5 text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-white" : "border-black bg-white text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-black"}`}
-                                >
-                                    <LogOut className={`h-3 w-3 ${isDarkMode ? "text-white" : "text-black"}`} /> {sidebarWidth > 120 && "Logout session"}
-                                </button>
                             </div>
                         )}
                     </div>
@@ -2910,7 +2877,7 @@ STRICT RULES:
                                                     <div className={`h-1.5 w-1.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(0,221,221,0.5)] ${subscription?.subscription ? 'bg-[#00DDDD]' : 'bg-amber-500'}`} />
                                                 </div>
                                                 <span className={`flex items-center text-xs font-bold ${isDarkMode ? "text-black bg-white px-2 border-2 border-transparent" : "text-white bg-black px-2 border-2 border-transparent"} tracking-widest uppercase`}>
-                                                    {isSubscriptionLoading ? "Loading..." : (userRole && userRole !== "student" ? "Agencies / Heavy Duty" : (subscription?.subscription?.plan_name || "Free Trial"))}
+                                                    {isSubscriptionLoading ? "Loading..." : (subscription?.subscription?.plan_name || "Free Trial")}
                                                 </span>
                                             </div>
                                         </div>
@@ -2949,7 +2916,7 @@ STRICT RULES:
                                         return null
                                     })()}
 
-                                    {/* Circular Usage Chart */}
+                                    {/* Tokens Remaining Circle */}
                                     <div className="relative w-32 h-32 mx-auto mb-8 flex-shrink-0">
                                         <svg className="w-full h-full rotate-[-90deg]">
                                             <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "rgba(0, 221, 221, 0.1)" : "rgba(0, 221, 221, 0.05)"} strokeWidth="6" />
@@ -2959,157 +2926,154 @@ STRICT RULES:
                                                 strokeWidth="6"
                                                 strokeDasharray="364"
                                                 strokeDashoffset={String(
-                                                    isSubscriptionLoading || !subscription?.usage || !subscription?.subscription?.details?.daily_chat_limit
+                                                    isSubscriptionLoading || !subscription?.subscription?.details?.monthly_tokens
                                                         ? 364
-                                                        : 364 - ((subscription.usage.daily_chats / subscription.subscription.details.daily_chat_limit) * 364)
+                                                        : 364 - ((subscription.tokens_remaining ?? 0) / subscription.subscription.details.monthly_tokens) * 364
                                                 )}
                                                 strokeLinecap="round"
                                                 className="transition-all duration-1000 drop-shadow-[0_0_8px_rgba(0,221,221,0.5)]"
                                             />
                                         </svg>
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <ChatLoader isDarkMode={isDarkMode} />
+                                        <div className="absolute inset-0 flex items-center justify-center flex-col">
+                                            <span className={`text-lg font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{subscription?.tokens_remaining ?? 0}</span>
+                                            <span className={`text-[6px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Tokens Left</span>
                                         </div>
                                     </div>
 
                                     {/* Detailed Metrics */}
-                                    <div className="space-y-4 mb-8">
-                                        {/* Chats Usage */}
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Chats Used</span>
-                                                <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.daily_chats || 0} / {subscription?.subscription?.details?.daily_chat_limit || 1}
-                                                </span>
-                                            </div>
-                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.daily_chats || 0) / (subscription?.subscription?.details?.daily_chat_limit || 1)) * 100)}%`
-                                                    }}
-                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className={`h-[1px] w-full ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-
-                                    {/* Usage Progress Bars */}
                                     <div className="space-y-6">
-                                        {/* Vision Usage */}
+                                        {/* Tokens Used (Chat) */}
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Vision Used</span>
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Chat Tokens</span>
                                                 <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.daily_visions || 0} / {subscription?.subscription?.details?.daily_vision_limit || 1}
+                                                    {subscription?.usage?.chat_tokens_used ?? 0} / {subscription?.subscription?.details?.monthly_tokens || 1}
                                                 </span>
                                             </div>
                                             <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
                                                 <motion.div
                                                     initial={{ width: 0 }}
                                                     animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.daily_visions || 0) / (subscription?.subscription?.details?.daily_vision_limit || 1)) * 100)}%`
+                                                        width: `${Math.min(100, ((subscription?.usage?.chat_tokens_used ?? 0) / (subscription?.subscription?.details?.monthly_tokens || 1)) * 100)}%`
                                                     }}
                                                     className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
                                                 />
                                             </div>
                                         </div>
 
-                                        {/* Images Usage */}
+                                        {/* Coding Tokens */}
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Images Used</span>
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Coding Tokens</span>
                                                 <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.monthly_images || 0} / {subscription?.subscription?.details?.monthly_image_limit || 1}
+                                                    {subscription?.usage?.coding_tokens_used ?? 0} / {subscription?.subscription?.details?.monthly_tokens || 1}
                                                 </span>
                                             </div>
                                             <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
                                                 <motion.div
                                                     initial={{ width: 0 }}
                                                     animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.monthly_images || 0) / (subscription?.subscription?.details?.monthly_image_limit || 1)) * 100)}%`
+                                                        width: `${Math.min(100, ((subscription?.usage?.coding_tokens_used ?? 0) / (subscription?.subscription?.details?.monthly_tokens || 1)) * 100)}%`
                                                     }}
                                                     className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
                                                 />
                                             </div>
                                         </div>
 
-                                        {/* Coding Usage */}
+                                        {/* Images Used */}
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Coding Used</span>
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Images Today</span>
                                                 <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.daily_codings || 0} / {subscription?.subscription?.details?.daily_coding_limit || 1}
+                                                    {subscription?.usage?.daily_images ?? 0} / {subscription?.subscription?.details?.daily_image_limit || 1}
                                                 </span>
                                             </div>
                                             <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
                                                 <motion.div
                                                     initial={{ width: 0 }}
                                                     animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.daily_codings || 0) / (subscription?.subscription?.details?.daily_coding_limit || 1)) * 100)}%`
+                                                        width: `${Math.min(100, ((subscription?.usage?.daily_images ?? 0) / (subscription?.subscription?.details?.daily_image_limit || 1)) * 100)}%`
                                                     }}
                                                     className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
                                                 />
                                             </div>
                                         </div>
 
-                                        {/* TTS Usage */}
+                                        {/* OCR Used */}
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>TTS Used</span>
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>OCR Pages</span>
                                                 <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.daily_tts || 0} / {subscription?.subscription?.details?.daily_tts_limit || 1}
+                                                    {subscription?.usage?.ocr_pages_used ?? 0} / {subscription?.subscription?.details?.ocr_limit || 1}
                                                 </span>
                                             </div>
                                             <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
                                                 <motion.div
                                                     initial={{ width: 0 }}
                                                     animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.daily_tts || 0) / (subscription?.subscription?.details?.daily_tts_limit || 1)) * 100)}%`
+                                                        width: `${Math.min(100, ((subscription?.usage?.ocr_pages_used ?? 0) / (subscription?.subscription?.details?.ocr_limit || 1)) * 100)}%`
                                                     }}
                                                     className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
                                                 />
                                             </div>
                                         </div>
 
-                                        {/* STT Usage */}
+                                        {/* Feature Extraction Used */}
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>STT Used</span>
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Feature Extraction</span>
                                                 <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.daily_stt || 0} / {subscription?.subscription?.details?.daily_stt_limit || 1}
+                                                    {subscription?.usage?.feature_pages_used ?? 0} / {subscription?.subscription?.details?.feature_extraction_limit || 1}
                                                 </span>
                                             </div>
                                             <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
                                                 <motion.div
                                                     initial={{ width: 0 }}
                                                     animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.daily_stt || 0) / (subscription?.subscription?.details?.daily_stt_limit || 1)) * 100)}%`
+                                                        width: `${Math.min(100, ((subscription?.usage?.feature_pages_used ?? 0) / (subscription?.subscription?.details?.feature_extraction_limit || 1)) * 100)}%`
                                                     }}
                                                     className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
                                                 />
                                             </div>
                                         </div>
 
-                                        {/* Flux Usage */}
+                                        {/* TTS Used */}
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Flux Used</span>
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>TTS Minutes</span>
                                                 <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.monthly_flux || 0} / {subscription?.subscription?.details?.monthly_flux_limit || 1}
+                                                    {subscription?.usage?.tts_minutes_used ?? 0} / {subscription?.subscription?.details?.tts_minutes_limit || 1}
                                                 </span>
                                             </div>
                                             <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
                                                 <motion.div
                                                     initial={{ width: 0 }}
                                                     animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.monthly_flux || 0) / (subscription?.subscription?.details?.monthly_flux_limit || 1)) * 100)}%`
+                                                        width: `${Math.min(100, ((subscription?.usage?.tts_minutes_used ?? 0) / (subscription?.subscription?.details?.tts_minutes_limit || 1)) * 100)}%`
                                                     }}
                                                     className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
                                                 />
                                             </div>
                                         </div>
-                                    </div>
+
+                                        {/* STT Used */}
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>STT Minutes</span>
+                                                <span className={isDarkMode ? "text-white" : "text-black"}>
+                                                    {subscription?.usage?.stt_minutes_used ?? 0} / {subscription?.subscription?.details?.stt_minutes_limit || 1}
+                                                </span>
+                                            </div>
+                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{
+                                                        width: `${Math.min(100, ((subscription?.usage?.stt_minutes_used ?? 0) / (subscription?.subscription?.details?.stt_minutes_limit || 1)) * 100)}%`
+                                                    }}
+                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {!userRole || userRole === "student" ? (
@@ -3391,7 +3355,7 @@ STRICT RULES:
                         {/* Middle: Live Usage Progress Circle using ChatLoader */}
                         <div className="flex flex-col items-center gap-6 w-full">
                             <div
-                                title="Live Chat Usage"
+                                title={`Tokens: ${subscription?.tokens_remaining ?? 0} / ${subscription?.subscription?.details?.monthly_tokens || 1}`}
                                 className="relative w-12 h-12 flex items-center justify-center cursor-help"
                             >
                                 <svg className="w-full h-full rotate-[-90deg] absolute">
@@ -3402,9 +3366,9 @@ STRICT RULES:
                                         strokeWidth="3"
                                         strokeDasharray="125.6"
                                         strokeDashoffset={String(
-                                            isSubscriptionLoading || !subscription?.usage || !subscription?.subscription?.details?.daily_chat_limit
+                                            isSubscriptionLoading || !subscription?.subscription?.details?.monthly_tokens
                                                 ? 125.6
-                                                : 125.6 - ((subscription.usage.daily_chats / subscription.subscription.details.daily_chat_limit) * 125.6)
+                                                : 125.6 - ((subscription.tokens_remaining ?? 0) / subscription.subscription.details.monthly_tokens) * 125.6
                                         )}
                                         strokeLinecap="round"
                                         className="transition-all duration-1000 drop-shadow-[0_0_4px_rgba(0,221,221,0.5)]"
@@ -3415,81 +3379,94 @@ STRICT RULES:
                                 </div>
                             </div>
 
-                            {/* VIS (Vision Used) Metric */}
+                            {/* CHT (Chat Tokens) Metric */}
                             <div
-                                title={`Vision Used: ${subscription?.usage?.daily_visions || 0} / ${subscription?.subscription?.details?.daily_vision_limit || 1}`}
+                                title={`Chat Tokens: ${subscription?.usage?.chat_tokens_used ?? 0} / ${subscription?.subscription?.details?.monthly_tokens || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
                                 <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                    VIS
+                                    CHT
                                 </span>
                                 <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
-                                    {subscription?.usage?.daily_visions || 0}
+                                    {subscription?.usage?.chat_tokens_used ?? 0}
                                 </span>
                             </div>
 
-                            {/* COD (Coding Used) Metric */}
+                            {/* COD (Coding Tokens) Metric */}
                             <div
-                                title={`Coding Used: ${subscription?.usage?.daily_codings || 0} / ${subscription?.subscription?.details?.daily_coding_limit || 1}`}
+                                title={`Coding Tokens: ${subscription?.usage?.coding_tokens_used ?? 0} / ${subscription?.subscription?.details?.monthly_tokens || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
                                 <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                     COD
                                 </span>
                                 <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
-                                    {subscription?.usage?.daily_codings || 0}
+                                    {subscription?.usage?.coding_tokens_used ?? 0}
                                 </span>
                             </div>
 
-                            {/* IMG (Images Used) Metric */}
+                            {/* IMG (Images Today) Metric */}
                             <div
-                                title={`Images Used: ${subscription?.usage?.monthly_images || 0} / ${subscription?.subscription?.details?.monthly_image_limit || 1}`}
+                                title={`Images Today: ${subscription?.usage?.daily_images ?? 0} / ${subscription?.subscription?.details?.daily_image_limit || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
                                 <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                     IMG
                                 </span>
                                 <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
-                                    {subscription?.usage?.monthly_images || 0}
+                                    {subscription?.usage?.daily_images ?? 0}
+                                </span>
+                            </div>
+
+                            {/* OCR Metric */}
+                            <div
+                                title={`OCR Pages: ${subscription?.usage?.ocr_pages_used ?? 0} / ${subscription?.subscription?.details?.ocr_limit || 1}`}
+                                className="flex flex-col items-center gap-0.5 cursor-help"
+                            >
+                                <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                    OCR
+                                </span>
+                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
+                                    {subscription?.usage?.ocr_pages_used ?? 0}
+                                </span>
+                            </div>
+
+                            {/* FEX (Feature Extraction) Metric */}
+                            <div
+                                title={`Feature Extraction: ${subscription?.usage?.feature_pages_used ?? 0} / ${subscription?.subscription?.details?.feature_extraction_limit || 1}`}
+                                className="flex flex-col items-center gap-0.5 cursor-help"
+                            >
+                                <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                    FEX
+                                </span>
+                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
+                                    {subscription?.usage?.feature_pages_used ?? 0}
                                 </span>
                             </div>
 
                             {/* TTS Metric */}
                             <div
-                                title={`TTS Used: ${subscription?.usage?.daily_tts || 0} / ${subscription?.subscription?.details?.daily_tts_limit || 1}`}
+                                title={`TTS Minutes: ${subscription?.usage?.tts_minutes_used ?? 0} / ${subscription?.subscription?.details?.tts_minutes_limit || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
                                 <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                     TTS
                                 </span>
                                 <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
-                                    {subscription?.usage?.daily_tts || 0}
+                                    {subscription?.usage?.tts_minutes_used ?? 0}
                                 </span>
                             </div>
 
                             {/* STT Metric */}
                             <div
-                                title={`STT Used: ${subscription?.usage?.daily_stt || 0} / ${subscription?.subscription?.details?.daily_stt_limit || 1}`}
+                                title={`STT Minutes: ${subscription?.usage?.stt_minutes_used ?? 0} / ${subscription?.subscription?.details?.stt_minutes_limit || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
                                 <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                     STT
                                 </span>
                                 <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
-                                    {subscription?.usage?.daily_stt || 0}
-                                </span>
-                            </div>
-
-                            {/* FLX (Flux Used) Metric */}
-                            <div
-                                title={`Flux Used: ${subscription?.usage?.monthly_flux || 0} / ${subscription?.subscription?.details?.monthly_flux_limit || 1}`}
-                                className="flex flex-col items-center gap-0.5 cursor-help"
-                            >
-                                <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                    FLX
-                                </span>
-                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
-                                    {subscription?.usage?.monthly_flux || 0}
+                                    {subscription?.usage?.stt_minutes_used ?? 0}
                                 </span>
                             </div>
                         </div>

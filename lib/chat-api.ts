@@ -408,28 +408,32 @@ export async function createPlan(data: Partial<Plan>) {
 
 export interface SubscriptionStatusResponse {
   success: boolean
+  name?: string
+  is_signup_complete?: boolean
+  tokens_remaining?: number
+  wallet_balance?: number
   subscription?: {
     plan_id: number
     plan_name: string
     price_inr: number
     details: {
-      daily_chat_limit: number
-      daily_coding_limit: number
-      daily_vision_limit: number
-      daily_tts_limit: number
-      daily_stt_limit: number
-      monthly_image_limit: number
-      monthly_flux_limit: number
+      monthly_tokens: number
+      daily_image_limit: number
+      ocr_limit: number
+      feature_extraction_limit: number
+      tts_minutes_limit: number
+      stt_minutes_limit: number
     }
   }
   usage?: {
-    daily_chats: number
-    daily_codings: number
-    daily_visions: number
-    daily_tts: number
-    daily_stt: number
+    daily_images: number
     monthly_images: number
-    monthly_flux: number
+    ocr_pages_used: number
+    feature_pages_used: number
+    tts_minutes_used: number
+    stt_minutes_used: number
+    chat_tokens_used: number
+    coding_tokens_used: number
     last_reset: string
   }
   error?: string
