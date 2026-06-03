@@ -26,7 +26,7 @@ export default function SchoolAdminLogin() {
             if (res.role) setUserRole(res.role)
             if (res.name) setUserInfo(res.name, "")
             if (res.school_name) setSchoolName(res.school_name)
-            window.location.href = "/chat"
+            window.location.href = "/admin/school-admin"
         } catch (e: any) {
             setError(e.message || "Login failed")
         } finally {

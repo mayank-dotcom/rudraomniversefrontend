@@ -5,8 +5,9 @@ import {
   Bell, Users, User, Mail, Plus, Trash2, Edit2, Upload, Search, FileText, Activity,
   RefreshCw, LogOut, CheckCircle2, X, Cpu, TrendingUp, ShieldCheck, Database, Zap,
   Briefcase, Award, BarChart3, Clock, AlertTriangle, ArrowUpRight, Download,
-  Sun, Moon
+  Sun, Moon, MessageSquare
 } from "lucide-react"
+import Link from "next/link"
 import { ThemeProvider, useTheme } from "@/lib/theme-context"
 import { removeApiKey, getApiKey } from "@/lib/auth"
 import {
@@ -389,6 +390,14 @@ function EnterpriseManagerPageInner() {
           >
             <RefreshCw className={`h-4 w-4 opacity-40 group-hover:opacity-100 group-hover:rotate-180 transition-all duration-500 ${isDarkMode ? "" : "text-black"}`} />
           </button>
+
+          <Link
+            href="/chat"
+            className={`h-10 w-10 rounded-2xl border flex items-center justify-center transition-all ${isDarkMode ? "border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500 hover:text-black" : "border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white"}`}
+            title="Chat"
+          >
+            <MessageSquare className="h-4 w-4 text-emerald-400" />
+          </Link>
           
           <div className={`h-8 w-[1px] ${isDarkMode ? "bg-white/15" : "bg-black/15"}`} />
 

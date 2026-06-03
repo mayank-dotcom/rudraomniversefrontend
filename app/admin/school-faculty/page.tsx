@@ -298,6 +298,14 @@ export default function SchoolFacultyAdminPage() {
             <RefreshCw className="h-4 w-4 opacity-40" />
           </button>
 
+          <Link
+            href="/chat"
+            className={`h-10 w-10 rounded-2xl border flex items-center justify-center transition-all ${isDarkMode ? "border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500 hover:text-black" : "border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white"}`}
+            title="Chat"
+          >
+            <MessageSquare className="h-4 w-4 text-emerald-400" />
+          </Link>
+
           <div className="h-8 w-[1px] bg-white/10 mx-2" />
 
           <div className="flex items-center gap-4">
