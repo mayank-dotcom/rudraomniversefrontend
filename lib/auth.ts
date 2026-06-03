@@ -46,6 +46,7 @@ export function getApiKey(): string | null {
 export function removeApiKey() {
   if (typeof window !== "undefined") {
     localStorage.removeItem("rudranex_api_key")
+    localStorage.removeItem("rudranex_admin_key")
   }
 }
 

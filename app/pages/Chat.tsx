@@ -2035,6 +2035,9 @@ STRICT RULES:
                                 onClick={() => {
                                     removeApiKey();
                                     removeUserInfo();
+                                    removeUserRole();
+                                    removeSchoolName();
+                                    removeEnterpriseName();
                                     setStoredActiveChatId(null);
                                     setAuthed(false);
                                     setUserName("");
