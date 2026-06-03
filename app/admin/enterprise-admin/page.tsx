@@ -429,6 +429,22 @@ function EnterpriseAdminPageInner() {
               exit={{ opacity: 0, y: -15 }}
               className="space-y-8"
             >
+              {/* Enterprise Identity Banner */}
+              <div className="relative border border-white/5 p-8 rounded-[3rem] bg-gradient-to-br from-orange-500/[0.03] to-transparent backdrop-blur-xl overflow-hidden group">
+                <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none" />
+                <div className="flex items-center gap-6">
+                  <div className="h-16 w-16 rounded-2xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
+                    <Building2 className="h-8 w-8 text-orange-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-display font-black tracking-tight uppercase">{stats?.enterprise_name || "Enterprise Admin"}</h2>
+                    <p className="text-[10px] font-mono tracking-widest text-[#00DDDD] uppercase mt-1">
+                      Enterprise Code: {stats?.enterprise_code || "N/A"} &nbsp;•&nbsp; {stats?.global_engagement || "0%"} Engagement
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Stat Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="relative border border-white/5 p-6 rounded-[2.5rem] bg-white/[0.02] backdrop-blur-xl overflow-hidden group">

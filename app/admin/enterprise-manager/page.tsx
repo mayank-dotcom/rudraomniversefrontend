@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from "react"
 import {
-  Bell, Users, User, Mail, Plus, Trash2, Edit2, Upload, Search, FileText, Activity,
+  Building2, Bell, Users, User, Mail, Plus, Trash2, Edit2, Upload, Search, FileText, Activity,
   RefreshCw, LogOut, CheckCircle2, X, Cpu, TrendingUp, ShieldCheck, Database, Zap,
   Briefcase, Award, BarChart3, Clock, AlertTriangle, ArrowUpRight, Download,
   Sun, Moon, MessageSquare
@@ -108,7 +108,7 @@ function EnterpriseManagerPageInner() {
         }
       }
     } catch (e: any) {
-      // Stats unavailable for manager role — silently handled
+      toast.error("Failed to load enterprise stats: " + (e.message || "Unknown error"))
     } finally {
       setIsStatsLoading(false)
     }
@@ -452,8 +452,25 @@ function EnterpriseManagerPageInner() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+              className="space-y-8"
             >
+              {/* Enterprise Identity Banner */}
+              <div className="relative border border-white/5 p-8 rounded-[3rem] bg-gradient-to-br from-[#00DDDD]/[0.03] to-transparent backdrop-blur-xl overflow-hidden group">
+                <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none" />
+                <div className="flex items-center gap-6">
+                  <div className="h-16 w-16 rounded-2xl bg-[#00DDDD]/20 border border-[#00DDDD]/30 flex items-center justify-center">
+                    <Building2 className="h-8 w-8 text-[#00DDDD]" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-display font-black tracking-tight uppercase">{stats?.enterprise_name || "Manager Panel"}</h2>
+                    <p className="text-[10px] font-mono tracking-widest text-[#00DDDD] uppercase mt-1">
+                      Enterprise Code: {stats?.enterprise_code || "N/A"} &nbsp;•&nbsp; {stats?.global_engagement || "0%"} Engagement
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Left Column: Department Head Analytics */}
               <div className="lg:col-span-8 space-y-8">
                 {/* Analytics Ring & Stats */}
@@ -570,6 +587,7 @@ function EnterpriseManagerPageInner() {
                 >
                   View All Bulletins
                 </button>
+              </div>
               </div>
             </motion.div>
           )}
