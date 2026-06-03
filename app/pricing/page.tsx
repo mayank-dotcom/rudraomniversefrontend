@@ -41,7 +41,7 @@ const PricingContent = () => {
         setProcessingPlanId(String(plan.id));
         try {
             const order = await createPaymentOrder(plan.id, coinsToUse > 0 ? coinsToUse : undefined);
-            const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || order.key_id;
+            const razorpayKeyId = order.key_id;
             if (!razorpayKeyId) {
                 toast.error("Payment gateway is not configured. Please contact support.");
                 return;
