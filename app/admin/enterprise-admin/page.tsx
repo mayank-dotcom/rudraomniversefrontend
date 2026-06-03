@@ -406,10 +406,10 @@ function EnterpriseAdminPageInner() {
                 className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${
                   active
                     ? "bg-gradient-to-r from-orange-500/20 to-orange-500/10 border border-orange-500/30 text-orange-400 font-bold"
-                    : (isDarkMode ? "border border-transparent hover:border-white/5 text-white/50 hover:text-white hover:bg-white/5" : "border border-transparent hover:border-black/5 text-black/50 hover:text-black hover:bg-black/5")
+                    : (isDarkMode ? "border border-transparent hover:border-white/5 text-white/50 hover:text-white hover:bg-white/5" : "border border-transparent hover:border-black/5 text-black/70 hover:text-black hover:bg-black/5")
                 }`}
               >
-                <Icon className={`h-3.5 w-3.5 transition-colors duration-300 ${active ? "text-orange-400" : (isDarkMode ? "text-white/40" : "text-black/40")}`} />
+                <Icon className={`h-3.5 w-3.5 transition-colors duration-300 ${active ? "text-orange-400" : (isDarkMode ? "text-white/40" : "text-black/60")}`} />
                 {tab.label}
               </button>
             )
@@ -500,7 +500,7 @@ function EnterpriseAdminPageInner() {
                         <span>CPU Core Cycles</span>
                         <span className="text-orange-400 font-bold">{stats?.resource_allocation?.compute || 0}% Allocated</span>
                       </div>
-                      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className={`h-2 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
                         <div className="h-full bg-orange-500 rounded-full transition-all duration-1000" style={{ width: `${stats?.resource_allocation?.compute || 0}%` }} />
                       </div>
                     </div>
@@ -510,7 +510,7 @@ function EnterpriseAdminPageInner() {
                         <span>Cluster Storage quota</span>
                         <span className="text-[#00DDDD] font-bold">{stats?.resource_allocation?.storage || 0}% Assigned</span>
                       </div>
-                      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className={`h-2 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
                         <div className="h-full bg-[#00DDDD] rounded-full transition-all duration-1000" style={{ width: `${stats?.resource_allocation?.storage || 0}%` }} />
                       </div>
                     </div>
@@ -520,20 +520,20 @@ function EnterpriseAdminPageInner() {
                         <span>High-Speed Bandwidth Uplink</span>
                         <span className="text-emerald-400 font-bold">{stats?.resource_allocation?.network || 0}% Bandwidth</span>
                       </div>
-                      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className={`h-2 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
                         <div className="h-full bg-emerald-400 rounded-full transition-all duration-1000" style={{ width: `${stats?.resource_allocation?.network || 0}%` }} />
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6 mt-8 pt-8 border-t border-white/5 text-[9px] font-mono uppercase tracking-widest text-white/40">
+                  <div className={`flex items-center gap-6 mt-8 pt-8 border-t text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "border-white/5 text-white/40" : "border-black/5 text-black/60"}`}>
                     <span className="flex items-center gap-1.5"><Database className="h-3 w-3 text-orange-400" /> DB Cluster: Rudra-Omniverse-2.0</span>
                     <span className="flex items-center gap-1.5"><ShieldCheck className="h-3 w-3 text-emerald-400" /> Secure Protocol Status: Stable</span>
                   </div>
                 </div>
 
                 {/* Right: Quick announcements panel */}
-                <div className="lg:col-span-4 border border-white/5 p-8 rounded-[3rem] bg-white/[0.01] backdrop-blur-2xl flex flex-col justify-between">
+                <div className={`p-8 rounded-[3rem] backdrop-blur-2xl flex flex-col justify-between border ${isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"}`}>
                   <div>
                     <h3 className="text-xs font-display font-black uppercase tracking-[0.2em] mb-6 flex items-center justify-between">
                       <span>Recent Broadcasts</span>
@@ -541,19 +541,19 @@ function EnterpriseAdminPageInner() {
                     </h3>
                     
                     {announcements.length === 0 ? (
-                      <div className="text-center py-10 text-[10px] font-mono uppercase opacity-40">No active broadcasts</div>
+                      <div className={`text-center py-10 text-[10px] font-mono uppercase ${isDarkMode ? "opacity-40" : "opacity-75 text-zinc-700"}`}>No active broadcasts</div>
                     ) : (
                       <div className="space-y-4">
                         {announcements.slice(0, 3).map(ann => (
-                          <div key={ann.id} className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                          <div key={ann.id} className={`p-4 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"}`}>
                             <div className="flex items-center justify-between mb-1.5">
                               <span className={`text-[8px] font-mono px-2 py-0.5 rounded-full uppercase tracking-widest ${
                                 ann.priority === 'high' ? 'bg-red-500/20 text-red-400 border border-red-500/20' : 'bg-orange-500/20 text-orange-400 border border-orange-500/20'
                               }`}>{ann.priority}</span>
-                              <span className="text-[8px] font-mono text-white/30">{new Date(ann.created_at).toLocaleDateString()}</span>
+                              <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/30" : "text-black/60"}`}>{new Date(ann.created_at).toLocaleDateString()}</span>
                             </div>
-                            <h4 className="text-xs font-bold text-white mb-1 truncate">{ann.title}</h4>
-                            <p className="text-[10px] text-white/50 line-clamp-2 leading-relaxed">{ann.content}</p>
+                            <h4 className={`text-xs font-bold mb-1 truncate ${isDarkMode ? "text-white" : "text-black"}`}>{ann.title}</h4>
+                            <p className={`text-[10px] line-clamp-2 leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/75"}`}>{ann.content}</p>
                           </div>
                         ))}
                       </div>

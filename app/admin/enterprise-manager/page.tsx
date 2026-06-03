@@ -431,10 +431,12 @@ function EnterpriseManagerPageInner() {
                 className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${
                   active
                     ? "bg-gradient-to-r from-[#00DDDD]/20 to-[#00DDDD]/10 border border-[#00DDDD]/30 text-[#00DDDD] font-bold"
-                    : "border border-transparent hover:border-white/5 text-white/50 hover:text-white hover:bg-white/5"
+                    : isDarkMode
+                      ? "border border-transparent hover:border-white/5 text-white/50 hover:text-white hover:bg-white/5"
+                      : "border border-transparent hover:border-black/5 text-black/65 hover:text-black hover:bg-black/5"
                 }`}
               >
-                <Icon className={`h-3.5 w-3.5 ${active ? "text-[#00DDDD]" : "text-white/40"}`} />
+                <Icon className={`h-3.5 w-3.5 ${active ? "text-[#00DDDD]" : isDarkMode ? "text-white/40" : "text-black/60"}`} />
                 {tab.label}
               </button>
             )
@@ -529,34 +531,34 @@ function EnterpriseManagerPageInner() {
                     <div className={`border p-6 rounded-3xl transition-colors duration-300 ${
                       isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-white"
                     }`}>
-                      <div className={`flex items-center justify-between mb-3 transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                      <div className={`flex items-center justify-between mb-3 transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/65"}`}>
                         <span className="text-[8px] font-mono uppercase tracking-widest">Global engagement</span>
                         <Activity className="h-4 w-4 text-[#00DDDD] animate-pulse" />
                       </div>
                       <h3 className={`text-xl font-display font-black tracking-tight transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{stats?.global_engagement || "Active"}</h3>
-                      <p className={`text-[9px] font-mono uppercase mt-1 transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Node network integrity</p>
+                      <p className={`text-[9px] font-mono uppercase mt-1 transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/60"}`}>Node network integrity</p>
                     </div>
 
                     <div className={`border p-6 rounded-3xl transition-colors duration-300 ${
                       isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-white"
                     }`}>
-                      <div className={`flex items-center justify-between mb-3 transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                      <div className={`flex items-center justify-between mb-3 transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/65"}`}>
                         <span className="text-[8px] font-mono uppercase tracking-widest">Monthly computational burn</span>
                         <Cpu className="h-4 w-4 text-orange-400" />
                       </div>
                       <h3 className={`text-xl font-display font-black tracking-tight transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{stats?.token_economy?.monthly_burn || "0 M"}</h3>
-                      <p className={`text-[9px] font-mono uppercase mt-1 transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>AI core usage bandwidth</p>
+                      <p className={`text-[9px] font-mono uppercase mt-1 transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/60"}`}>AI core usage bandwidth</p>
                     </div>
 
                     <div className={`border p-6 rounded-3xl transition-colors duration-300 ${
                       isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-white"
                     }`}>
-                      <div className={`flex items-center justify-between mb-3 transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                      <div className={`flex items-center justify-between mb-3 transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/65"}`}>
                         <span className="text-[8px] font-mono uppercase tracking-widest">Allocated class</span>
                         <ShieldCheck className="h-4 w-4 text-emerald-400" />
                       </div>
                       <h3 className={`text-xl font-display font-black tracking-tight truncate transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{stats?.enterprise_code || "B2B-SECURE"}</h3>
-                      <p className={`text-[9px] font-mono uppercase mt-1 transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Cluster designation</p>
+                      <p className={`text-[9px] font-mono uppercase mt-1 transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/60"}`}>Cluster designation</p>
                     </div>
                   </div>
               </div>
@@ -572,7 +574,7 @@ function EnterpriseManagerPageInner() {
                   </h3>
                   
                   {announcements.length === 0 ? (
-                    <div className="text-center py-10 text-[10px] font-mono uppercase opacity-40">No notifications issued</div>
+                    <div className={`text-center py-10 text-[10px] font-mono uppercase ${isDarkMode ? "opacity-40" : "opacity-75 text-zinc-800"}`}>No notifications issued</div>
                   ) : (
                     <div className="space-y-4 max-h-[340px] overflow-y-auto custom-scrollbar pr-1">
                       {announcements.map(ann => (
@@ -583,10 +585,10 @@ function EnterpriseManagerPageInner() {
                             <span className={`text-[7px] font-mono px-2 py-0.5 rounded-full uppercase tracking-widest ${
                               ann.priority === 'high' ? 'bg-red-500/20 text-red-400 border border-red-500/20' : 'bg-[#00DDDD]/20 text-[#00DDDD] border border-[#00DDDD]/20'
                             }`}>{ann.priority}</span>
-                            <span className={`text-[8px] font-mono transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>{new Date(ann.created_at).toLocaleDateString()}</span>
+                            <span className={`text-[8px] font-mono transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/60"}`}>{new Date(ann.created_at).toLocaleDateString()}</span>
                           </div>
                           <h4 className={`text-xs font-bold mb-1 transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{ann.title}</h4>
-                          <p className={`text-[10px] leading-relaxed line-clamp-3 transition-colors duration-300 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>{ann.content}</p>
+                          <p className={`text-[10px] leading-relaxed line-clamp-3 transition-colors duration-300 ${isDarkMode ? "text-white/50" : "text-black/75"}`}>{ann.content}</p>
                         </div>
                       ))}
                     </div>
@@ -655,7 +657,7 @@ function EnterpriseManagerPageInner() {
                   isDarkMode ? "border-white/5" : "border-black/5"
                 }`}>
                   <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>Operational Node Registry</h3>
-                  <span className={`text-[10px] font-mono transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{processedEmployees.length} employees onboarded</span>
+                  <span className={`text-[10px] font-mono transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/65"}`}>{processedEmployees.length} employees onboarded</span>
                 </div>
 
                 {isEmployeesLoading ? (
@@ -668,7 +670,7 @@ function EnterpriseManagerPageInner() {
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className={`border-b text-[9px] font-mono uppercase tracking-widest transition-colors duration-300 ${
-                            isDarkMode ? "border-white/5 text-white/40" : "border-black/5 text-black/40"
+                            isDarkMode ? "border-white/5 text-white/40" : "border-black/5 text-black/60"
                           }`}>
                             <th className="p-5 text-left">Employee Name</th>
                             <th className="p-5 text-left">Employee ID</th>
@@ -735,7 +737,7 @@ function EnterpriseManagerPageInner() {
 
                     {/* Pagination */}
                     <div className={`p-4 flex items-center justify-between border-t transition-colors duration-300 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
-                      <div className={`text-[10px] font-mono transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Page {employeesPage} / {employeesTotalPages || 1}</div>
+                      <div className={`text-[10px] font-mono transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/65"}`}>Page {employeesPage} / {employeesTotalPages || 1}</div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setEmployeesPage(p => Math.max(1, p - 1))}
@@ -1016,7 +1018,7 @@ function EnterpriseManagerPageInner() {
                     onChange={(e) => setEmpClass(e.target.value)}
                     required
                     placeholder="e.g. Engineering"
-                    className={`w-full mt-1.5 p-3 text-xs font-mono border rounded-2xl text-white focus:outline-none transition-colors duration-300 ${
+                    className={`w-full mt-1.5 p-3 text-xs font-mono border rounded-2xl focus:outline-none transition-colors duration-300 ${
                       isDarkMode ? "border-white/5 bg-white/5 text-white" : "border-black/5 bg-black/5 text-black"
                     }`}
                   />
