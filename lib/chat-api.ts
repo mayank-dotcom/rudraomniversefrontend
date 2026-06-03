@@ -133,6 +133,7 @@ export interface CreateOrderResponse {
   currency: string
   receipt: string
   coins_redeemed?: number
+  key_id?: string
   error?: string
 }
 

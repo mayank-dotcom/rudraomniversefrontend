@@ -38,15 +38,14 @@ const PricingContent = () => {
     }, []);
 
     const handleRazorpayPayment = useCallback(async (plan: Plan, coinsToUse: number = 0) => {
-        const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-        if (!razorpayKeyId) {
-            toast.error("Payment gateway is not configured. Please contact support.");
-            return;
-        }
-
         setProcessingPlanId(String(plan.id));
         try {
             const order = await createPaymentOrder(plan.id, coinsToUse > 0 ? coinsToUse : undefined);
+            const razorpayKeyId = order.key_id;
+            if (!razorpayKeyId) {
+                toast.error("Payment gateway is not configured. Please contact support.");
+                return;
+            }
 
             if (!window.Razorpay) {
                 await new Promise<void>((resolve, reject) => {
