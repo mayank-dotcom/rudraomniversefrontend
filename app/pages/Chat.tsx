@@ -3839,6 +3839,7 @@ STRICT RULES:
                 isMobile={isMobile}
                 setIsSidebarCollapsed={setIsSidebarCollapsed}
                 setIsRightSidebarCollapsed={setIsRightSidebarCollapsed}
+                isDarkMode={isDarkMode}
             />
 
         </div>

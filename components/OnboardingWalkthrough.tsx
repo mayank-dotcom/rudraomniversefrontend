@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, X, Sparkles, CheckCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, X, Sparkles, CheckCircle, Check } from "lucide-react";
 
 interface WalkthroughStep {
   title: string;
@@ -17,6 +17,7 @@ interface OnboardingWalkthroughProps {
   isMobile: boolean;
   setIsSidebarCollapsed: (v: boolean) => void;
   setIsRightSidebarCollapsed: (v: boolean) => void;
+  isDarkMode: boolean;
 }
 
 export default function OnboardingWalkthrough({
@@ -25,6 +26,7 @@ export default function OnboardingWalkthrough({
   isMobile,
   setIsSidebarCollapsed,
   setIsRightSidebarCollapsed,
+  isDarkMode,
 }: OnboardingWalkthroughProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -239,20 +241,53 @@ export default function OnboardingWalkthrough({
     }
   }, [isOpen]);
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+      if (e.key === "ArrowRight") {
+        handleNext();
+      } else if (e.key === "ArrowLeft") {
+        handleBack();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, currentStep]);
+
   const progressPercentage = (currentStep / (steps.length - 1)) * 100;
 
   return (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[100] overflow-hidden pointer-events-none select-none">
-          {/* Backdrop with cutout mask (fully transparent to remove highlight box) */}
+          {/* Backdrop with cutout mask */}
           <svg className="absolute inset-0 w-full h-full pointer-events-auto">
+            <defs>
+              <mask id="walkthrough-mask">
+                <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                {rect && (
+                  <motion.rect
+                    animate={{
+                      x: rect.left - 8,
+                      y: rect.top - 8,
+                      width: rect.width + 16,
+                      height: rect.height + 16,
+                    }}
+                    transition={{ type: "spring", stiffness: 140, damping: 20 }}
+                    rx="12"
+                    fill="black"
+                  />
+                )}
+              </mask>
+            </defs>
             <rect
               x="0"
               y="0"
               width="100%"
               height="100%"
-              fill="rgba(0, 0, 0, 0)"
+              fill="rgba(0, 0, 0, 0.6)"
+              mask="url(#walkthrough-mask)"
             />
           </svg>
 
@@ -302,8 +337,12 @@ export default function OnboardingWalkthrough({
                   </div>
                 )}
 
-                {/* Minimal Content Wrapper (transparent and borderless) */}
-                <div className="flex-1 bg-transparent p-5 border-none shadow-none">
+                {/* Minimal Content Wrapper (Glassmorphism & Round Border) */}
+                <div className={`flex-1 p-5 rounded-3xl border transition-all duration-300 ${
+                  isDarkMode
+                    ? "bg-white/10 border-white/20 backdrop-blur-md text-white shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+                    : "bg-white/60 border-white/40 backdrop-blur-md text-black shadow-[0_8px_32px_rgba(255,255,255,0.15),0_8px_20px_rgba(0,0,0,0.08)]"
+                }`}>
                   {/* Progress Line */}
                   <div className="w-full h-0.5 bg-white/10 mb-4 rounded-full overflow-hidden">
                     <motion.div
@@ -320,7 +359,9 @@ export default function OnboardingWalkthrough({
                     </span>
                     <button
                       onClick={handleClose}
-                      className="p-1 hover:bg-white/5 hover:text-[#00DDDD] transition-all rounded"
+                      className={`p-1 transition-all rounded ${
+                        isDarkMode ? "hover:bg-white/5 hover:text-[#00DDDD]" : "hover:bg-black/5 hover:text-[#00c5c5]"
+                      }`}
                       title="Skip Tour"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -329,21 +370,23 @@ export default function OnboardingWalkthrough({
 
                   {/* Title & Description */}
                   <div className="mb-5">
-                    <h3 className="text-sm font-bold tracking-tight mb-2 flex items-center gap-2 text-white">
+                    <h3 className={`text-sm font-bold tracking-tight mb-2 flex items-center gap-2 ${isDarkMode ? "text-white" : "text-black"}`}>
                       {currentStep === 0 && <Sparkles className="h-4 w-4 text-[#00DDDD] animate-pulse" />}
                       {currentStep === steps.length - 1 && <CheckCircle className="h-4 w-4 text-[#00DDDD]" />}
                       {steps[currentStep].title}
                     </h3>
-                    <p className="text-xs text-white/95 leading-relaxed font-sans font-light">
+                    <p className={`text-xs leading-relaxed font-sans font-light ${isDarkMode ? "text-white/95" : "text-neutral-800"}`}>
                       {steps[currentStep].description}
                     </p>
                   </div>
 
                   {/* Navigation Controls */}
-                  <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                  <div className={`flex items-center justify-between pt-3 border-t ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
                     <button
                       onClick={handleClose}
-                      className="text-[10px] font-mono uppercase tracking-widest text-white/40 hover:text-white transition-colors"
+                      className={`text-[10px] font-mono uppercase tracking-widest transition-colors ${
+                        isDarkMode ? "text-white/40 hover:text-white" : "text-neutral-500 hover:text-black"
+                      }`}
                     >
                       Skip
                     </button>
@@ -352,17 +395,25 @@ export default function OnboardingWalkthrough({
                       {currentStep > 0 && (
                         <button
                           onClick={handleBack}
-                          className="px-3 py-1.5 border border-white/10 hover:border-white/20 text-white rounded-lg flex items-center justify-center gap-1.5 transition-all text-xs font-mono uppercase tracking-wider bg-black/40 backdrop-blur-xs"
+                          className={`px-3 py-1.5 border rounded-lg flex items-center justify-center gap-1.5 transition-all text-xs font-mono uppercase tracking-wider ${
+                            isDarkMode
+                              ? "border-white/10 hover:border-white/20 text-white bg-black/40 backdrop-blur-xs"
+                              : "border-black/10 hover:border-black/20 text-black bg-white/40 backdrop-blur-xs"
+                          }`}
                         >
                           <ArrowLeft className="h-3 w-3" /> Back
                         </button>
                       )}
                       <button
                         onClick={handleNext}
-                        className="px-4 py-2 bg-[#00DDDD] text-black hover:bg-[#00c5c5] hover:shadow-[0_0_15px_rgba(0,221,221,0.5)] hover:scale-105 active:scale-95 text-xs font-bold font-mono uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 transition-all"
+                        className="p-2.5 bg-[#00DDDD] text-black hover:bg-[#00c5c5] hover:shadow-[0_0_15px_rgba(0,221,221,0.6)] hover:scale-105 active:scale-95 rounded-full flex items-center justify-center transition-all"
+                        title={currentStep === steps.length - 1 ? "Finish" : "Next"}
                       >
-                        {currentStep === steps.length - 1 ? "Finish" : "Next"}{" "}
-                        <ArrowRight className="h-3 w-3" />
+                        {currentStep === steps.length - 1 ? (
+                          <Check className="h-4 w-4 stroke-[3]" />
+                        ) : (
+                          <ArrowRight className="h-4 w-4 stroke-[3]" />
+                        )}
                       </button>
                     </div>
                   </div>
