@@ -1287,10 +1287,11 @@ STRICT RULES:
 
                 if (isRegularImage) {
                     userContent = [
-                        { type: "text", text: trimmedInput || "Please analyze this image in detail." },
+                        { type: "text", text: trimmedInput || "Please extract and analyze all text visible in this image in detail." },
                         { type: "image_url", image_url: { url: selectedFile.content } }
                     ];
-                    requestModality = "vision";
+                    requestModality = "ocr";
+                    requestEndpoint = "/features/pdf/intel";
 
                 } else if (isScannedPdf) {
                     // ── Scanned (image-only) PDF → PDF Intel with OCR modality ─────
