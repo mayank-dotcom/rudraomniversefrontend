@@ -2256,7 +2256,7 @@ STRICT RULES:
                                             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                                             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} w-full`}
                                         >
-                                            <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[90%] md:max-w-[80%]" : "items-start max-w-[90%] md:max-w-[60%]"}`}>
+                                            <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[90%] md:max-w-[80%]" : "items-start max-w-[90%] md:max-w-[85%]"}`}>
                                                 <div className="flex items-center gap-3 mb-4">
                                                     <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/80 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/30") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]" : "text-black/60")}`}>
                                                         {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
@@ -2277,7 +2277,7 @@ STRICT RULES:
                                                             <img
                                                                 src={msg.content}
                                                                 alt="Generated image"
-                                                                className="w-full h-auto rounded-2xl border border-white/10 shadow-2xl transition-transform duration-300 group-hover/img-wrapper:scale-[1.01]"
+                                                                className="w-full max-h-[400px] object-contain rounded-2xl border border-white/10 shadow-2xl transition-transform duration-300 group-hover/img-wrapper:scale-[1.01]"
                                                             />
                                                             <button
                                                                 onClick={() => handleDownloadImage(msg.content)}
