@@ -462,7 +462,7 @@ function EnterpriseManagerPageInner() {
                     <Building2 className="h-8 w-8 text-[#00DDDD]" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-display font-black tracking-tight uppercase">{stats?.enterprise_name || "Manager Panel"}</h2>
+                    <h2 className={`text-2xl font-display font-black tracking-tight uppercase transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{stats?.enterprise_name || "Manager Panel"}</h2>
                     <p className="text-[10px] font-mono tracking-widest text-[#00DDDD] uppercase mt-1">
                       Enterprise Code: {stats?.enterprise_code || "N/A"} &nbsp;•&nbsp; {stats?.global_engagement || "0%"} Engagement
                     </p>
@@ -474,12 +474,14 @@ function EnterpriseManagerPageInner() {
               {/* Left Column: Department Head Analytics */}
               <div className="lg:col-span-8 space-y-8">
                 {/* Analytics Ring & Stats */}
-                <div className="border border-white/5 p-8 rounded-[3rem] bg-white/[0.01] backdrop-blur-3xl relative overflow-hidden flex flex-col md:flex-row items-center justify-around gap-8">
+                <div className={`border p-8 rounded-[3rem] relative overflow-hidden flex flex-col md:flex-row items-center justify-around gap-8 transition-colors duration-300 ${
+                  isDarkMode ? "border-white/5 bg-white/[0.01] backdrop-blur-3xl" : "border-black/5 bg-white"
+                }`}>
                   {/* Quota ring */}
                   <div className="flex flex-col items-center gap-4">
                     <div className="relative h-44 w-44">
                       <svg className="transform -rotate-90" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.03)" strokeWidth="6" fill="none" />
+                        <circle cx="50" cy="50" r="42" stroke={isDarkMode ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)"} strokeWidth="6" fill="none" />
                         <circle
                           cx="50"
                           cy="50"
@@ -492,7 +494,7 @@ function EnterpriseManagerPageInner() {
                         />
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-3xl font-display font-black text-white">{quotaUsedPercent}%</span>
+                        <span className={`text-3xl font-display font-black transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{quotaUsedPercent}%</span>
                         <span className="text-[7px] font-mono uppercase tracking-widest text-[#00DDDD] mt-1 font-bold">Quota Used</span>
                       </div>
                     </div>
@@ -505,16 +507,16 @@ function EnterpriseManagerPageInner() {
                       <h2 className="text-xl font-display font-black tracking-tight text-[#00DDDD] mt-1">Operational Seats Allocated</h2>
                     </div>
 
-                    <div className="space-y-2 text-xs font-mono text-white/60">
-                      <div className="flex justify-between py-1 border-b border-white/5">
+                    <div className={`space-y-2 text-xs font-mono transition-colors duration-300 ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                      <div className={`flex justify-between py-1 border-b transition-colors duration-300 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
                         <span>Current Occupied:</span>
-                        <span className="text-white font-bold">{stats?.total_employees || 0} employees</span>
+                        <span className={`font-bold transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{stats?.total_employees || 0} employees</span>
                       </div>
-                      <div className="flex justify-between py-1 border-b border-white/5">
+                      <div className={`flex justify-between py-1 border-b transition-colors duration-300 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
                         <span>Assigned Limit:</span>
-                        <span className="text-white font-bold">{stats?.total_quota_assigned || 0} seats</span>
+                        <span className={`font-bold transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{stats?.total_quota_assigned || 0} seats</span>
                       </div>
-                      <div className="flex justify-between py-1 border-b border-white/5">
+                      <div className={`flex justify-between py-1 border-b transition-colors duration-300 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
                         <span>Efficiency Rating:</span>
                         <span className="text-orange-400 font-bold">{stats?.token_economy?.efficiency || "100.0%"}</span>
                       </div>
@@ -523,40 +525,48 @@ function EnterpriseManagerPageInner() {
                 </div>
 
                 {/* Engagement grid & classification */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="border border-white/5 p-6 rounded-3xl bg-white/[0.01]">
-                    <div className="flex items-center justify-between mb-3 text-white/40">
-                      <span className="text-[8px] font-mono uppercase tracking-widest">Global engagement</span>
-                      <Activity className="h-4 w-4 text-[#00DDDD] animate-pulse" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className={`border p-6 rounded-3xl transition-colors duration-300 ${
+                      isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-white"
+                    }`}>
+                      <div className={`flex items-center justify-between mb-3 transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                        <span className="text-[8px] font-mono uppercase tracking-widest">Global engagement</span>
+                        <Activity className="h-4 w-4 text-[#00DDDD] animate-pulse" />
+                      </div>
+                      <h3 className={`text-xl font-display font-black tracking-tight transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{stats?.global_engagement || "Active"}</h3>
+                      <p className={`text-[9px] font-mono uppercase mt-1 transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Node network integrity</p>
                     </div>
-                    <h3 className="text-xl font-display font-black tracking-tight text-white">{stats?.global_engagement || "Active"}</h3>
-                    <p className="text-[9px] font-mono text-white/30 uppercase mt-1">Node network integrity</p>
-                  </div>
 
-                  <div className="border border-white/5 p-6 rounded-3xl bg-white/[0.01]">
-                    <div className="flex items-center justify-between mb-3 text-white/40">
-                      <span className="text-[8px] font-mono uppercase tracking-widest">Monthly computational burn</span>
-                      <Cpu className="h-4 w-4 text-orange-400" />
+                    <div className={`border p-6 rounded-3xl transition-colors duration-300 ${
+                      isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-white"
+                    }`}>
+                      <div className={`flex items-center justify-between mb-3 transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                        <span className="text-[8px] font-mono uppercase tracking-widest">Monthly computational burn</span>
+                        <Cpu className="h-4 w-4 text-orange-400" />
+                      </div>
+                      <h3 className={`text-xl font-display font-black tracking-tight transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{stats?.token_economy?.monthly_burn || "0 M"}</h3>
+                      <p className={`text-[9px] font-mono uppercase mt-1 transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>AI core usage bandwidth</p>
                     </div>
-                    <h3 className="text-xl font-display font-black tracking-tight text-white">{stats?.token_economy?.monthly_burn || "0 M"}</h3>
-                    <p className="text-[9px] font-mono text-white/30 uppercase mt-1">AI core usage bandwidth</p>
-                  </div>
 
-                  <div className="border border-white/5 p-6 rounded-3xl bg-white/[0.01]">
-                    <div className="flex items-center justify-between mb-3 text-white/40">
-                      <span className="text-[8px] font-mono uppercase tracking-widest">Allocated class</span>
-                      <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                    <div className={`border p-6 rounded-3xl transition-colors duration-300 ${
+                      isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-white"
+                    }`}>
+                      <div className={`flex items-center justify-between mb-3 transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                        <span className="text-[8px] font-mono uppercase tracking-widest">Allocated class</span>
+                        <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                      </div>
+                      <h3 className={`text-xl font-display font-black tracking-tight truncate transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{stats?.enterprise_code || "B2B-SECURE"}</h3>
+                      <p className={`text-[9px] font-mono uppercase mt-1 transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Cluster designation</p>
                     </div>
-                    <h3 className="text-xl font-display font-black tracking-tight text-white truncate">{stats?.enterprise_code || "B2B-SECURE"}</h3>
-                    <p className="text-[9px] font-mono text-white/30 uppercase mt-1">Cluster designation</p>
                   </div>
-                </div>
               </div>
 
               {/* Right Column: Broadcast Alerts feed */}
-              <div className="lg:col-span-4 border border-white/5 p-8 rounded-[3rem] bg-white/[0.01] flex flex-col justify-between">
+              <div className={`lg:col-span-4 border p-8 rounded-[3rem] flex flex-col justify-between transition-colors duration-300 ${
+                isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-white"
+              }`}>
                 <div>
-                  <h3 className="text-xs font-display font-black uppercase tracking-[0.2em] mb-6 flex items-center justify-between">
+                  <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] mb-6 flex items-center justify-between transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>
                     <span>Priority Bulletins</span>
                     <AlertTriangle className="h-4 w-4 text-orange-400" />
                   </h3>
@@ -566,15 +576,17 @@ function EnterpriseManagerPageInner() {
                   ) : (
                     <div className="space-y-4 max-h-[340px] overflow-y-auto custom-scrollbar pr-1">
                       {announcements.map(ann => (
-                        <div key={ann.id} className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                        <div key={ann.id} className={`p-4 rounded-2xl border transition-colors duration-300 ${
+                          isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                        }`}>
                           <div className="flex items-center justify-between mb-2">
                             <span className={`text-[7px] font-mono px-2 py-0.5 rounded-full uppercase tracking-widest ${
                               ann.priority === 'high' ? 'bg-red-500/20 text-red-400 border border-red-500/20' : 'bg-[#00DDDD]/20 text-[#00DDDD] border border-[#00DDDD]/20'
                             }`}>{ann.priority}</span>
-                            <span className="text-[8px] font-mono text-white/30">{new Date(ann.created_at).toLocaleDateString()}</span>
+                            <span className={`text-[8px] font-mono transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>{new Date(ann.created_at).toLocaleDateString()}</span>
                           </div>
-                          <h4 className="text-xs font-bold text-white mb-1">{ann.title}</h4>
-                          <p className="text-[10px] text-white/50 leading-relaxed line-clamp-3">{ann.content}</p>
+                          <h4 className={`text-xs font-bold mb-1 transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{ann.title}</h4>
+                          <p className={`text-[10px] leading-relaxed line-clamp-3 transition-colors duration-300 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>{ann.content}</p>
                         </div>
                       ))}
                     </div>
@@ -609,14 +621,20 @@ function EnterpriseManagerPageInner() {
                     value={employeesSearch}
                     onChange={(e) => { setEmployeesSearch(e.target.value); setEmployeesPage(1); }}
                     placeholder="Search name, employee ID, designation..."
-                    className="w-full pl-10 pr-4 py-2.5 text-xs font-mono rounded-2xl border border-white/5 bg-white/5 text-white placeholder:text-white/30 focus:outline-none focus:border-[#00DDDD]/50"
+                    className={`w-full pl-10 pr-4 py-2.5 text-xs font-mono rounded-2xl border focus:outline-none focus:border-[#00DDDD]/50 transition-colors duration-300 ${
+                      isDarkMode ? "border-white/5 bg-white/5 text-white placeholder:text-white/30" : "border-black/5 bg-black/5 text-black placeholder:text-black/30"
+                    }`}
                   />
                 </div>
 
                 <div className="flex gap-3">
                   <button
                     onClick={() => setActiveTab("bulk")}
-                    className="px-5 py-2.5 border border-white/5 hover:border-white/15 hover:bg-white/5 text-[9px] font-mono uppercase tracking-[0.2em] font-bold rounded-2xl transition-all flex items-center gap-2"
+                    className={`px-5 py-2.5 text-[9px] font-mono uppercase tracking-[0.2em] font-bold rounded-2xl transition-all flex items-center gap-2 border ${
+                      isDarkMode 
+                        ? "border-white/5 hover:border-white/15 hover:bg-white/5" 
+                        : "border-black/5 hover:border-black/15 hover:bg-black/5"
+                    } ${isDarkMode ? "text-white" : "text-black"}`}
                   >
                     <Upload className="h-4 w-4" /> Excel Roster
                   </button>
@@ -630,10 +648,14 @@ function EnterpriseManagerPageInner() {
               </div>
 
               {/* Roster table */}
-              <div className="border border-white/5 rounded-[2rem] bg-white/[0.01] overflow-hidden">
-                <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                  <h3 className="text-xs font-display font-black uppercase tracking-[0.2em]">Operational Node Registry</h3>
-                  <span className="text-[10px] font-mono text-white/40">{processedEmployees.length} employees onboarded</span>
+              <div className={`border rounded-[2rem] overflow-hidden transition-colors duration-300 ${
+                isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-white"
+              }`}>
+                <div className={`p-6 border-b flex items-center justify-between transition-colors duration-300 ${
+                  isDarkMode ? "border-white/5" : "border-black/5"
+                }`}>
+                  <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>Operational Node Registry</h3>
+                  <span className={`text-[10px] font-mono transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{processedEmployees.length} employees onboarded</span>
                 </div>
 
                 {isEmployeesLoading ? (
@@ -645,7 +667,9 @@ function EnterpriseManagerPageInner() {
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse">
                         <thead>
-                          <tr className="border-b border-white/5 text-[9px] font-mono uppercase tracking-widest text-white/40">
+                          <tr className={`border-b text-[9px] font-mono uppercase tracking-widest transition-colors duration-300 ${
+                            isDarkMode ? "border-white/5 text-white/40" : "border-black/5 text-black/40"
+                          }`}>
                             <th className="p-5 text-left">Employee Name</th>
                             <th className="p-5 text-left">Employee ID</th>
                             <th className="p-5 text-left">Mobile Number</th>
@@ -657,12 +681,16 @@ function EnterpriseManagerPageInner() {
                         </thead>
                         <tbody>
                           {visibleEmployees.map(emp => (
-                            <tr key={emp.id} className="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
+                            <tr key={emp.id} className={`border-b transition-colors duration-300 ${
+                              isDarkMode ? "border-white/5 hover:bg-white/[0.01]" : "border-black/5 hover:bg-black/[0.01]"
+                            }`}>
                               <td className="p-5 font-bold text-sm">{emp.name}</td>
                               <td className="p-5 font-mono text-xs text-[#00DDDD]">{emp.roll_no}</td>
                               <td className="p-5 font-mono text-xs opacity-75">{emp.mobile_number || "-"}</td>
                               <td className="p-5 font-mono text-xs opacity-70">
-                                <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5">{emp.assigned_class || "unassigned"}</span>
+                                <span className={`px-2 py-0.5 rounded border transition-colors duration-300 ${
+                                  isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                                }`}>{emp.assigned_class || "unassigned"}</span>
                               </td>
                               <td className="p-5 text-center font-mono text-xs font-bold text-emerald-400">
                                 {emp.total_score || 0}%
@@ -670,7 +698,11 @@ function EnterpriseManagerPageInner() {
                               <td className="p-5 text-center">
                                 <button
                                   onClick={() => handleOpenInspector(emp)}
-                                  className="px-3.5 py-1.5 border border-white/5 hover:border-[#00DDDD]/30 bg-white/5 hover:bg-[#00DDDD]/10 text-[#00DDDD] text-[9px] font-mono uppercase tracking-widest rounded-xl transition-all"
+                                  className={`px-3.5 py-1.5 text-[#00DDDD] text-[9px] font-mono uppercase tracking-widest rounded-xl border transition-all ${
+                                    isDarkMode 
+                                      ? "border-white/5 hover:border-[#00DDDD]/30 bg-white/5 hover:bg-[#00DDDD]/10" 
+                                      : "border-black/5 hover:border-[#00DDDD]/30 bg-black/5 hover:bg-[#00DDDD]/10"
+                                  }`}
                                 >
                                   Deep Inspector
                                 </button>
@@ -678,7 +710,11 @@ function EnterpriseManagerPageInner() {
                               <td className="p-5 text-right flex items-center justify-end gap-2.5">
                                 <button
                                   onClick={() => handleOpenEditEmployee(emp)}
-                                  className="p-2 border border-white/5 hover:border-white/20 bg-white/5 text-white/70 hover:text-white rounded-xl transition-all"
+                                  className={`p-2 border rounded-xl transition-all ${
+                                    isDarkMode 
+                                      ? "border-white/5 hover:border-white/20 bg-white/5 text-white/70 hover:text-white" 
+                                      : "border-black/5 hover:border-black/20 bg-black/5 text-black/70 hover:text-black"
+                                  }`}
                                   title="Edit Employee"
                                 >
                                   <Edit2 className="h-3.5 w-3.5" />
@@ -698,20 +734,28 @@ function EnterpriseManagerPageInner() {
                     </div>
 
                     {/* Pagination */}
-                    <div className="p-4 flex items-center justify-between border-t border-white/5">
-                      <div className="text-[10px] font-mono text-white/40">Page {employeesPage} / {employeesTotalPages || 1}</div>
+                    <div className={`p-4 flex items-center justify-between border-t transition-colors duration-300 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                      <div className={`text-[10px] font-mono transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Page {employeesPage} / {employeesTotalPages || 1}</div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setEmployeesPage(p => Math.max(1, p - 1))}
                           disabled={employeesPage === 1}
-                          className="px-3 py-1.5 rounded-lg border border-white/5 hover:bg-white/5 text-[10px] font-mono disabled:opacity-30"
+                          className={`px-3 py-1.5 rounded-lg border text-[10px] font-mono disabled:opacity-30 transition-colors duration-300 ${
+                            isDarkMode 
+                              ? "border-white/5 hover:bg-white/5" 
+                              : "border-black/5 hover:bg-black/5"
+                          } ${isDarkMode ? "text-white" : "text-black"}`}
                         >
                           Prev
                         </button>
                         <button
                           onClick={() => setEmployeesPage(p => Math.min(employeesTotalPages, p + 1))}
                           disabled={employeesPage === employeesTotalPages}
-                          className="px-3 py-1.5 rounded-lg border border-white/5 hover:bg-white/5 text-[10px] font-mono disabled:opacity-30"
+                          className={`px-3 py-1.5 rounded-lg border text-[10px] font-mono disabled:opacity-30 transition-colors duration-300 ${
+                            isDarkMode 
+                              ? "border-white/5 hover:bg-white/5" 
+                              : "border-black/5 hover:bg-black/5"
+                          } ${isDarkMode ? "text-white" : "text-black"}`}
                         >
                           Next
                         </button>
@@ -736,14 +780,16 @@ function EnterpriseManagerPageInner() {
               <div
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
-                className="border-2 border-dashed border-white/10 hover:border-[#00DDDD]/30 bg-white/[0.01] hover:bg-white/[0.02] p-10 rounded-[3rem] text-center transition-all cursor-pointer flex flex-col items-center gap-4 relative overflow-hidden"
+                className={`border-2 border-dashed hover:border-[#00DDDD]/30 p-10 rounded-[3rem] text-center transition-all cursor-pointer flex flex-col items-center gap-4 relative overflow-hidden ${
+                  isDarkMode ? "border-white/10 bg-white/[0.01] hover:bg-white/[0.02]" : "border-black/10 bg-black/[0.01] hover:bg-black/[0.02]"
+                }`}
               >
                 <div className="h-16 w-16 rounded-full bg-[#00DDDD]/10 border border-[#00DDDD]/20 flex items-center justify-center text-[#00DDDD]">
                   <Upload className="h-6 w-6" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-white">Drag & drop employee register Excel sheet</h4>
-                  <p className="text-[10px] font-mono text-white/40 uppercase mt-1">Supports standard .xlsx formatted roster logs</p>
+                  <h4 className={`text-sm font-bold transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>Drag & drop employee register Excel sheet</h4>
+                  <p className={`text-[10px] font-mono uppercase mt-1 transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Supports standard .xlsx formatted roster logs</p>
                 </div>
 
                 <input
@@ -756,7 +802,9 @@ function EnterpriseManagerPageInner() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-[9px] font-mono uppercase tracking-widest text-white transition-all mt-2"
+                  className={`px-5 py-2.5 rounded-2xl text-[9px] font-mono uppercase tracking-widest transition-all mt-2 ${
+                    isDarkMode ? "bg-white/5 hover:bg-white/10 border border-white/5 text-white" : "bg-black/5 hover:bg-black/10 border border-black/5 text-black"
+                  }`}
                 >
                   Browse Files
                 </button>
@@ -764,19 +812,23 @@ function EnterpriseManagerPageInner() {
 
               {/* Upload file confirmation */}
               {selectedFile && (
-                <div className="p-5 border border-white/5 rounded-3xl bg-white/[0.02] flex items-center justify-between gap-4">
+                <div className={`p-5 border rounded-3xl flex items-center justify-between gap-4 transition-colors duration-300 ${
+                  isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.02]"
+                }`}>
                   <div className="flex items-center gap-3">
                     <FileText className="h-8 w-8 text-[#00DDDD]" />
                     <div>
-                      <span className="text-xs font-bold block truncate max-w-xs">{selectedFile.name}</span>
-                      <span className="text-[8px] font-mono text-white/30 uppercase mt-0.5">{(selectedFile.size / 1024).toFixed(1)} KB</span>
+                      <span className={`text-xs font-bold block truncate max-w-xs transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{selectedFile.name}</span>
+                      <span className={`text-[8px] font-mono uppercase mt-0.5 transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>{(selectedFile.size / 1024).toFixed(1)} KB</span>
                     </div>
                   </div>
                   
                   <div className="flex gap-2">
                     <button
                       onClick={() => setSelectedFile(null)}
-                      className="px-4 py-2 border border-white/5 hover:bg-white/5 text-[9px] font-mono uppercase tracking-widest rounded-xl transition-all"
+                      className={`px-4 py-2 border text-[9px] font-mono uppercase tracking-widest rounded-xl transition-all ${
+                        isDarkMode ? "border-white/5 hover:bg-white/5" : "border-black/5 hover:bg-black/5"
+                      } ${isDarkMode ? "text-white" : "text-black"}`}
                     >
                       Clear
                     </button>
@@ -793,28 +845,36 @@ function EnterpriseManagerPageInner() {
 
               {/* Upload Feedback Result logs */}
               {uploadResult && (
-                <div className="p-6 border border-white/5 rounded-[2rem] bg-white/[0.02] space-y-4">
+                <div className={`p-6 border rounded-[2rem] space-y-4 transition-colors duration-300 ${
+                  isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.02]"
+                }`}>
                   <h3 className="text-xs font-display font-black uppercase tracking-[0.2em] text-[#00DDDD] flex items-center gap-2">
                     <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" /> Handshake Parsing Completed
                   </h3>
 
                   <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-2xl">
-                      <span className="text-[8px] font-mono text-white/40 uppercase block">Processed</span>
-                      <span className="text-lg font-bold text-white mt-1 block">{uploadResult.processed}</span>
+                    <div className={`p-3.5 border rounded-2xl transition-colors duration-300 ${
+                      isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                    }`}>
+                      <span className={`text-[8px] font-mono uppercase block transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Processed</span>
+                      <span className={`text-lg font-bold mt-1 block transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{uploadResult.processed}</span>
                     </div>
-                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-2xl">
-                      <span className="text-[8px] font-mono text-white/40 uppercase block text-emerald-400">Added</span>
+                    <div className={`p-3.5 border rounded-2xl transition-colors duration-300 ${
+                      isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                    }`}>
+                      <span className={`text-[8px] font-mono uppercase block text-emerald-400`}>Added</span>
                       <span className="text-lg font-bold text-emerald-400 mt-1 block">{uploadResult.added}</span>
                     </div>
-                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-2xl">
-                      <span className="text-[8px] font-mono text-white/40 uppercase block text-red-400">Failed</span>
+                    <div className={`p-3.5 border rounded-2xl transition-colors duration-300 ${
+                      isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                    }`}>
+                      <span className={`text-[8px] font-mono uppercase block text-red-400`}>Failed</span>
                       <span className="text-lg font-bold text-red-400 mt-1 block">{uploadResult.failed}</span>
                     </div>
                   </div>
 
                   {uploadResult.errors.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-white/5">
+                    <div className={`space-y-2 pt-2 border-t transition-colors duration-300 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
                       <span className="text-[8px] font-mono text-red-400 uppercase tracking-widest font-bold">Error Logs Stack:</span>
                       <div className="p-3 rounded-2xl bg-red-500/5 border border-red-500/10 max-h-36 overflow-y-auto custom-scrollbar text-[10px] font-mono text-red-400/80 space-y-1.5">
                         {uploadResult.errors.map((err, i) => (
@@ -840,7 +900,7 @@ function EnterpriseManagerPageInner() {
               exit={{ opacity: 0, y: -15 }}
               className="max-w-3xl mx-auto space-y-6"
             >
-              <h3 className="text-xs font-display font-black uppercase tracking-[0.2em] mb-4">Uplink Bulletin Feed</h3>
+              <h3 className={`text-xs font-display font-black uppercase tracking-[0.2em] mb-4 transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>Uplink Bulletin Feed</h3>
 
               {isAnnouncementsLoading ? (
                 <div className="py-20 text-center text-[10px] font-mono uppercase opacity-40 animate-pulse">Syncing satellite feed...</div>
@@ -849,24 +909,28 @@ function EnterpriseManagerPageInner() {
               ) : (
                 <div className="space-y-4">
                   {announcements.map(ann => (
-                    <div key={ann.id} className="p-6 border border-white/5 rounded-3xl bg-white/[0.01] hover:border-[#00DDDD]/20 transition-all duration-300">
+                    <div key={ann.id} className={`p-6 border rounded-3xl hover:border-[#00DDDD]/20 transition-all duration-300 ${
+                      isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"
+                    }`}>
                       <div className="flex items-center justify-between mb-3.5">
                         <span className={`text-[8px] font-mono px-2 py-0.5 rounded-full uppercase tracking-widest ${
                           ann.priority === 'high' ? 'bg-red-500/20 text-red-400 border border-red-500/20' : 'bg-[#00DDDD]/20 text-[#00DDDD] border border-[#00DDDD]/20'
                         }`}>{ann.priority}</span>
-                        <span className="text-[9px] font-mono text-white/30">{new Date(ann.created_at).toLocaleString()}</span>
+                        <span className={`text-[9px] font-mono transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>{new Date(ann.created_at).toLocaleString()}</span>
                       </div>
-                      <h4 className="text-sm font-bold text-white mb-2">{ann.title}</h4>
-                      <p className="text-xs text-white/60 leading-relaxed whitespace-pre-line mb-3">{ann.content}</p>
+                      <h4 className={`text-sm font-bold mb-2 transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{ann.title}</h4>
+                      <p className={`text-xs leading-relaxed whitespace-pre-line mb-3 transition-colors duration-300 ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{ann.content}</p>
                       
                       {ann.attachment_url && (
-                        <div className="pt-3 border-t border-white/5 flex justify-between items-center">
-                          <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest">Resource file available</span>
+                        <div className={`pt-3 border-t flex justify-between items-center transition-colors duration-300 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                          <span className={`text-[8px] font-mono uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Resource file available</span>
                           <a
                             href={ann.attachment_url}
                             target="_blank"
                             rel="noreferrer"
-                            className="px-3.5 py-1.5 border border-white/5 hover:border-[#00DDDD]/30 bg-white/5 text-[#00DDDD] hover:text-[#00DDDD] text-[8px] font-mono uppercase tracking-widest rounded-lg flex items-center gap-1 transition-all"
+                            className={`px-3.5 py-1.5 border hover:border-[#00DDDD]/30 text-[#00DDDD] hover:text-[#00DDDD] text-[8px] font-mono uppercase tracking-widest rounded-lg flex items-center gap-1 transition-all ${
+                              isDarkMode ? "border-white/5 bg-white/5" : "border-black/5 bg-black/5"
+                            }`}
                           >
                             <Download className="h-3 w-3" /> Fetch Resource
                           </a>
@@ -912,7 +976,9 @@ function EnterpriseManagerPageInner() {
                   onChange={(e) => setEmpName(e.target.value)}
                   required
                   placeholder="e.g. Mayank Rawat"
-                  className="w-full mt-1.5 p-3 text-xs font-mono border border-white/5 bg-white/5 rounded-2xl text-white focus:outline-none focus:border-[#00DDDD]/50"
+                  className={`w-full mt-1.5 p-3 text-xs font-mono border rounded-2xl focus:outline-none focus:border-[#00DDDD]/50 transition-colors duration-300 ${
+                    isDarkMode ? "border-white/5 bg-white/5 text-white" : "border-black/5 bg-black/5 text-black"
+                  }`}
                 />
               </div>
 
@@ -923,7 +989,9 @@ function EnterpriseManagerPageInner() {
                   onChange={(e) => setEmpRollNo(e.target.value)}
                   required
                   placeholder="e.g. EMP-9981"
-                  className="w-full mt-1.5 p-3 text-xs font-mono border border-white/5 bg-white/5 rounded-2xl text-white focus:outline-none focus:border-[#00DDDD]/50"
+                  className={`w-full mt-1.5 p-3 text-xs font-mono border rounded-2xl focus:outline-none focus:border-[#00DDDD]/50 transition-colors duration-300 ${
+                    isDarkMode ? "border-white/5 bg-white/5 text-white" : "border-black/5 bg-black/5 text-black"
+                  }`}
                 />
               </div>
 
@@ -934,7 +1002,9 @@ function EnterpriseManagerPageInner() {
                   onChange={(e) => setEmpMobile(e.target.value)}
                   required
                   placeholder="e.g. +91 9876543210"
-                  className="w-full mt-1.5 p-3 text-xs font-mono border border-white/5 bg-white/5 rounded-2xl text-white focus:outline-none focus:border-[#00DDDD]/50"
+                  className={`w-full mt-1.5 p-3 text-xs font-mono border rounded-2xl focus:outline-none focus:border-[#00DDDD]/50 transition-colors duration-300 ${
+                    isDarkMode ? "border-white/5 bg-white/5 text-white" : "border-black/5 bg-black/5 text-black"
+                  }`}
                 />
               </div>
 
@@ -946,7 +1016,9 @@ function EnterpriseManagerPageInner() {
                     onChange={(e) => setEmpClass(e.target.value)}
                     required
                     placeholder="e.g. Engineering"
-                    className="w-full mt-1.5 p-3 text-xs font-mono border border-white/5 bg-white/5 rounded-2xl text-white focus:outline-none"
+                    className={`w-full mt-1.5 p-3 text-xs font-mono border rounded-2xl text-white focus:outline-none transition-colors duration-300 ${
+                      isDarkMode ? "border-white/5 bg-white/5 text-white" : "border-black/5 bg-black/5 text-black"
+                    }`}
                   />
                 </div>
 
@@ -958,7 +1030,9 @@ function EnterpriseManagerPageInner() {
                     onChange={(e) => setEmpPassword(e.target.value)}
                     required
                     placeholder="Min 6 chars"
-                    className="w-full mt-1.5 p-3 text-xs font-mono border border-white/5 bg-white/5 rounded-2xl text-white focus:outline-none"
+                    className={`w-full mt-1.5 p-3 text-xs font-mono border rounded-2xl focus:outline-none transition-colors duration-300 ${
+                      isDarkMode ? "border-white/5 bg-white/5 text-white" : "border-black/5 bg-black/5 text-black"
+                    }`}
                   />
                 </div>
               </div>
@@ -1005,7 +1079,9 @@ function EnterpriseManagerPageInner() {
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   required
-                  className="w-full mt-1.5 p-3 text-xs font-mono border border-white/5 bg-white/5 rounded-2xl text-white focus:outline-none"
+                  className={`w-full mt-1.5 p-3 text-xs font-mono border rounded-2xl focus:outline-none transition-colors duration-300 ${
+                    isDarkMode ? "border-white/5 bg-white/5 text-white" : "border-black/5 bg-black/5 text-black"
+                  }`}
                 />
               </div>
 
@@ -1015,7 +1091,9 @@ function EnterpriseManagerPageInner() {
                   value={editClass}
                   onChange={(e) => setEditClass(e.target.value)}
                   required
-                  className="w-full mt-1.5 p-3 text-xs font-mono border border-white/5 bg-white/5 rounded-2xl text-white focus:outline-none"
+                  className={`w-full mt-1.5 p-3 text-xs font-mono border rounded-2xl focus:outline-none transition-colors duration-300 ${
+                    isDarkMode ? "border-white/5 bg-white/5 text-white" : "border-black/5 bg-black/5 text-black"
+                  }`}
                 />
               </div>
 
@@ -1023,7 +1101,9 @@ function EnterpriseManagerPageInner() {
                 <button
                   type="button"
                   onClick={() => setEditingEmployee(null)}
-                  className="flex-1 py-3 border border-white/5 text-[9px] font-mono uppercase tracking-widest hover:bg-white/5 transition-all rounded-xl"
+                  className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-widest transition-all rounded-xl ${
+                    isDarkMode ? "border border-white/5 hover:bg-white/5 text-white" : "border border-black/5 hover:bg-black/5 text-black"
+                  }`}
                 >
                   Cancel
                 </button>
@@ -1063,12 +1143,12 @@ function EnterpriseManagerPageInner() {
               <div className="py-20 text-center text-[10px] font-mono uppercase opacity-40 animate-pulse">Syncing profile uplink...</div>
             ) : inspectorStats ? (
               <div className="space-y-6">
-                <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+                <div className={`flex items-center gap-4 border-b pb-4 transition-colors duration-300 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
                   <div className="h-12 w-12 rounded-2xl bg-[#00DDDD]/10 border border-[#00DDDD]/20 flex items-center justify-center">
                     <User className="h-6 w-6 text-[#00DDDD]" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-display font-black uppercase tracking-tight text-white">
+                    <h2 className={`text-lg font-display font-black uppercase tracking-tight transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>
                       {inspectorStats.profile?.name}
                     </h2>
                     <p className="text-[9px] font-mono text-[#00DDDD] uppercase tracking-widest mt-0.5">
@@ -1079,25 +1159,33 @@ function EnterpriseManagerPageInner() {
 
                 {/* Score Stats Ring / cards */}
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
-                    <span className="text-[8px] font-mono text-white/30 uppercase block">Quiz Accuracy</span>
+                  <div className={`p-4 rounded-2xl border text-center transition-colors duration-300 ${
+                    isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                  }`}>
+                    <span className={`text-[8px] font-mono uppercase block transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Quiz Accuracy</span>
                     <span className="text-md font-bold text-emerald-400 mt-1 block">{inspectorStats.performance?.quiz_accuracy || "0.0%"}</span>
                   </div>
-                  <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
-                    <span className="text-[8px] font-mono text-white/30 uppercase block">Interview Rate</span>
+                  <div className={`p-4 rounded-2xl border text-center transition-colors duration-300 ${
+                    isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                  }`}>
+                    <span className={`text-[8px] font-mono uppercase block transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Interview Rate</span>
                     <span className="text-md font-bold text-[#00DDDD] mt-1 block">{inspectorStats.performance?.interview_success || "0.0%"}</span>
                   </div>
-                  <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
-                    <span className="text-[8px] font-mono text-white/30 uppercase block">Battle Ready</span>
+                  <div className={`p-4 rounded-2xl border text-center transition-colors duration-300 ${
+                    isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                  }`}>
+                    <span className={`text-[8px] font-mono uppercase block transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Battle Ready</span>
                     <span className="text-md font-bold text-orange-400 mt-1 block">{inspectorStats.performance?.battle_readiness || "0.0%"}</span>
                   </div>
                 </div>
 
                 {/* Ranking Summary */}
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex justify-between items-center text-xs font-mono">
+                <div className={`p-4 rounded-2xl border flex justify-between items-center text-xs font-mono transition-colors duration-300 ${
+                  isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                }`}>
                   <div className="flex items-center gap-2">
                     <Award className="h-4 w-4 text-[#00DDDD]" />
-                    <span className="text-white/50">Enterprise Rank Percentile:</span>
+                    <span className={`transition-colors duration-300 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>Enterprise Rank Percentile:</span>
                   </div>
                   <span className="font-bold text-[#00DDDD] text-sm">
                     {inspectorStats.ranking?.rank} / {inspectorStats.ranking?.total || 1} ({inspectorStats.ranking?.percentile || "0.0%"})
@@ -1107,15 +1195,15 @@ function EnterpriseManagerPageInner() {
                 {/* Skills distributes progress bars */}
                 {inspectorStats.skills && inspectorStats.skills.length > 0 && (
                   <div className="space-y-3">
-                    <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest font-bold">Skills Matrix Spectrum:</span>
+                    <span className={`text-[9px] font-mono uppercase tracking-widest font-bold transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Skills Matrix Spectrum:</span>
                     <div className="space-y-2">
                       {inspectorStats.skills.map((skill, idx) => (
                         <div key={idx}>
-                          <div className="flex items-center justify-between text-[10px] font-mono mb-1 text-white/70">
+                          <div className={`flex items-center justify-between text-[10px] font-mono mb-1 transition-colors duration-300 ${isDarkMode ? "text-white/70" : "text-black/70"}`}>
                             <span>{skill.label}</span>
                             <span className="font-bold text-[#00DDDD]">{skill.value}%</span>
                           </div>
-                          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                          <div className={`h-1.5 w-full rounded-full overflow-hidden transition-colors duration-300 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
                             <div className="h-full bg-gradient-to-r from-[#00DDDD]/50 to-[#00DDDD] rounded-full" style={{ width: `${skill.value}%` }} />
                           </div>
                         </div>
@@ -1127,15 +1215,17 @@ function EnterpriseManagerPageInner() {
                 {/* System event logs */}
                 {inspectorStats.logs && inspectorStats.logs.length > 0 && (
                   <div className="space-y-3">
-                    <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest font-bold">Event Protocol Logs:</span>
+                    <span className={`text-[9px] font-mono uppercase tracking-widest font-bold transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Event Protocol Logs:</span>
                     <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar pr-1 text-[10px] font-mono">
                       {inspectorStats.logs.map((log, idx) => (
-                        <div key={idx} className="p-2.5 bg-white/5 border border-white/5 rounded-xl flex justify-between items-start">
+                        <div key={idx} className={`p-2.5 border rounded-xl flex justify-between items-start transition-colors duration-300 ${
+                          isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                        }`}>
                           <div>
-                            <span className="text-white font-bold block">{log.title}</span>
-                            <span className="text-white/40 block text-[9px] mt-0.5">{log.type} // {log.meta}</span>
+                            <span className={`font-bold block transition-colors duration-300 ${isDarkMode ? "text-white" : "text-black"}`}>{log.title}</span>
+                            <span className={`block text-[9px] mt-0.5 transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{log.type} // {log.meta}</span>
                           </div>
-                          <div className="text-right text-[8px] text-white/30 shrink-0">
+                          <div className={`text-right text-[8px] shrink-0 transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
                             <span>{log.time}</span>
                             <span className="block mt-0.5">{log.date}</span>
                           </div>
@@ -1146,7 +1236,7 @@ function EnterpriseManagerPageInner() {
                 )}
               </div>
             ) : (
-              <div className="py-10 text-center text-white/30 uppercase font-mono">Error syncing profile</div>
+              <div className={`py-10 text-center uppercase font-mono transition-colors duration-300 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Error syncing profile</div>
             )}
 
             <button

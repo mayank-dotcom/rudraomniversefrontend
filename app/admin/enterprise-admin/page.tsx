@@ -390,7 +390,7 @@ function EnterpriseAdminPageInner() {
 
       {/* SUB-HEADER TABS */}
       <div className="max-w-[1600px] mx-auto px-6 md:px-12 mt-8">
-        <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+        <div className={`flex items-center gap-3 border-b pb-4 transition-colors duration-300 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
           {[
             { id: "dashboard", label: "Dashboard", icon: Cpu },
             { id: "managers", label: "Manager Nodes", icon: Layers },
@@ -406,10 +406,10 @@ function EnterpriseAdminPageInner() {
                 className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${
                   active
                     ? "bg-gradient-to-r from-orange-500/20 to-orange-500/10 border border-orange-500/30 text-orange-400 font-bold"
-                    : "border border-transparent hover:border-white/5 text-white/50 hover:text-white hover:bg-white/5"
+                    : (isDarkMode ? "border border-transparent hover:border-white/5 text-white/50 hover:text-white hover:bg-white/5" : "border border-transparent hover:border-black/5 text-black/50 hover:text-black hover:bg-black/5")
                 }`}
               >
-                <Icon className={`h-3.5 w-3.5 ${active ? "text-orange-400" : "text-white/40"}`} />
+                <Icon className={`h-3.5 w-3.5 transition-colors duration-300 ${active ? "text-orange-400" : (isDarkMode ? "text-white/40" : "text-black/40")}`} />
                 {tab.label}
               </button>
             )
@@ -430,7 +430,7 @@ function EnterpriseAdminPageInner() {
               className="space-y-8"
             >
               {/* Enterprise Identity Banner */}
-              <div className="relative border border-white/5 p-8 rounded-[3rem] bg-gradient-to-br from-orange-500/[0.03] to-transparent backdrop-blur-xl overflow-hidden group">
+              <div className={`relative p-8 rounded-[3rem] bg-gradient-to-br from-orange-500/[0.03] to-transparent backdrop-blur-xl overflow-hidden group transition-colors duration-300 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
                 <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none" />
                 <div className="flex items-center gap-6">
                   <div className="h-16 w-16 rounded-2xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
@@ -447,7 +447,7 @@ function EnterpriseAdminPageInner() {
 
               {/* Stat Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="relative border border-white/5 p-6 rounded-[2.5rem] bg-white/[0.02] backdrop-blur-xl overflow-hidden group">
+                <div className={`relative p-6 rounded-[2.5rem] backdrop-blur-xl overflow-hidden group transition-colors duration-300 ${isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.02]"}`}>
                   <div className="absolute inset-0 bg-gradient-to-br from-orange-500/[0.02] to-transparent pointer-events-none" />
                   <span className="text-[8px] font-mono uppercase tracking-[0.3em] opacity-40">COMMISSIONED MANAGERS</span>
                   <div className="flex items-baseline gap-2 mt-2">
@@ -457,7 +457,7 @@ function EnterpriseAdminPageInner() {
                   <div className="h-[2px] w-8 mt-4 rounded-full bg-orange-500" />
                 </div>
 
-                <div className="relative border border-white/5 p-6 rounded-[2.5rem] bg-white/[0.02] backdrop-blur-xl overflow-hidden group">
+                <div className={`relative p-6 rounded-[2.5rem] backdrop-blur-xl overflow-hidden group transition-colors duration-300 ${isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.02]"}`}>
                   <div className="absolute inset-0 bg-gradient-to-br from-[#00DDDD]/[0.02] to-transparent pointer-events-none" />
                   <span className="text-[8px] font-mono uppercase tracking-[0.3em] opacity-40">EMPLOYEE SEATS</span>
                   <div className="flex items-baseline gap-2 mt-2">
@@ -467,7 +467,7 @@ function EnterpriseAdminPageInner() {
                   <div className="h-[2px] w-8 mt-4 rounded-full bg-[#00DDDD]" />
                 </div>
 
-                <div className="relative border border-white/5 p-6 rounded-[2.5rem] bg-white/[0.02] backdrop-blur-xl overflow-hidden group">
+                <div className={`relative p-6 rounded-[2.5rem] backdrop-blur-xl overflow-hidden group transition-colors duration-300 ${isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.02]"}`}>
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/[0.02] to-transparent pointer-events-none" />
                   <span className="text-[8px] font-mono uppercase tracking-[0.3em] opacity-40">MONTHLY COMPUTE BURN</span>
                   <div className="flex items-baseline gap-2 mt-2">
@@ -477,7 +477,7 @@ function EnterpriseAdminPageInner() {
                   <div className="h-[2px] w-8 mt-4 rounded-full bg-purple-500" />
                 </div>
 
-                <div className="relative border border-white/5 p-6 rounded-[2.5rem] bg-white/[0.02] backdrop-blur-xl overflow-hidden group">
+                <div className={`relative p-6 rounded-[2.5rem] backdrop-blur-xl overflow-hidden group transition-colors duration-300 ${isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.02]"}`}>
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.02] to-transparent pointer-events-none" />
                   <span className="text-[8px] font-mono uppercase tracking-[0.3em] opacity-40">ACTIVE COMPUTE NODES</span>
                   <div className="flex items-baseline gap-2 mt-2">
@@ -491,7 +491,7 @@ function EnterpriseAdminPageInner() {
               {/* Resource & Allocation Row */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Left: Allocation Meter bars */}
-                <div className="lg:col-span-8 border border-white/5 p-8 rounded-[3rem] bg-white/[0.01] backdrop-blur-2xl relative overflow-hidden">
+                <div className={`lg:col-span-8 p-8 rounded-[3rem] backdrop-blur-2xl relative overflow-hidden transition-colors duration-300 ${isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"}`}>
                   <h3 className="text-xs font-display font-black uppercase tracking-[0.2em] mb-8">Node Compute Resource Allocations</h3>
                   <div className="space-y-6">
                     {/* Compute Allocation */}
