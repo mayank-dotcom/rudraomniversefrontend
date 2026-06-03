@@ -38,7 +38,7 @@ export function setApiKey(key: string) {
 
 export function getApiKey(): string | null {
   if (typeof window !== "undefined") {
-    return localStorage.getItem("rudranex_api_key")
+    return localStorage.getItem("rudranex_api_key") || localStorage.getItem("rudranex_admin_key")
   }
   return null
 }
