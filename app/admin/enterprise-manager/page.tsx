@@ -119,8 +119,7 @@ function EnterpriseManagerPageInner() {
     try {
       const res = await getEnterpriseEmployees()
       if (res.success) {
-        const localEmps = getLocalEmployees()
-        setEmployees([...(res.employees || []), ...localEmps])
+        setEmployees(res.employees || [])
       }
     } catch (e: any) {
       const localEmps = getLocalEmployees()
@@ -159,20 +158,13 @@ function EnterpriseManagerPageInner() {
 
     setIsActionLoading(true)
     try {
-      await createEnterpriseEmployee({
+      const created = await createEnterpriseEmployee({
         name: empName.trim(),
         roll_no: empRollNo.trim(),
         mobile_number: empMobile.trim(),
         password: empPassword.trim(),
         assigned_class: empClass.trim(),
       })
-      const newLocalEmp = addLocalEmployee({
-        name: empName.trim(),
-        roll_no: empRollNo.trim(),
-        mobile_number: empMobile.trim() || empRollNo.trim(),
-        assigned_class: empClass.trim(),
-      })
-      setEmployees(prev => [...prev, newLocalEmp])
       toast.success("Employee onboarded successfully!")
       setShowCreateEmpModal(false)
       setEmpName("")
@@ -180,7 +172,15 @@ function EnterpriseManagerPageInner() {
       setEmpMobile("")
       setEmpPassword("")
       setEmpClass(stats?.enterprise_code || "DEVELOPMENT-NODE")
+      fetchEmployees()
     } catch (err: any) {
+      const newLocalEmp = addLocalEmployee({
+        name: empName.trim(),
+        roll_no: empRollNo.trim(),
+        mobile_number: empMobile.trim() || empRollNo.trim(),
+        assigned_class: empClass.trim(),
+      })
+      setEmployees(prev => [...prev, newLocalEmp])
       toast.error(err.message || "Failed to onboard employee")
     } finally {
       setIsActionLoading(false)

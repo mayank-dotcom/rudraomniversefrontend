@@ -47,6 +47,12 @@ export function removeApiKey() {
   if (typeof window !== "undefined") {
     localStorage.removeItem("rudranex_api_key")
     localStorage.removeItem("rudranex_admin_key")
+    localStorage.removeItem("rudranex_user_role")
+    localStorage.removeItem("rudranex_user_name")
+    localStorage.removeItem("rudranex_user_email")
+    localStorage.removeItem("rudranex_school_name")
+    localStorage.removeItem("rudranex_enterprise_name")
+    localStorage.removeItem("manager_local_employees")
   }
 }
 
