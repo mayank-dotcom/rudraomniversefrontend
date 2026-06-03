@@ -75,25 +75,33 @@ export interface UpdateTokensResponse {
 
 export interface Plan {
   id: string
-  name: string
-  price: number
-  currency?: string
-  tokens_limit: number
-  images_limit: number
-  personas_limit: number
-  features?: string[]
+  plan_name: string
+  price_inr: number
+  daily_image_limit?: number
+  daily_stt_limit?: number
+  daily_tts_limit?: number
+  daily_vision_limit?: number
+  feature_extraction_limit?: number
+  image_limit?: number
+  monthly_flux_limit?: number
+  monthly_image_limit?: number
+  monthly_tokens?: number
+  ocr_limit?: number
+  stt_minutes_limit?: number
+  tts_minutes_limit?: number
   is_active?: boolean
+  // Legacy fields (kept for backward compat)
+  name?: string
+  price?: number
+  currency?: string
+  tokens_limit?: number
+  images_limit?: number
+  personas_limit?: number
+  features?: string[]
   description?: string
   status?: string
-  plan_name?: string
-  price_inr?: number
   daily_chat_limit?: number
   daily_coding_limit?: number
-  daily_vision_limit?: number
-  monthly_image_limit?: number
-  monthly_flux_limit?: number
-  daily_tts_limit?: number
-  daily_stt_limit?: number
 }
 
 export interface PlansListResponse {
@@ -1192,13 +1200,18 @@ export interface AdminPlan {
   id: number
   plan_name: string
   price_inr: number
-  daily_chat_limit: number
-  daily_coding_limit: number
+  daily_image_limit: number
   daily_vision_limit: number
   daily_tts_limit: number
   daily_stt_limit: number
-  monthly_image_limit: number
+  feature_extraction_limit: number
+  image_limit: number
   monthly_flux_limit: number
+  monthly_image_limit: number
+  monthly_tokens: number
+  ocr_limit: number
+  stt_minutes_limit: number
+  tts_minutes_limit: number
 }
 
 export interface AdminPlansResponse {

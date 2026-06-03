@@ -43,36 +43,40 @@ const PlanCard = ({ plan, isDarkMode, onEdit }: { plan: any, isDarkMode: boolean
 
             <div className={`space-y-2 mb-6 text-[10px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
                 <div className="flex justify-between">
-                    <span>Daily Chat</span>
-                    <span className="font-bold">{plan.daily_chat_limit || 0}</span>
+                    <span>Daily Image</span>
+                    <span className="font-bold">{plan.daily_image_limit ?? 0}</span>
                 </div>
                 <div className="flex justify-between">
-                    <span>Daily Coding</span>
-                    <span className="font-bold">{plan.daily_coding_limit || 0}</span>
+                    <span>Feature Extraction</span>
+                    <span className="font-bold">{plan.feature_extraction_limit ?? 0}</span>
                 </div>
                 <div className="flex justify-between">
                     <span>Daily Vision</span>
-                    <span className="font-bold">{plan.daily_vision_limit || 0}</span>
+                    <span className="font-bold">{plan.daily_vision_limit ?? 0}</span>
                 </div>
                 <div className="flex justify-between">
                     <span>Monthly Images</span>
-                    <span className="font-bold">{plan.monthly_image_limit || 0}</span>
+                    <span className="font-bold">{plan.monthly_image_limit ?? 0}</span>
                 </div>
                 <div className="flex justify-between">
                     <span>Monthly Flux</span>
-                    <span className="font-bold">{plan.monthly_flux_limit || 0}</span>
+                    <span className="font-bold">{plan.monthly_flux_limit ?? 0}</span>
                 </div>
                 <div className="flex justify-between">
                     <span>Daily TTS</span>
-                    <span className="font-bold">{plan.daily_tts_limit || 0}</span>
+                    <span className="font-bold">{plan.daily_tts_limit ?? 0}</span>
                 </div>
                 <div className="flex justify-between">
                     <span>Daily STT</span>
-                    <span className="font-bold">{plan.daily_stt_limit || 0}</span>
+                    <span className="font-bold">{plan.daily_stt_limit ?? 0}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span>OCR Limit</span>
+                    <span className="font-bold">{plan.ocr_limit ?? 0}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2 mt-2">
-                    <span>Token Limit</span>
-                    <span className="font-bold">{plan.tokens_limit || plan.daily_chat_limit || 0}</span>
+                    <span>Monthly Tokens</span>
+                    <span className="font-bold">{plan.monthly_tokens ?? 0}</span>
                 </div>
             </div>
 
@@ -374,16 +378,16 @@ const Dashboard = () => {
                             ...u,
                             subscription: {
                                 ...u.subscription,
-                                daily_chat_limit: plan.daily_chat_limit || 0,
-                                daily_coding_limit: plan.daily_coding_limit || 0,
+                                daily_chat_limit: plan.daily_image_limit || 0,
+                                daily_coding_limit: plan.feature_extraction_limit || 0,
                                 daily_vision_limit: plan.daily_vision_limit || 0,
                                 daily_tts_limit: plan.daily_tts_limit || 0,
                                 daily_stt_limit: plan.daily_stt_limit || 0,
                                 monthly_image_limit: plan.monthly_image_limit || 0,
                                 monthly_flux_limit: plan.monthly_flux_limit || 0,
-                                tokens_limit: plan.daily_chat_limit || 100,
+                                tokens_limit: plan.monthly_tokens || 100,
                                 images_limit: plan.monthly_image_limit || 50,
-                                personas_limit: (plan.daily_coding_limit || 10) + (plan.daily_vision_limit || 10),
+                                personas_limit: (plan.feature_extraction_limit || 10) + (plan.daily_vision_limit || 10),
                             }
                         };
                     }
@@ -4305,7 +4309,7 @@ const Dashboard = () => {
                                     <div className="flex items-center justify-between mb-8">
                                         <h3 className={`text-lg font-display font-black uppercase tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>All Plans</h3>
                                         <button
-                                            onClick={() => setEditingPlan({ id: 'new', name: '', price: 0, tokens_limit: 0, images_limit: 0, personas_limit: 0, plan_name: '', price_inr: 0, daily_chat_limit: 0, daily_coding_limit: 0, daily_vision_limit: 0, monthly_image_limit: 0, monthly_flux_limit: 0, daily_tts_limit: 0, daily_stt_limit: 0 })}
+                                            onClick={() => setEditingPlan({ id: 'new', plan_name: '', price_inr: 0, daily_image_limit: 0, feature_extraction_limit: 0, daily_vision_limit: 0, monthly_image_limit: 0, monthly_flux_limit: 0, daily_tts_limit: 0, daily_stt_limit: 0, monthly_tokens: 0, ocr_limit: 0, name: '', price: 0, tokens_limit: 0, images_limit: 0, personas_limit: 0, daily_chat_limit: 0, daily_coding_limit: 0 })}
                                             className="px-6 py-3 bg-emerald-500 text-black text-[10px] font-mono uppercase tracking-[0.2em] font-bold hover:scale-105 transition-all rounded-2xl flex items-center gap-2"
                                         >
                                             <Plus className="h-4 w-4" /> Create Plan
@@ -4685,14 +4689,14 @@ const Dashboard = () => {
                                                                  createPlan({
                                                                      plan_name: formData.get('plan_name') as string,
                                                                      price_inr: Number(formData.get('price_inr')),
-                                                                     daily_chat_limit: Number(formData.get('daily_chat_limit')),
-                                                                     daily_coding_limit: Number(formData.get('daily_coding_limit')),
+                                                                     daily_image_limit: Number(formData.get('daily_image_limit')),
+                                                                     feature_extraction_limit: Number(formData.get('feature_extraction_limit')),
                                                                      daily_vision_limit: Number(formData.get('daily_vision_limit')),
                                                                      monthly_image_limit: Number(formData.get('monthly_image_limit')),
                                                                      monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
                                                                      daily_tts_limit: Number(formData.get('daily_tts_limit')),
                                                                      daily_stt_limit: Number(formData.get('daily_stt_limit')),
-                                                                     tokens_limit: Number(formData.get('tokens_limit'))
+                                                                     monthly_tokens: Number(formData.get('monthly_tokens'))
                                                                   }).then((res) => {
                                                                         const newPlanId = res?.plan?.id?.toString()
                                                                         if (newPlanId) {
@@ -4715,14 +4719,14 @@ const Dashboard = () => {
                                                                  handleUpdatePlan(editingPlan.id?.toString() || '', {
                                                                      plan_name: formData.get('plan_name') as string,
                                                                      price_inr: Number(formData.get('price_inr')),
-                                                                     daily_chat_limit: Number(formData.get('daily_chat_limit')),
-                                                                     daily_coding_limit: Number(formData.get('daily_coding_limit')),
+                                                                     daily_image_limit: Number(formData.get('daily_image_limit')),
+                                                                     feature_extraction_limit: Number(formData.get('feature_extraction_limit')),
                                                                      daily_vision_limit: Number(formData.get('daily_vision_limit')),
                                                                      monthly_image_limit: Number(formData.get('monthly_image_limit')),
                                                                      monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
                                                                      daily_tts_limit: Number(formData.get('daily_tts_limit')),
                                                                      daily_stt_limit: Number(formData.get('daily_stt_limit')),
-                                                                     tokens_limit: Number(formData.get('tokens_limit'))
+                                                                     monthly_tokens: Number(formData.get('monthly_tokens'))
                                                                  });
                                                                 setPlanFeatures(editingPlan.id?.toString() || '', selectedFeatures);
                                                                 if (strikeOffEnabled && strikeOffPrice > 0) {
@@ -4756,11 +4760,11 @@ const Dashboard = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily Chat</label>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily Image</label>
                                     <input
-                                        name="daily_chat_limit"
+                                        name="daily_image_limit"
                                         type="number"
-                                        defaultValue={editingPlan.daily_chat_limit || 0}
+                                        defaultValue={editingPlan.daily_image_limit ?? 0}
                                         className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
                                             }`}
                                     />
@@ -4769,11 +4773,11 @@ const Dashboard = () => {
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Daily Coding</label>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Feature Extraction</label>
                                     <input
-                                        name="daily_coding_limit"
+                                        name="feature_extraction_limit"
                                         type="number"
-                                        defaultValue={editingPlan.daily_coding_limit || 0}
+                                        defaultValue={editingPlan.feature_extraction_limit ?? 0}
                                         className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
                                             }`}
                                     />
@@ -4819,7 +4823,7 @@ const Dashboard = () => {
                                     <input
                                         name="daily_tts_limit"
                                         type="number"
-                                        defaultValue={editingPlan.daily_tts_limit || 0}
+                                        defaultValue={editingPlan.daily_tts_limit ?? 0}
                                         className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
                                             }`}
                                     />
@@ -4829,22 +4833,34 @@ const Dashboard = () => {
                                     <input
                                         name="daily_stt_limit"
                                         type="number"
-                                        defaultValue={editingPlan.daily_stt_limit || 0}
+                                        defaultValue={editingPlan.daily_stt_limit ?? 0}
                                         className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
                                             }`}
                                     />
                                 </div>
                             </div>
 
-                            <div>
-                                <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Token Limit</label>
-                                <input
-                                    name="tokens_limit"
-                                    type="number"
-                                    defaultValue={editingPlan.tokens_limit || editingPlan.daily_chat_limit || 0}
-                                    className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
-                                        }`}
-                                />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Monthly Tokens</label>
+                                    <input
+                                        name="monthly_tokens"
+                                        type="number"
+                                        defaultValue={editingPlan.monthly_tokens ?? 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>OCR Limit</label>
+                                    <input
+                                        name="ocr_limit"
+                                        type="number"
+                                        defaultValue={editingPlan.ocr_limit ?? 0}
+                                        className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"
+                                            }`}
+                                    />
+                                </div>
                             </div>
 
                             {/* Available Modes / Features */}

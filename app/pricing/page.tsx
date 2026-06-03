@@ -151,13 +151,17 @@ const PricingContent = () => {
                         ...plan,
                         name: plan.plan_name || 'Unnamed Plan',
                         price: plan.price_inr || 0,
-                        tokens: plan.daily_chat_limit || 0,
+                        tokens: plan.monthly_tokens || 0,
                         images: plan.monthly_image_limit || 0,
-                        personas: plan.daily_coding_limit || 0,
+                        personas: plan.feature_extraction_limit || 0,
+                        daily_image_limit: plan.daily_image_limit || 0,
                         daily_vision_limit: plan.daily_vision_limit || 0,
                         monthly_flux_limit: plan.monthly_flux_limit || 0,
                         daily_tts_limit: plan.daily_tts_limit || 0,
-                        daily_stt_limit: plan.daily_stt_limit || 0
+                        daily_stt_limit: plan.daily_stt_limit || 0,
+                        feature_extraction_limit: plan.feature_extraction_limit || 0,
+                        monthly_tokens: plan.monthly_tokens || 0,
+                        ocr_limit: plan.ocr_limit || 0
                     }));
                     setPlans(mappedPlans);
                 }
