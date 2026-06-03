@@ -1813,7 +1813,7 @@ STRICT RULES:
                                         {sidebarWidth > 120 && (
                                             <div className="flex flex-col">
                                                 <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
-                                                <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black"}`}>{userRole ? userRole.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) : "Pro Member"}</span>
+                                                <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : "Pro Member"}</span>
                                             </div>
                                         )}
                                     </div>
@@ -1826,14 +1826,6 @@ STRICT RULES:
                                         {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
                                     </div>
                                 </button>
-                                {userRole && userRole !== "student" && userRole !== "employee" && (
-                                    <Link
-                                        href={userRole === "school_admin" ? "/admin/school-admin" : userRole === "faculty" ? "/admin/school-faculty" : userRole === "enterprise_admin" ? "/admin/enterprise-admin" : userRole === "manager" ? "/admin/enterprise-manager" : userRole === "global_admin" ? "/admin" : "#"}
-                                        className={`w-full flex items-center justify-center gap-3 p-3 border-2 text-[10px] font-mono uppercase tracking-widest transition-all active:scale-95 ${isDarkMode ? "border-white bg-white/5 text-white hover:bg-white/20" : "border-black bg-white text-black hover:bg-black/10"}`}
-                                    >
-                                        <LayoutDashboard className="h-3 w-3" /> {sidebarWidth > 120 && "Admin Panel"}
-                                    </Link>
-                                )}
                                 <button
                                     onClick={() => {
                                         removeApiKey();
@@ -1941,18 +1933,6 @@ STRICT RULES:
                                 {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
                             </button>
 
-                            {userRole && userRole !== "student" && userRole !== "employee" && (
-                                <Link
-                                    href={userRole === "school_admin" ? "/admin/school-admin" : userRole === "faculty" ? "/admin/school-faculty" : userRole === "enterprise_admin" ? "/admin/enterprise-admin" : userRole === "manager" ? "/admin/enterprise-manager" : userRole === "global_admin" ? "/admin" : "#"}
-                                    title="Admin Panel"
-                                    className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${isDarkMode
-                                        ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5"
-                                        : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110"
-                                        }`}
-                                >
-                                    <LayoutDashboard className="h-4 w-4" />
-                                </Link>
-                            )}
                         </div>
 
                         {/* Bottom: Logout with identical size */}
@@ -3132,7 +3112,7 @@ STRICT RULES:
                                     </div>
                                     </div>
 
-                                    {userRole !== "employee" && (
+                                    {!userRole || userRole === "student" ? (
                                         <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : ""}`}>
                                             <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(0,221,221,0.5)] transition-all duration-300">
                                                 <div className="bubble-layer bubble-1"></div>
@@ -3145,7 +3125,7 @@ STRICT RULES:
                                                 <span>Upgrade Now</span>
                                             </button>
                                         </Link>
-                                    )}
+                                    ) : null}
                                 </>
                             )}
 
@@ -3515,7 +3495,7 @@ STRICT RULES:
                         </div>
 
                         {/* Bottom: Mini Cyan Upgrade Button */}
-                        {userRole !== "employee" && (
+                        {(!userRole || userRole === "student") && (
                             <div className="w-full flex items-center justify-center px-2 pb-10">
                                 <Link href="/pricing" title="Upgrade Now" className="block cursor-pointer">
                                     <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-[rgba(0,221,221,0.2)]`}>
