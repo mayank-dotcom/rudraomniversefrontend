@@ -11,7 +11,7 @@ import {
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAdminUsers, AdminUser, getSubscriptionStatus, updateTokens, getPlansList, updatePlan, createPlan, Plan, adminLoginWithCredentials, loginByAdminCode, createSchoolAdmin, getSiteSettings, updateSiteSetting, SiteSetting, freezeUser, unfreezeUser, getAdminRequests, declineAdminRequest, AdminRequest, getAdminSchools, getAdminSchoolAdmins, AdminSchool, AdminSchoolAdmin, getFrozenUsers, getAdminSchoolFacultyByCode, SchoolFacultyMember, deleteAdminUser, deleteSchoolFaculty, getAdminActivity, getAvailableFeatures, AvailableFeature, setPlanFeatures, getPlanFeatures, getPlanStrikeOff, setPlanStrikeOff, getAdminEnterprises, onboardEnterprise, deleteEnterprise, getEnterpriseStatsGlobal, AdminEnterprise, deleteAdminSchool } from '@/lib/chat-api';
-import { isAdminAuthenticated, setAdminKey, removeAdminKey, setApiKey } from '@/lib/auth';
+import { isAdminAuthenticated, setAdminKey, removeAdminKey, setApiKey, setUserRole } from '@/lib/auth';
 import { toast } from 'sonner';
 
 const PlanCard = ({ plan, isDarkMode, onEdit }: { plan: any, isDarkMode: boolean, onEdit: (plan: any) => void }) => {
@@ -816,6 +816,7 @@ const Dashboard = () => {
                 throw new Error("Global admin key missing in response")
             }
             setAdminKey(globalRes.api_key);
+            setUserRole(globalRes.role || "global_admin");
             setIsAdmin(true);
             await fetchData();
             toast.success("Global Admin login successful");
