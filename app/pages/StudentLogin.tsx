@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -101,6 +101,9 @@ export default function StudentLogin() {
 
       if (res.ok && data.success) {
         setUserInfo(name, "")
+        if (typeof window !== "undefined") {
+          localStorage.setItem("show_walkthrough", "true")
+        }
         setStep("success")
         setTimeout(() => { window.location.href = "/chat" }, 1000)
       } else {

@@ -570,7 +570,7 @@ function EnterpriseAdminPageInner() {
               </div>
 
               {/* Bottom: Manager Node Status Summary */}
-              <div className="border border-white/5 p-8 rounded-[3rem] bg-white/[0.01]">
+              <div className={`border p-8 rounded-[3rem] transition-colors duration-300 ${isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"}`}>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xs font-display font-black uppercase tracking-[0.2em]">Manager Uplinks</h3>
                   <button onClick={() => setActiveTab("managers")} className="text-[9px] font-mono uppercase tracking-widest text-[#00DDDD] hover:underline flex items-center gap-1">
@@ -579,23 +579,23 @@ function EnterpriseAdminPageInner() {
                 </div>
 
                 {managers.length === 0 ? (
-                  <div className="text-center py-10 text-[10px] font-mono uppercase opacity-40">No manager nodes commissioned</div>
+                  <div className={`text-center py-10 text-[10px] font-mono uppercase ${isDarkMode ? "opacity-40" : "opacity-75 text-zinc-800"}`}>No manager nodes commissioned</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {managers.slice(0, 3).map(mgr => (
-                      <div key={mgr.id} className="p-5 rounded-3xl bg-white/[0.02] border border-white/5 hover:border-orange-500/30 transition-all duration-300">
+                      <div key={mgr.id} className={`p-5 rounded-3xl border hover:border-orange-500/30 transition-all duration-300 ${isDarkMode ? "bg-white/[0.02] border-white/5" : "bg-black/[0.02] border-black/5"}`}>
                         <div className="flex items-center justify-between mb-3">
                           <span className="text-xs font-bold truncate pr-3">{mgr.name}</span>
                           <span className="text-[8px] font-mono text-[#00DDDD] uppercase tracking-widest">{mgr.assigned_class}</span>
                         </div>
-                        <div className="space-y-1.5 text-[10px] font-mono text-white/50">
+                        <div className={`space-y-1.5 text-[10px] font-mono ${isDarkMode ? "text-white/50" : "text-black/70"}`}>
                           <div className="flex justify-between">
                             <span>Uplink ID:</span>
-                            <span className="text-white font-bold">{mgr.admin_code}</span>
+                            <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{mgr.admin_code}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Employee Limit:</span>
-                            <span className="text-white font-bold">{mgr.employee_quota || 0} seats</span>
+                            <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{mgr.employee_quota || 0} seats</span>
                           </div>
                         </div>
                       </div>
@@ -621,9 +621,11 @@ function EnterpriseAdminPageInner() {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-30" />
                   <input
                     value={managersSearch}
-                    onChange={(e) => setManagersSearch(e.target.value)}
+                    onChange={(e) => { setManagersSearch(e.target.value); }}
                     placeholder="Search node code, assigned class, name..."
-                    className="w-full pl-10 pr-4 py-2.5 text-xs font-mono rounded-2xl border border-white/5 bg-white/5 text-white placeholder:text-white/30 focus:outline-none focus:border-orange-500/50"
+                    className={`w-full pl-10 pr-4 py-2.5 text-xs font-mono rounded-2xl border focus:outline-none focus:border-orange-500/50 transition-colors duration-300 ${
+                      isDarkMode ? "border-white/5 bg-white/5 text-white placeholder:text-white/30" : "border-black/5 bg-black/5 text-black placeholder:text-black/55"
+                    }`}
                   />
                 </div>
 
@@ -636,10 +638,10 @@ function EnterpriseAdminPageInner() {
               </div>
 
               {/* Managers Table Grid */}
-              <div className="border border-white/5 rounded-[2rem] bg-white/[0.01] overflow-hidden">
-                <div className="p-6 border-b border-white/5 flex items-center justify-between">
+              <div className={`border rounded-[2rem] overflow-hidden transition-colors duration-300 ${isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"}`}>
+                <div className={`p-6 border-b flex items-center justify-between transition-colors duration-300 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
                   <h3 className="text-xs font-display font-black uppercase tracking-[0.2em]">Active Department uplinks</h3>
-                  <span className="text-[10px] font-mono text-white/40">{processedManagers.length} active nodes</span>
+                  <span className={`text-[10px] font-mono transition-colors duration-300 ${isDarkMode ? "text-white/40" : "text-black/65"}`}>{processedManagers.length} active nodes</span>
                 </div>
 
                 {isManagersLoading ? (
@@ -650,7 +652,7 @@ function EnterpriseAdminPageInner() {
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
-                        <tr className="border-b border-white/5 text-[9px] font-mono uppercase tracking-widest text-white/40">
+                        <tr className={`border-b text-[9px] font-mono uppercase tracking-widest transition-colors duration-300 ${isDarkMode ? "border-white/5 text-white/40" : "border-black/5 text-black/60"}`}>
                           <th className="p-5 text-left">Node Name</th>
                           <th className="p-5 text-left">Admin Code</th>
                           <th className="p-5 text-left">Classification Node</th>
@@ -661,14 +663,14 @@ function EnterpriseAdminPageInner() {
                       </thead>
                       <tbody>
                         {processedManagers.map(mgr => (
-                          <tr key={mgr.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                          <tr key={mgr.id} className={`border-b transition-colors duration-300 ${isDarkMode ? "border-white/5 hover:bg-white/[0.02]" : "border-black/5 hover:bg-black/[0.02]"}`}>
                             <td className="p-5 font-bold text-sm">{mgr.name}</td>
                             <td className="p-5 font-mono text-xs text-[#00DDDD]">{mgr.admin_code}</td>
                             <td className="p-5 font-mono text-xs opacity-70">
-                              <span className="px-2 py-1 rounded bg-white/5 border border-white/5">{mgr.assigned_class}</span>
+                              <span className={`px-2 py-1 rounded border transition-colors duration-300 ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"}`}>{mgr.assigned_class}</span>
                             </td>
                             <td className="p-5 text-center font-mono text-xs">
-                              <span className="font-bold text-white">{mgr.employee_quota || 0}</span> seats
+                              <span className={`font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{mgr.employee_quota || 0}</span> seats
                             </td>
                             <td className="p-5 text-center">
                               <button
@@ -681,7 +683,9 @@ function EnterpriseAdminPageInner() {
                             <td className="p-5 text-right flex items-center justify-end gap-2.5">
                               <button
                                 onClick={() => handleOpenEditQuota(mgr)}
-                                className="px-3 py-1.5 border border-white/5 hover:border-white/20 bg-white/5 text-white/70 hover:text-white text-[9px] font-mono uppercase tracking-widest rounded-xl transition-all"
+                                className={`px-3 py-1.5 border text-[9px] font-mono uppercase tracking-widest rounded-xl transition-all ${
+                                  isDarkMode ? "border-white/5 hover:border-white/20 bg-white/5 text-white/70 hover:text-white" : "border-black/5 hover:border-black/20 bg-black/5 text-black/70 hover:text-black"
+                                }`}
                               >
                                 Edit Quota
                               </button>
@@ -861,10 +865,12 @@ function EnterpriseAdminPageInner() {
               <div className="relative max-w-md">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 opacity-30" />
                 <input
-                  value={employeesSearch}
-                  onChange={(e) => { setEmployeesSearch(e.target.value); setEmployeesPage(1); }}
-                  placeholder="Search employees by name, roll no, department class..."
-                  className="w-full pl-10 pr-4 py-2.5 text-xs font-mono rounded-2xl border border-white/5 bg-white/5 text-white placeholder:text-white/30 focus:outline-none focus:border-orange-500/50"
+                  value={managersSearch}
+                  onChange={(e) => setManagersSearch(e.target.value)}
+                  placeholder="Search node code, assigned class, name..."
+                  className={`w-full pl-10 pr-4 py-2.5 text-xs font-mono rounded-2xl border focus:outline-none focus:border-orange-500/50 transition-colors duration-300 ${
+                    isDarkMode ? "border-white/5 bg-white/5 text-white placeholder:text-white/30" : "border-black/5 bg-black/5 text-black placeholder:text-black/55"
+                  }`}
                 />
               </div>
 

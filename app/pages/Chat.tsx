@@ -46,6 +46,7 @@ import BattleArenaModal from "@/components/BattleArenaModal";
 import { GraduationCap as MockIcon } from "lucide-react";
 import WelcomeBox from "@/components/ui/WelcomeBox";
 import WalletPanel from "@/components/ui/WalletPanel";
+import OnboardingWalkthrough from "@/components/OnboardingWalkthrough";
 
 interface Message {
     role: "user" | "assistant" | "system";
@@ -203,6 +204,7 @@ const Chat = () => {
     }, []);
 
     const [authed, setAuthed] = useState<boolean | null>(null);
+    const [showWalkthrough, setShowWalkthrough] = useState(false);
     const [userName, setUserName] = useState<string>("");
     const [userEmail, setUserEmail] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>(getWelcomeMessages);
@@ -321,6 +323,16 @@ const Chat = () => {
             window.removeEventListener("storage", syncAuth);
         };
     }, []);
+
+    useEffect(() => {
+        if (authed && !showEmployeeView) {
+            const shouldShow = window.localStorage.getItem("show_walkthrough") === "true";
+            if (shouldShow) {
+                setShowWalkthrough(true);
+                window.localStorage.removeItem("show_walkthrough");
+            }
+        }
+    }, [authed, showEmployeeView]);
 
     const startResizingLeft = useCallback((e: React.MouseEvent) => {
         setIsResizingLeft(true);
@@ -1586,6 +1598,7 @@ STRICT RULES:
             )}
 
             <aside
+                id="walkthrough-sidebar"
                 style={{ width: isSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${sidebarWidth}px`) }}
                 className={`h-full border-r-2 ${isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "fixed left-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
             >
@@ -1807,7 +1820,7 @@ STRICT RULES:
 
                         {/* User Profile */}
                         {!isMobile && (
-                            <div className={`p-6 border-t-2 ${isDarkMode ? "border-white bg-black/40" : "border-black bg-white"}`}>
+                            <div id="walkthrough-profile-area" className={`p-6 border-t-2 ${isDarkMode ? "border-white bg-black/40" : "border-black bg-white"}`}>
                                 <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center gap-3">
                                         <div className={`h-10 w-10 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative group`}>
@@ -1975,6 +1988,7 @@ STRICT RULES:
 
                 {/* Left Toggle Button */}
                 <button
+                    id="walkthrough-sidebar-toggle"
                     onClick={() => {
                         const newCollapsed = !isSidebarCollapsed;
                         setIsSidebarCollapsed(newCollapsed);
@@ -2071,14 +2085,26 @@ STRICT RULES:
                             </button>
                         </div>
                     ) : (
-                        <div className="hidden md:flex flex-col items-end gap-0.5">
-                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/70" : "text-white/30") : "text-black/40"}`}>Current Session</span>
-                            <div className="flex items-center gap-2">
-                                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${isDarkMode ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-500/10 border border-emerald-500/20"}`}>
-                                    <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                    <span className="text-[8px] font-mono text-emerald-500 uppercase tracking-widest">Active</span>
+                        <div className="flex items-center gap-6">
+                            {!showEmployeeView && (
+                                <button
+                                    onClick={() => setShowWalkthrough(true)}
+                                    className={`px-3 py-1.5 border-2 text-[9px] font-mono uppercase tracking-widest transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-1.5 ${isDarkMode ? "border-white/20 bg-white/5 text-white hover:border-[#00DDDD] hover:text-[#00DDDD]" : "border-black/25 bg-black/5 text-black hover:border-[#00DDDD] hover:text-[#00DDDD]"}`}
+                                    title="Start Workspace Tour"
+                                >
+                                    <Sparkles className="h-3 w-3 animate-pulse" />
+                                    Quick Tour
+                                </button>
+                            )}
+                            <div className="hidden md:flex flex-col items-end gap-0.5">
+                                <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/70" : "text-white/30") : "text-black/40"}`}>Current Session</span>
+                                <div className="flex items-center gap-2">
+                                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${isDarkMode ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-500/10 border border-emerald-500/20"}`}>
+                                        <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                        <span className="text-[8px] font-mono text-emerald-500 uppercase tracking-widest">Active</span>
+                                    </div>
+                                    <span className={`text-xs ${isDarkMode ? "text-white/70" : "text-black/70"}`}>{activeChat?.title || "Unsaved chat"}</span>
                                 </div>
-                                <span className={`text-xs ${isDarkMode ? "text-white/70" : "text-black/70"}`}>{activeChat?.title || "Unsaved chat"}</span>
                             </div>
                         </div>
                     )}
@@ -2673,7 +2699,7 @@ STRICT RULES:
                                 )}
                             </AnimatePresence>
 
-                            <div className={`relative flex border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
+                            <div id="walkthrough-input-area" className={`relative flex border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
                                 <div className="flex-1 min-w-0 flex">
                                     <div className="flex items-center gap-1 md:gap-2 pl-1.5 md:pl-3 pt-3 pb-2.5 self-end">
                                         <button
@@ -2779,7 +2805,7 @@ STRICT RULES:
                                             </button>
                                         </div>
                                     )}
-                                    <div className="relative" ref={engineSelectRef}>
+                                    <div className="relative" ref={engineSelectRef} id="walkthrough-engine-select">
                                         <button
                                             onClick={() => setShowEngineSelect(!showEngineSelect)}
                                             className={`flex items-center gap-2 ${isMobile ? "p-2" : "px-3 py-2"} border-2 ${showEngineSelect ? "border-[#00DDDD] text-[#00DDDD]" : (isDarkMode ? "border-white text-white hover:border-[#00DDDD] hover:text-[#00DDDD]" : "border-black text-black hover:border-[#00DDDD] hover:text-[#00DDDD]")} text-[9px] font-mono uppercase tracking-widest transition-all duration-300 rounded`}
@@ -3551,6 +3577,7 @@ STRICT RULES:
 
                 {/* Right Toggle Button */}
                 <button
+                    id="walkthrough-right-sidebar-toggle"
                     onClick={() => {
                         const newCollapsed = !isRightSidebarCollapsed;
                         setIsRightSidebarCollapsed(newCollapsed);
@@ -3803,6 +3830,15 @@ STRICT RULES:
                 onHost={handleBattleArenaHost}
                 onJoin={handleBattleArenaJoin}
                 isDarkMode={isDarkMode}
+            />
+
+            {/* Onboarding Walkthrough */}
+            <OnboardingWalkthrough
+                isOpen={showWalkthrough}
+                onClose={() => setShowWalkthrough(false)}
+                isMobile={isMobile}
+                setIsSidebarCollapsed={setIsSidebarCollapsed}
+                setIsRightSidebarCollapsed={setIsRightSidebarCollapsed}
             />
 
         </div>
