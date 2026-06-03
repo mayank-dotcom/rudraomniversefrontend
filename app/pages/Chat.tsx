@@ -248,6 +248,7 @@ const Chat = () => {
     const [responseTime, setResponseTime] = useState<number | null>(null);
     const [sidebarTab, setSidebarTab] = useState<"history" | "modes">("history");
     const [rightSidebarTab, setRightSidebarTab] = useState<"usage" | "gmail" | "wallet">("usage");
+    const [isEnterpriseMode, setIsEnterpriseMode] = useState(false);
     const [gmailConnected, setGmailConnected] = useState(false);
     const [gmailEmail, setGmailEmail] = useState("");
     const [gmailEmails, setGmailEmails] = useState<any[]>([]);
@@ -296,7 +297,8 @@ const Chat = () => {
 
     const employeeRestrictedEngines = ["Student Mode", "Interview Prep", "Mock Paper Generator", "Battle Arena"];
     const userRole = typeof window !== "undefined" ? getUserRole() : null;
-    const showEmployeeView = userRole === "employee" || userRole === "global_admin" || userRole === "enterprise_admin" || userRole === "manager" || userRole === "school_admin" || userRole === "faculty";
+    const isGlobalAdmin = userRole === "global_admin";
+    const showEmployeeView = userRole === "employee" || userRole === "enterprise_admin" || userRole === "manager" || userRole === "school_admin" || userRole === "faculty" || (isGlobalAdmin && !isEnterpriseMode);
     const visibleEngines = showEmployeeView
         ? engines.filter(e => !employeeRestrictedEngines.includes(e.name))
         : engines.filter(e => e.name !== "Assistant Mode");
@@ -1819,15 +1821,29 @@ STRICT RULES:
                                             </div>
                                         )}
                                     </div>
-                                <button
-                                    onClick={toggleTheme}
-                                    className={`p-2 border transition-all duration-300 group ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black bg-white hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
-                                    title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                                >
-                                    <div className="group-hover:rotate-180 transition-transform duration-500">
-                                        {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
-                                    </div>
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    {isGlobalAdmin && (
+                                        <button
+                                            onClick={() => {
+                                                setIsEnterpriseMode(!isEnterpriseMode);
+                                                setRightSidebarTab(isEnterpriseMode ? "gmail" : "wallet");
+                                            }}
+                                            className={`p-2 border transition-all duration-300 group text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110" : "border-black bg-white hover:bg-gray-50 hover:scale-110"} ${isEnterpriseMode ? "text-[#00DDDD]" : "text-orange-400"}`}
+                                            title={isEnterpriseMode ? "Switch to Regular Mode" : "Switch to Enterprise Mode"}
+                                        >
+                                            {isEnterpriseMode ? "ENT" : "REG"}
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={toggleTheme}
+                                        className={`p-2 border transition-all duration-300 group ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black bg-white hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
+                                        title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                                    >
+                                        <div className="group-hover:rotate-180 transition-transform duration-500">
+                                            {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
+                                        </div>
+                                    </button>
+                                </div>
                                 </div>
                                 <button
                                     onClick={() => {
