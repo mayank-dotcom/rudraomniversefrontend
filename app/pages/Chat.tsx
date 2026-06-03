@@ -296,7 +296,8 @@ const Chat = () => {
 
     const employeeRestrictedEngines = ["Student Mode", "Interview Prep", "Mock Paper Generator", "Battle Arena"];
     const userRole = typeof window !== "undefined" ? getUserRole() : null;
-    const visibleEngines = userRole === "employee"
+    const showEmployeeView = userRole === "employee" || userRole === "global_admin" || userRole === "enterprise_admin" || userRole === "manager" || userRole === "school_admin" || userRole === "faculty";
+    const visibleEngines = showEmployeeView
         ? engines.filter(e => !employeeRestrictedEngines.includes(e.name))
         : engines.filter(e => e.name !== "Assistant Mode");
 
@@ -404,7 +405,7 @@ const Chat = () => {
     }, [])
 
     useEffect(() => {
-        if (userRole !== "employee" || rightSidebarTab !== "gmail" || isRightSidebarCollapsed) return
+        if (!showEmployeeView || rightSidebarTab !== "gmail" || isRightSidebarCollapsed) return
         checkGmailStatus()
     }, [userRole, rightSidebarTab, isRightSidebarCollapsed, checkGmailStatus])
 
@@ -1224,7 +1225,7 @@ STRICT RULES:
         }
 
         // Gmail mode: if To is filled, polish with AI then show confirmation
-        if (rightSidebarTab === "gmail" && userRole === "employee" && gmailConnected && gmailMailTo.trim()) {
+        if (rightSidebarTab === "gmail" && showEmployeeView && gmailConnected && gmailMailTo.trim()) {
             setGmailPolishing(true);
             setGmailPolishedBody("");
             setGmailConfirmSend(true);
@@ -2227,7 +2228,7 @@ STRICT RULES:
                                             }}
                                             onOpenMockPaper={() => setIsMockPaperModalOpen(true)}
                                             onOpenInterview={() => setIsInterviewModalOpen(true)}
-                                            hiddenEngines={userRole === "employee" ? employeeRestrictedEngines : []}
+                                            hiddenEngines={showEmployeeView ? employeeRestrictedEngines : []}
                                         />
                                     )
                                 ) : (
@@ -2460,7 +2461,7 @@ STRICT RULES:
                                 </div>
                             )}
                             {/* ─── Gmail Mail Toolbar ─── */}
-                            {rightSidebarTab === "gmail" && userRole === "employee" && gmailConnected && (
+                            {rightSidebarTab === "gmail" && showEmployeeView && gmailConnected && (
                                 <div className="mb-2 space-y-1.5">
                                     {/* To: field + Send/Bulk toggle */}
                                     <div className="flex items-center gap-2">
@@ -2770,7 +2771,7 @@ STRICT RULES:
                                                     <div className="space-y-1">
                                                         {visibleEngines.map((engine) => {
                                                             const featureId = getFeatureIdForEngine(engine.name)
-                                                            const isAvailable = userRole !== "employee" || planFeatures.length === 0 || planFeatures.includes(featureId)
+                                                            const isAvailable = !showEmployeeView || planFeatures.length === 0 || planFeatures.includes(featureId)
                                                             return (
                                                                 <button
                                                                     key={engine.name}
@@ -2860,7 +2861,7 @@ STRICT RULES:
                             >
                                 Usage
                             </button>
-                            {userRole !== "employee" && (
+                            {!showEmployeeView && (
                                 <button
                                     onClick={() => setRightSidebarTab("wallet")}
                                     className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 ${rightSidebarTab === "wallet"
@@ -2871,7 +2872,7 @@ STRICT RULES:
                                     Wallet
                                 </button>
                             )}
-                            {userRole === "employee" && (
+                            {showEmployeeView && (
                                 <button
                                     onClick={() => setRightSidebarTab("gmail")}
                                     className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 ${rightSidebarTab === "gmail"
@@ -3115,11 +3116,11 @@ STRICT RULES:
                                 </>
                             )}
 
-                            {rightSidebarTab === "wallet" && userRole !== "employee" && (
+                            {rightSidebarTab === "wallet" && !showEmployeeView && (
                                 <WalletPanel isDarkMode={isDarkMode} isMobile={isMobile} />
                             )}
 
-                            {rightSidebarTab === "gmail" && userRole === "employee" && (
+                            {rightSidebarTab === "gmail" && showEmployeeView && (
                                 <div className="flex flex-col h-full">
                                     {/* ─── SEARCH BAR ─── */}
                                     {gmailConnected && (
@@ -3349,7 +3350,7 @@ STRICT RULES:
                                 <div className={`absolute inset-0 rounded-sm border ${isDarkMode ? 'border-white' : 'border-black'} pointer-events-none`} />
                             </div>
 
-                            {userRole !== "employee" && (
+                            {!showEmployeeView && (
                                 <button
                                     onClick={() => { setRightSidebarTab("wallet"); setIsRightSidebarCollapsed(false) }}
                                     title="Wallet"
@@ -3358,7 +3359,7 @@ STRICT RULES:
                                     <Wallet className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
                                 </button>
                             )}
-                            {userRole === "employee" && (
+                            {showEmployeeView && (
                                 <button
                                     onClick={() => { setRightSidebarTab("gmail"); setIsRightSidebarCollapsed(false) }}
                                     title="Gmail"
