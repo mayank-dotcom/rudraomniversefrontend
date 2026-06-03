@@ -67,13 +67,12 @@ export default function EnterprisePortalLogin() {
                 if (res.api_key) {
                     setApiKey(res.api_key)
                     setUserInfo(res.name || "Admin", "")
+                    if (res.role) setUserRole(res.role)
                     if (res.school_name) setSchoolName(res.school_name)
                 }
                 const role = (res.role || "").toLowerCase()
-                if (role === "enterprise_admin") {
-                    window.location.href = "/admin/enterprise-admin"
-                } else if (role === "manager") {
-                    window.location.href = "/admin/enterprise-manager"
+                if (role === "enterprise_admin" || role === "manager") {
+                    window.location.href = "/chat"
                 } else {
                     throw new Error("Invalid enterprise role")
                 }

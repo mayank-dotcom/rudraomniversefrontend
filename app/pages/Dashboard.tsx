@@ -1602,6 +1602,15 @@ const Dashboard = () => {
                             )}
                         </button>
 
+                        {/* Chat Button */}
+                        <Link
+                            href="/chat"
+                            className="h-10 w-10 rounded-2xl border border-emerald-500/30 flex items-center justify-center group cursor-pointer overflow-hidden bg-emerald-500/10 hover:bg-emerald-500 transition-all"
+                            title="Open Chat"
+                        >
+                            <MessageSquare className="h-4 w-4 text-emerald-400 group-hover:text-black transition-colors" />
+                        </Link>
+
                         {/* Divider */}
                         <div className={`h-6 w-[1px] mx-1 ${isDarkMode ? "bg-white/10" : "bg-zinc-300"}`} />
 

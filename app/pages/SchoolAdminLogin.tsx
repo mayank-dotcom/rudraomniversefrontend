@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { ArrowLeft, ShieldCheck, Lock } from "lucide-react"
 import { loginByAdminCode } from "@/lib/chat-api"
-import { setApiKey } from "@/lib/auth"
+import { setApiKey, setUserRole, setUserInfo, setSchoolName } from "@/lib/auth"
 
 export default function SchoolAdminLogin() {
     const [adminCode, setAdminCode] = useState("")
@@ -23,7 +23,10 @@ export default function SchoolAdminLogin() {
             if ((res.role || "").toLowerCase() !== "school_admin") {
                 throw new Error("This code is not for School Admin login")
             }
-            window.location.href = "/admin/school-admin"
+            if (res.role) setUserRole(res.role)
+            if (res.name) setUserInfo(res.name, "")
+            if (res.school_name) setSchoolName(res.school_name)
+            window.location.href = "/chat"
         } catch (e: any) {
             setError(e.message || "Login failed")
         } finally {

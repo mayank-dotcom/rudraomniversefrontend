@@ -8,11 +8,11 @@ import {
     UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Check, Clock, Trash2, Inbox,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
-    Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2
+    Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2, LayoutDashboard
 } from "lucide-react";
 import Link from "next/link";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
-import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole, getSchoolName, getEnterpriseName } from "@/lib/auth";
+import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole, getSchoolName, getEnterpriseName, removeUserRole, removeSchoolName, removeEnterpriseName } from "@/lib/auth";
 import { useTheme } from "@/lib/theme-context";
 import {
     ChatSummary,
@@ -1813,19 +1813,45 @@ STRICT RULES:
                                         {sidebarWidth > 120 && (
                                             <div className="flex flex-col">
                                                 <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
-                                                <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black"}`}>Pro Member</span>
+                                                <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black"}`}>{userRole ? userRole.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()) : "Pro Member"}</span>
                                             </div>
                                         )}
                                     </div>
-                                    <button
-                                        onClick={toggleTheme}
-                                        className={`p-2 border transition-all duration-300 group ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black bg-white hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
-                                        title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                                <button
+                                    onClick={toggleTheme}
+                                    className={`p-2 border transition-all duration-300 group ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black bg-white hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
+                                    title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                                >
+                                    <div className="group-hover:rotate-180 transition-transform duration-500">
+                                        {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
+                                    </div>
+                                </button>
+                                {userRole && userRole !== "student" && userRole !== "employee" && (
+                                    <Link
+                                        href={userRole === "school_admin" ? "/admin/school-admin" : userRole === "faculty" ? "/admin/school-faculty" : userRole === "enterprise_admin" ? "/admin/enterprise-admin" : userRole === "manager" ? "/admin/enterprise-manager" : userRole === "global_admin" ? "/admin" : "#"}
+                                        className={`w-full flex items-center justify-center gap-3 p-3 border-2 text-[10px] font-mono uppercase tracking-widest transition-all active:scale-95 ${isDarkMode ? "border-white bg-white/5 text-white hover:bg-white/20" : "border-black bg-white text-black hover:bg-black/10"}`}
                                     >
-                                        <div className="group-hover:rotate-180 transition-transform duration-500">
-                                            {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
-                                        </div>
-                                    </button>
+                                        <LayoutDashboard className="h-3 w-3" /> {sidebarWidth > 120 && "Admin Panel"}
+                                    </Link>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        removeApiKey();
+                                        removeUserInfo();
+                                        removeUserRole();
+                                        removeSchoolName();
+                                        removeEnterpriseName();
+                                        setStoredActiveChatId(null);
+                                        setAuthed(false);
+                                        setUserName("");
+                                        setUserEmail("");
+                                        window.location.href = "/";
+                                    }}
+                                    title="Logout"
+                                    className={`w-full flex items-center justify-center gap-3 p-3 border-2 ${isDarkMode ? "border-white bg-white/5 text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-white" : "border-black bg-white text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-black"}`}
+                                >
+                                    <LogOut className={`h-3 w-3 ${isDarkMode ? "text-white" : "text-black"}`} /> {sidebarWidth > 120 && "Logout session"}
+                                </button>
                                 </div>
                                 <button
                                     onClick={() => {
@@ -1914,9 +1940,21 @@ STRICT RULES:
                             >
                                 {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
                             </button>
+
+                            {userRole && userRole !== "student" && userRole !== "employee" && (
+                                <Link
+                                    href={userRole === "school_admin" ? "/admin/school-admin" : userRole === "faculty" ? "/admin/school-faculty" : userRole === "enterprise_admin" ? "/admin/enterprise-admin" : userRole === "manager" ? "/admin/enterprise-manager" : userRole === "global_admin" ? "/admin" : "#"}
+                                    title="Admin Panel"
+                                    className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${isDarkMode
+                                        ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5"
+                                        : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110"
+                                        }`}
+                                >
+                                    <LayoutDashboard className="h-4 w-4" />
+                                </Link>
+                            )}
                         </div>
 
-                        {/* Bottom: Logout with identical size */}
                         {/* Bottom: Logout with identical size */}
                         {!isMobile && (
                             <div className="flex flex-col items-center w-full px-2">
@@ -1924,6 +1962,9 @@ STRICT RULES:
                                     onClick={() => {
                                         removeApiKey();
                                         removeUserInfo();
+                                        removeUserRole();
+                                        removeSchoolName();
+                                        removeEnterpriseName();
                                         setStoredActiveChatId(null);
                                         setAuthed(false);
                                         setUserName("");
@@ -2889,7 +2930,7 @@ STRICT RULES:
                                                     <div className={`h-1.5 w-1.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(0,221,221,0.5)] ${subscription?.subscription ? 'bg-[#00DDDD]' : 'bg-amber-500'}`} />
                                                 </div>
                                                 <span className={`flex items-center text-xs font-bold ${isDarkMode ? "text-black bg-white px-2 border-2 border-transparent" : "text-white bg-black px-2 border-2 border-transparent"} tracking-widest uppercase`}>
-                                                    {isSubscriptionLoading ? "Loading..." : (subscription?.subscription?.plan_name || "Free Trial")}
+                                                    {isSubscriptionLoading ? "Loading..." : (userRole && userRole !== "student" ? "Agencies / Heavy Duty" : (subscription?.subscription?.plan_name || "Free Trial"))}
                                                 </span>
                                             </div>
                                         </div>
