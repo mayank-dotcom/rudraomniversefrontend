@@ -2273,11 +2273,11 @@ STRICT RULES:
                                                             {msg.content}
                                                         </p>
                                                     ) : isImageContent(msg.content) ? (
-                                                        <div className="relative group/img-wrapper max-w-full">
+                                                        <div className="relative group/img-wrapper max-w-[400px]">
                                                             <img
                                                                 src={msg.content}
                                                                 alt="Generated image"
-                                                                className="w-full max-h-[400px] object-contain rounded-2xl border border-white/10 shadow-2xl transition-transform duration-300 group-hover/img-wrapper:scale-[1.01]"
+                                                                className="w-full max-h-[300px] object-contain rounded-2xl border border-white/10 shadow-2xl transition-transform duration-300 group-hover/img-wrapper:scale-[1.01]"
                                                             />
                                                             <button
                                                                 onClick={() => handleDownloadImage(msg.content)}
