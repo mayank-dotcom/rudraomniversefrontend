@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { X, Phone, Mail, GitBranch, KeyRound, Check, ChevronRight, User, GraduationCap } from "lucide-react"
 import { GithubAuthProvider, GoogleAuthProvider, signInWithPopup } from "firebase/auth"
 import { getFirebaseAuth, sendFirebaseOTP, cleanupRecaptcha } from "@/lib/firebase"
-import { setApiKey, setUserInfo } from "@/lib/auth"
+import { setApiKey, setUserInfo, setSchoolName, setUserRole } from "@/lib/auth"
 import { googleLogin, githubLogin, studentLogin } from "@/lib/chat-api"
 import { useTheme } from "@/lib/theme-context"
 
@@ -442,6 +442,8 @@ function StudentAuth({ onSuccess, isDarkMode }: { onSuccess: () => void; isDarkM
       if (data.api_key) {
         setApiKey(data.api_key)
         setUserInfo(data.name || "Student", "")
+        if (data.school_name) setSchoolName(data.school_name)
+        if (data.role) setUserRole(data.role)
         setSuccess(true)
         setTimeout(() => { onSuccess(); window.location.href = "/chat" }, 1000)
       }

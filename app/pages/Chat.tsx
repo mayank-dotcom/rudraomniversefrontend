@@ -8,11 +8,11 @@ import {
     UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Check, Clock, Trash2, Inbox,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
-    Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet
+    Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2
 } from "lucide-react";
 import Link from "next/link";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
-import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole } from "@/lib/auth";
+import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole, getSchoolName, getEnterpriseName } from "@/lib/auth";
 import { useTheme } from "@/lib/theme-context";
 import {
     ChatSummary,
@@ -2898,6 +2898,35 @@ STRICT RULES:
                                             <div className={`absolute inset-0 rounded-sm border ${isDarkMode ? 'border-white' : 'border-black'} pointer-events-none`} />
                                         </div>
                                     </div>
+
+                                    {/* School / Enterprise Details */}
+                                    {(() => {
+                                        const schoolName = getSchoolName()
+                                        const enterpriseName = getEnterpriseName()
+                                        if (schoolName) {
+                                            return (
+                                                <div className={`flex items-center gap-3 mb-6 px-4 py-3 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                                    <GraduationCap className={`h-4 w-4 shrink-0 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>School</span>
+                                                        <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{schoolName}</span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        }
+                                        if (enterpriseName) {
+                                            return (
+                                                <div className={`flex items-center gap-3 mb-6 px-4 py-3 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                                                    <Building2 className={`h-4 w-4 shrink-0 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Enterprise</span>
+                                                        <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{enterpriseName}</span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        }
+                                        return null
+                                    })()}
 
                                     {/* Circular Usage Chart */}
                                     <div className="relative w-32 h-32 mx-auto mb-8 flex-shrink-0">

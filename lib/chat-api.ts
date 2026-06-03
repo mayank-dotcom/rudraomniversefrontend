@@ -671,6 +671,7 @@ export interface AdminCodeLoginResponse {
   role?: string
   name?: string
   school_id?: number
+  school_name?: string
   error?: string
 }
 

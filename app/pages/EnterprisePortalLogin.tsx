@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Building2, Lock, User, Briefcase, Users, Shield, KeyRound, Smartphone } from "lucide-react"
 import Navbar from "@/components/ui/Navbar"
 import { loginEnterprise, loginByAdminCode } from "@/lib/chat-api"
-import { setApiKey, setUserInfo, setUserRole } from "@/lib/auth"
+import { setApiKey, setUserInfo, setUserRole, setEnterpriseName, setSchoolName } from "@/lib/auth"
 import { useTheme } from "@/lib/theme-context"
 
 type RoleTab = "admin" | "manager" | "employee"
@@ -59,6 +59,7 @@ export default function EnterprisePortalLogin() {
                     setApiKey(res.api_key)
                     setUserInfo(res.name || "Employee", "")
                     setUserRole(res.role || "employee")
+                    if (res.enterprise_name) setEnterpriseName(res.enterprise_name)
                 }
                 window.location.href = "/chat"
             } else {
@@ -66,6 +67,7 @@ export default function EnterprisePortalLogin() {
                 if (res.api_key) {
                     setApiKey(res.api_key)
                     setUserInfo(res.name || "Admin", "")
+                    if (res.school_name) setSchoolName(res.school_name)
                 }
                 const role = (res.role || "").toLowerCase()
                 if (role === "enterprise_admin") {

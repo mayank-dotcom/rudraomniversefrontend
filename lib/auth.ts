@@ -96,3 +96,45 @@ export function removeUserRole() {
     localStorage.removeItem(USER_ROLE_STORAGE)
   }
 }
+
+const SCHOOL_NAME_STORAGE = "rudranex_school_name"
+
+export function setSchoolName(name: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(SCHOOL_NAME_STORAGE, name)
+  }
+}
+
+export function getSchoolName(): string | null {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem(SCHOOL_NAME_STORAGE)
+  }
+  return null
+}
+
+export function removeSchoolName() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(SCHOOL_NAME_STORAGE)
+  }
+}
+
+const ENTERPRISE_NAME_STORAGE = "rudranex_enterprise_name"
+
+export function setEnterpriseName(name: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(ENTERPRISE_NAME_STORAGE, name)
+  }
+}
+
+export function getEnterpriseName(): string | null {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem(ENTERPRISE_NAME_STORAGE)
+  }
+  return null
+}
+
+export function removeEnterpriseName() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(ENTERPRISE_NAME_STORAGE)
+  }
+}
