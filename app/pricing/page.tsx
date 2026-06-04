@@ -191,46 +191,46 @@ const PricingContent = () => {
 
     const getMultiplierData = (planName: string) => {
         const list = [
-            { keywords: ['free'], multiplier: '0.02x', tokens: '1K', features: [] as { icon: any; label: string; value: string }[] },
+            { keywords: ['free'], multiplier: '0.02x', tokens: '1K', features: [] as { icon: any; text: string }[] },
             { keywords: ['motion'], multiplier: '1x', tokens: '50K', features: [
-                { icon: Zap, label: 'AI Chat & Writing', value: 'Base Pool' },
-                { icon: ImageIcon, label: 'AI Image Creator', value: 'Standard Quality' },
-                { icon: Scan, label: 'Read Text from Images', value: 'Core Processing' },
-                { icon: Puzzle, label: 'AI Document Analysis', value: 'Basic Analysis' },
-                { icon: Volume2, label: 'Voice Reader (Text-to-Speech)', value: 'Standard Voice' },
-                { icon: Mic, label: 'Voice Typing (Speech-to-Text)', value: 'Standard Transcription' },
+                { icon: Zap, text: 'Engage in clear conversations with our AI assistant to draft outlines, brainstorm ideas, and answer simple questions.' },
+                { icon: ImageIcon, text: 'Create standard-definition custom graphics and design unique illustrations using basic image generation tools in the lab.' },
+                { icon: Scan, text: 'Convert physical documents and clear paper images into editable digital text files using standard character recognition.' },
+                { icon: Puzzle, text: 'Upload single document files to extract high-level summaries and locate specific data points automatically.' },
+                { icon: Volume2, text: 'Convert written text articles into clear audio recordings for listening to study notes on the go.' },
+                { icon: Mic, text: 'Dictate notes and letters using smart voice typing for fast transcription of your daily spoken words.' },
             ]},
             { keywords: ['speed'], multiplier: '10x', tokens: '500K', features: [
-                { icon: Zap, label: 'AI Chat & Writing', value: 'Expanded Pool' },
-                { icon: ImageIcon, label: 'AI Image Creator', value: 'Priority Generation' },
-                { icon: Scan, label: 'Read Text from Images', value: 'Batch Processing' },
-                { icon: Puzzle, label: 'AI Document Analysis', value: 'Advanced Insights' },
-                { icon: Volume2, label: 'Voice Reader (Text-to-Speech)', value: 'High-Fidelity Voice' },
-                { icon: Mic, label: 'Voice Typing (Speech-to-Text)', value: 'Advanced Transcription' },
+                { icon: Zap, text: 'Unlock faster processing speeds and longer chat history windows for complex research tasks and documentation projects.' },
+                { icon: ImageIcon, text: 'Produce high-definition digital illustrations instantly without waiting in standard queues during peak generation hours.' },
+                { icon: Scan, text: 'Extract text from multi-page scanned PDF documents and low-resolution digital screenshots with enhanced OCR accuracy.' },
+                { icon: Puzzle, text: 'Analyze large datasets to identify hidden trends and cross-reference information across your uploaded materials.' },
+                { icon: Volume2, text: 'Listen to complete books and research reports narrated by natural, high-fidelity synthetic voices for long listening sessions.' },
+                { icon: Mic, text: 'Convert long lectures and meetings into highly accurate text using advanced acoustic speech-to-text algorithms.' },
             ]},
             { keywords: ['velocity'], multiplier: '16x', tokens: '800K', features: [
-                { icon: Zap, label: 'AI Chat & Writing', value: 'Professional Quota' },
-                { icon: ImageIcon, label: 'AI Image Creator', value: 'Studio Grade' },
-                { icon: Scan, label: 'Read Text from Images', value: 'Enterprise Suite' },
-                { icon: Puzzle, label: 'AI Document Analysis', value: 'Deep Extraction' },
-                { icon: Volume2, label: 'Voice Reader (Text-to-Speech)', value: 'Studio Voice' },
-                { icon: Mic, label: 'Voice Typing (Speech-to-Text)', value: 'Real-time Transcription' },
+                { icon: Zap, text: 'Deploy professional-grade reasoning engines optimized for executing multi-step logical operations and detailed code generation.' },
+                { icon: ImageIcon, text: 'Generate ultra-realistic visual art and complex design mockups using advanced control parameters and model tuning.' },
+                { icon: Scan, text: 'Scan complex business documents and extract layout details to export data into clean, structured tables.' },
+                { icon: Puzzle, text: 'Synthesize information from multiple distinct file sources to generate comprehensive, cohesive executive summaries for your team.' },
+                { icon: Volume2, text: 'Generate custom voiceovers with realistic emotional tones suitable for producing podcasts, video narration, and media.' },
+                { icon: Mic, text: 'Transcribe live audio streams with automatic speaker identification and smart punctuation in multiple languages.' },
             ]},
             { keywords: ['acceleration'], multiplier: '20x', tokens: '1M', features: [
-                { icon: Zap, label: 'AI Chat & Writing', value: 'Production Quota' },
-                { icon: ImageIcon, label: 'AI Image Creator', value: 'Flux/Infinite Gen' },
-                { icon: Scan, label: 'Read Text from Images', value: 'Cognitive Parsing' },
-                { icon: Puzzle, label: 'AI Document Analysis', value: 'Semantic Mapping' },
-                { icon: Volume2, label: 'Voice Reader (Text-to-Speech)', value: 'API-Grade Voice' },
-                { icon: Mic, label: 'Voice Typing (Speech-to-Text)', value: 'Multi-Speaker Support' },
+                { icon: Zap, text: 'Empower your production workflows with massive monthly token allocations for continuous, uninterrupted AI assistant interactions.' },
+                { icon: ImageIcon, text: 'Create unlimited high-resolution commercial marketing graphics instantly using our fastest, state-of-the-art neural diffusion models.' },
+                { icon: Scan, text: 'Automatically parse unstructured handwritten notes and complex archives using our custom layout intelligence engine.' },
+                { icon: Puzzle, text: 'Identify semantic relationships and extract metadata schemas from your organization\'s entire document library in seconds.' },
+                { icon: Volume2, text: 'Integrate low-latency voice synthesis into your customer-facing applications using premium, studio-quality speech generation APIs.' },
+                { icon: Mic, text: 'Process noisy ambient audio files and complex board meetings using advanced neural speech recognition pipelines.' },
             ]},
             { keywords: ['agenc', 'heavy duty', 'enterprise'], multiplier: '100x', tokens: '5M', features: [
-                { icon: Zap, label: 'AI Chat & Writing', value: 'Dedicated Cluster' },
-                { icon: ImageIcon, label: 'AI Image Creator', value: 'Custom Models' },
-                { icon: Scan, label: 'Read Text from Images', value: 'Intelligent Capture' },
-                { icon: Puzzle, label: 'AI Document Analysis', value: 'Custom Schema Parsing' },
-                { icon: Volume2, label: 'Voice Reader (Text-to-Speech)', value: 'API Low-Latency' },
-                { icon: Mic, label: 'Voice Typing (Speech-to-Text)', value: 'Multi-lingual Support' },
+                { icon: Zap, text: 'Execute high-priority API queries on dedicated compute clusters for maximum uptime and zero throttling.' },
+                { icon: ImageIcon, text: 'Train bespoke image generation models specifically designed to replicate and match your unique corporate brand guidelines.' },
+                { icon: Scan, text: 'Process high-volume batches of document scans using parallelized OCR engines optimized for enterprise scaling.' },
+                { icon: Puzzle, text: 'Deploy automated parsers to convert unstructured legacy business databases into clean, schema-compliant JSON structures.' },
+                { icon: Volume2, text: 'Build real-time conversational voice agents featuring custom voice clones and sub-millisecond audio synthesis times.' },
+                { icon: Mic, text: 'Transcribe massive archives of multilingual recordings simultaneously using our distributed acoustic neural network architecture.' },
             ]},
         ];
         const lower = planName.toLowerCase();
@@ -327,37 +327,43 @@ const PricingContent = () => {
                                         >
                                             {plan.plan_name}
                                         </h3>
-                                        <div className="flex items-baseline gap-2">
-                                            {(() => {
-                                                const isAgency = plan.plan_name?.toLowerCase().includes('agenc') || plan.plan_name?.toLowerCase().includes('heavy duty') || plan.plan_name?.toLowerCase().includes('enterprise');
-                                                if (isAgency) {
-                                                    return (
-                                                        <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
+                                        {(() => {
+                                            const isAgency = plan.plan_name?.toLowerCase().includes('agenc') || plan.plan_name?.toLowerCase().includes('heavy duty') || plan.plan_name?.toLowerCase().includes('enterprise');
+                                            if (isAgency) {
+                                                return (
+                                                    <div className="flex items-center justify-center w-full my-2 h-[80px]">
+                                                        <span className="font-display font-bold leading-none text-[var(--color-cyan)] select-none" style={{ fontSize: "110px" }}>
                                                             ∞
                                                         </span>
-                                                    )
-                                                }
-                                                const strikeOff = getPlanStrikeOff(String(plan.id))
-                                                if (strikeOff) {
-                                                    return (
-                                                        <>
-                                                            <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <div className="flex items-baseline gap-2">
+                                                    {(() => {
+                                                        const strikeOff = getPlanStrikeOff(String(plan.id))
+                                                        if (strikeOff) {
+                                                            return (
+                                                                <>
+                                                                    <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
+                                                                        ₹{plan.price_inr || plan.price}
+                                                                    </span>
+                                                                    <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
+                                                                        ₹{strikeOff.price_inr}
+                                                                    </span>
+                                                                </>
+                                                            )
+                                                        }
+                                                        return (
+                                                            <span className="font-display font-bold leading-none tracking-tighter" style={{ fontSize: "40px" }}>
                                                                 ₹{plan.price_inr || plan.price}
                                                             </span>
-                                                            <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
-                                                                ₹{strikeOff.price_inr}
-                                                            </span>
-                                                        </>
-                                                    )
-                                                }
-                                                return (
-                                                    <span className="font-display font-bold leading-none tracking-tighter" style={{ fontSize: "40px" }}>
-                                                        ₹{plan.price_inr || plan.price}
-                                                    </span>
-                                                )
-                                            })()}
-                                            <span className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>/mo</span>
-                                        </div>
+                                                        )
+                                                    })()}
+                                                    <span className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>/mo</span>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
 
                                     {/* Features */}
@@ -367,10 +373,10 @@ const PricingContent = () => {
                                             return md ? (
                                                 <>
                                                     {md.features.map((f, idx) => (
-                                                        <div key={idx} className="flex items-center gap-4">
-                                                            <f.icon className="h-4 w-4 shrink-0 text-[var(--color-cyan)]" />
-                                                            <p className={`text-[13px] font-medium ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
-                                                                <span className={isDarkMode ? "text-white/60" : "text-black/60"}>{f.label}</span> — <span className="text-[var(--color-cyan)] font-semibold">{f.value}</span>
+                                                        <div key={idx} className="flex items-start gap-4">
+                                                            <f.icon className="h-4 w-4 shrink-0 text-[var(--color-cyan)] mt-0.5" />
+                                                            <p className={`text-[13px] font-medium leading-relaxed ${isDarkMode ? "text-white/70" : "text-black/70"}`}>
+                                                                {f.text}
                                                             </p>
                                                         </div>
                                                     ))}
