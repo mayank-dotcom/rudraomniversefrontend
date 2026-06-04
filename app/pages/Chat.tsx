@@ -217,7 +217,12 @@ const Chat = () => {
     const [isResizingRight, setIsResizingRight] = useState(false);
     const { isDarkMode, toggleTheme } = useTheme();
     const [showEngineSelect, setShowEngineSelect] = useState(false);
-    const [selectedEngine, setSelectedEngine] = useState("Student Mode");
+    const [selectedEngine, setSelectedEngine] = useState(() => {
+        const role = typeof window !== "undefined" ? getUserRole() : null;
+        const isGlobal = role === "global_admin";
+        const isEmployee = role === "employee" || role === "enterprise_admin" || role === "manager" || role === "school_admin" || role === "faculty" || isGlobal;
+        return isEmployee ? "Assistant Mode" : "Student Mode";
+    });
     const [selectedImageStyle, setSelectedImageStyle] = useState("realistic");
     const [isLoading, setIsLoading] = useState(false);
     const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -305,6 +310,10 @@ const Chat = () => {
     const visibleEngines = showEmployeeView
         ? engines.filter(e => !employeeRestrictedEngines.includes(e.name))
         : engines.filter(e => e.name !== "Assistant Mode");
+
+    useEffect(() => {
+        setSelectedEngine(showEmployeeView ? "Assistant Mode" : "Student Mode");
+    }, [showEmployeeView]);
 
     const activeChat = chats.find((chat) => chat.id === activeChatId) || null;
     const filteredChats = useMemo(() => {
@@ -3188,7 +3197,7 @@ STRICT RULES:
                                     </div>
 
                                     {!userRole || userRole === "student" ? (
-                                        <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : ""}`}>
+                                        <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : "mt-12"}`}>
                                             <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(0,221,221,0.5)] transition-all duration-300">
                                                 <div className="bubble-layer bubble-1"></div>
                                                 <div className="bubble-layer bubble-2"></div>
