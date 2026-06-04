@@ -1623,7 +1623,7 @@ STRICT RULES:
     const isChatEmpty = messages.length === 0 || messages.every((msg) => msg.localOnly);
 
     return (
-        <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : `${(userRole === "enterprise_admin" || userRole === "manager") ? "bg-[#faf5ef]" : "bg-white"} text-black`} selection:bg-white selection:text-black flex overflow-hidden transition-colors duration-500 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+        <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black flex overflow-hidden transition-colors duration-500 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
             <style dangerouslySetInnerHTML={{
                 __html: `
                 @keyframes bounceArrowLeft {
