@@ -374,8 +374,8 @@ const PricingContent = () => {
                                                 <>
                                                     {md.features.map((f, idx) => (
                                                         <div key={idx} className="flex items-start gap-4">
-                                                            <f.icon className="h-4 w-4 shrink-0 text-[var(--color-cyan)] mt-0.5" />
-                                                            <p className={`text-[13px] font-medium leading-relaxed ${isDarkMode ? "text-white/70" : "text-black/70"}`}>
+                                                            <f.icon className="h-5 w-5 shrink-0 text-[var(--color-cyan)] mt-0.5" />
+                                                            <p className={`text-[15px] font-medium leading-relaxed ${isDarkMode ? "text-white/70" : "text-black/70"}`}>
                                                                 {f.text}
                                                             </p>
                                                         </div>
