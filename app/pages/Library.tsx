@@ -571,37 +571,37 @@ export default function LibraryPage() {
                 onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "featured"
-                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-black border border-black/10")
+                    ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
                     : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Sparkles className={`h-4.5 w-4.5 ${activeCategory === "featured" ? (isDarkMode ? "text-[var(--color-cyan)]" : "text-black") : ""}`} />
+                  <Sparkles className={`h-4.5 w-4.5 ${activeCategory === "featured" ? "text-black" : ""}`} />
                   <span>Featured Feed</span>
                 </div>
-                {activeCategory === "featured" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
+                {activeCategory === "featured" && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
               </button>
 
               <button
                 onClick={() => { setActiveCategory("public_showcase"); setIsUploadDragging(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "public_showcase"
-                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-black border border-black/10")
+                    ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
                     : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Globe className={`h-4.5 w-4.5 ${activeCategory === "public_showcase" ? (isDarkMode ? "text-[var(--color-cyan)]" : "text-black") : (isDarkMode ? "text-sky-500/80" : "text-black")}`} />
+                  <Globe className={`h-4.5 w-4.5 ${activeCategory === "public_showcase" ? "text-black" : (isDarkMode ? "text-sky-500/80" : "text-black")}`} />
                   <span>Community Showcase</span>
                 </div>
-                {activeCategory === "public_showcase" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
+                {activeCategory === "public_showcase" && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
               </button>
 
               <button
                 onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "recent"
-                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-black border border-black/10")
+                    ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
                     : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
                 }`}
               >
@@ -609,30 +609,32 @@ export default function LibraryPage() {
                   <Clock className="h-4.5 w-4.5" />
                   <span>Recent Creations</span>
                 </div>
-                {activeCategory === "recent" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
+                {activeCategory === "recent" && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
               </button>
 
               <button
                 onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "saved"
-                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-black border border-black/10")
+                    ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
                     : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Bookmark className={`h-4.5 w-4.5 ${activeCategory === "saved" ? (isDarkMode ? "text-[var(--color-cyan)]" : "text-black") : ""}`} />
+                  <Bookmark className={`h-4.5 w-4.5 ${activeCategory === "saved" ? "text-black" : ""}`} />
                   <span>Saved</span>
                 </div>
                 <div className="flex items-center gap-1">
                   {savedIds.length > 0 && (
                     <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
-                      isDarkMode ? "bg-[var(--color-cyan)]/10 text-[var(--color-cyan)]" : "bg-black/10 text-black font-semibold"
+                      activeCategory === "saved"
+                        ? "bg-black/20 text-black font-semibold"
+                        : (isDarkMode ? "bg-[var(--color-cyan)]/10 text-[var(--color-cyan)]" : "bg-black/10 text-black font-semibold")
                     }`}>
                       {savedIds.length}
                     </span>
                   )}
-                  {activeCategory === "saved" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
+                  {activeCategory === "saved" && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
                 </div>
               </button>
             </div>
@@ -652,15 +654,15 @@ export default function LibraryPage() {
                 onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "all"
-                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-black border border-black/10")
+                    ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
                     : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <ImageIcon className={`h-4.5 w-4.5 ${activeCategory === "all" ? (isDarkMode ? "text-[var(--color-cyan)]" : "text-black") : ""}`} />
+                  <ImageIcon className={`h-4.5 w-4.5 ${activeCategory === "all" ? "text-black" : ""}`} />
                   <span>My Gallery</span>
                 </div>
-                {activeCategory === "all" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
+                {activeCategory === "all" && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
               </button>
 
             </div>
@@ -675,39 +677,42 @@ export default function LibraryPage() {
                   No folders created yet.
                 </span>
               ) : (
-                galleries.map((g) => (
-                  <button
-                    key={g.id}
-                    onClick={() => {
-                      setSelectedGalleryId(g.id);
-                      setActiveCategory("gallery");
-                      setIsUploadDragging(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm hover:bg-white/[0.02] text-left transition-all font-sans ${
-                      activeCategory === "gallery" && selectedGalleryId === g.id
-                        ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5 font-semibold" : "bg-black/5 text-black border border-black/10 font-semibold")
-                        : (isDarkMode ? "text-white/40 hover:text-white/85" : "text-black hover:bg-black/[0.02]")
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 truncate">
-                      {activeCategory === "gallery" && selectedGalleryId === g.id ? (
-                        <FolderOpen className={`h-4.5 w-4.5 shrink-0 ${g.is_public ? (isDarkMode ? "text-[var(--color-cyan)]" : "text-black") : (isDarkMode ? "text-amber-500/80" : "text-black")}`} />
-                      ) : (
-                        <Folder className={`h-4.5 w-4.5 shrink-0 ${g.is_public ? (isDarkMode ? "text-sky-400/60" : "text-black") : (isDarkMode ? "text-amber-500/60" : "text-black")}`} />
-                      )}
-                      <span className="truncate">{g.name}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-1 shrink-0 select-none">
-                      {g.is_public ? (
-                        <Globe className={`h-3 w-3 ${isDarkMode ? "text-sky-400/70" : "text-black"}`} />
-                      ) : (
-                        <Lock className={`h-3 w-3 ${isDarkMode ? "text-white/20" : "text-black"}`} />
-                      )}
-                      <span className={`text-[10px] font-mono ${isDarkMode ? "opacity-40" : "text-black font-medium"}`}>({g.asset_count || 0})</span>
-                    </div>
-                  </button>
-                ))
+                galleries.map((g) => {
+                  const isSelected = activeCategory === "gallery" && selectedGalleryId === g.id;
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => {
+                        setSelectedGalleryId(g.id);
+                        setActiveCategory("gallery");
+                        setIsUploadDragging(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-left transition-all font-sans ${
+                        isSelected
+                          ? "bg-[#00DDDD] text-black border border-[#00DDDD] font-semibold"
+                          : (isDarkMode ? "text-white/40 hover:text-white/85 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 truncate">
+                        {isSelected ? (
+                          <FolderOpen className="h-4.5 w-4.5 shrink-0 text-black" />
+                        ) : (
+                          <Folder className={`h-4.5 w-4.5 shrink-0 ${g.is_public ? (isDarkMode ? "text-sky-400/60" : "text-black") : (isDarkMode ? "text-amber-500/60" : "text-black")}`} />
+                        )}
+                        <span className="truncate">{g.name}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-1 shrink-0 select-none">
+                        {g.is_public ? (
+                          <Globe className={`h-3 w-3 ${isSelected ? "text-black" : (isDarkMode ? "text-sky-400/70" : "text-black")}`} />
+                        ) : (
+                          <Lock className={`h-3 w-3 ${isSelected ? "text-black" : (isDarkMode ? "text-white/20" : "text-black")}`} />
+                        )}
+                        <span className={`text-[10px] font-mono ${isSelected ? "text-black font-semibold" : (isDarkMode ? "opacity-40" : "text-black font-medium")}`}>({g.asset_count || 0})</span>
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
 
@@ -1113,7 +1118,7 @@ export default function LibraryPage() {
                               alt={asset.prompt || "Concept visual"}
                               className="w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-105 cursor-pointer"
                               loading="lazy"
-                              onClick={() => setExpandedAsset(asset)}
+                              onDoubleClick={() => setExpandedAsset(asset)}
                             />
 
                             {/* Top Action Indicators (Heart and Visibility) */}
