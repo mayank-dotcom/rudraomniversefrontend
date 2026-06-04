@@ -8,7 +8,7 @@ import {
     UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Check, Clock, Trash2, Inbox,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
-    Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2, LayoutDashboard
+    Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2, LayoutDashboard, Share
 } from "lucide-react";
 import Link from "next/link";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
@@ -2473,6 +2473,9 @@ STRICT RULES:
                                                             </button>
                                                             <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
                                                                 <FileDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                            </button>
+                                                            <button onClick={() => { if (navigator.share) { navigator.share({ title: "Rudranex AI Response", text: msg.content }); } else { navigator.clipboard.writeText(msg.content); toast.success("Link copied to clipboard"); } }} title="Share" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
+                                                                <Share className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                                             </button>
                                                         </>
                                                     )}
