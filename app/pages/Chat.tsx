@@ -3018,7 +3018,84 @@ STRICT RULES:
                                         </div>
                                     </div>
 
+                                    {/* Detailed Metrics */}
+                                    <div className="space-y-6">
+                                        {/* Chat+Code (Chat + Coding Tokens) */}
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Chat+Code</span>
+                                                <span className={isDarkMode ? "text-white" : "text-black"}>
+                                                    {(subscription?.usage?.chat_tokens_used ?? 0) + (subscription?.usage?.coding_tokens_used ?? 0)} / {subscription?.subscription?.details?.monthly_tokens || 1}
+                                                </span>
+                                            </div>
+                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{
+                                                        width: `${Math.min(100, (((subscription?.usage?.chat_tokens_used ?? 0) + (subscription?.usage?.coding_tokens_used ?? 0)) / (subscription?.subscription?.details?.monthly_tokens || 1)) * 100)}%`
+                                                    }}
+                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                />
+                                            </div>
+                                        </div>
 
+                                        {/* Images Today */}
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Images Today</span>
+                                                <span className={isDarkMode ? "text-white" : "text-black"}>
+                                                    {subscription?.usage?.daily_images ?? 0} / {subscription?.subscription?.details?.daily_image_limit || 1}
+                                                </span>
+                                            </div>
+                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{
+                                                        width: `${Math.min(100, ((subscription?.usage?.daily_images ?? 0) / (subscription?.subscription?.details?.daily_image_limit || 1)) * 100)}%`
+                                                    }}
+                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* TTS Minutes */}
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>TTS Minutes</span>
+                                                <span className={isDarkMode ? "text-white" : "text-black"}>
+                                                    {subscription?.usage?.tts_minutes_used ?? 0} / {subscription?.subscription?.details?.tts_minutes_limit || 1}
+                                                </span>
+                                            </div>
+                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{
+                                                        width: `${Math.min(100, ((subscription?.usage?.tts_minutes_used ?? 0) / (subscription?.subscription?.details?.tts_minutes_limit || 1)) * 100)}%`
+                                                    }}
+                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* STT Minutes */}
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>STT Minutes</span>
+                                                <span className={isDarkMode ? "text-white" : "text-black"}>
+                                                    {subscription?.usage?.stt_minutes_used ?? 0} / {subscription?.subscription?.details?.stt_minutes_limit || 1}
+                                                </span>
+                                            </div>
+                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{
+                                                        width: `${Math.min(100, ((subscription?.usage?.stt_minutes_used ?? 0) / (subscription?.subscription?.details?.stt_minutes_limit || 1)) * 100)}%`
+                                                    }}
+                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
 
                                     {!userRole || userRole === "student" ? (
                                         <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : ""}`}>
@@ -3341,29 +3418,16 @@ STRICT RULES:
                                 </div>
                             </div>
 
-                            {/* CHT (Chat Tokens) Metric */}
+                            {/* Chat+Code (Chat + Coding Tokens) Metric */}
                             <div
-                                title={`Chat Tokens: ${subscription?.usage?.chat_tokens_used ?? 0} / ${subscription?.subscription?.details?.monthly_tokens || 1}`}
+                                title={`Chat+Code: ${(subscription?.usage?.chat_tokens_used ?? 0) + (subscription?.usage?.coding_tokens_used ?? 0)} / ${subscription?.subscription?.details?.monthly_tokens || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
                                 <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                    CHT
+                                    Chat+Code
                                 </span>
                                 <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
-                                    {subscription?.usage?.chat_tokens_used ?? 0}
-                                </span>
-                            </div>
-
-                            {/* COD (Coding Tokens) Metric */}
-                            <div
-                                title={`Coding Tokens: ${subscription?.usage?.coding_tokens_used ?? 0} / ${subscription?.subscription?.details?.monthly_tokens || 1}`}
-                                className="flex flex-col items-center gap-0.5 cursor-help"
-                            >
-                                <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                    COD
-                                </span>
-                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
-                                    {subscription?.usage?.coding_tokens_used ?? 0}
+                                    {(subscription?.usage?.chat_tokens_used ?? 0) + (subscription?.usage?.coding_tokens_used ?? 0)}
                                 </span>
                             </div>
 
@@ -3377,32 +3441,6 @@ STRICT RULES:
                                 </span>
                                 <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
                                     {subscription?.usage?.daily_images ?? 0}
-                                </span>
-                            </div>
-
-                            {/* OCR Metric */}
-                            <div
-                                title={`OCR Pages: ${subscription?.usage?.ocr_pages_used ?? 0} / ${subscription?.subscription?.details?.ocr_limit || 1}`}
-                                className="flex flex-col items-center gap-0.5 cursor-help"
-                            >
-                                <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                    OCR
-                                </span>
-                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
-                                    {subscription?.usage?.ocr_pages_used ?? 0}
-                                </span>
-                            </div>
-
-                            {/* FEX (Feature Extraction) Metric */}
-                            <div
-                                title={`Feature Extraction: ${subscription?.usage?.feature_pages_used ?? 0} / ${subscription?.subscription?.details?.feature_extraction_limit || 1}`}
-                                className="flex flex-col items-center gap-0.5 cursor-help"
-                            >
-                                <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                    FEX
-                                </span>
-                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
-                                    {subscription?.usage?.feature_pages_used ?? 0}
                                 </span>
                             </div>
 
