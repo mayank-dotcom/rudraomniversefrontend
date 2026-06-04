@@ -422,27 +422,40 @@ const PricingContent = () => {
                                             return (
                                                 <div className="flex flex-col gap-1.5">
                                                     <div className="flex items-baseline gap-2">
-                                                        {(() => {
-                                                            const strikeOff = getPlanStrikeOff(String(plan.id))
-                                                            if (strikeOff) {
-                                                                const displayStrikeOff = isYearly ? Math.round(strikeOff.price_inr * 0.7) : strikeOff.price_inr;
-                                                                return (
-                                                                    <>
-                                                                        <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
-                                                                            ₹{displayPrice}
-                                                                        </span>
-                                                                        <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
-                                                                            ₹{displayStrikeOff}
-                                                                        </span>
-                                                                    </>
-                                                                )
-                                                            }
-                                                            return (
-                                                                <span className="font-display font-bold leading-none tracking-tighter" style={{ fontSize: "40px" }}>
-                                                                    ₹{displayPrice}
-                                                                </span>
-                                                            )
-                                                        })()}
+                                                         {(() => {
+                                                             const strikeOff = getPlanStrikeOff(String(plan.id))
+                                                             if (isYearly) {
+                                                                 const monthlyPrice = strikeOff ? strikeOff.price_inr : basePrice;
+                                                                 const yearlyMonthlyPrice = strikeOff ? Math.round(strikeOff.price_inr * 0.7) : displayPrice;
+                                                                 return (
+                                                                     <>
+                                                                         <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
+                                                                             ₹{monthlyPrice}
+                                                                         </span>
+                                                                         <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
+                                                                             ₹{yearlyMonthlyPrice}
+                                                                         </span>
+                                                                     </>
+                                                                 )
+                                                             }
+                                                             if (strikeOff) {
+                                                                 return (
+                                                                     <>
+                                                                         <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
+                                                                             ₹{basePrice}
+                                                                         </span>
+                                                                         <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
+                                                                             ₹{strikeOff.price_inr}
+                                                                         </span>
+                                                                     </>
+                                                                 )
+                                                             }
+                                                             return (
+                                                                 <span className="font-display font-bold leading-none tracking-tighter" style={{ fontSize: "40px" }}>
+                                                                     ₹{displayPrice}
+                                                                 </span>
+                                                             )
+                                                         })()}
                                                         <span className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>/mo</span>
                                                     </div>
                                                     {isYearly && basePrice > 0 && (
