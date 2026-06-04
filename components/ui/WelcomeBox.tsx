@@ -18,10 +18,10 @@ interface FeatureCardData {
 const allCards: FeatureCardData[] = [
     {
         icon: GraduationCap,
-        title: "Student Mode",
+        title: "Explore Mode",
         description: "AI-powered explanations, summaries, and study help for any subject.",
         category: "Text",
-        engine: "Student Mode",
+        engine: "Explore Mode",
     },
 
     {

@@ -84,7 +84,7 @@ const PlanCard = ({ plan, isDarkMode, onEdit }: { plan: any, isDarkMode: boolean
                 const planFeatures = getPlanFeatures(String(plan.id))
                 if (planFeatures.length > 0) {
                     const featureNames: Record<string, string> = {
-                        student_mode: "Student Mode",
+                        student_mode: "Explore Mode",
                         interview_prep: "Interview Prep",
                         mock_paper_generator: "Mock Paper",
                         persona_mode: "Persona Mode",

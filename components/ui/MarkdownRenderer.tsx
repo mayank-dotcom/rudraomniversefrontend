@@ -176,9 +176,9 @@ export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage,
             `}
             style={{
                 '--tw-prose-body': isDarkMode ? '#fff' : '#000',
-                '--tw-prose-headings': isDarkMode ? '#fff' : '#000',
+                '--tw-prose-headings': isDarkMode ? '#00DDDD' : '#008A8A',
                 '--tw-prose-links': isDarkMode ? '#fff' : '#000',
-                '--tw-prose-bold': isDarkMode ? '#fff' : '#000',
+                '--tw-prose-bold': isDarkMode ? '#00DDDD' : '#008A8A',
                 '--tw-prose-counters': isDarkMode ? '#fff' : '#000',
                 '--tw-prose-bullets': isDarkMode ? '#fff' : '#000',
                 '--tw-prose-hr': isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',

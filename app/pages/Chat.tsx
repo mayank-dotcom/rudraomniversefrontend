@@ -221,7 +221,7 @@ const Chat = () => {
         const role = typeof window !== "undefined" ? getUserRole() : null;
         const isGlobal = role === "global_admin";
         const isEmployee = role === "employee" || role === "enterprise_admin" || role === "manager" || role === "school_admin" || role === "faculty" || isGlobal;
-        return isEmployee ? "Assistant Mode" : "Student Mode";
+        return isEmployee ? "Assistant Mode" : "Explore Mode";
     });
     const [selectedImageStyle, setSelectedImageStyle] = useState("realistic");
     const [isLoading, setIsLoading] = useState(false);
@@ -293,7 +293,7 @@ const Chat = () => {
     const [planFeatures, setPlanFeaturesState] = useState<string[]>([]);
 
     const engines = [
-        { name: "Student Mode", endpoint: "/chat", icon: GraduationCap },
+        { name: "Explore Mode", endpoint: "/chat", icon: GraduationCap },
         { name: "Assistant Mode", endpoint: "/chat", icon: Bot },
 
         { name: "Interview Prep", endpoint: "/tools/interview", icon: UserCog },
@@ -303,7 +303,7 @@ const Chat = () => {
         { name: "Battle Arena", endpoint: "/battle-arena", icon: Swords },
     ];
 
-    const employeeRestrictedEngines = ["Student Mode", "Interview Prep", "Mock Paper Generator", "Battle Arena"];
+    const employeeRestrictedEngines = ["Explore Mode", "Interview Prep", "Mock Paper Generator", "Battle Arena"];
     const userRole = typeof window !== "undefined" ? getUserRole() : null;
     const isGlobalAdmin = userRole === "global_admin";
     const showEmployeeView = userRole === "employee" || userRole === "enterprise_admin" || userRole === "manager" || userRole === "school_admin" || userRole === "faculty" || (isGlobalAdmin && !isEnterpriseMode);
@@ -312,7 +312,7 @@ const Chat = () => {
         : engines.filter(e => e.name !== "Assistant Mode");
 
     useEffect(() => {
-        setSelectedEngine(showEmployeeView ? "Assistant Mode" : "Student Mode");
+        setSelectedEngine(showEmployeeView ? "Assistant Mode" : "Explore Mode");
     }, [showEmployeeView]);
 
     const activeChat = chats.find((chat) => chat.id === activeChatId) || null;
