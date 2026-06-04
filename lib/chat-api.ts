@@ -77,6 +77,7 @@ export interface Plan {
   id: string
   plan_name: string
   price_inr: number
+  strike_off_price?: number
   daily_image_limit?: number
   daily_stt_limit?: number
   daily_tts_limit?: number

@@ -29,12 +29,12 @@ const PlanCard = ({ plan, isDarkMode, onEdit }: { plan: any, isDarkMode: boolean
                 {plan.is_active && <span className="text-[9px] font-mono uppercase tracking-widest text-emerald-400">Active</span>}
             </div>
             {(() => {
-                const strikeOff = getPlanStrikeOff(String(plan.id))
-                if (strikeOff) {
+                const strikeOffVal = (plan.strike_off_price && plan.strike_off_price > 0) ? plan.strike_off_price : getPlanStrikeOff(String(plan.id))?.price_inr;
+                if (strikeOffVal) {
                     return (
                         <div className="mb-6">
                             <p className={`text-2xl font-display font-black line-through ${isDarkMode ? "text-white/40" : "text-black/30"}`}>₹{plan.price_inr || plan.price}</p>
-                            <p className={`text-3xl font-display font-black ${isDarkMode ? "text-white" : "text-black"}`}>₹{strikeOff.price_inr}</p>
+                            <p className={`text-3xl font-display font-black ${isDarkMode ? "text-white" : "text-black"}`}>₹{strikeOffVal}</p>
                         </div>
                     )
                 }
@@ -976,10 +976,10 @@ const Dashboard = () => {
                 if (planId && planId !== 'new') {
                     const saved = getPlanFeatures(planId)
                     setSelectedFeatures(saved)
-                    const strikeOff = getPlanStrikeOff(planId)
-                    if (strikeOff) {
+                    const strikeOffVal = (editingPlan.strike_off_price && editingPlan.strike_off_price > 0) ? editingPlan.strike_off_price : getPlanStrikeOff(planId)?.price_inr;
+                    if (strikeOffVal) {
                         setStrikeOffEnabled(true)
-                        setStrikeOffPrice(strikeOff.price_inr)
+                        setStrikeOffPrice(strikeOffVal)
                     } else {
                         setStrikeOffEnabled(false)
                         setStrikeOffPrice(0)
@@ -4642,13 +4642,17 @@ const Dashboard = () => {
                                                              title: "Quiet power.\nTailored access.",
                                                              description: "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
                                                              plans: [
-                                                                 {
-                                                                     planName: "Free Trial",
-                                                                     features: [
-                                                                         { icon: "zap", text: "Get started with basic access to our core AI reasoning models for everyday questions." },
-                                                                         { icon: "image", text: "Generate standard-resolution custom graphics with limited daily image generation runs." }
-                                                                     ]
-                                                                 },
+                                                                  {
+                                                                      planName: "Free Trial",
+                                                                      features: [
+                                                                          { icon: "zap", text: "Engage in basic conversations with our AI assistant to outline ideas and answer everyday questions." },
+                                                                          { icon: "image", text: "Create standard-definition custom graphics using basic image generation tools in the lab." },
+                                                                          { icon: "scan", text: "Convert physical documents and paper images into digital text files using standard character recognition." },
+                                                                          { icon: "puzzle", text: "Upload document files to extract high-level summaries and locate specific data points." },
+                                                                          { icon: "volume", text: "Convert written text articles into audio files to listen to study notes on the go." },
+                                                                          { icon: "mic", text: "Dictate notes and letters using smart voice typing for transcription of spoken words." }
+                                                                      ]
+                                                                  },
                                                                  {
                                                                      planName: "Motion Plan",
                                                                      features: [
@@ -4889,7 +4893,8 @@ const Dashboard = () => {
                                                                      monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
                                                                      daily_tts_limit: Number(formData.get('daily_tts_limit')),
                                                                      daily_stt_limit: Number(formData.get('daily_stt_limit')),
-                                                                     monthly_tokens: Number(formData.get('monthly_tokens'))
+                                                                     monthly_tokens: Number(formData.get('monthly_tokens')),
+                                                                     strike_off_price: strikeOffEnabled ? strikeOffPrice : 0
                                                                   }).then((res) => {
                                                                         const newPlanId = res?.plan?.id?.toString()
                                                                         if (newPlanId) {
@@ -4919,7 +4924,8 @@ const Dashboard = () => {
                                                                      monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
                                                                      daily_tts_limit: Number(formData.get('daily_tts_limit')),
                                                                      daily_stt_limit: Number(formData.get('daily_stt_limit')),
-                                                                     monthly_tokens: Number(formData.get('monthly_tokens'))
+                                                                     monthly_tokens: Number(formData.get('monthly_tokens')),
+                                                                     strike_off_price: strikeOffEnabled ? strikeOffPrice : 0
                                                                  });
                                                                 setPlanFeatures(editingPlan.id?.toString() || '', selectedFeatures);
                                                                 if (strikeOffEnabled && strikeOffPrice > 0) {

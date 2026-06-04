@@ -27,6 +27,7 @@ const Navbar = ({ onAuthClick }: NavbarProps) => {
         { label: "FAQ", href: "/faq" },
         { label: "Support", href: "/support" },
         { label: "Schools", href: "/schools" },
+        { label: "ENT", href: "/auth/enterprise-portal" },
     ];
 
     const accessItems = [

@@ -204,8 +204,12 @@ const PricingContent = () => {
     const getMultiplierData = (planName: string) => {
         const list = [
             { keywords: ['free'], multiplier: '0.02x', tokens: '1K', features: [
-                { icon: Zap, text: 'Get started with basic access to our core AI reasoning models for everyday questions.' },
-                { icon: ImageIcon, text: 'Generate standard-definition custom graphics with limited daily image generation runs.' }
+                { icon: Zap, text: 'Engage in basic conversations with our AI assistant to outline ideas and answer everyday questions.' },
+                { icon: ImageIcon, text: 'Create standard-definition custom graphics using basic image generation tools in the lab.' },
+                { icon: Scan, text: 'Convert physical documents and paper images into digital text files using standard character recognition.' },
+                { icon: Puzzle, text: 'Upload document files to extract high-level summaries and locate specific data points.' },
+                { icon: Volume2, text: 'Convert written text articles into audio files to listen to study notes on the go.' },
+                { icon: Mic, text: 'Dictate notes and letters using smart voice typing for transcription of spoken words.' }
             ] },
             { keywords: ['motion'], multiplier: '1x', tokens: '50K', features: [
                 { icon: Zap, text: 'Engage in clear conversations with our AI assistant to draft outlines, brainstorm ideas, and answer simple questions.' },
@@ -460,39 +464,46 @@ const PricingContent = () => {
                                                 <div className="flex flex-col gap-1.5">
                                                     <div className="flex items-baseline gap-2">
                                                          {(() => {
-                                                             const strikeOff = getPlanStrikeOff(String(plan.id))
-                                                             if (isYearly) {
-                                                                 const monthlyPrice = strikeOff ? strikeOff.price_inr : basePrice;
-                                                                 const yearlyMonthlyPrice = strikeOff ? Math.round(strikeOff.price_inr * 0.7) : displayPrice;
-                                                                 return (
-                                                                     <>
-                                                                         <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
-                                                                             ₹{monthlyPrice}
-                                                                         </span>
-                                                                         <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
-                                                                             ₹{yearlyMonthlyPrice}
-                                                                         </span>
-                                                                     </>
-                                                                 )
-                                                             }
-                                                             if (strikeOff) {
-                                                                 return (
-                                                                     <>
-                                                                         <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
-                                                                             ₹{basePrice}
-                                                                         </span>
-                                                                         <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
-                                                                             ₹{strikeOff.price_inr}
-                                                                         </span>
-                                                                     </>
-                                                                 )
-                                                             }
-                                                             return (
-                                                                 <span className="font-display font-bold leading-none tracking-tighter" style={{ fontSize: "40px" }}>
-                                                                     ₹{displayPrice}
-                                                                 </span>
-                                                             )
-                                                         })()}
+                                                              if (basePrice === 0) {
+                                                                  return (
+                                                                      <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
+                                                                          ₹0
+                                                                      </span>
+                                                                  );
+                                                              }
+                                                              const strikeOffVal = (plan.strike_off_price && plan.strike_off_price > 0) ? plan.strike_off_price : getPlanStrikeOff(String(plan.id))?.price_inr;
+                                                              if (isYearly) {
+                                                                  const monthlyPrice = strikeOffVal ? strikeOffVal : basePrice;
+                                                                  const yearlyMonthlyPrice = strikeOffVal ? Math.round(strikeOffVal * 0.7) : displayPrice;
+                                                                  return (
+                                                                      <>
+                                                                          <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
+                                                                              ₹{monthlyPrice}
+                                                                          </span>
+                                                                          <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
+                                                                              ₹{yearlyMonthlyPrice}
+                                                                          </span>
+                                                                      </>
+                                                                  )
+                                                              }
+                                                              if (strikeOffVal) {
+                                                                  return (
+                                                                      <>
+                                                                          <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
+                                                                              ₹{basePrice}
+                                                                          </span>
+                                                                          <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
+                                                                              ₹{strikeOffVal}
+                                                                          </span>
+                                                                      </>
+                                                                  )
+                                                              }
+                                                              return (
+                                                                  <span className="font-display font-bold leading-none tracking-tighter" style={{ fontSize: "40px" }}>
+                                                                      ₹{displayPrice}
+                                                                  </span>
+                                                              )
+                                                          })()}
                                                         <span className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>/mo</span>
                                                     </div>
                                                     {isYearly && basePrice > 0 && (
