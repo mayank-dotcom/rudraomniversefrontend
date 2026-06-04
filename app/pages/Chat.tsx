@@ -280,6 +280,7 @@ const Chat = () => {
     const requestStartTime = useRef<number>(0);
     const engineSelectRef = useRef<HTMLDivElement>(null);
     const stopGenerationRef = useRef(false);
+    const abortControllerRef = useRef<AbortController | null>(null);
     const styleCardsScrollRef = useRef<HTMLDivElement>(null);
 
     const [subscription, setSubscription] = useState<any>(null);
@@ -1382,98 +1383,179 @@ STRICT RULES:
                     }
                 ];
 
-            setMessages((prev) => [...prev.filter((message) => !message.localOnly), userMessage]);
-            setInput("");
-            setSelectedFile(null);
+            // ── Streaming for text chat, non-streaming for image gen / file uploads ──
+            const useStreaming = !isImageGenMode && !selectedFile && requestModality === "text";
 
-            const data = await sendAiRequest({
-                endpoint: requestEndpoint,
-                messages: conversationHistory,
-                chat_id: undefined,
-                modality: requestModality
-            });
+            if (useStreaming) {
+                // --- SSE streaming path ---
+                const assistantMessage: Message = {
+                    role: "assistant",
+                    content: "",
+                    timestamp: formatTimestamp()
+                };
+                setMessages((prev) => [...prev.filter((m) => !m.localOnly), userMessage, assistantMessage]);
+                setInput("");
+                setSelectedFile(null);
+                setShowDots(false);
 
-            console.log("AI Response:", data);
-            // Backend returns { success, model, data: choices_array }
-            const firstChoice = data.data?.[0];
-            console.log("First choice:", firstChoice);
-            const isImageGen = isImageGenMode;
+                const ctrl = new AbortController();
+                abortControllerRef.current = ctrl;
 
-            let aiContent: string;
-            if (isImageGen) {
-                aiContent = (data as any).response || firstChoice?.message?.content || firstChoice?.text || "";
-            } else {
-                aiContent = firstChoice?.message?.content || firstChoice?.text || "";
-            }
-            if (!aiContent) {
-                aiContent = firstChoice ? JSON.stringify(firstChoice) : "Response received from Rudranex AI.";
-            }
-
-            const isImage = isImageGen || isImageContent(aiContent);
-
-            setShowDots(false);
-
-            const assistantMessage: Message = {
-                role: "assistant",
-                content: "",
-                timestamp: formatTimestamp()
-            };
-            setMessages((prev) => [...prev, assistantMessage]);
-
-            if (isImage) {
-                setMessages((prev) => {
-                    const newMessages = [...prev];
-                    const lastMsg = newMessages[newMessages.length - 1];
-                    if (lastMsg && lastMsg.role === "assistant") {
-                        lastMsg.content = aiContent;
-                    }
-                    return newMessages;
-                });
-            } else {
-                setMessages((prev) => {
-                    const newMessages = [...prev];
-                    const lastMsg = newMessages[newMessages.length - 1];
-                    if (lastMsg && lastMsg.role === "assistant") {
-                        lastMsg.content = aiContent;
-                    }
-                    return newMessages;
-                });
-            }
-            if (isImageGenMode) {
-                saveImageToHistory(userMessage, { role: "assistant", content: aiContent, timestamp: formatTimestamp() });
-            }
-            if (currentChatId) {
+                let aiContent = "";
                 try {
-                    const [savedUser, savedAssistant] = await Promise.all([
-                        saveChatMessage(currentChatId, "user", displayContent),
-                        saveChatMessage(currentChatId, "assistant", aiContent)
-                    ]);
-                    const userMsgId = savedUser?.message?.id as string | undefined;
-                    const assistantMsgId = savedAssistant?.message?.id as string | undefined;
-                    if (userMsgId || assistantMsgId) {
-                        setMessages((prev) => {
-                            const updated = [...prev];
-                            for (let i = updated.length - 1; i >= 0; i--) {
-                                if (updated[i].role === "user" && !updated[i].messageId && userMsgId) {
-                                    updated[i] = { ...updated[i], messageId: userMsgId };
-                                    break;
+                    aiContent = await sendAiRequestStream(
+                        {
+                            endpoint: requestEndpoint,
+                            messages: conversationHistory,
+                            modality: requestModality,
+                            signal: ctrl.signal,
+                        },
+                        (chunk) => {
+                            setMessages((prev) => {
+                                const updated = [...prev];
+                                const last = updated[updated.length - 1];
+                                if (last && last.role === "assistant") {
+                                    updated[updated.length - 1] = { ...last, content: chunk };
                                 }
-                            }
-                            for (let i = updated.length - 1; i >= 0; i--) {
-                                if (updated[i].role === "assistant" && !updated[i].messageId && assistantMsgId) {
-                                    updated[i] = { ...updated[i], messageId: assistantMsgId };
-                                    break;
-                                }
-                            }
-                            return updated;
+                                return updated;
+                            });
+                        }
+                    );
+                } catch (err: any) {
+                    if (err.name === "AbortError") {
+                        // Stream was cancelled — keep whatever was received so far
+                        const currentContent = await new Promise<string>((resolve) => {
+                            setMessages((prev) => {
+                                const last = prev[prev.length - 1];
+                                resolve(last?.role === "assistant" ? last.content : "");
+                                return prev;
+                            });
                         });
+                        aiContent = currentContent;
+                    } else {
+                        throw err;
                     }
-                } catch {
-                    // Best effort - feedback won't persist for this exchange
+                } finally {
+                    abortControllerRef.current = null;
                 }
-            }
 
-            setResponseTime((Date.now() - requestStart) / 1000);
+                if (currentChatId && aiContent) {
+                    try {
+                        const [savedUser, savedAssistant] = await Promise.all([
+                            saveChatMessage(currentChatId, "user", displayContent),
+                            saveChatMessage(currentChatId, "assistant", aiContent)
+                        ]);
+                        const userMsgId = savedUser?.message?.id as string | undefined;
+                        const assistantMsgId = savedAssistant?.message?.id as string | undefined;
+                        if (userMsgId || assistantMsgId) {
+                            setMessages((prev) => {
+                                const updated = [...prev];
+                                for (let i = updated.length - 1; i >= 0; i--) {
+                                    if (updated[i].role === "user" && !updated[i].messageId && userMsgId) {
+                                        updated[i] = { ...updated[i], messageId: userMsgId };
+                                        break;
+                                    }
+                                }
+                                for (let i = updated.length - 1; i >= 0; i--) {
+                                    if (updated[i].role === "assistant" && !updated[i].messageId && assistantMsgId) {
+                                        updated[i] = { ...updated[i], messageId: assistantMsgId };
+                                        break;
+                                    }
+                                }
+                                return updated;
+                            });
+                        }
+                    } catch {
+                        // Best effort
+                    }
+                }
+
+                setResponseTime((Date.now() - requestStart) / 1000);
+
+            } else {
+                // --- Non-streaming path (image gen, file uploads, OCR) ---
+                setMessages((prev) => [...prev.filter((message) => !message.localOnly), userMessage]);
+                setInput("");
+                setSelectedFile(null);
+
+                const data = await sendAiRequest({
+                    endpoint: requestEndpoint,
+                    messages: conversationHistory,
+                    chat_id: undefined,
+                    modality: requestModality
+                });
+
+                console.log("AI Response:", data);
+                const firstChoice = data.data?.[0];
+                console.log("First choice:", firstChoice);
+                const isImageGen = isImageGenMode;
+
+                let aiContent: string;
+                if (isImageGen) {
+                    aiContent = (data as any).response || firstChoice?.message?.content || firstChoice?.text || "";
+                } else {
+                    aiContent = firstChoice?.message?.content || firstChoice?.text || "";
+                }
+                if (!aiContent) {
+                    aiContent = firstChoice ? JSON.stringify(firstChoice) : "Response received from Rudranex AI.";
+                }
+
+                const isImage = isImageGen || isImageContent(aiContent);
+
+                setShowDots(false);
+
+                const assistantMessage: Message = {
+                    role: "assistant",
+                    content: "",
+                    timestamp: formatTimestamp()
+                };
+                setMessages((prev) => [...prev, assistantMessage]);
+
+                setMessages((prev) => {
+                    const newMessages = [...prev];
+                    const lastMsg = newMessages[newMessages.length - 1];
+                    if (lastMsg && lastMsg.role === "assistant") {
+                        lastMsg.content = aiContent;
+                    }
+                    return newMessages;
+                });
+
+                if (isImageGenMode) {
+                    saveImageToHistory(userMessage, { role: "assistant", content: aiContent, timestamp: formatTimestamp() });
+                }
+                if (currentChatId) {
+                    try {
+                        const [savedUser, savedAssistant] = await Promise.all([
+                            saveChatMessage(currentChatId, "user", displayContent),
+                            saveChatMessage(currentChatId, "assistant", aiContent)
+                        ]);
+                        const userMsgId = savedUser?.message?.id as string | undefined;
+                        const assistantMsgId = savedAssistant?.message?.id as string | undefined;
+                        if (userMsgId || assistantMsgId) {
+                            setMessages((prev) => {
+                                const updated = [...prev];
+                                for (let i = updated.length - 1; i >= 0; i--) {
+                                    if (updated[i].role === "user" && !updated[i].messageId && userMsgId) {
+                                        updated[i] = { ...updated[i], messageId: userMsgId };
+                                        break;
+                                    }
+                                }
+                                for (let i = updated.length - 1; i >= 0; i--) {
+                                    if (updated[i].role === "assistant" && !updated[i].messageId && assistantMsgId) {
+                                        updated[i] = { ...updated[i], messageId: assistantMsgId };
+                                        break;
+                                    }
+                                }
+                                return updated;
+                            });
+                        }
+                    } catch {
+                        // Best effort - feedback won't persist for this exchange
+                    }
+                }
+
+                setResponseTime((Date.now() - requestStart) / 1000);
+            } // end non-streaming block
         } catch (error) {
             setShowDots(false);
             const message = error instanceof Error ? error.message : "Unable to process your request.";
@@ -1503,6 +1585,11 @@ STRICT RULES:
     };
 
     const handleStopGeneration = () => {
+        // Abort the in-flight SSE stream if one is active
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
         stopGenerationRef.current = true;
         setIsLoading(false);
         setShowDots(false);

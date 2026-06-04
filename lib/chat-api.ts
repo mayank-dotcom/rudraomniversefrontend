@@ -1912,6 +1912,7 @@ export async function sendAiRequestStream(
     messages: Array<{ role: "user" | "assistant" | "system"; content: any }>
     chat_id?: string
     modality?: string
+    signal?: AbortSignal
   },
   onChunk: (text: string) => void
 ): Promise<string> {
@@ -1924,6 +1925,7 @@ export async function sendAiRequestStream(
       ...getHeaders(),
       "Accept": "text/event-stream",
     },
+    signal: payload.signal,
     body: JSON.stringify({
       messages: payload.messages,
       stream: true,
@@ -1946,21 +1948,38 @@ export async function sendAiRequestStream(
   }
 
   let buffer = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
 
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        const data = line.slice(6);
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
         if (data === "[DONE]") continue;
 
         try {
           const parsed = JSON.parse(data);
+
+          // Backend custom SSE format: { type: 'text' | 'tool_result', content }
+          if (parsed.type === "text" && parsed.content) {
+            fullText += parsed.content;
+            onChunk(fullText);
+            continue;
+          }
+          if (parsed.type === "tool_result" && parsed.content) {
+            fullText += parsed.content;
+            onChunk(fullText);
+            continue;
+          }
+          // Skip metadata events (credits, tool_start, error)
+          if (parsed.type) continue;
+
+          // OpenAI-standard delta format (fallback)
           const content = parsed.choices?.[0]?.delta?.content
             || parsed.choices?.[0]?.message?.content
             || parsed.data?.[0]?.text
@@ -1975,6 +1994,8 @@ export async function sendAiRequestStream(
         }
       }
     }
+  } finally {
+    reader.releaseLock();
   }
 
   return fullText;
