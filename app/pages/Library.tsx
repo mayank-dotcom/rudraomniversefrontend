@@ -191,6 +191,16 @@ export default function LibraryPage() {
     getSavedAssetIds().then(setSavedIds).catch(() => {})
   }, [fetchAssets, router])
 
+  // Close expanded modal on Escape key
+  useEffect(() => {
+    if (!expandedAsset) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpandedAsset(null)
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [expandedAsset])
+
   // Handle Deleting Asset
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this asset from your library?")) return
@@ -1415,132 +1425,199 @@ export default function LibraryPage() {
       )}
 
       {/* Expanded Image Modal */}
+      {/* Expanded Image Modal - Fullscreen Lightbox */}
       <AnimatePresence>
         {expandedAsset && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 md:p-8"
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[100] flex bg-black/99"
             onClick={() => setExpandedAsset(null)}
           >
+            {/* Close button */}
             <button
               onClick={() => setExpandedAsset(null)}
-              className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors z-50 shadow-lg"
+              className="absolute top-4 right-4 md:top-5 md:right-5 z-50 p-2 md:p-2.5 rounded-full bg-white/[0.04] text-white/50 hover:bg-white/10 hover:text-white transition-colors border border-white/[0.06] backdrop-blur-md"
             >
-              <X className="h-6 w-6" />
+              <X className="h-4 w-4 md:h-5 md:w-5" />
             </button>
-            
+
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.96, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 180 }}
-              className={`w-full max-w-5xl h-[85vh] md:h-[80vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row border transition-colors duration-300 ${
-                isDarkMode ? "bg-zinc-950 border-white/10 text-white" : "bg-white border-black/10 text-black"
-              }`}
+              exit={{ scale: 0.96, opacity: 0 }}
+              transition={{ type: "spring", damping: 26, stiffness: 160 }}
+              className="w-full h-full flex flex-col md:flex-row"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Left Side: Image container */}
-              <div className="flex-1 bg-black/40 flex items-center justify-center p-4 relative overflow-hidden group min-h-[40vh] md:min-h-0">
+              {/* Image Container - 80% width on desktop */}
+              <div className="flex-[4] flex items-center justify-center bg-black/60 p-3 md:p-6 relative min-h-[40vh] md:min-h-0">
                 <img
                   src={expandedAsset.asset_url}
                   alt={expandedAsset.prompt || "Concept visual"}
-                  className="max-w-full max-h-[50vh] md:max-h-[75vh] object-contain rounded-xl shadow-2xl"
+                  className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg md:rounded-xl select-none shadow-lg"
+                  draggable={false}
                 />
+                {/* Mobile prompt overlay */}
+                <div className="absolute bottom-2 left-2 right-2 md:hidden">
+                  <div className="backdrop-blur-xl bg-black/70 border border-white/[0.06] rounded-xl px-3.5 py-2.5">
+                    <p className="text-xs text-white/90 line-clamp-2">{expandedAsset.prompt || "No prompt"}</p>
+                  </div>
+                </div>
               </div>
 
-              {/* Right Side: Details panel */}
-              <div className={`w-full md:w-80 flex flex-col justify-between border-t md:border-t-0 md:border-l p-6 shrink-0 transition-colors duration-300 ${
-                isDarkMode ? "border-white/10 bg-zinc-900/40" : "border-black/10 bg-zinc-50/40"
+              {/* Details Panel - 360px on desktop */}
+              <div className={`w-full md:w-[360px] shrink-0 flex flex-col overflow-y-auto border-t md:border-t-0 md:border-l transition-colors duration-300 ${
+                isDarkMode ? "bg-zinc-950 border-white/[0.06]" : "bg-white border-black/[0.06]"
               }`}>
-                <div className="flex flex-col gap-5 overflow-y-auto max-h-[35vh] md:max-h-[60vh] scrollbar-hide">
+                {/* Header badges + title + heart */}
+                <div className={`px-5 py-4 border-b shrink-0 ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`}>
+                  <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider bg-[#00DDDD]/15 text-[#00DDDD] border border-[#00DDDD]/15">
+                      {expandedAsset.asset_type || "image"}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider border ${
+                      expandedAsset.is_public
+                        ? "bg-sky-500/10 text-sky-400 border-sky-400/20"
+                        : "bg-amber-500/10 text-amber-400 border-amber-400/20"
+                    }`}>
+                      {expandedAsset.is_public ? "Public" : "Private"}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider border ${
+                      isDarkMode ? "bg-white/[0.03] text-white/40 border-white/[0.06]" : "bg-black/[0.03] text-black/40 border-black/[0.06]"
+                    }`}>
+                      {expandedAsset.id.startsWith("feat-") ? "Featured" : expandedAsset.id.startsWith("uploaded-") ? "Upload" : "Library"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <h3 className={`text-sm font-bold font-sans tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
+                      {expandedAsset.id.startsWith("feat-") ? "Featured Creation" : "Library Asset"}
+                    </h3>
+                    {!expandedAsset.id.startsWith("feat-") && (
+                      <button
+                        onClick={() => toggleSaved(expandedAsset)}
+                        className={`p-1.5 rounded-full transition-all duration-200 active:scale-90 ${
+                          savedIds.includes(expandedAsset.id)
+                            ? "text-[#00DDDD] bg-[#00DDDD]/10"
+                            : isDarkMode
+                              ? "text-white/30 hover:text-white/60 hover:bg-white/5"
+                              : "text-black/30 hover:text-black/60 hover:bg-black/5"
+                        }`}
+                      >
+                        <Heart className={`h-3.5 w-3.5 ${savedIds.includes(expandedAsset.id) ? "fill-[#00DDDD]" : ""}`} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scrollable details content */}
+                <div className={`flex-1 px-5 py-4 space-y-4 overflow-y-auto ${isDarkMode ? "text-white" : "text-black"}`}>
+                  {/* Prompt */}
                   <div>
-                    <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
+                    <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
                       Prompt Idea
                     </span>
-                    <p className="text-sm font-medium mt-1.5 leading-relaxed break-words font-sans">
+                    <p className={`text-xs mt-1 leading-relaxed font-sans ${isDarkMode ? "text-white/80" : "text-black/70"}`}>
                       {expandedAsset.prompt || "No prompt text provided."}
                     </p>
                     {expandedAsset.prompt && (
                       <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(expandedAsset.prompt || "");
-                          toast.success("Prompt copied to clipboard!");
-                        }}
-                        className={`flex items-center gap-1.5 text-[10px] font-semibold mt-2.5 transition-colors ${
-                          isDarkMode ? "text-[#00DDDD] hover:text-[#00c5c5]" : "text-cyan-600 hover:text-cyan-700"
-                        }`}
+                        onClick={() => { navigator.clipboard.writeText(expandedAsset.prompt || ""); toast.success("Prompt copied to clipboard!"); }}
+                        className="flex items-center gap-1 text-[10px] font-semibold mt-1.5 text-[#00DDDD] hover:text-[#00b3b3] transition-colors"
                       >
-                        <Copy className="h-3.5 w-3.5" />
-                        <span>Copy Prompt</span>
+                        <Copy className="h-3 w-3" />
+                        Copy Prompt
                       </button>
                     )}
                   </div>
 
-                  <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+                  <div className={`h-px ${isDarkMode ? "bg-white/[0.04]" : "bg-black/[0.04]"}`} />
 
-                  {/* Metadata */}
-                  <div className="flex flex-col gap-3">
+                  {/* Metadata Grid */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                     <div>
-                      <span className={`text-[10px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
-                        Created Date
+                      <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                        Created
                       </span>
-                      <span className="text-xs font-mono font-medium block mt-1">
-                        {expandedAsset.created_at ? new Date(expandedAsset.created_at).toLocaleString() : "Unknown"}
+                      <span className={`text-[11px] font-medium block mt-0.5 ${isDarkMode ? "text-white/70" : "text-black/60"}`}>
+                        {expandedAsset.created_at
+                          ? new Date(expandedAsset.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                          : "Unknown"}
                       </span>
                     </div>
-
                     <div>
-                      <span className={`text-[10px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
+                      <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                        Type
+                      </span>
+                      <span className={`text-[11px] font-medium capitalize block mt-0.5 ${isDarkMode ? "text-white/70" : "text-black/60"}`}>
+                        {expandedAsset.asset_type || "Image"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
                         Visibility
                       </span>
-                      <span className={`text-xs font-semibold block mt-1 uppercase ${
-                        expandedAsset.is_public ? "text-sky-400" : "text-amber-500"
-                      }`}>
-                        {expandedAsset.is_public ? "Public Showcase" : "Private (Only You)"}
+                      <span className={`text-[11px] font-semibold block mt-0.5 uppercase ${expandedAsset.is_public ? "text-sky-400" : "text-amber-400"}`}>
+                        {expandedAsset.is_public ? "Public" : "Private"}
                       </span>
                     </div>
-
                     <div>
-                      <span className={`text-[10px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
-                        Asset Type
+                      <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                        Saved
                       </span>
-                      <span className="text-xs font-medium block mt-1 capitalize font-mono">
-                        {expandedAsset.asset_type || "Image"}
+                      <span className={`text-[11px] font-medium block mt-0.5 ${savedIds.includes(expandedAsset.id) ? "text-[#00DDDD]" : isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                        {savedIds.includes(expandedAsset.id) ? "Yes" : "No"}
+                      </span>
+                    </div>
+                    {expandedAsset.gallery_id && (
+                      <div className="col-span-2">
+                        <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                          Folder
+                        </span>
+                        <span className={`text-[11px] font-medium block mt-0.5 flex items-center gap-1.5 ${isDarkMode ? "text-white/70" : "text-black/60"}`}>
+                          <Folder className="h-3 w-3 text-[#00DDDD]" />
+                          {(() => { const g = [...galleries, ...publicGalleries].find(g => g.id === expandedAsset.gallery_id); return g?.name || "Unknown Folder"; })()}
+                        </span>
+                      </div>
+                    )}
+                    <div className="col-span-2">
+                      <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                        Asset ID
+                      </span>
+                      <span className={`text-[11px] font-mono block mt-0.5 break-all ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                        {expandedAsset.id}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Bottom Actions inside details card */}
-                <div className="flex flex-col gap-2.5 pt-4 border-t border-white/5 mt-auto">
+                {/* Bottom actions */}
+                <div className={`px-5 py-3 border-t space-y-2 shrink-0 ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`}>
                   <a
                     href={expandedAsset.asset_url}
-                    download={`rudra-asset-${expandedAsset.id}.png`}
+                    download={`rudra-${expandedAsset.id}.png`}
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full py-2.5 rounded-xl text-center text-xs font-bold font-mono uppercase tracking-wider bg-[#00DDDD] text-black hover:bg-[#00c5c5] transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#00dddd]/10"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider bg-[#00DDDD] text-black hover:bg-[#00c5c5] transition-all active:scale-[0.98] shadow-lg shadow-[#00dddd]/10"
                   >
+                    <Download className="h-3.5 w-3.5" />
                     Download Image
                   </a>
-                  
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(expandedAsset.asset_url);
-                      toast.success("Image URL copied!");
-                    }}
-                    className={`w-full py-2.5 rounded-xl text-center text-xs font-bold font-mono uppercase tracking-wider border transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                    onClick={() => { navigator.clipboard.writeText(expandedAsset.asset_url); toast.success("Image URL copied!"); }}
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider border transition-all active:scale-[0.98] ${
                       isDarkMode
-                        ? "border-white/10 hover:border-white/20 hover:bg-white/5 text-white"
-                        : "border-black/10 hover:border-black/20 hover:bg-black/5 text-black"
+                        ? "border-white/[0.06] text-white/60 hover:border-white/20 hover:text-white"
+                        : "border-black/[0.06] text-black/60 hover:border-black/20 hover:text-black"
                     }`}
                   >
+                    <Copy className="h-3.5 w-3.5" />
                     Copy Link
                   </button>
                 </div>
               </div>
-
             </motion.div>
           </motion.div>
         )}
