@@ -109,11 +109,8 @@ export default function LibraryPage() {
   // Custom Interactive States
   const [activeCategory, setActiveCategory] = useState<string>("featured")
   const [aspectRatio, setAspectRatio] = useState<"1:1" | "16:9" | "9:16">("1:1")
-  const [activePreset, setActivePreset] = useState<"none" | "balloon" | "stop-motion" | "archival" | "film-noir" | "cardboard">("none")
-  const [isPresetOpen, setIsPresetOpen] = useState(false)
-  const [resolution, setResolution] = useState<"480p" | "720p" | "1080p" | "4K">("1080p")
-  const [duration, setDuration] = useState<"5s" | "10s" | "15s">("5s")
-  const [motionSpeed, setMotionSpeed] = useState<"2v" | "4v" | "8v">("2v")
+  const [createdOnFilter, setCreatedOnFilter] = useState<"all" | "today" | "week" | "month">("all")
+  const [sourceFilter, setSourceFilter] = useState<"all" | "personal" | "community">("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [savedIds, setSavedIds] = useState<string[]>([])
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -307,34 +304,17 @@ export default function LibraryPage() {
     })
   }
 
-  // Aspect ratio helper functions
-  const handleCycleAspectRatio = () => {
-    const ratios: ("1:1" | "16:9" | "9:16")[] = ["1:1", "16:9", "9:16"]
-    const nextIndex = (ratios.indexOf(aspectRatio) + 1) % ratios.length
-    const nextRatio = ratios[nextIndex]
-    setAspectRatio(nextRatio)
-    toast.success(`Aspect Ratio set to ${nextRatio}`)
+  // Filter helper functions
+  const handleCycleCreatedOn = () => {
+    const options: ("all" | "today" | "week" | "month")[] = ["all", "today", "week", "month"]
+    const nextIndex = (options.indexOf(createdOnFilter) + 1) % options.length
+    setCreatedOnFilter(options[nextIndex])
   }
 
-  const handleCycleResolution = () => {
-    const resList: ("480p" | "720p" | "1080p" | "4K")[] = ["480p", "720p", "1080p", "4K"]
-    const nextIndex = (resList.indexOf(resolution) + 1) % resList.length
-    setResolution(resList[nextIndex])
-    toast.success(`Quality: ${resList[nextIndex]}`)
-  }
-
-  const handleCycleDuration = () => {
-    const durList: ("5s" | "10s" | "15s")[] = ["5s", "10s", "15s"]
-    const nextIndex = (durList.indexOf(duration) + 1) % durList.length
-    setDuration(durList[nextIndex])
-    toast.success(`Length: ${durList[nextIndex]}`)
-  }
-
-  const handleCycleMotionSpeed = () => {
-    const speeds: ("2v" | "4v" | "8v")[] = ["2v", "4v", "8v"]
-    const nextIndex = (speeds.indexOf(motionSpeed) + 1) % speeds.length
-    setMotionSpeed(speeds[nextIndex])
-    toast.success(`Multiplier set to ${speeds[nextIndex]}`)
+  const handleCycleSource = () => {
+    const options: ("all" | "personal" | "community")[] = ["all", "personal", "community"]
+    const nextIndex = (options.indexOf(sourceFilter) + 1) % options.length
+    setSourceFilter(options[nextIndex])
   }
 
   const handleCopyPrompt = (promptText: string, id: string) => {
@@ -513,24 +493,35 @@ export default function LibraryPage() {
       case "public_gallery": pool = publicGalleryAssets; break
       case "all": default: pool = [...uploadedAssets, ...assets]; break
     }
+
+    // Apply Personal/Community filter
+    if (sourceFilter === "personal") {
+      pool = pool.filter((asset) => !asset.id.startsWith("feat-") && !asset.is_public);
+    } else if (sourceFilter === "community") {
+      pool = pool.filter((asset) => asset.id.startsWith("feat-") || asset.is_public);
+    }
+
+    // Apply Created On filter
+    if (createdOnFilter !== "all") {
+      const now = new Date();
+      pool = pool.filter((asset) => {
+        if (!asset.created_at) return false;
+        const assetDate = new Date(asset.created_at);
+        const diffTime = Math.abs(now.getTime() - assetDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (createdOnFilter === "today") return diffDays <= 1;
+        if (createdOnFilter === "week") return diffDays <= 7;
+        if (createdOnFilter === "month") return diffDays <= 30;
+        return true;
+      });
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       pool = pool.filter((asset) => asset.prompt?.toLowerCase().includes(q))
     }
     return pool
-  }, [activeCategory, assets, publicAssets, uploadedAssets, savedIds, searchQuery, selectedGalleryId, publicGalleryAssets])
-
-  // Get active CSS filter for presets
-  const getPresetFilterClass = () => {
-    switch (activePreset) {
-      case "balloon": return "brightness-[1.05] contrast-[1.05] saturate-[1.4] sepia-[0.05]"
-      case "stop-motion": return "contrast-[1.25] sepia-[0.15] hue-rotate-[10deg]"
-      case "archival": return "sepia-[0.6] saturate-[0.6] contrast-[1.1]"
-      case "film-noir": return "grayscale-[1] contrast-[1.5] brightness-[0.85]"
-      case "cardboard": return "contrast-[1.1] saturate-[1.25] sepia-[0.25]"
-      default: return "filter-none"
-    }
-  }
+  }, [activeCategory, assets, publicAssets, uploadedAssets, savedIds, searchQuery, selectedGalleryId, publicGalleryAssets, sourceFilter, createdOnFilter])
 
   // Aspect ratio wrapper class
   const getCardAspectRatioClass = () => {
@@ -572,20 +563,20 @@ export default function LibraryPage() {
           <div className="p-5 flex flex-col gap-7">
             {/* Explore Section */}
             <div className="flex flex-col gap-1.5">
-              <span className={`text-[9px] font-mono tracking-widest uppercase px-2.5 mb-1 block ${isDarkMode ? "text-white/20" : "text-black/35"}`}>
+              <span className={`text-[11px] font-mono tracking-widest uppercase px-2.5 mb-1 block ${isDarkMode ? "text-white/20" : "text-black"}`}>
                 Explore
               </span>
               
               <button
                 onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium font-sans transition-all duration-200 ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "featured"
-                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-[#00DDDD] border border-black/5")
-                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black/50 hover:text-black hover:bg-black/[0.02]")
+                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-black border border-black/10")
+                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Sparkles className={`h-3.5 w-3.5 ${activeCategory === "featured" ? "text-[var(--color-cyan)]" : ""}`} />
+                  <Sparkles className={`h-4.5 w-4.5 ${activeCategory === "featured" ? (isDarkMode ? "text-[var(--color-cyan)]" : "text-black") : ""}`} />
                   <span>Featured Feed</span>
                 </div>
                 {activeCategory === "featured" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
@@ -593,14 +584,14 @@ export default function LibraryPage() {
 
               <button
                 onClick={() => { setActiveCategory("public_showcase"); setIsUploadDragging(false); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium font-sans transition-all duration-200 ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "public_showcase"
-                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-[#00DDDD] border border-black/5")
-                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black/50 hover:text-black hover:bg-black/[0.02]")
+                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-black border border-black/10")
+                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Globe className={`h-3.5 w-3.5 ${activeCategory === "public_showcase" ? "text-[var(--color-cyan)]" : "text-sky-500/80"}`} />
+                  <Globe className={`h-4.5 w-4.5 ${activeCategory === "public_showcase" ? (isDarkMode ? "text-[var(--color-cyan)]" : "text-black") : (isDarkMode ? "text-sky-500/80" : "text-black")}`} />
                   <span>Community Showcase</span>
                 </div>
                 {activeCategory === "public_showcase" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
@@ -608,14 +599,14 @@ export default function LibraryPage() {
 
               <button
                 onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium font-sans transition-all duration-200 ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "recent"
-                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-[#00DDDD] border border-black/5")
-                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black/50 hover:text-black hover:bg-black/[0.02]")
+                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-black border border-black/10")
+                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Clock className="h-3.5 w-3.5" />
+                  <Clock className="h-4.5 w-4.5" />
                   <span>Recent Creations</span>
                 </div>
                 {activeCategory === "recent" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
@@ -623,20 +614,20 @@ export default function LibraryPage() {
 
               <button
                 onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium font-sans transition-all duration-200 ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "saved"
-                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-[#00DDDD] border border-black/5")
-                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black/50 hover:text-black hover:bg-black/[0.02]")
+                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-black border border-black/10")
+                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Bookmark className={`h-3.5 w-3.5 ${activeCategory === "saved" ? "text-[var(--color-cyan)]" : ""}`} />
+                  <Bookmark className={`h-4.5 w-4.5 ${activeCategory === "saved" ? (isDarkMode ? "text-[var(--color-cyan)]" : "text-black") : ""}`} />
                   <span>Saved</span>
                 </div>
                 <div className="flex items-center gap-1">
                   {savedIds.length > 0 && (
-                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
-                      isDarkMode ? "bg-[var(--color-cyan)]/10 text-[var(--color-cyan)]" : "bg-cyan-500/10 text-cyan-700"
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
+                      isDarkMode ? "bg-[var(--color-cyan)]/10 text-[var(--color-cyan)]" : "bg-black/10 text-black font-semibold"
                     }`}>
                       {savedIds.length}
                     </span>
@@ -649,24 +640,24 @@ export default function LibraryPage() {
             {/* Library Section */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between px-2.5 mb-1">
-                <span className={`text-[9px] font-mono tracking-widest uppercase block ${isDarkMode ? "text-white/20" : "text-black/35"}`}>
+                <span className={`text-[11px] font-mono tracking-widest uppercase block ${isDarkMode ? "text-white/20" : "text-black"}`}>
                   Personal Workspace
                 </span>
-                <button onClick={handleCreateGallery} className={`transition-colors ${isDarkMode ? "text-white/30 hover:text-[var(--color-cyan)]" : "text-black/30 hover:text-cyan-600"}`} title="Create Folder">
-                  <FolderPlus className="h-3.5 w-3.5" />
+                <button onClick={handleCreateGallery} className={`transition-colors ${isDarkMode ? "text-white/30 hover:text-[var(--color-cyan)]" : "text-black hover:text-cyan-600"}`} title="Create Folder">
+                  <FolderPlus className="h-4.5 w-4.5" />
                 </button>
               </div>
 
               <button
                 onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium font-sans transition-all duration-200 ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "all"
-                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-[#00DDDD] border border-black/5")
-                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black/50 hover:text-black hover:bg-black/[0.02]")
+                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-black border border-black/10")
+                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <ImageIcon className={`h-3.5 w-3.5 ${activeCategory === "all" ? "text-[var(--color-cyan)]" : ""}`} />
+                  <ImageIcon className={`h-4.5 w-4.5 ${activeCategory === "all" ? (isDarkMode ? "text-[var(--color-cyan)]" : "text-black") : ""}`} />
                   <span>My Gallery</span>
                 </div>
                 {activeCategory === "all" && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />}
@@ -676,11 +667,11 @@ export default function LibraryPage() {
 
             {/* Custom Database Galleries list */}
             <div className="flex flex-col gap-1.5">
-              <span className={`text-[9px] font-mono tracking-widest uppercase px-2.5 mb-1 block ${isDarkMode ? "text-white/20" : "text-black/35"}`}>
+              <span className={`text-[11px] font-mono tracking-widest uppercase px-2.5 mb-1 block ${isDarkMode ? "text-white/20" : "text-black"}`}>
                 Custom Folders
               </span>
               {galleries.length === 0 ? (
-                <span className={`text-[10px] italic px-3 py-1 font-sans ${isDarkMode ? "text-white/20" : "text-black/30"}`}>
+                <span className={`text-xs italic px-3 py-1 font-sans ${isDarkMode ? "text-white/20" : "text-black"}`}>
                   No folders created yet.
                 </span>
               ) : (
@@ -692,45 +683,34 @@ export default function LibraryPage() {
                       setActiveCategory("gallery");
                       setIsUploadDragging(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-white/[0.02] text-left transition-all font-sans ${
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm hover:bg-white/[0.02] text-left transition-all font-sans ${
                       activeCategory === "gallery" && selectedGalleryId === g.id
-                        ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5 font-semibold" : "bg-black/5 text-[#00DDDD] border border-black/5 font-semibold")
-                        : (isDarkMode ? "text-white/40 hover:text-white/85" : "text-black/50 hover:text-black")
+                        ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5 font-semibold" : "bg-black/5 text-black border border-black/10 font-semibold")
+                        : (isDarkMode ? "text-white/40 hover:text-white/85" : "text-black hover:bg-black/[0.02]")
                     }`}
                   >
                     <div className="flex items-center gap-2.5 truncate">
                       {activeCategory === "gallery" && selectedGalleryId === g.id ? (
-                        <FolderOpen className={`h-3.5 w-3.5 shrink-0 ${g.is_public ? "text-[var(--color-cyan)]" : "text-amber-500/80"}`} />
+                        <FolderOpen className={`h-4.5 w-4.5 shrink-0 ${g.is_public ? (isDarkMode ? "text-[var(--color-cyan)]" : "text-black") : (isDarkMode ? "text-amber-500/80" : "text-black")}`} />
                       ) : (
-                        <Folder className={`h-3.5 w-3.5 shrink-0 ${g.is_public ? "text-sky-400/60" : "text-amber-500/60"}`} />
+                        <Folder className={`h-4.5 w-4.5 shrink-0 ${g.is_public ? (isDarkMode ? "text-sky-400/60" : "text-black") : (isDarkMode ? "text-amber-500/60" : "text-black")}`} />
                       )}
                       <span className="truncate">{g.name}</span>
                     </div>
                     
                     <div className="flex items-center gap-1 shrink-0 select-none">
                       {g.is_public ? (
-                        <Globe className="h-2.5 w-2.5 text-sky-400/70" />
+                        <Globe className={`h-3 w-3 ${isDarkMode ? "text-sky-400/70" : "text-black"}`} />
                       ) : (
-                        <Lock className="h-2.5 w-2.5 text-white/20" />
+                        <Lock className={`h-3 w-3 ${isDarkMode ? "text-white/20" : "text-black"}`} />
                       )}
-                      <span className="text-[9px] font-mono opacity-40">({g.asset_count || 0})</span>
+                      <span className={`text-[10px] font-mono ${isDarkMode ? "opacity-40" : "text-black font-medium"}`}>({g.asset_count || 0})</span>
                     </div>
                   </button>
                 ))
               )}
             </div>
 
-          </div>
-
-          {/* Sidebar Footer info */}
-          <div className={`p-5 border-t text-[10px] font-mono flex flex-col gap-1.5 ${
-            isDarkMode ? "border-white/5 bg-black/10 text-white/20" : "border-black/5 bg-black/[0.02] text-black/40"
-          }`}>
-            <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Library Server: Connected</span>
-            </div>
-            <div>Version: Rudra 2.0</div>
           </div>
           
         </aside>
@@ -941,26 +921,7 @@ export default function LibraryPage() {
           </div>
 
           {/* Curated Preset Active Indicator Banner */}
-          {activePreset !== "none" && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 px-4 py-2 border border-[var(--color-cyan)]/20 bg-[var(--color-cyan)]/5 text-[var(--color-cyan)] rounded-xl flex items-center justify-between text-xs shadow-inner"
-            >
-              <div className="flex items-center gap-2">
-                <Sliders className="h-3.5 w-3.5" />
-                <span>
-                  Color grading filter <strong>{activePreset.toUpperCase()}</strong> applied to view.
-                </span>
-              </div>
-              <button
-                onClick={() => { setActivePreset("none"); toast.success("Preset reset to default."); }}
-                className="text-[10px] font-mono uppercase bg-white/10 hover:bg-white/20 text-white px-2 py-0.5 rounded transition-colors"
-              >
-                Disable
-              </button>
-            </motion.div>
-          )}
+
 
           {/* ================= CONTENT CONTAINER ================= */}
           <div className="relative">
@@ -1150,7 +1111,7 @@ export default function LibraryPage() {
                             <img
                               src={asset.asset_url}
                               alt={asset.prompt || "Concept visual"}
-                              className={`w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-105 cursor-pointer ${getPresetFilterClass()}`}
+                              className="w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-105 cursor-pointer"
                               loading="lazy"
                               onClick={() => setExpandedAsset(asset)}
                             />
@@ -1281,122 +1242,33 @@ export default function LibraryPage() {
           {/* ================= FLOATING FILTER BAR ================= */}
           <div className="fixed bottom-6 left-[calc(50%+128px)] -translate-x-1/2 flex flex-col items-center gap-3 z-40 max-w-[1000px] w-[95%] md:w-[80%] shrink-0">
             
-            {/* Presets pop-up window floating above pill */}
-            <AnimatePresence>
-              {isPresetOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 12, scale: 0.96 }}
-                  transition={{ duration: 0.2 }}
-                  className={`w-64 border rounded-2xl p-2.5 shadow-2xl flex flex-col gap-1 select-none backdrop-blur-2xl ${
-                    isDarkMode ? "glass-panel border-white/10 bg-[#0e0e12]/95" : "bg-white border-black/10 shadow-[0_15px_30px_rgba(0,0,0,0.15)] text-black"
-                  }`}
-                >
-                  <div className={`flex items-center justify-between px-2.5 py-1 mb-1 border-b ${isDarkMode ? "border-white/5 text-white/45" : "border-black/5 text-black/50"}`}>
-                    <span className="text-[10px] font-mono tracking-widest uppercase">Color Grading Filters</span>
-                    <Sliders className={`h-3 w-3 ${isDarkMode ? "text-[var(--color-cyan)]" : "text-cyan-600"}`} />
-                  </div>
-                  
-                  {[
-                    { id: "none", label: "Default Normal" },
-                    { id: "balloon", label: "Balloon (Warm tone)" },
-                    { id: "stop-motion", label: "Stop Motion (Gritty)" },
-                    { id: "archival", label: "Archival (Sepia)" },
-                    { id: "film-noir", label: "Film Noir (High contrast B&W)" },
-                    { id: "cardboard", label: "Cardboard Craft" }
-                  ].map((preset) => (
-                    <button
-                      key={preset.id}
-                      onClick={() => {
-                        setActivePreset(preset.id as any);
-                        setIsPresetOpen(false);
-                        toast.success(`Filter: "${preset.label}" applied.`);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-xs font-sans transition-all flex items-center justify-between ${
-                        activePreset === preset.id
-                          ? (isDarkMode ? "bg-[var(--color-cyan)]/10 text-[var(--color-cyan)] font-semibold" : "bg-cyan-500/10 text-cyan-700 font-semibold")
-                          : (isDarkMode ? "text-white/50 hover:bg-white/5 hover:text-white" : "text-black/60 hover:bg-black/5 hover:text-black")
-                      }`}
-                    >
-                      <span>{preset.label}</span>
-                      <div className={`h-1.5 w-1.5 rounded-full ${
-                        activePreset === preset.id ? (isDarkMode ? "bg-[var(--color-cyan)]" : "bg-cyan-600") : "bg-transparent"
-                      }`} />
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* Core Pill Bar */}
             <div className={`w-full flex items-center justify-between gap-3 p-2 border rounded-full transition-all duration-300 ${
               isDarkMode
                 ? "bg-[#101014]/90 border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-white/20"
-                : "bg-white/90 border-black/10 shadow-[0_10px_30px_rgba(0,0,0,0.08)] hover:border-black/20"
+                : "bg-white border-black/10 shadow-[0_10px_30px_rgba(0,0,0,0.08)] hover:border-black/20"
             }`}>
               
               {/* Middle Configurations Pills */}
-              <div className={`hidden lg:flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-0.5 select-none text-[10px] font-sans font-medium shrink-0 ${
-                isDarkMode ? "text-white/50" : "text-black/60"
-              }`}>
+              <div className="flex items-center gap-2 select-none text-[10px] font-sans font-medium shrink-0">
                 
-                {/* Preset controller */}
+                {/* Created On filter */}
                 <button
-                  onClick={() => setIsPresetOpen(!isPresetOpen)}
-                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 ${
-                    activePreset !== "none"
-                      ? (isDarkMode ? "bg-[var(--color-cyan)]/10 border-[var(--color-cyan)]/30 text-[var(--color-cyan)]" : "bg-cyan-500/10 border-cyan-500/30 text-cyan-700")
-                      : (isDarkMode ? "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10" : "bg-black/5 border-black/5 hover:bg-black/10 hover:border-black/10")
-                  }`}
+                  onClick={handleCycleCreatedOn}
+                  className="px-4 py-2 rounded-full bg-[#00DDDD] text-black font-semibold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 border-none shadow-[0_0_15px_rgba(0,221,221,0.2)]"
                 >
-                  <Sliders className="h-3 w-3" />
-                  <span>Preset: {activePreset === "none" ? "None" : activePreset.charAt(0).toUpperCase() + activePreset.slice(1)}</span>
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Created: {createdOnFilter === "all" ? "All Time" : createdOnFilter === "today" ? "Today" : createdOnFilter === "week" ? "Last 7 Days" : "Last 30 Days"}</span>
                 </button>
 
-                {/* Aspect Ratio controller */}
+                {/* Personal/Community filter */}
                 <button
-                  onClick={handleCycleAspectRatio}
-                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 ${
-                    isDarkMode ? "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10" : "bg-black/5 border-black/5 hover:bg-black/10 hover:border-black/10"
-                  }`}
+                  onClick={handleCycleSource}
+                  className="px-4 py-2 rounded-full bg-[#00DDDD] text-black font-semibold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 border-none shadow-[0_0_15px_rgba(0,221,221,0.2)]"
                 >
-                  <Maximize2 className={`rotate-45 h-3 w-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
-                  <span>Ratio: {aspectRatio}</span>
+                  <Globe className="h-3.5 w-3.5" />
+                  <span>Source: {sourceFilter === "all" ? "All" : sourceFilter === "personal" ? "Personal" : "Community"}</span>
                 </button>
-
-                {/* Quality Resolution controller */}
-                <button
-                  onClick={handleCycleResolution}
-                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 ${
-                    isDarkMode ? "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10" : "bg-black/5 border-black/5 hover:bg-black/10 hover:border-black/10"
-                  }`}
-                >
-                  <Eye className={`h-3 w-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
-                  <span>{resolution}</span>
-                </button>
-
-                {/* Duration Controller */}
-                <button
-                  onClick={handleCycleDuration}
-                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 ${
-                    isDarkMode ? "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10" : "bg-black/5 border-black/5 hover:bg-black/10 hover:border-black/10"
-                  }`}
-                >
-                  <Clock className={`h-3 w-3 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
-                  <span>{duration}</span>
-                </button>
-
-                {/* Speed Multiplier */}
-                <button
-                  onClick={handleCycleMotionSpeed}
-                  className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 ${
-                    isDarkMode ? "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10" : "bg-black/5 border-black/5 hover:bg-black/10 hover:border-black/10"
-                  }`}
-                >
-                  <span>{motionSpeed}</span>
-                </button>
-
 
               </div>
 
