@@ -3018,141 +3018,7 @@ STRICT RULES:
                                         </div>
                                     </div>
 
-                                    {/* Detailed Metrics */}
-                                    <div className="space-y-6">
-                                        {/* Tokens Used (Chat) */}
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Chat Tokens</span>
-                                                <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.chat_tokens_used ?? 0} / {subscription?.subscription?.details?.monthly_tokens || 1}
-                                                </span>
-                                            </div>
-                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.chat_tokens_used ?? 0) / (subscription?.subscription?.details?.monthly_tokens || 1)) * 100)}%`
-                                                    }}
-                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
-                                                />
-                                            </div>
-                                        </div>
 
-                                        {/* Coding Tokens */}
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Coding Tokens</span>
-                                                <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.coding_tokens_used ?? 0} / {subscription?.subscription?.details?.monthly_tokens || 1}
-                                                </span>
-                                            </div>
-                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.coding_tokens_used ?? 0) / (subscription?.subscription?.details?.monthly_tokens || 1)) * 100)}%`
-                                                    }}
-                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Images Used */}
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Images Today</span>
-                                                <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.daily_images ?? 0} / {subscription?.subscription?.details?.daily_image_limit || 1}
-                                                </span>
-                                            </div>
-                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.daily_images ?? 0) / (subscription?.subscription?.details?.daily_image_limit || 1)) * 100)}%`
-                                                    }}
-                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* OCR Used */}
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>OCR Pages</span>
-                                                <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.ocr_pages_used ?? 0} / {subscription?.subscription?.details?.ocr_limit || 1}
-                                                </span>
-                                            </div>
-                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.ocr_pages_used ?? 0) / (subscription?.subscription?.details?.ocr_limit || 1)) * 100)}%`
-                                                    }}
-                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Feature Extraction Used */}
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Feature Extraction</span>
-                                                <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.feature_pages_used ?? 0} / {subscription?.subscription?.details?.feature_extraction_limit || 1}
-                                                </span>
-                                            </div>
-                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.feature_pages_used ?? 0) / (subscription?.subscription?.details?.feature_extraction_limit || 1)) * 100)}%`
-                                                    }}
-                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* TTS Used */}
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>TTS Minutes</span>
-                                                <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.tts_minutes_used ?? 0} / {subscription?.subscription?.details?.tts_minutes_limit || 1}
-                                                </span>
-                                            </div>
-                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.tts_minutes_used ?? 0) / (subscription?.subscription?.details?.tts_minutes_limit || 1)) * 100)}%`
-                                                    }}
-                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* STT Used */}
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>STT Minutes</span>
-                                                <span className={isDarkMode ? "text-white" : "text-black"}>
-                                                    {subscription?.usage?.stt_minutes_used ?? 0} / {subscription?.subscription?.details?.stt_minutes_limit || 1}
-                                                </span>
-                                            </div>
-                                            <div className={`h-1 w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"} rounded-full overflow-hidden`}>
-                                                <motion.div
-                                                    initial={{ width: 0 }}
-                                                    animate={{
-                                                        width: `${Math.min(100, ((subscription?.usage?.stt_minutes_used ?? 0) / (subscription?.subscription?.details?.stt_minutes_limit || 1)) * 100)}%`
-                                                    }}
-                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
 
                                     {!userRole || userRole === "student" ? (
                                         <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : ""}`}>
@@ -3394,7 +3260,7 @@ STRICT RULES:
                         </div>
                     </div>
                 ) : (
-                    <div className="flex flex-col h-full items-center py-6 justify-between overflow-hidden w-full">
+                    <div className="flex flex-col h-full items-center py-6 overflow-y-auto w-full">
                         {/* Top: Plan Indicator using Clock icon from the Plan Badge */}
                         <div className="flex flex-col items-center gap-6 w-full px-2">
                             <div
@@ -3429,6 +3295,24 @@ STRICT RULES:
 
                             <div className={`h-[1px] w-8 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
                         </div>
+
+                        {/* Upgrade Button right below Wallet/Mail */}
+                        {(!userRole || userRole === "student") && (
+                            <div className="w-full flex items-center justify-center px-2 py-4">
+                                <Link href="/pricing" title="Upgrade Now" className="block cursor-pointer">
+                                    <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-[rgba(0,221,221,0.2)]`}>
+                                        <div className="bubble-layer bubble-1"></div>
+                                        <div className="bubble-layer bubble-2"></div>
+                                        <div className="bubble-layer bubble-3"></div>
+                                        <div className="bubble-layer bubble-4"></div>
+                                        <div className="bubble-layer bubble-5"></div>
+                                        <div className="bubble-layer bubble-6"></div>
+                                        <div className="bubble-layer bubble-7"></div>
+                                        <Zap className="h-5 w-5 text-black relative z-10 fill-black" />
+                                    </button>
+                                </Link>
+                            </div>
+                        )}
 
                         {/* Middle: Live Usage Progress Circle using ChatLoader */}
                         <div className="flex flex-col items-center gap-6 w-full">
@@ -3549,23 +3433,6 @@ STRICT RULES:
                             </div>
                         </div>
 
-                        {/* Bottom: Mini Cyan Upgrade Button */}
-                        {(!userRole || userRole === "student") && (
-                            <div className="w-full flex items-center justify-center px-2 pb-10">
-                                <Link href="/pricing" title="Upgrade Now" className="block cursor-pointer">
-                                    <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-[rgba(0,221,221,0.2)]`}>
-                                        <div className="bubble-layer bubble-1"></div>
-                                        <div className="bubble-layer bubble-2"></div>
-                                        <div className="bubble-layer bubble-3"></div>
-                                        <div className="bubble-layer bubble-4"></div>
-                                        <div className="bubble-layer bubble-5"></div>
-                                        <div className="bubble-layer bubble-6"></div>
-                                        <div className="bubble-layer bubble-7"></div>
-                                        <Zap className="h-5 w-5 text-black relative z-10 fill-black" />
-                                    </button>
-                                </Link>
-                            </div>
-                        )}
                     </div>
                 )}
 
