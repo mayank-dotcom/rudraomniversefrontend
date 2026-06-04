@@ -1948,9 +1948,25 @@ export async function sendAiRequestStream(
   }
 
   let buffer = "";
+  let lastChunkTime = Date.now();
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const result: { done: boolean; value?: Uint8Array } | null = await Promise.race([
+        reader.read().then(r => ({ ...r, _timedout: false })),
+        new Promise<any>(resolve => {
+          const check = () => {
+            if (Date.now() - lastChunkTime >= 5000) {
+              resolve({ done: true, value: undefined, _timedout: true });
+            } else {
+              setTimeout(check, 500);
+            }
+          };
+          check();
+        }),
+      ]);
+      if (!result) break;
+      const { done, value } = result as { done: boolean; value?: Uint8Array };
+      if (done && (result as any)._timedout) break;
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
@@ -1993,6 +2009,7 @@ export async function sendAiRequestStream(
           // Ignore parse errors for intermediate chunks
         }
       }
+      lastChunkTime = Date.now();
     }
   } finally {
     reader.releaseLock();

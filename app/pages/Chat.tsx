@@ -1396,12 +1396,12 @@ STRICT RULES:
                 setMessages((prev) => [...prev.filter((m) => !m.localOnly), userMessage, assistantMessage]);
                 setInput("");
                 setSelectedFile(null);
-                setShowDots(false);
 
                 const ctrl = new AbortController();
                 abortControllerRef.current = ctrl;
 
                 let aiContent = "";
+                let hasReceivedFirstChunk = false;
                 try {
                     aiContent = await sendAiRequestStream(
                         {
@@ -1411,6 +1411,11 @@ STRICT RULES:
                             signal: ctrl.signal,
                         },
                         (chunk) => {
+                            if (!hasReceivedFirstChunk) {
+                                hasReceivedFirstChunk = true;
+                                setShowDots(false);
+                                setIsLoading(false);
+                            }
                             setMessages((prev) => {
                                 const updated = [...prev];
                                 const last = updated[updated.length - 1];
