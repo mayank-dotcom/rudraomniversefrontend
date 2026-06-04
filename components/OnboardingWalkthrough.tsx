@@ -9,6 +9,7 @@ interface WalkthroughStep {
   description: string;
   targetSelector?: string;
   placement: "top" | "bottom" | "left" | "right" | "center";
+  offsetY?: number;
 }
 
 interface OnboardingWalkthroughProps {
@@ -45,6 +46,7 @@ export default function OnboardingWalkthrough({
         description: "Switch between different AI engines tailored for your tasks—Student Mode for coursework, Persona Mode for character study, or AI Image Lab for generating artwork.",
         targetSelector: "#walkthrough-engine-select",
         placement: "top",
+        offsetY: 20,
       },
       {
         title: "Session History & Settings",
@@ -170,7 +172,7 @@ export default function OnboardingWalkthrough({
     if (!stepConfig) return;
 
     const cardWidth = 340; // width of card text area + optional horizontal arrow
-    const cardHeight = 200; // estimated height of card text area + vertical arrow
+    const cardHeight = 250; // estimated height of card text area + vertical arrow
 
     if (!rect || stepConfig.placement === "center") {
       // Center placement
@@ -183,7 +185,8 @@ export default function OnboardingWalkthrough({
     }
 
     const placement = stepConfig.placement;
-    const gap = 20;
+    const offsetY = stepConfig.offsetY || 0;
+    const gap = 20 + offsetY;
     let x = 0;
     let y = 0;
 
