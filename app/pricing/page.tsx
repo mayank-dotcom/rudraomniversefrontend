@@ -102,6 +102,14 @@ const PricingContent = () => {
     }, [billingPeriod]);
 
     const handleSelectPlan = useCallback((plan: Plan) => {
+        const isAgency = plan.plan_name?.toLowerCase().includes('agenc') || 
+                         plan.plan_name?.toLowerCase().includes('heavy duty') || 
+                         plan.plan_name?.toLowerCase().includes('enterprise');
+        if (isAgency) {
+            window.location.href = "/b2b";
+            return;
+        }
+
         const apiKey = getApiKey();
         if (!apiKey) {
             toast.error("Please log in first to subscribe to a plan.");
@@ -114,18 +122,20 @@ const PricingContent = () => {
     const [pageData, setPageData] = useState<{
         title: string;
         description: string;
-        linkText: string;
-        linkUrl: string;
+        linkText?: string;
+        linkUrl?: string;
+        plans?: any[];
     }>({
         title: "Quiet power.\nTailored access.",
         description: "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
         linkText: "Learn More",
-        linkUrl: "/pricing"
+        linkUrl: "/pricing",
+        plans: []
     });
 
     useEffect(() => {
         getPublicSiteSettings().then(res => {
-            const setting = res.settings?.find(s => s.key === "b2b_page");
+            const setting = res.settings?.find(s => s.key === "pricing_page") || res.settings?.find(s => s.key === "b2b_page");
             if (setting?.value) {
                 try {
                     const parsed = JSON.parse(setting.value);
@@ -133,10 +143,11 @@ const PricingContent = () => {
                         title: parsed.title || "Quiet power.\nTailored access.",
                         description: parsed.description || "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
                         linkText: parsed.linkText || "Learn More",
-                        linkUrl: parsed.linkUrl || "/pricing"
+                        linkUrl: parsed.linkUrl || "/pricing",
+                        plans: parsed.plans || []
                     });
                 } catch (e) {
-                    console.error("Error parsing B2B settings", e);
+                    console.error("Error parsing settings", e);
                 }
             }
         }).catch(() => {});
@@ -236,6 +247,29 @@ const PricingContent = () => {
         ];
         const lower = planName.toLowerCase();
         return list.find(d => d.keywords.some(k => lower.includes(k))) || null;
+    };
+
+    const iconMap: Record<string, any> = {
+        zap: Zap,
+        image: ImageIcon,
+        scan: Scan,
+        puzzle: Puzzle,
+        volume: Volume2,
+        mic: Mic
+    };
+
+    const getPlanFeaturesList = (planName: string) => {
+        if (pageData.plans && pageData.plans.length > 0) {
+            const matchedPlan = pageData.plans.find(p => p.planName?.toLowerCase() === planName.toLowerCase());
+            if (matchedPlan && Array.isArray(matchedPlan.features) && matchedPlan.features.length > 0) {
+                return matchedPlan.features.map((f: any) => ({
+                    icon: iconMap[f.icon] || Zap,
+                    text: f.text
+                }));
+            }
+        }
+        const md = getMultiplierData(planName);
+        return md ? md.features : [];
     };
 
     const getCardStyles = (index: number) => {
@@ -471,10 +505,10 @@ const PricingContent = () => {
                                     {/* Features */}
                                     <div className="flex-1 space-y-5 mb-16">
                                         {(() => {
-                                            const md = getMultiplierData(plan.plan_name || '');
-                                            return md ? (
+                                            const features = getPlanFeaturesList(plan.plan_name || '');
+                                            return features.length > 0 ? (
                                                 <>
-                                                    {md.features.map((f, idx) => (
+                                                    {features.map((f: any, idx: number) => (
                                                         <div key={idx} className="flex items-start gap-4">
                                                             <f.icon className="h-5 w-5 shrink-0 text-[var(--color-cyan)] mt-0.5" />
                                                             <p className={`text-[15px] font-medium leading-relaxed ${isDarkMode ? "text-white/70" : "text-black/70"}`}>

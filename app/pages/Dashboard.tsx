@@ -2253,7 +2253,9 @@ const Dashboard = () => {
                                                                                  editingSiteSetting.key === 'footer_contact' ? 'Footer Contact' : 
                                                                              editingSiteSetting.key === 'schools_page' ? 'Schools Page' : 
                                                                                 editingSiteSetting.key === 'b2b_page' ? 'B2B Page' : 
-                                                                                    editingSiteSetting.key === 'home_page' ? 'Home Page Video' : 
+                                                                                    
+                                                                                editingSiteSetting.key === 'pricing_page' ? 'Pricing Page' :
+                                                                                editingSiteSetting.key === 'home_page' ? 'Home Page Video' : 
                                                                                         editingSiteSetting.key === 'plugin_page' ? 'Plugin Page' : 
                                                                                             editingSiteSetting.key === 'mobile_app_page' ? 'Mobile App Page' : 
                                                                                              editingSiteSetting.key === 'faq_page' ? 'FAQ Page' : 
@@ -2657,7 +2659,116 @@ const Dashboard = () => {
                                                 </div>
                                             )}
 
-                                            {editingSiteSetting.key === 'b2b_page' && (
+                                            {editingSiteSetting.key === 'pricing_page' && (
+                                                <div className="space-y-6">
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Title</label>
+                                                        <input
+                                                            value={siteFormData?.title || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, title: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Hero Title (e.g. Quiet power. Tailored access.)"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Description</label>
+                                                        <textarea
+                                                            value={siteFormData?.description || ''}
+                                                            onChange={(e) => {
+                                                                const next = { ...siteFormData, description: e.target.value };
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            rows={3}
+                                                            className={`w-full p-4 text-sm font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                            placeholder="Hero Description"
+                                                        />
+                                                    </div>
+                                                    
+                                                    {/* Plans Features Section */}
+                                                    <div className="space-y-6">
+                                                        <h3 className={`text-xs font-mono uppercase tracking-widest border-b pb-2 ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}>Plan Features Editor</h3>
+                                                        {(Array.isArray(siteFormData?.plans) ? siteFormData.plans : []).map((plan: any, planIdx: number) => (
+                                                            <div key={planIdx} className={`p-6 rounded-xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                                                                <h4 className="text-sm font-bold uppercase tracking-tight mb-4">{plan.planName}</h4>
+                                                                
+                                                                <div className="space-y-3">
+                                                                    {(Array.isArray(plan.features) ? plan.features : []).map((feature: any, featIdx: number) => {
+                                                                        const updateFeature = (field: string, val: string) => {
+                                                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                            if (next.plans[planIdx].features[featIdx]) {
+                                                                                next.plans[planIdx].features[featIdx][field] = val;
+                                                                            }
+                                                                            setSiteFormData(next);
+                                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                        };
+                                                                        
+                                                                        return (
+                                                                            <div key={featIdx} className="flex gap-2 items-center">
+                                                                                {/* Icon selector dropdown */}
+                                                                                <select
+                                                                                    value={feature.icon || 'zap'}
+                                                                                    onChange={(e) => updateFeature('icon', e.target.value)}
+                                                                                    className={`p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 shrink-0 ${isDarkMode ? "bg-[#111] border-white/10 text-white" : "bg-white border-black/10 text-black"}`}
+                                                                                >
+                                                                                    <option value="zap">Zap (Reasoning/Chat)</option>
+                                                                                    <option value="image">Image (Illustration)</option>
+                                                                                    <option value="scan">Scan (OCR)</option>
+                                                                                    <option value="puzzle">Puzzle (PDF Analyzer)</option>
+                                                                                    <option value="volume">Volume (TTS)</option>
+                                                                                    <option value="mic">Mic (STT)</option>
+                                                                                </select>
+                                                                                
+                                                                                {/* Feature Text */}
+                                                                                <input
+                                                                                    value={feature.text || ''}
+                                                                                    onChange={(e) => updateFeature('text', e.target.value)}
+                                                                                    placeholder="Feature Description Text"
+                                                                                    className={`flex-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                                                />
+                                                                                
+                                                                                {/* Remove Feature button */}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                                        next.plans[planIdx].features = next.plans[planIdx].features.filter((_: any, idx: number) => idx !== featIdx);
+                                                                                        setSiteFormData(next);
+                                                                                        setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                                    }}
+                                                                                    className="p-3 text-xs font-mono uppercase text-red-400 hover:text-red-300 font-bold"
+                                                                                >
+                                                                                    Remove
+                                                                                </button>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                    
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                            if (!next.plans[planIdx].features) next.plans[planIdx].features = [];
+                                                                            next.plans[planIdx].features.push({ icon: 'zap', text: '' });
+                                                                            setSiteFormData(next);
+                                                                            setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                        }}
+                                                                        className={`text-[10px] font-mono uppercase tracking-widest mt-2 ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                                                    >
+                                                                        + Add Feature to {plan.planName}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                                                                        {editingSiteSetting.key === 'b2b_page' && (
                                                 <div className="space-y-6">
                                                     <div>
                                                         <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Hero Title</label>
@@ -4424,6 +4535,7 @@ const Dashboard = () => {
                                     { key: 'footer_contact', label: 'Footer Contact', icon: Phone },
                                     { key: 'schools_page', label: 'Schools Page', icon: GraduationCap },
                                     { key: 'b2b_page', label: 'B2B Page', icon: Briefcase },
+                                    { key: 'pricing_page', label: 'Pricing Page', icon: Zap },
                                     { key: 'home_page', label: 'Home Page Video', icon: Play },
                                     { key: 'plugin_page', label: 'Plugin Page', icon: Code2 },
                                     { key: 'mobile_app_page', label: 'Mobile App Page', icon: Smartphone },
@@ -4525,6 +4637,74 @@ const Dashboard = () => {
                                                         };
                                                         setSiteFormData(defaults);
                                                         setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
+                                                     } else if (page.key === 'pricing_page') {
+                                                         const defaults = {
+                                                             title: "Quiet power.\nTailored access.",
+                                                             description: "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
+                                                             plans: [
+                                                                 {
+                                                                     planName: "Free Trial",
+                                                                     features: []
+                                                                 },
+                                                                 {
+                                                                     planName: "Motion Plan",
+                                                                     features: [
+                                                                         { icon: "zap", text: "Engage in clear conversations with our AI assistant to draft outlines, brainstorm ideas, and answer simple questions." },
+                                                                         { icon: "image", text: "Create standard-definition custom graphics and design unique illustrations using basic image generation tools in the lab." },
+                                                                         { icon: "scan", text: "Convert physical documents and clear paper images into editable digital text files using standard character recognition." },
+                                                                         { icon: "puzzle", text: "Upload single document files to extract high-level summaries and locate specific data points automatically." },
+                                                                         { icon: "volume", text: "Convert written text articles into clear audio recordings for listening to study notes on the go." },
+                                                                         { icon: "mic", text: "Dictate notes and letters using smart voice typing for fast transcription of your daily spoken words." }
+                                                                     ]
+                                                                 },
+                                                                 {
+                                                                     planName: "Speed Plan",
+                                                                     features: [
+                                                                         { icon: "zap", text: "Unlock faster processing speeds and longer chat history windows for complex research tasks and documentation projects." },
+                                                                         { icon: "image", text: "Produce high-definition digital illustrations instantly without waiting in standard queues during peak generation hours." },
+                                                                         { icon: "scan", text: "Extract text from multi-page scanned PDF documents and low-resolution digital screenshots with enhanced OCR accuracy." },
+                                                                         { icon: "puzzle", text: "Analyze large datasets to identify hidden trends and cross-reference information across your uploaded materials." },
+                                                                         { icon: "volume", text: "Listen to complete books and research reports narrated by natural, high-fidelity synthetic voices for long listening sessions." },
+                                                                         { icon: "mic", text: "Convert long lectures and meetings into highly accurate text using advanced acoustic speech-to-text algorithms." }
+                                                                     ]
+                                                                 },
+                                                                 {
+                                                                     planName: "Velocity Plan",
+                                                                     features: [
+                                                                         { icon: "zap", text: "Deploy professional-grade reasoning engines optimized for executing multi-step logical operations and detailed code generation." },
+                                                                         { icon: "image", text: "Generate ultra-realistic visual art and complex design mockups using advanced control parameters and model tuning." },
+                                                                         { icon: "scan", text: "Scan complex business documents and extract layout details to export data into clean, structured tables." },
+                                                                         { icon: "puzzle", text: "Synthesize information from multiple distinct file sources to generate comprehensive, cohesive executive summaries for your team." },
+                                                                         { icon: "volume", text: "Generate custom voiceovers with realistic emotional tones suitable for producing podcasts, video narration, and media." },
+                                                                         { icon: "mic", text: "Transcribe live audio streams with automatic speaker identification and smart punctuation in multiple languages." }
+                                                                     ]
+                                                                 },
+                                                                 {
+                                                                     planName: "Acceleration Plan",
+                                                                     features: [
+                                                                         { icon: "zap", text: "Empower your production workflows with massive monthly token allocations for continuous, uninterrupted AI assistant interactions." },
+                                                                         { icon: "image", text: "Create unlimited high-resolution commercial marketing graphics instantly using our fastest, state-of-the-art neural diffusion models." },
+                                                                         { icon: "scan", text: "Automatically parse unstructured handwritten notes and complex archives using our custom layout intelligence engine." },
+                                                                         { icon: "puzzle", text: "Identify semantic relationships and extract metadata schemas from your organization's document library in seconds." },
+                                                                         { icon: "volume", text: "Integrate low-latency voice synthesis into your customer-facing applications using premium, studio-quality speech generation APIs." },
+                                                                         { icon: "mic", text: "Process noisy ambient audio files and complex board meetings using advanced neural speech recognition pipelines." }
+                                                                     ]
+                                                                 },
+                                                                 {
+                                                                     planName: "Agencies / Heavy Duty",
+                                                                     features: [
+                                                                         { icon: "zap", text: "Execute high-priority API queries on dedicated compute clusters for maximum uptime and zero throttling." },
+                                                                         { icon: "image", text: "Train bespoke image generation models specifically designed to replicate and match your unique corporate brand guidelines." },
+                                                                         { icon: "scan", text: "Process high-volume batches of document scans using parallelized OCR engines optimized for enterprise scaling." },
+                                                                         { icon: "puzzle", text: "Deploy automated parsers to convert unstructured legacy business databases into clean, schema-compliant JSON structures." },
+                                                                         { icon: "volume", text: "Build real-time conversational voice agents featuring custom voice clones and sub-millisecond audio synthesis times." },
+                                                                         { icon: "mic", text: "Transcribe massive archives of multilingual recordings simultaneously using our distributed acoustic neural network architecture." }
+                                                                     ]
+                                                                 }
+                                                             ]
+                                                         };
+                                                         setSiteFormData(defaults);
+                                                         setEditingSiteSetting({ key: page.key, value: JSON.stringify(defaults) });
                                                     } else if (page.key === 'home_page') {
                                                         const defaults = {
                                                             videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
