@@ -1439,6 +1439,8 @@ STRICT RULES:
                     abortControllerRef.current = null;
                 }
 
+                setIsLoading(false);
+
                 if (currentChatId && aiContent) {
                     try {
                         const [savedUser, savedAssistant] = await Promise.all([
@@ -1519,6 +1521,8 @@ STRICT RULES:
                     }
                     return newMessages;
                 });
+
+                setIsLoading(false);
 
                 if (isImageGenMode) {
                     saveImageToHistory(userMessage, { role: "assistant", content: aiContent, timestamp: formatTimestamp() });
