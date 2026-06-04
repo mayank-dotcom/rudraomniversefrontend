@@ -22,6 +22,7 @@ const PricingContent = () => {
     const [plans, setPlans] = useState<Plan[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [walletBalance, setWalletBalance] = useState<number | null>(null);
+    const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
     const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
 
@@ -317,6 +318,46 @@ const PricingContent = () => {
                         </div>
                     </div>
 
+                    {/* Billing Switcher Tabset */}
+                    <div className="flex justify-center items-center mb-16">
+                        <div className={`relative flex p-1.5 rounded-full border ${isDarkMode ? "bg-[#111] border-white/10" : "bg-[#f0f0f0] border-black/10"}`}>
+                            <button
+                                onClick={() => setBillingPeriod('monthly')}
+                                className={`relative z-10 px-8 py-3 text-xs font-sans font-bold uppercase tracking-widest rounded-full transition-colors duration-300 ${
+                                    billingPeriod === 'monthly'
+                                        ? (isDarkMode ? "text-black" : "text-white")
+                                        : (isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black")
+                                }`}
+                            >
+                                {billingPeriod === 'monthly' && (
+                                    <motion.span
+                                        layoutId="activeBillingTab"
+                                        className={`absolute inset-0 rounded-full z-[-1] ${isDarkMode ? "bg-white" : "bg-black"}`}
+                                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                    />
+                                )}
+                                Monthly
+                            </button>
+                            <button
+                                onClick={() => setBillingPeriod('yearly')}
+                                className={`relative z-10 px-8 py-3 text-xs font-sans font-bold uppercase tracking-widest rounded-full transition-colors duration-300 ${
+                                    billingPeriod === 'yearly'
+                                        ? (isDarkMode ? "text-black" : "text-white")
+                                        : (isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black")
+                                }`}
+                            >
+                                {billingPeriod === 'yearly' && (
+                                    <motion.span
+                                        layoutId="activeBillingTab"
+                                        className={`absolute inset-0 rounded-full z-[-1] ${isDarkMode ? "bg-white" : "bg-black"}`}
+                                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                    />
+                                )}
+                                Yearly <span className={`normal-case text-[9px] font-bold ml-1 px-1.5 py-0.5 rounded-full ${billingPeriod === 'yearly' ? (isDarkMode ? "bg-black/10 text-black/80" : "bg-white/20 text-white/90") : "bg-[var(--color-cyan)]/20 text-[var(--color-cyan)]"}`}>Save 20%</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {plans.map((plan, i) => {
                             const Icon = getPlanIcon(plan.plan_name || '');
@@ -331,11 +372,14 @@ const PricingContent = () => {
                                     transition={{ duration: 0.8, delay: i * 0.1 }}
                                     className={`relative p-10 flex flex-col border group transition-all duration-500 backdrop-blur-sm ${getCardStyles(i)}`}
                                 >
-                                    {/* Plan Tag — Technical Label style */}
+                                    {/* Plan Tag — Cyan Blue Badge style */}
                                     <div className="flex justify-between items-center mb-16">
                                         <span 
-                                            className={`font-sans font-bold uppercase ${isPro ? "text-[var(--color-cyan)]" : (isDarkMode ? "text-white/20" : "text-black/30")}`}
-                                            style={{ fontSize: "11px", letterSpacing: "0.1em" }}
+                                            className={`font-sans font-bold uppercase tracking-widest px-3.5 py-1.5 rounded-full text-[10px] ${
+                                                isDarkMode 
+                                                    ? "text-[var(--color-cyan)] bg-[var(--color-cyan)]/10 border border-[var(--color-cyan)]/30" 
+                                                    : "text-[#008080] bg-[#008080]/5 border border-[#008080]/20"
+                                            }`}
                                         >
                                             {tag}
                                         </span>
@@ -361,29 +405,41 @@ const PricingContent = () => {
                                                     </div>
                                                 );
                                             }
+                                            const isYearly = billingPeriod === 'yearly';
+                                            const basePrice = plan.price_inr || plan.price || 0;
+                                            const displayPrice = isYearly ? Math.round(basePrice * 0.8) : basePrice;
+
                                             return (
-                                                <div className="flex items-baseline gap-2">
-                                                    {(() => {
-                                                        const strikeOff = getPlanStrikeOff(String(plan.id))
-                                                        if (strikeOff) {
+                                                <div className="flex flex-col gap-1.5">
+                                                    <div className="flex items-baseline gap-2">
+                                                        {(() => {
+                                                            const strikeOff = getPlanStrikeOff(String(plan.id))
+                                                            if (strikeOff) {
+                                                                const displayStrikeOff = isYearly ? Math.round(strikeOff.price_inr * 0.8) : strikeOff.price_inr;
+                                                                return (
+                                                                    <>
+                                                                        <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
+                                                                            ₹{displayPrice}
+                                                                        </span>
+                                                                        <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
+                                                                            ₹{displayStrikeOff}
+                                                                        </span>
+                                                                    </>
+                                                                )
+                                                            }
                                                             return (
-                                                                <>
-                                                                    <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
-                                                                        ₹{plan.price_inr || plan.price}
-                                                                    </span>
-                                                                    <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
-                                                                        ₹{strikeOff.price_inr}
-                                                                    </span>
-                                                                </>
+                                                                <span className="font-display font-bold leading-none tracking-tighter" style={{ fontSize: "40px" }}>
+                                                                    ₹{displayPrice}
+                                                                </span>
                                                             )
-                                                        }
-                                                        return (
-                                                            <span className="font-display font-bold leading-none tracking-tighter" style={{ fontSize: "40px" }}>
-                                                                ₹{plan.price_inr || plan.price}
-                                                            </span>
-                                                        )
-                                                    })()}
-                                                    <span className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>/mo</span>
+                                                        })()}
+                                                        <span className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>/mo</span>
+                                                    </div>
+                                                    {isYearly && basePrice > 0 && (
+                                                        <span className={`text-[10px] font-sans font-bold tracking-wider uppercase opacity-50 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                            Billed annually (₹{(displayPrice * 12).toLocaleString()})
+                                                        </span>
+                                                    )}
                                                 </div>
                                             );
                                         })()}
@@ -412,7 +468,11 @@ const PricingContent = () => {
                                     <button
                                         onClick={() => handleSelectPlan(plan)}
                                         disabled={processingPlanId === String(plan.id) || plan.price_inr === 0}
-                                        className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isPro ? (isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90") : (isDarkMode ? "border border-white/10 text-white hover:bg-white/5" : "border border-black/10 text-black hover:bg-black/5")}`}
+                                        className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                                            plan.price_inr === 0
+                                                ? (isDarkMode ? "border border-white/10 text-white" : "border border-black/10 text-black")
+                                                : (isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")
+                                        }`}
                                         style={{ fontSize: "11px", letterSpacing: "0.2em" }}
                                     >
                                         {processingPlanId === String(plan.id) ? "Processing..." : plan.price_inr === 0 ? "Current Plan" : "Select Plan"}
@@ -435,6 +495,7 @@ const PricingContent = () => {
 
             {/* Checkout Modal */}
             {checkoutPlan && (() => {
+                const isYearly = billingPeriod === 'yearly';
                 const planPrice = Number(checkoutPlan.price_inr || checkoutPlan.price);
                 const maxCoins = walletBalance !== null ? Math.min(walletBalance, planPrice - 1) : 0;
                 const coinsToUse = useCoins ? Math.min(maxCoins, walletBalance || 0) : 0;
@@ -460,28 +521,35 @@ const PricingContent = () => {
                             Checkout
                         </span>
                         <h3 className="font-display font-bold text-xl uppercase mb-2">
-                            {checkoutPlan.plan_name}
+                            {checkoutPlan.plan_name} {isYearly && <span className="text-[10px] tracking-widest uppercase font-bold text-[var(--color-cyan)] bg-[var(--color-cyan)]/10 px-2 py-1 rounded-full ml-2">Yearly</span>}
                         </h3>
 
                         {/* Price Display */}
-                        <div className="flex items-baseline gap-2 mb-6">
-                            {useCoins && savings > 0 ? (
-                                <>
-                                    <span className="font-display font-bold tracking-tight line-through opacity-40" style={{ fontSize: "32px" }}>
+                        <div className="flex flex-col gap-1.5 mb-6">
+                            <div className="flex items-baseline gap-2">
+                                {useCoins && savings > 0 ? (
+                                    <>
+                                        <span className="font-display font-bold tracking-tight line-through opacity-40" style={{ fontSize: "32px" }}>
+                                            ₹{planPrice.toLocaleString()}
+                                        </span>
+                                        <span className="font-display font-bold tracking-tight text-[var(--color-cyan)]" style={{ fontSize: "32px" }}>
+                                            ₹{discountedPrice.toLocaleString()}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="font-display font-bold tracking-tight" style={{ fontSize: "32px" }}>
                                         ₹{planPrice.toLocaleString()}
                                     </span>
-                                    <span className="font-display font-bold tracking-tight text-[var(--color-cyan)]" style={{ fontSize: "32px" }}>
-                                        ₹{discountedPrice.toLocaleString()}
-                                    </span>
-                                </>
-                            ) : (
-                                <span className="font-display font-bold tracking-tight" style={{ fontSize: "32px" }}>
-                                    ₹{planPrice.toLocaleString()}
+                                )}
+                                <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                    /mo
                                 </span>
+                            </div>
+                            {isYearly && (
+                                <p className={`text-[11px] font-semibold tracking-wide ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                    Note: Yearly options are coming soon. Processing monthly billing for now.
+                                </p>
                             )}
-                            <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                /mo
-                            </span>
                         </div>
 
                         {/* Wallet & Coin Discount */}
