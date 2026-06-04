@@ -580,7 +580,7 @@ export default function LibraryPage() {
                 onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium font-sans transition-all duration-200 ${
                   activeCategory === "featured"
-                    ? (isDarkMode ? "bg-white/5 text-[var(--color-cyan)] border border-white/5" : "bg-black/5 text-cyan-600 border border-black/5")
+                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-[#00DDDD] border border-black/5")
                     : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black/50 hover:text-black hover:bg-black/[0.02]")
                 }`}
               >
@@ -595,7 +595,7 @@ export default function LibraryPage() {
                 onClick={() => { setActiveCategory("public_showcase"); setIsUploadDragging(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium font-sans transition-all duration-200 ${
                   activeCategory === "public_showcase"
-                    ? (isDarkMode ? "bg-white/5 text-[var(--color-cyan)] border border-white/5" : "bg-black/5 text-cyan-600 border border-black/5")
+                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-[#00DDDD] border border-black/5")
                     : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black/50 hover:text-black hover:bg-black/[0.02]")
                 }`}
               >
@@ -610,7 +610,7 @@ export default function LibraryPage() {
                 onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium font-sans transition-all duration-200 ${
                   activeCategory === "recent"
-                    ? (isDarkMode ? "bg-white/5 text-[var(--color-cyan)] border border-white/5" : "bg-black/5 text-cyan-600 border border-black/5")
+                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-[#00DDDD] border border-black/5")
                     : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black/50 hover:text-black hover:bg-black/[0.02]")
                 }`}
               >
@@ -625,7 +625,7 @@ export default function LibraryPage() {
                 onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium font-sans transition-all duration-200 ${
                   activeCategory === "saved"
-                    ? (isDarkMode ? "bg-white/5 text-[var(--color-cyan)] border border-white/5" : "bg-black/5 text-cyan-600 border border-black/5")
+                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-[#00DDDD] border border-black/5")
                     : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black/50 hover:text-black hover:bg-black/[0.02]")
                 }`}
               >
@@ -661,7 +661,7 @@ export default function LibraryPage() {
                 onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium font-sans transition-all duration-200 ${
                   activeCategory === "all"
-                    ? (isDarkMode ? "bg-white/5 text-[var(--color-cyan)] border border-white/5" : "bg-black/5 text-cyan-600 border border-black/5")
+                    ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5" : "bg-black/5 text-[#00DDDD] border border-black/5")
                     : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black/50 hover:text-black hover:bg-black/[0.02]")
                 }`}
               >
@@ -694,7 +694,7 @@ export default function LibraryPage() {
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-white/[0.02] text-left transition-all font-sans ${
                       activeCategory === "gallery" && selectedGalleryId === g.id
-                        ? (isDarkMode ? "bg-white/5 text-[var(--color-cyan)] border border-white/5 font-semibold" : "bg-black/5 text-cyan-600 border border-black/5 font-semibold")
+                        ? (isDarkMode ? "bg-white/5 text-[#00DDDD] border border-white/5 font-semibold" : "bg-black/5 text-[#00DDDD] border border-black/5 font-semibold")
                         : (isDarkMode ? "text-white/40 hover:text-white/85" : "text-black/50 hover:text-black")
                     }`}
                   >
@@ -904,7 +904,7 @@ export default function LibraryPage() {
                 onClick={() => setShowcaseTab("assets")}
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold font-sans tracking-wide transition-all ${
                   showcaseTab === "assets"
-                    ? (isDarkMode ? "bg-white/10 text-[var(--color-cyan)] shadow-sm" : "bg-white text-cyan-600 shadow-sm")
+                    ? (isDarkMode ? "bg-white/10 text-[#00DDDD] shadow-sm" : "bg-white text-[#00DDDD] shadow-sm")
                     : (isDarkMode ? "text-white/45 hover:text-white/80" : "text-black/55 hover:text-black")
                 }`}
               >
@@ -914,7 +914,7 @@ export default function LibraryPage() {
                 onClick={() => setShowcaseTab("galleries")}
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold font-sans tracking-wide transition-all flex items-center gap-1.5 ${
                   showcaseTab === "galleries"
-                    ? (isDarkMode ? "bg-white/10 text-[var(--color-cyan)] shadow-sm" : "bg-white text-cyan-600 shadow-sm")
+                    ? (isDarkMode ? "bg-white/10 text-[#00DDDD] shadow-sm" : "bg-white text-[#00DDDD] shadow-sm")
                     : (isDarkMode ? "text-white/45 hover:text-white/80" : "text-black/55 hover:text-black")
                 }`}
               >
