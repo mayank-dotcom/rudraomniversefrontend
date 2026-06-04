@@ -3383,7 +3383,7 @@ STRICT RULES:
 
                                     {/* ─── FOOTER (sticky bottom) ─── */}
                                     {gmailConnected && (
-                                        <div className={`shrink-0 mt-4 pt-4 border-t sticky bottom-0 ${isDarkMode ? "border-white/10 bg-[#0a0a0a]" : "border-black/10 bg-[#fcfcfc]"}`}>
+                                        <div className={`shrink-0 mt-4 pt-4 border-t sticky bottom-0 ${isDarkMode ? "border-white/10 bg-[#0a0a0a]" : "border-black/10 bg-white"}`}>
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2.5">
                                                     <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
@@ -3610,11 +3610,11 @@ STRICT RULES:
                             onClick={(e: React.MouseEvent) => e.stopPropagation()}
                             className={`relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border shadow-2xl ${isDarkMode
                                 ? "bg-[#0a0a0a] border-white/10"
-                                : "bg-[#fcfcfc] border-black/10"
+                                : "bg-white border-black/10"
                                 }`}
                         >
                             {/* Header */}
-                            <div className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${isDarkMode ? "border-white/10 bg-[#0a0a0a]" : "border-black/10 bg-[#fcfcfc]"}`}>
+                            <div className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${isDarkMode ? "border-white/10 bg-[#0a0a0a]" : "border-black/10 bg-white"}`}>
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className={`p-1.5 rounded-lg shrink-0 ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
                                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">

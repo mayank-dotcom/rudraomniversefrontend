@@ -488,7 +488,12 @@ export default function LibraryPage() {
       case "recent": pool = assets.slice(0, 4); break
       case "public_showcase": pool = publicAssets.filter((asset) => asset.gallery_id === null); break
       case "uploads": pool = uploadedAssets; break
-      case "saved": pool = [...FEATURED_ASSETS, ...assets, ...uploadedAssets].filter((asset) => savedIds.includes(asset.id)); break
+      case "saved": {
+        const combined = [...FEATURED_ASSETS, ...assets, ...uploadedAssets, ...publicAssets, ...publicGalleryAssets];
+        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+        pool = unique.filter((asset) => savedIds.includes(asset.id));
+        break;
+      }
       case "gallery": pool = assets.filter((asset) => asset.gallery_id === selectedGalleryId); break
       case "public_gallery": pool = publicGalleryAssets; break
       case "all": default: pool = [...uploadedAssets, ...assets]; break
