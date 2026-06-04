@@ -44,7 +44,7 @@ export default function OnboardingWalkthrough({
         title: "Select AI Modes & Engines",
         description: "Switch between different AI engines tailored for your tasks—Student Mode for coursework, Persona Mode for character study, or AI Image Lab for generating artwork.",
         targetSelector: "#walkthrough-engine-select",
-        placement: "bottom",
+        placement: "top",
       },
       {
         title: "Session History & Settings",
