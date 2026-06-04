@@ -1302,11 +1302,11 @@ STRICT RULES:
 
                 if (isRegularImage) {
                     userContent = [
-                        { type: "text", text: trimmedInput || "Please extract and analyze all text visible in this image in detail." },
+                        { type: "text", text: trimmedInput || "Please extract and return ALL text visible in this image. Perform OCR on the entire image and return the extracted text." },
                         { type: "image_url", image_url: { url: selectedFile.content } }
                     ];
                     requestModality = "ocr";
-                    requestEndpoint = "/chat";
+                    requestEndpoint = "/features/vision/solve";
 
                 } else if (isScannedPdf) {
                     // ── Scanned (image-only) PDF → PDF Intel with OCR modality ─────
@@ -1322,10 +1322,10 @@ STRICT RULES:
                         { type: "image_url", image_url: { url: base64 } }
                     ];
                     requestModality = "ocr";
-                    requestEndpoint = "/chat";
+                    requestEndpoint = "/features/pdf/intel";
 
                 } else if (isPdfFile) {
-                    // ── Text PDF → Chat endpoint ─────────────────────────────────────
+                    // ── Text PDF → PDF Intel endpoint ───────────────────────────────
                     const MAX_CHARS = 14000;
                     const truncated = selectedFile.content.length > MAX_CHARS
                         ? selectedFile.content.slice(0, MAX_CHARS) + "\n\n[Content truncated due to length...]"
@@ -1336,7 +1336,7 @@ STRICT RULES:
                         : `PDF Document: "${selectedFile.name}"\n\nContent:\n${truncated}\n\n---\nPlease analyze this document, summarize the key points, and provide useful insights.`;
 
                     requestModality = "text";
-                    requestEndpoint = "/chat";
+                    requestEndpoint = "/features/pdf/intel";
 
                 } else {
                     // ── Plain text file ─────────────────────────────────────────────
