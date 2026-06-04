@@ -299,6 +299,26 @@ export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage,
                         const { children } = props;
                         return <li className={`text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white" : "text-black"}`}>{children}</li>;
                     },
+                    strong(props) {
+                        const { children } = props;
+                        return <strong className={`${isDarkMode ? "text-[#00DDDD]" : "text-[#008A8A]"} font-bold`}>{children}</strong>;
+                    },
+                    h1(props) {
+                        const { children } = props;
+                        return <h1 className={`${isDarkMode ? "text-[#00DDDD] border-white/10" : "text-[#008A8A] border-black/10"} text-2xl md:text-3xl font-black mt-8 mb-4 pb-2 border-b`}>{children}</h1>;
+                    },
+                    h2(props) {
+                        const { children } = props;
+                        return <h2 className={`${isDarkMode ? "text-[#00DDDD]" : "text-[#008A8A]"} text-xl md:text-2xl font-bold mt-6 mb-3`}>{children}</h2>;
+                    },
+                    h3(props) {
+                        const { children } = props;
+                        return <h3 className={`${isDarkMode ? "text-[#00DDDD]" : "text-[#008A8A]"} text-lg md:text-xl font-semibold mt-5 mb-2`}>{children}</h3>;
+                    },
+                    h4(props) {
+                        const { children } = props;
+                        return <h4 className={`${isDarkMode ? "text-[#00DDDD]" : "text-[#008A8A]"} text-base md:text-lg font-semibold mt-4 mb-2`}>{children}</h4>;
+                    },
                     p(props) {
                         const { children } = props;
                         return <p className={`${isDarkMode ? "text-white" : "text-black"} text-base md:text-lg leading-relaxed`}>{children}</p>;
