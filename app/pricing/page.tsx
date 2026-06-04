@@ -193,44 +193,44 @@ const PricingContent = () => {
         const list = [
             { keywords: ['free'], multiplier: '0.02x', tokens: '1K', features: [] as { icon: any; label: string; value: string }[] },
             { keywords: ['motion'], multiplier: '1x', tokens: '50K', features: [
-                { icon: Zap, label: 'Tokens', value: '1x' },
-                { icon: ImageIcon, label: 'Images', value: '1x' },
-                { icon: Scan, label: 'OCR', value: '1x' },
-                { icon: Puzzle, label: 'Feature Ext.', value: '1x' },
-                { icon: Volume2, label: 'TTS', value: '1x' },
-                { icon: Mic, label: 'STT', value: '1x' },
+                { icon: Zap, label: 'Token Allocation', value: 'Base Pool' },
+                { icon: ImageIcon, label: 'AI Image Lab', value: 'Standard Gen' },
+                { icon: Scan, label: 'OCR Scanner', value: 'Core Engine' },
+                { icon: Puzzle, label: 'Feature Extractor', value: 'Basic Capture' },
+                { icon: Volume2, label: 'TTS Audio', value: 'Standard Voice' },
+                { icon: Mic, label: 'STT Audio', value: 'Standard Transcription' },
             ]},
             { keywords: ['speed'], multiplier: '10x', tokens: '500K', features: [
-                { icon: Zap, label: 'Tokens', value: '10x' },
-                { icon: ImageIcon, label: 'Images', value: '3x' },
-                { icon: Scan, label: 'OCR', value: '3x' },
-                { icon: Puzzle, label: 'Feature Ext.', value: '3x' },
-                { icon: Volume2, label: 'TTS', value: '5x' },
-                { icon: Mic, label: 'STT', value: '5x' },
+                { icon: Zap, label: 'Token Allocation', value: 'Expanded Pool' },
+                { icon: ImageIcon, label: 'AI Image Lab', value: 'Priority Gen' },
+                { icon: Scan, label: 'OCR Scanner', value: 'Batch Engine' },
+                { icon: Puzzle, label: 'Feature Extractor', value: 'Advanced Analysis' },
+                { icon: Volume2, label: 'TTS Audio', value: 'High-Fi Voice' },
+                { icon: Mic, label: 'STT Audio', value: 'Advanced Transcription' },
             ]},
             { keywords: ['velocity'], multiplier: '16x', tokens: '800K', features: [
-                { icon: Zap, label: 'Tokens', value: '16x' },
-                { icon: ImageIcon, label: 'Images', value: '7.5x' },
-                { icon: Scan, label: 'OCR', value: '6x' },
-                { icon: Puzzle, label: 'Feature Ext.', value: '6x' },
-                { icon: Volume2, label: 'TTS', value: '10x' },
-                { icon: Mic, label: 'STT', value: '10x' },
+                { icon: Zap, label: 'Token Allocation', value: 'Professional Quota' },
+                { icon: ImageIcon, label: 'AI Image Lab', value: 'Studio Grade' },
+                { icon: Scan, label: 'OCR Scanner', value: 'Enterprise Suite' },
+                { icon: Puzzle, label: 'Feature Extractor', value: 'Deep Extraction' },
+                { icon: Volume2, label: 'TTS Audio', value: 'Studio Voice' },
+                { icon: Mic, label: 'STT Audio', value: 'Real-time Transcription' },
             ]},
             { keywords: ['acceleration'], multiplier: '20x', tokens: '1M', features: [
-                { icon: Zap, label: 'Tokens', value: '20x' },
-                { icon: ImageIcon, label: 'Images', value: '25x' },
-                { icon: Scan, label: 'OCR', value: '12x' },
-                { icon: Puzzle, label: 'Feature Ext.', value: '12x' },
-                { icon: Volume2, label: 'TTS', value: '60x' },
-                { icon: Mic, label: 'STT', value: '60x' },
+                { icon: Zap, label: 'Token Allocation', value: 'Production Quota' },
+                { icon: ImageIcon, label: 'AI Image Lab', value: 'Flux/Infinite Gen' },
+                { icon: Scan, label: 'OCR Scanner', value: 'Cognitive Parsing' },
+                { icon: Puzzle, label: 'Feature Extractor', value: 'Semantic Mapping' },
+                { icon: Volume2, label: 'TTS Audio', value: 'API-Grade Voice' },
+                { icon: Mic, label: 'STT Audio', value: 'Multi-Speaker STT' },
             ]},
             { keywords: ['agenc', 'heavy duty', 'enterprise'], multiplier: '100x', tokens: '5M', features: [
-                { icon: Zap, label: 'Tokens', value: '100x' },
-                { icon: ImageIcon, label: 'Images', value: '250x' },
-                { icon: Scan, label: 'OCR', value: '200x' },
-                { icon: Puzzle, label: 'Feature Ext.', value: '200x' },
-                { icon: Volume2, label: 'TTS', value: '500x' },
-                { icon: Mic, label: 'STT', value: '500x' },
+                { icon: Zap, label: 'Token Allocation', value: 'Dedicated Cluster' },
+                { icon: ImageIcon, label: 'AI Image Lab', value: 'Custom Models' },
+                { icon: Scan, label: 'OCR Scanner', value: 'Intelligent Capture' },
+                { icon: Puzzle, label: 'Feature Extractor', value: 'Custom Schemas' },
+                { icon: Volume2, label: 'TTS Audio', value: 'API Low-Latency' },
+                { icon: Mic, label: 'STT Audio', value: 'Multi-lingual STT' },
             ]},
         ];
         const lower = planName.toLowerCase();
@@ -360,9 +360,9 @@ const PricingContent = () => {
                                                 <>
                                                     {md.features.map((f, idx) => (
                                                         <div key={idx} className="flex items-center gap-4">
-                                                            <f.icon className={`h-4 w-4 shrink-0 ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
-                                                            <p className={`text-[13px] font-medium ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
-                                                                <span className={isDarkMode ? "text-white/60" : "text-black/70"}>{f.label}:</span> {f.value}
+                                                            <f.icon className="h-4 w-4 shrink-0 text-[var(--color-cyan)]" />
+                                                            <p className={`text-[13px] font-medium ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
+                                                                <span className={isDarkMode ? "text-white/60" : "text-black/60"}>{f.label}</span> — <span className="text-[var(--color-cyan)] font-semibold">{f.value}</span>
                                                             </p>
                                                         </div>
                                                     ))}
