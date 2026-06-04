@@ -203,7 +203,10 @@ const PricingContent = () => {
 
     const getMultiplierData = (planName: string) => {
         const list = [
-            { keywords: ['free'], multiplier: '0.02x', tokens: '1K', features: [] as { icon: any; text: string }[] },
+            { keywords: ['free'], multiplier: '0.02x', tokens: '1K', features: [
+                { icon: Zap, text: 'Get started with basic access to our core AI reasoning models for everyday questions.' },
+                { icon: ImageIcon, text: 'Generate standard-definition custom graphics with limited daily image generation runs.' }
+            ] },
             { keywords: ['motion'], multiplier: '1x', tokens: '50K', features: [
                 { icon: Zap, text: 'Engage in clear conversations with our AI assistant to draft outlines, brainstorm ideas, and answer simple questions.' },
                 { icon: ImageIcon, text: 'Create standard-definition custom graphics and design unique illustrations using basic image generation tools in the lab.' },

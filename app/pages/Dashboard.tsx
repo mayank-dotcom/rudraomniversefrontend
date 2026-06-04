@@ -4644,7 +4644,10 @@ const Dashboard = () => {
                                                              plans: [
                                                                  {
                                                                      planName: "Free Trial",
-                                                                     features: []
+                                                                     features: [
+                                                                         { icon: "zap", text: "Get started with basic access to our core AI reasoning models for everyday questions." },
+                                                                         { icon: "image", text: "Generate standard-resolution custom graphics with limited daily image generation runs." }
+                                                                     ]
                                                                  },
                                                                  {
                                                                      planName: "Motion Plan",
