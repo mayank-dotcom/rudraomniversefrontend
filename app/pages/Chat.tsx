@@ -1388,12 +1388,7 @@ STRICT RULES:
 
             if (useStreaming) {
                 // --- SSE streaming path ---
-                const assistantMessage: Message = {
-                    role: "assistant",
-                    content: "",
-                    timestamp: formatTimestamp()
-                };
-                setMessages((prev) => [...prev.filter((m) => !m.localOnly), userMessage, assistantMessage]);
+                setMessages((prev) => [...prev.filter((m) => !m.localOnly), userMessage]);
                 setInput("");
                 setSelectedFile(null);
 
@@ -1415,28 +1410,36 @@ STRICT RULES:
                                 hasReceivedFirstChunk = true;
                                 setShowDots(false);
                                 setIsLoading(false);
+                                setMessages((prev) => [...prev, {
+                                    role: "assistant" as const,
+                                    content: chunk,
+                                    timestamp: formatTimestamp()
+                                }]);
+                            } else {
+                                setMessages((prev) => {
+                                    const updated = [...prev];
+                                    const last = updated[updated.length - 1];
+                                    if (last && last.role === "assistant") {
+                                        updated[updated.length - 1] = { ...last, content: chunk };
+                                    }
+                                    return updated;
+                                });
                             }
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                const last = updated[updated.length - 1];
-                                if (last && last.role === "assistant") {
-                                    updated[updated.length - 1] = { ...last, content: chunk };
-                                }
-                                return updated;
-                            });
                         }
                     );
                 } catch (err: any) {
                     if (err.name === "AbortError") {
                         // Stream was cancelled — keep whatever was received so far
-                        const currentContent = await new Promise<string>((resolve) => {
-                            setMessages((prev) => {
-                                const last = prev[prev.length - 1];
-                                resolve(last?.role === "assistant" ? last.content : "");
-                                return prev;
+                        if (hasReceivedFirstChunk) {
+                            const currentContent = await new Promise<string>((resolve) => {
+                                setMessages((prev) => {
+                                    const last = prev[prev.length - 1];
+                                    resolve(last?.role === "assistant" ? last.content : "");
+                                    return prev;
+                                });
                             });
-                        });
-                        aiContent = currentContent;
+                            aiContent = currentContent;
+                        }
                     } else {
                         throw err;
                     }
