@@ -1430,26 +1430,14 @@ STRICT RULES:
                     return newMessages;
                 });
             } else {
-                const words = aiContent.split(/(?<=\s)/);
-                let currentText = "";
-                for (let i = 0; i < words.length; i++) {
-                    if (stopGenerationRef.current) {
-                        aiContent = currentText;
-                        break;
+                setMessages((prev) => {
+                    const newMessages = [...prev];
+                    const lastMsg = newMessages[newMessages.length - 1];
+                    if (lastMsg && lastMsg.role === "assistant") {
+                        lastMsg.content = aiContent;
                     }
-                    currentText += words[i];
-                    if (i % 3 === 0 || i === words.length - 1) {
-                        setMessages((prev) => {
-                            const newMessages = [...prev];
-                            const lastMsg = newMessages[newMessages.length - 1];
-                            if (lastMsg && lastMsg.role === "assistant") {
-                                lastMsg.content = currentText;
-                            }
-                            return newMessages;
-                        });
-                        await new Promise(resolve => setTimeout(resolve, 5));
-                    }
-                }
+                    return newMessages;
+                });
             }
             if (isImageGenMode) {
                 saveImageToHistory(userMessage, { role: "assistant", content: aiContent, timestamp: formatTimestamp() });
@@ -1536,7 +1524,7 @@ STRICT RULES:
     const isChatEmpty = messages.length === 0 || messages.every((msg) => msg.localOnly);
 
     return (
-        <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black flex overflow-hidden transition-colors duration-500 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+        <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : `${(userRole === "enterprise_admin" || userRole === "manager") ? "bg-[#faf5ef]" : "bg-white"} text-black`} selection:bg-white selection:text-black flex overflow-hidden transition-colors duration-500 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
             <style dangerouslySetInnerHTML={{
                 __html: `
                 @keyframes bounceArrowLeft {
@@ -1600,7 +1588,7 @@ STRICT RULES:
             <aside
                 id="walkthrough-sidebar"
                 style={{ width: isSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${sidebarWidth}px`) }}
-                className={`h-full border-r-2 ${isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "fixed left-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
+                className={`h-full border-r-2 ${isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : `${(userRole === "enterprise_admin" || userRole === "manager") ? "bg-[#f5efe8]" : "bg-[#fcfcfc]"}`} flex flex-col ${isMobile ? "fixed left-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
             >
                 {!isSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
@@ -1708,12 +1696,12 @@ STRICT RULES:
                                                         onClick={() => void openChat(chat.id)}
                                                         onDoubleClick={() => handleStartEditing(chat)}
                                                         className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${activeChatId === chat.id
-                                                            ? (isDarkMode ? "text-[#00DDDD]" : "text-white")
+                                                            ? (isDarkMode ? "text-[#00DDDD]" : "text-black")
                                                             : (isDarkMode ? "text-white/60 hover:bg-white/5" : "text-black hover:bg-black/5")
                                                             }`}
                                                     >
                                                         <MessageSquare className={`h-3 w-3 flex-shrink-0 ${activeChatId === chat.id
-                                                            ? (isDarkMode ? "text-[#00DDDD]" : "text-white")
+                                                            ? (isDarkMode ? "text-[#00DDDD]" : "text-black")
                                                             : (isDarkMode ? "text-white/20" : "text-black")
                                                             }`} />
                                                         {sidebarWidth > 120 && <span className={`truncate font-sans ${activeChatId === chat.id ? "font-bold" : (isDarkMode ? "opacity-60" : "text-black")}`}>{chat.title}</span>}
@@ -2279,7 +2267,7 @@ STRICT RULES:
                                             key={i}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                                            transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
                                             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} w-full`}
                                         >
                                             <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[90%] md:max-w-[80%]" : "items-start max-w-[90%] md:max-w-[85%]"}`}>
@@ -2902,7 +2890,7 @@ STRICT RULES:
             {/* Right Sidebar */}
             <aside
                 style={{ width: isRightSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${rightSidebarWidth}px`) }}
-                className={`h-full border-l-2 ${isRightSidebarCollapsed && isMobile ? "border-l-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fcfcfc]"} flex flex-col ${isMobile ? "fixed right-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
+                className={`h-full border-l-2 ${isRightSidebarCollapsed && isMobile ? "border-l-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : `${(userRole === "enterprise_admin" || userRole === "manager") ? "bg-[#f5efe8]" : "bg-[#fcfcfc]"}`} flex flex-col ${isMobile ? "fixed right-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
             >
                 {!isRightSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
@@ -3337,7 +3325,7 @@ STRICT RULES:
                         </div>
                     </div>
                 ) : (
-                    <div className="flex flex-col h-full items-center py-6 overflow-y-auto w-full">
+                    <div className="flex flex-col h-full items-center py-6 overflow-y-auto overflow-x-hidden w-full">
                         {/* Top: Plan Indicator using Clock icon from the Plan Badge */}
                         <div className="flex flex-col items-center gap-6 w-full px-2">
                             <div
@@ -3375,7 +3363,7 @@ STRICT RULES:
 
                         {/* Upgrade Button right below Wallet/Mail */}
                         {(!userRole || userRole === "student") && (
-                            <div className="w-full flex items-center justify-center px-2 py-4">
+                            <div className="w-full flex items-center justify-center px-2 pt-[21px] pb-4">
                                 <Link href="/pricing" title="Upgrade Now" className="block cursor-pointer">
                                     <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-[rgba(0,221,221,0.2)]`}>
                                         <div className="bubble-layer bubble-1"></div>
