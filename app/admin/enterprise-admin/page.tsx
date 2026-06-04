@@ -533,7 +533,7 @@ function EnterpriseAdminPageInner() {
                 </div>
 
                 {/* Right: Quick announcements panel */}
-                <div className={`p-8 rounded-[3rem] backdrop-blur-2xl flex flex-col justify-between border ${isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"}`}>
+                <div className={`lg:col-span-4 p-6 md:p-8 rounded-[1.5rem] md:rounded-[3rem] backdrop-blur-2xl flex flex-col justify-between border ${isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"}`}>
                   <div>
                     <h3 className="text-xs font-display font-black uppercase tracking-[0.2em] mb-6 flex items-center justify-between">
                       <span>Recent Broadcasts</span>
