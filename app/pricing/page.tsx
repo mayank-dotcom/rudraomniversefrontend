@@ -237,6 +237,29 @@ const PricingContent = () => {
         return list.find(d => d.keywords.some(k => lower.includes(k))) || null;
     };
 
+    const getCardStyles = (index: number) => {
+        const darkBgs = [
+            'bg-[#0e0e0e]/80 hover:bg-[#121212]/90 border-white/10 hover:border-white/20',
+            'bg-[#0b1416]/80 hover:bg-[#0f1d20]/90 border-teal-500/20 hover:border-teal-500/30',
+            'bg-[#0a111a]/80 hover:bg-[#0f1929]/90 border-blue-500/20 hover:border-blue-500/30',
+            'bg-[#100b1a]/80 hover:bg-[#170f29]/90 border-purple-500/20 hover:border-purple-500/30',
+            'bg-[#1a0e14]/80 hover:bg-[#26131c]/90 border-pink-500/20 hover:border-pink-500/30',
+            'bg-[#071818]/90 hover:bg-[#0a2626]/90 border-[var(--color-cyan)]/30 hover:border-[var(--color-cyan)]/50 shadow-[0_0_30px_rgba(0,221,221,0.05)] hover:shadow-[0_0_30px_rgba(0,221,221,0.1)]',
+        ];
+
+        const lightBgs = [
+            'bg-[#f7f7f7] hover:bg-[#f2f2f2] border-black/5 hover:border-black/10',
+            'bg-[#f0f9f9] hover:bg-[#e6f5f5] border-teal-500/10 hover:border-teal-500/20',
+            'bg-[#edf4fc] hover:bg-[#e1edfa] border-blue-500/10 hover:border-blue-500/20',
+            'bg-[#f3edf9] hover:bg-[#e7daf3] border-purple-500/10 hover:border-purple-500/20',
+            'bg-[#faf0f3] hover:bg-[#f5e1e7] border-pink-500/10 hover:border-pink-500/20',
+            'bg-[#e6fbfb] hover:bg-[#d2f7f7] border-[var(--color-cyan)]/30 hover:border-[var(--color-cyan)]/50 shadow-[0_0_30px_rgba(0,221,221,0.03)] hover:shadow-[0_0_30px_rgba(0,221,221,0.06)]',
+        ];
+
+        const idx = Math.min(index, darkBgs.length - 1);
+        return isDarkMode ? darkBgs[idx] : lightBgs[idx];
+    };
+
     if (isLoading) {
         return (
             <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fdfdfd]"}`}>
@@ -294,7 +317,7 @@ const PricingContent = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {plans.map((plan, i) => {
                             const Icon = getPlanIcon(plan.plan_name || '');
                             const tag = getPlanTag(plan.plan_name || '');
@@ -306,7 +329,7 @@ const PricingContent = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.8, delay: i * 0.1 }}
-                                    className={`relative p-10 flex flex-col border ${isDarkMode ? "border-white/20" : "border-black/10"} group transition-all duration-500 ${isPro ? (isDarkMode ? "bg-[#0d0d0d]" : "bg-white") : (isDarkMode ? "bg-transparent" : "bg-transparent")}`}
+                                    className={`relative p-10 flex flex-col border group transition-all duration-500 backdrop-blur-sm ${getCardStyles(i)}`}
                                 >
                                     {/* Plan Tag — Technical Label style */}
                                     <div className="flex justify-between items-center mb-16">
