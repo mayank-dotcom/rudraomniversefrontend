@@ -1306,7 +1306,7 @@ STRICT RULES:
                         { type: "image_url", image_url: { url: selectedFile.content } }
                     ];
                     requestModality = "ocr";
-                    requestEndpoint = "/features/pdf/intel";
+                    requestEndpoint = "/chat";
 
                 } else if (isScannedPdf) {
                     // ── Scanned (image-only) PDF → PDF Intel with OCR modality ─────
@@ -1322,10 +1322,10 @@ STRICT RULES:
                         { type: "image_url", image_url: { url: base64 } }
                     ];
                     requestModality = "ocr";
-                    requestEndpoint = "/features/pdf/intel";
+                    requestEndpoint = "/chat";
 
                 } else if (isPdfFile) {
-                    // ── Text PDF → PDF Intel endpoint ───────────────────────────────
+                    // ── Text PDF → Chat endpoint ─────────────────────────────────────
                     const MAX_CHARS = 14000;
                     const truncated = selectedFile.content.length > MAX_CHARS
                         ? selectedFile.content.slice(0, MAX_CHARS) + "\n\n[Content truncated due to length...]"
@@ -1336,7 +1336,7 @@ STRICT RULES:
                         : `PDF Document: "${selectedFile.name}"\n\nContent:\n${truncated}\n\n---\nPlease analyze this document, summarize the key points, and provide useful insights.`;
 
                     requestModality = "text";
-                    requestEndpoint = "/features/pdf/intel";
+                    requestEndpoint = "/chat";
 
                 } else {
                     // ── Plain text file ─────────────────────────────────────────────
