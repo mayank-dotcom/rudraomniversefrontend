@@ -335,7 +335,7 @@ function EnterpriseManagerPageInner() {
   if (isAuthenticated === null) {
     return (
       <div className={`min-h-screen flex items-center justify-center font-mono transition-colors duration-300 ${
-        isDarkMode ? "bg-[#050505] text-white" : "bg-[#f8f9fa] text-black"
+        isDarkMode ? "bg-[#050505] text-white" : "bg-[#FFF5EA] text-black"
       }`}>
         <div className="flex flex-col items-center gap-4">
           <RefreshCw className="h-8 w-8 text-[#00DDDD] animate-spin" />
@@ -347,7 +347,7 @@ function EnterpriseManagerPageInner() {
 
   return (
     <div className={`min-h-screen font-sans selection:bg-[#00DDDD] selection:text-black relative overflow-x-hidden pb-12 transition-colors duration-300 ${
-      isDarkMode ? "bg-[#050505] text-white" : "bg-[#f8f9fa] text-black"
+      isDarkMode ? "bg-[#050505] text-white" : "bg-[#FFF5EA] text-black"
     }`}>
       <div className={`absolute inset-0 pointer-events-none transition-colors duration-300 ${
         isDarkMode ? "bg-[radial-gradient(ellipse_at_top_right,rgba(0,221,221,0.02),transparent_50%)]" : ""
@@ -956,7 +956,7 @@ function EnterpriseManagerPageInner() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className={`relative w-full max-w-md border p-6 rounded-[2.5rem] transition-colors duration-300 ${
-              isDarkMode ? "border-white/10 bg-[#0a0a0a] text-white" : "border-black/10 bg-white text-black"
+              isDarkMode ? "border-white/10 bg-[#0a0a0a] text-white" : "border-black/10 bg-[#fdf9f4] text-black"
             }`}
           >
             <button
@@ -1060,7 +1060,7 @@ function EnterpriseManagerPageInner() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className={`relative w-full max-w-sm border p-6 rounded-[2.5rem] transition-colors duration-300 ${
-              isDarkMode ? "border-white/10 bg-[#0c0c0c] text-white" : "border-black/10 bg-white text-black"
+              isDarkMode ? "border-white/10 bg-[#0c0c0c] text-white" : "border-black/10 bg-[#fdf9f4] text-black"
             }`}
           >
             <button
@@ -1131,7 +1131,7 @@ function EnterpriseManagerPageInner() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className={`relative w-full max-w-xl border p-6 rounded-[2.5rem] flex flex-col justify-between overflow-y-auto max-h-[85vh] custom-scrollbar transition-colors duration-300 ${
-              isDarkMode ? "border-white/10 bg-[#0c0c0c] text-white" : "border-black/10 bg-white text-black"
+              isDarkMode ? "border-white/10 bg-[#0c0c0c] text-white" : "border-black/10 bg-[#fdf9f4] text-black"
             }`}
           >
             <button
