@@ -41,7 +41,7 @@ const PricingContent = () => {
     const handleRazorpayPayment = useCallback(async (plan: Plan, coinsToUse: number = 0) => {
         setProcessingPlanId(String(plan.id));
         try {
-            const order = await createPaymentOrder(plan.id, coinsToUse > 0 ? coinsToUse : undefined);
+            const order = await createPaymentOrder(plan.id, coinsToUse > 0 ? coinsToUse : undefined, billingPeriod);
             const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || order.key_id;
             if (!razorpayKeyId) {
                 toast.error("Payment gateway is not configured. Please contact support.");
@@ -99,7 +99,7 @@ const PricingContent = () => {
         } finally {
             setProcessingPlanId(null);
         }
-    }, []);
+    }, [billingPeriod]);
 
     const handleSelectPlan = useCallback((plan: Plan) => {
         const apiKey = getApiKey();
@@ -323,37 +323,47 @@ const PricingContent = () => {
                         <div className={`relative flex p-1.5 rounded-full border ${isDarkMode ? "bg-[#111] border-white/10" : "bg-[#f0f0f0] border-black/10"}`}>
                             <button
                                 onClick={() => setBillingPeriod('monthly')}
-                                className={`relative z-10 px-8 py-3 text-xs font-sans font-bold uppercase tracking-widest rounded-full transition-colors duration-300 ${
+                                className={`relative z-10 px-8 py-3 text-xs font-sans font-bold uppercase tracking-widest rounded-full transition-all duration-300 overflow-hidden ${
                                     billingPeriod === 'monthly'
-                                        ? (isDarkMode ? "text-black" : "text-white")
+                                        ? "upgrade-btn !w-auto !font-sans text-black shadow-[0_0_20px_rgba(0,221,221,0.4)]"
                                         : (isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black")
                                 }`}
                             >
                                 {billingPeriod === 'monthly' && (
-                                    <motion.span
-                                        layoutId="activeBillingTab"
-                                        className={`absolute inset-0 rounded-full z-[-1] ${isDarkMode ? "bg-white" : "bg-black"}`}
-                                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                                    />
+                                    <>
+                                        <div className="bubble-layer bubble-1"></div>
+                                        <div className="bubble-layer bubble-2"></div>
+                                        <div className="bubble-layer bubble-3"></div>
+                                        <div className="bubble-layer bubble-4"></div>
+                                        <div className="bubble-layer bubble-5"></div>
+                                        <div className="bubble-layer bubble-6"></div>
+                                        <div className="bubble-layer bubble-7"></div>
+                                    </>
                                 )}
-                                Monthly
+                                <span className="relative z-10">Monthly</span>
                             </button>
                             <button
                                 onClick={() => setBillingPeriod('yearly')}
-                                className={`relative z-10 px-8 py-3 text-xs font-sans font-bold uppercase tracking-widest rounded-full transition-colors duration-300 ${
+                                className={`relative z-10 px-8 py-3 text-xs font-sans font-bold uppercase tracking-widest rounded-full transition-all duration-300 overflow-hidden ${
                                     billingPeriod === 'yearly'
-                                        ? (isDarkMode ? "text-black" : "text-white")
+                                        ? "upgrade-btn !w-auto !font-sans text-black shadow-[0_0_20px_rgba(0,221,221,0.4)]"
                                         : (isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black")
                                 }`}
                             >
                                 {billingPeriod === 'yearly' && (
-                                    <motion.span
-                                        layoutId="activeBillingTab"
-                                        className={`absolute inset-0 rounded-full z-[-1] ${isDarkMode ? "bg-white" : "bg-black"}`}
-                                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                                    />
+                                    <>
+                                        <div className="bubble-layer bubble-1"></div>
+                                        <div className="bubble-layer bubble-2"></div>
+                                        <div className="bubble-layer bubble-3"></div>
+                                        <div className="bubble-layer bubble-4"></div>
+                                        <div className="bubble-layer bubble-5"></div>
+                                        <div className="bubble-layer bubble-6"></div>
+                                        <div className="bubble-layer bubble-7"></div>
+                                    </>
                                 )}
-                                Yearly <span className={`normal-case text-[9px] font-bold ml-1 px-1.5 py-0.5 rounded-full ${billingPeriod === 'yearly' ? (isDarkMode ? "bg-black/10 text-black/80" : "bg-white/20 text-white/90") : "bg-[var(--color-cyan)]/20 text-[var(--color-cyan)]"}`}>Save 20%</span>
+                                <span className="relative z-10">
+                                    Yearly <span className={`normal-case text-[9px] font-bold ml-1 px-1.5 py-0.5 rounded-full ${billingPeriod === 'yearly' ? "bg-black/15 text-black/80" : "bg-[var(--color-cyan)]/20 text-[var(--color-cyan)]"}`}>Save 30%</span>
+                                </span>
                             </button>
                         </div>
                     </div>
@@ -407,7 +417,7 @@ const PricingContent = () => {
                                             }
                                             const isYearly = billingPeriod === 'yearly';
                                             const basePrice = plan.price_inr || plan.price || 0;
-                                            const displayPrice = isYearly ? Math.round(basePrice * 0.8) : basePrice;
+                                            const displayPrice = isYearly ? Math.round(basePrice * 0.7) : basePrice;
 
                                             return (
                                                 <div className="flex flex-col gap-1.5">
@@ -415,7 +425,7 @@ const PricingContent = () => {
                                                         {(() => {
                                                             const strikeOff = getPlanStrikeOff(String(plan.id))
                                                             if (strikeOff) {
-                                                                const displayStrikeOff = isYearly ? Math.round(strikeOff.price_inr * 0.8) : strikeOff.price_inr;
+                                                                const displayStrikeOff = isYearly ? Math.round(strikeOff.price_inr * 0.7) : strikeOff.price_inr;
                                                                 return (
                                                                     <>
                                                                         <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
@@ -436,7 +446,7 @@ const PricingContent = () => {
                                                         <span className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>/mo</span>
                                                     </div>
                                                     {isYearly && basePrice > 0 && (
-                                                        <span className={`text-[10px] font-sans font-bold tracking-wider uppercase opacity-50 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                        <span className={`text-[10px] font-sans font-bold tracking-wider uppercase ${isDarkMode ? "text-white/40 opacity-50" : "text-black opacity-95"}`}>
                                                             Billed annually (₹{(displayPrice * 12).toLocaleString()})
                                                         </span>
                                                     )}
@@ -496,7 +506,8 @@ const PricingContent = () => {
             {/* Checkout Modal */}
             {checkoutPlan && (() => {
                 const isYearly = billingPeriod === 'yearly';
-                const planPrice = Number(checkoutPlan.price_inr || checkoutPlan.price);
+                const basePrice = Number(checkoutPlan.price_inr || checkoutPlan.price);
+                const planPrice = isYearly ? basePrice * 0.7 * 12 : basePrice;
                 const maxCoins = walletBalance !== null ? Math.min(walletBalance, planPrice - 1) : 0;
                 const coinsToUse = useCoins ? Math.min(maxCoins, walletBalance || 0) : 0;
                 const discountedPrice = planPrice - coinsToUse;
@@ -542,12 +553,12 @@ const PricingContent = () => {
                                     </span>
                                 )}
                                 <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                    /mo
+                                    {isYearly ? "/yr" : "/mo"}
                                 </span>
                             </div>
                             {isYearly && (
                                 <p className={`text-[11px] font-semibold tracking-wide ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                    Note: Yearly options are coming soon. Processing monthly billing for now.
+                                    You are subscribing to the annual plan. One-time payment of ₹{planPrice.toLocaleString()} billed yearly.
                                 </p>
                             )}
                         </div>
