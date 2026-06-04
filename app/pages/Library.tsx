@@ -1123,7 +1123,7 @@ export default function LibraryPage() {
                               alt={asset.prompt || "Concept visual"}
                               className="w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-105 cursor-pointer"
                               loading="lazy"
-                              onDoubleClick={() => setExpandedAsset(asset)}
+                              onClick={() => setExpandedAsset(asset)}
                             />
 
                             {/* Top Action Indicators (Heart and Visibility) */}
@@ -1421,26 +1421,127 @@ export default function LibraryPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 md:p-10"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 md:p-8"
             onClick={() => setExpandedAsset(null)}
           >
             <button
               onClick={() => setExpandedAsset(null)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors z-10"
+              className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors z-50 shadow-lg"
             >
               <X className="h-6 w-6" />
             </button>
-            <motion.img
-              key={expandedAsset.asset_url}
-              src={expandedAsset.asset_url}
-              alt={expandedAsset.prompt || "Expanded view"}
-              initial={{ scale: 0.85, opacity: 0 }}
+            
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.85, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 180 }}
+              className={`w-full max-w-5xl h-[85vh] md:h-[80vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row border transition-colors duration-300 ${
+                isDarkMode ? "bg-zinc-950 border-white/10 text-white" : "bg-white border-black/10 text-black"
+              }`}
               onClick={(e) => e.stopPropagation()}
-            />
+            >
+              {/* Left Side: Image container */}
+              <div className="flex-1 bg-black/40 flex items-center justify-center p-4 relative overflow-hidden group min-h-[40vh] md:min-h-0">
+                <img
+                  src={expandedAsset.asset_url}
+                  alt={expandedAsset.prompt || "Concept visual"}
+                  className="max-w-full max-h-[50vh] md:max-h-[75vh] object-contain rounded-xl shadow-2xl"
+                />
+              </div>
+
+              {/* Right Side: Details panel */}
+              <div className={`w-full md:w-80 flex flex-col justify-between border-t md:border-t-0 md:border-l p-6 shrink-0 transition-colors duration-300 ${
+                isDarkMode ? "border-white/10 bg-zinc-900/40" : "border-black/10 bg-zinc-50/40"
+              }`}>
+                <div className="flex flex-col gap-5 overflow-y-auto max-h-[35vh] md:max-h-[60vh] scrollbar-hide">
+                  <div>
+                    <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
+                      Prompt Idea
+                    </span>
+                    <p className="text-sm font-medium mt-1.5 leading-relaxed break-words font-sans">
+                      {expandedAsset.prompt || "No prompt text provided."}
+                    </p>
+                    {expandedAsset.prompt && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(expandedAsset.prompt || "");
+                          toast.success("Prompt copied to clipboard!");
+                        }}
+                        className={`flex items-center gap-1.5 text-[10px] font-semibold mt-2.5 transition-colors ${
+                          isDarkMode ? "text-[#00DDDD] hover:text-[#00c5c5]" : "text-cyan-600 hover:text-cyan-700"
+                        }`}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        <span>Copy Prompt</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                  {/* Metadata */}
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <span className={`text-[10px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
+                        Created Date
+                      </span>
+                      <span className="text-xs font-mono font-medium block mt-1">
+                        {expandedAsset.created_at ? new Date(expandedAsset.created_at).toLocaleString() : "Unknown"}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className={`text-[10px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
+                        Visibility
+                      </span>
+                      <span className={`text-xs font-semibold block mt-1 uppercase ${
+                        expandedAsset.is_public ? "text-sky-400" : "text-amber-500"
+                      }`}>
+                        {expandedAsset.is_public ? "Public Showcase" : "Private (Only You)"}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className={`text-[10px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
+                        Asset Type
+                      </span>
+                      <span className="text-xs font-medium block mt-1 capitalize font-mono">
+                        {expandedAsset.asset_type || "Image"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Actions inside details card */}
+                <div className="flex flex-col gap-2.5 pt-4 border-t border-white/5 mt-auto">
+                  <a
+                    href={expandedAsset.asset_url}
+                    download={`rudra-asset-${expandedAsset.id}.png`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-2.5 rounded-xl text-center text-xs font-bold font-mono uppercase tracking-wider bg-[#00DDDD] text-black hover:bg-[#00c5c5] transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#00dddd]/10"
+                  >
+                    Download Image
+                  </a>
+                  
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(expandedAsset.asset_url);
+                      toast.success("Image URL copied!");
+                    }}
+                    className={`w-full py-2.5 rounded-xl text-center text-xs font-bold font-mono uppercase tracking-wider border transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                      isDarkMode
+                        ? "border-white/10 hover:border-white/20 hover:bg-white/5 text-white"
+                        : "border-black/10 hover:border-black/20 hover:bg-black/5 text-black"
+                    }`}
+                  >
+                    Copy Link
+                  </button>
+                </div>
+              </div>
+
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
