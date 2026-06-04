@@ -193,44 +193,44 @@ const PricingContent = () => {
         const list = [
             { keywords: ['free'], multiplier: '0.02x', tokens: '1K', features: [] as { icon: any; label: string; value: string }[] },
             { keywords: ['motion'], multiplier: '1x', tokens: '50K', features: [
-                { icon: Zap, label: 'Token Allocation', value: 'Base Pool' },
-                { icon: ImageIcon, label: 'AI Image Lab', value: 'Standard Gen' },
-                { icon: Scan, label: 'OCR Scanner', value: 'Core Engine' },
-                { icon: Puzzle, label: 'Feature Extractor', value: 'Basic Capture' },
-                { icon: Volume2, label: 'TTS Audio', value: 'Standard Voice' },
-                { icon: Mic, label: 'STT Audio', value: 'Standard Transcription' },
+                { icon: Zap, label: 'AI Chat & Writing', value: 'Base Pool' },
+                { icon: ImageIcon, label: 'AI Image Creator', value: 'Standard Quality' },
+                { icon: Scan, label: 'Read Text from Images', value: 'Core Processing' },
+                { icon: Puzzle, label: 'AI Document Analysis', value: 'Basic Analysis' },
+                { icon: Volume2, label: 'Voice Reader (Text-to-Speech)', value: 'Standard Voice' },
+                { icon: Mic, label: 'Voice Typing (Speech-to-Text)', value: 'Standard Transcription' },
             ]},
             { keywords: ['speed'], multiplier: '10x', tokens: '500K', features: [
-                { icon: Zap, label: 'Token Allocation', value: 'Expanded Pool' },
-                { icon: ImageIcon, label: 'AI Image Lab', value: 'Priority Gen' },
-                { icon: Scan, label: 'OCR Scanner', value: 'Batch Engine' },
-                { icon: Puzzle, label: 'Feature Extractor', value: 'Advanced Analysis' },
-                { icon: Volume2, label: 'TTS Audio', value: 'High-Fi Voice' },
-                { icon: Mic, label: 'STT Audio', value: 'Advanced Transcription' },
+                { icon: Zap, label: 'AI Chat & Writing', value: 'Expanded Pool' },
+                { icon: ImageIcon, label: 'AI Image Creator', value: 'Priority Generation' },
+                { icon: Scan, label: 'Read Text from Images', value: 'Batch Processing' },
+                { icon: Puzzle, label: 'AI Document Analysis', value: 'Advanced Insights' },
+                { icon: Volume2, label: 'Voice Reader (Text-to-Speech)', value: 'High-Fidelity Voice' },
+                { icon: Mic, label: 'Voice Typing (Speech-to-Text)', value: 'Advanced Transcription' },
             ]},
             { keywords: ['velocity'], multiplier: '16x', tokens: '800K', features: [
-                { icon: Zap, label: 'Token Allocation', value: 'Professional Quota' },
-                { icon: ImageIcon, label: 'AI Image Lab', value: 'Studio Grade' },
-                { icon: Scan, label: 'OCR Scanner', value: 'Enterprise Suite' },
-                { icon: Puzzle, label: 'Feature Extractor', value: 'Deep Extraction' },
-                { icon: Volume2, label: 'TTS Audio', value: 'Studio Voice' },
-                { icon: Mic, label: 'STT Audio', value: 'Real-time Transcription' },
+                { icon: Zap, label: 'AI Chat & Writing', value: 'Professional Quota' },
+                { icon: ImageIcon, label: 'AI Image Creator', value: 'Studio Grade' },
+                { icon: Scan, label: 'Read Text from Images', value: 'Enterprise Suite' },
+                { icon: Puzzle, label: 'AI Document Analysis', value: 'Deep Extraction' },
+                { icon: Volume2, label: 'Voice Reader (Text-to-Speech)', value: 'Studio Voice' },
+                { icon: Mic, label: 'Voice Typing (Speech-to-Text)', value: 'Real-time Transcription' },
             ]},
             { keywords: ['acceleration'], multiplier: '20x', tokens: '1M', features: [
-                { icon: Zap, label: 'Token Allocation', value: 'Production Quota' },
-                { icon: ImageIcon, label: 'AI Image Lab', value: 'Flux/Infinite Gen' },
-                { icon: Scan, label: 'OCR Scanner', value: 'Cognitive Parsing' },
-                { icon: Puzzle, label: 'Feature Extractor', value: 'Semantic Mapping' },
-                { icon: Volume2, label: 'TTS Audio', value: 'API-Grade Voice' },
-                { icon: Mic, label: 'STT Audio', value: 'Multi-Speaker STT' },
+                { icon: Zap, label: 'AI Chat & Writing', value: 'Production Quota' },
+                { icon: ImageIcon, label: 'AI Image Creator', value: 'Flux/Infinite Gen' },
+                { icon: Scan, label: 'Read Text from Images', value: 'Cognitive Parsing' },
+                { icon: Puzzle, label: 'AI Document Analysis', value: 'Semantic Mapping' },
+                { icon: Volume2, label: 'Voice Reader (Text-to-Speech)', value: 'API-Grade Voice' },
+                { icon: Mic, label: 'Voice Typing (Speech-to-Text)', value: 'Multi-Speaker Support' },
             ]},
             { keywords: ['agenc', 'heavy duty', 'enterprise'], multiplier: '100x', tokens: '5M', features: [
-                { icon: Zap, label: 'Token Allocation', value: 'Dedicated Cluster' },
-                { icon: ImageIcon, label: 'AI Image Lab', value: 'Custom Models' },
-                { icon: Scan, label: 'OCR Scanner', value: 'Intelligent Capture' },
-                { icon: Puzzle, label: 'Feature Extractor', value: 'Custom Schemas' },
-                { icon: Volume2, label: 'TTS Audio', value: 'API Low-Latency' },
-                { icon: Mic, label: 'STT Audio', value: 'Multi-lingual STT' },
+                { icon: Zap, label: 'AI Chat & Writing', value: 'Dedicated Cluster' },
+                { icon: ImageIcon, label: 'AI Image Creator', value: 'Custom Models' },
+                { icon: Scan, label: 'Read Text from Images', value: 'Intelligent Capture' },
+                { icon: Puzzle, label: 'AI Document Analysis', value: 'Custom Schema Parsing' },
+                { icon: Volume2, label: 'Voice Reader (Text-to-Speech)', value: 'API Low-Latency' },
+                { icon: Mic, label: 'Voice Typing (Speech-to-Text)', value: 'Multi-lingual Support' },
             ]},
         ];
         const lower = planName.toLowerCase();
@@ -329,6 +329,14 @@ const PricingContent = () => {
                                         </h3>
                                         <div className="flex items-baseline gap-2">
                                             {(() => {
+                                                const isAgency = plan.plan_name?.toLowerCase().includes('agenc') || plan.plan_name?.toLowerCase().includes('heavy duty') || plan.plan_name?.toLowerCase().includes('enterprise');
+                                                if (isAgency) {
+                                                    return (
+                                                        <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
+                                                            ∞
+                                                        </span>
+                                                    )
+                                                }
                                                 const strikeOff = getPlanStrikeOff(String(plan.id))
                                                 if (strikeOff) {
                                                     return (
