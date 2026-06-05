@@ -3158,8 +3158,16 @@ STRICT RULES:
                                                 </div>
                                                 <div>
                                                     <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Bulk Email Send</p>
-                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Upload Excel file with columns: email, message</p>
+                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Upload CSV file with columns: email, message</p>
                                                 </div>
+                                            </div>
+
+                                            <div className={`mb-3 p-2 rounded-lg ${isDarkMode ? "bg-white/[0.03] border border-white/5" : "bg-black/[0.02] border border-black/5"}`}>
+                                                <p className={`text-[7px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Accepted CSV format</p>
+                                                <pre className={`text-[8px] font-mono leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+email,message{'\n'}
+john@example.com,Hello John check this out{'\n'}
+jane@example.com,"Hey Jane, here is the update"</pre>
                                             </div>
 
                                             <div
@@ -3175,8 +3183,7 @@ STRICT RULES:
                                                 <svg className="h-8 w-8 mx-auto mb-2 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
                                                 </svg>
-                                                <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Drop Excel file here or click to browse</p>
-                                                <p className={`text-[7px] font-mono mt-1 ${isDarkMode ? "text-white/20" : "text-black/20"}`}>Columns: email, message</p>
+                                                <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Drop CSV file here or click to browse</p>
                                             </div>
                                             <input ref={bulkFileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => {
                                                 const file = e.target.files?.[0];
