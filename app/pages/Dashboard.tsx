@@ -33,8 +33,8 @@ const PlanCard = ({ plan, isDarkMode, onEdit }: { plan: any, isDarkMode: boolean
                 if (strikeOffVal) {
                     return (
                         <div className="mb-6">
-                            <p className={`text-2xl font-display font-black line-through ${isDarkMode ? "text-white/40" : "text-black/30"}`}>₹{plan.price_inr || plan.price}</p>
-                            <p className={`text-3xl font-display font-black ${isDarkMode ? "text-white" : "text-black"}`}>₹{strikeOffVal}</p>
+                            <p className={`text-2xl font-display font-black line-through ${isDarkMode ? "text-white/40" : "text-black/30"}`}>₹{strikeOffVal}</p>
+                            <p className={`text-3xl font-display font-black ${isDarkMode ? "text-white" : "text-black"}`}>₹{plan.price_inr || plan.price}</p>
                         </div>
                     )
                 }

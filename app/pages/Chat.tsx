@@ -1585,7 +1585,6 @@ STRICT RULES:
                             if (!hasReceivedFirstChunk) {
                                 hasReceivedFirstChunk = true;
                                 setShowDots(false);
-                                setIsLoading(false);
                                 setMessages((prev) => [...prev, {
                                     role: "assistant" as const,
                                     content: chunk,
@@ -2549,7 +2548,7 @@ STRICT RULES:
                                                 <div className="flex items-center gap-3 mb-4">
                                                     <span className={`text-[9px] font-mono uppercase tracking-[0.2em] flex items-center gap-1.5 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/80 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/30") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]" : "text-black/60")}`}>
                                                         {msg.role === "assistant" && isLoading && i === messages.length - 1 && (
-                                                            <span className="h-1.5 w-1.5 rounded-full bg-[#00DDDD] animate-pulse" />
+                                                            <span className="h-2.5 w-2.5 rounded-full border-2 border-t-transparent animate-spin border-[#00DDDD] inline-block" />
                                                         )}
                                                         {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
                                                     </span>

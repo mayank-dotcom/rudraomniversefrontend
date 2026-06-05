@@ -474,14 +474,13 @@ const PricingContent = () => {
                                                               const strikeOffVal = (plan.strike_off_price && plan.strike_off_price > 0) ? plan.strike_off_price : getPlanStrikeOff(String(plan.id))?.price_inr;
                                                               if (isYearly) {
                                                                   const monthlyPrice = strikeOffVal ? strikeOffVal : basePrice;
-                                                                  const yearlyMonthlyPrice = strikeOffVal ? Math.round(strikeOffVal * 0.7) : displayPrice;
                                                                   return (
                                                                       <>
                                                                           <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
                                                                               ₹{monthlyPrice}
                                                                           </span>
                                                                           <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
-                                                                              ₹{yearlyMonthlyPrice}
+                                                                              ₹{displayPrice}
                                                                           </span>
                                                                       </>
                                                                   )
@@ -490,10 +489,10 @@ const PricingContent = () => {
                                                                   return (
                                                                       <>
                                                                           <span className="font-display font-bold leading-none tracking-tighter line-through opacity-40" style={{ fontSize: "40px" }}>
-                                                                              ₹{basePrice}
+                                                                              ₹{strikeOffVal}
                                                                           </span>
                                                                           <span className="font-display font-bold leading-none tracking-tighter text-[var(--color-cyan)]" style={{ fontSize: "40px" }}>
-                                                                              ₹{strikeOffVal}
+                                                                              ₹{basePrice}
                                                                           </span>
                                                                       </>
                                                                   )
