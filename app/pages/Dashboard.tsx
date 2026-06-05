@@ -5120,12 +5120,12 @@ const Dashboard = () => {
                                 </label>
                                 {strikeOffEnabled && (
                                     <div className="mt-2">
-                                        <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>New Price (INR)</label>
+                                        <label className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Old Price (INR)</label>
                                         <input
                                             type="number"
                                             value={strikeOffPrice}
                                             onChange={(e) => setStrikeOffPrice(Number(e.target.value))}
-                                            placeholder="Enter new price"
+                                            placeholder="Enter old price"
                                             className={`w-full mt-1 p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
                                         />
                                     </div>

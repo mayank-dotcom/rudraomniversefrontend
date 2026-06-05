@@ -127,7 +127,7 @@ const PricingContent = () => {
         plans?: any[];
     }>({
         title: "Quiet power.\nTailored access.",
-        description: "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
+        description: "",
         linkText: "Learn More",
         linkUrl: "/pricing",
         plans: []
@@ -141,7 +141,7 @@ const PricingContent = () => {
                     const parsed = JSON.parse(setting.value);
                     setPageData({
                         title: parsed.title || "Quiet power.\nTailored access.",
-                        description: parsed.description || "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
+                        description: parsed.description || "",
                         linkText: parsed.linkText || "Learn More",
                         linkUrl: parsed.linkUrl || "/pricing",
                         plans: parsed.plans || []
@@ -350,12 +350,14 @@ const PricingContent = () => {
                                 ))}
                             </h1>
                             {/* Body Copy — 16px Regular */}
-                            <p 
-                                className={`max-w-xl leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}
-                                style={{ fontSize: "16px" }}
-                            >
-                                {pageData.description}
-                            </p>
+                            {pageData.description && (
+                                <p 
+                                    className={`max-w-xl leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                                    style={{ fontSize: "16px" }}
+                                >
+                                    {pageData.description}
+                                </p>
+                            )}
                         </div>
                     </div>
 
