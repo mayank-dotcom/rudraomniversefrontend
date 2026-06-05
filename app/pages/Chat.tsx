@@ -290,6 +290,8 @@ const Chat = () => {
     const [gmailAutoSignature, setGmailAutoSignature] = useState("");
     const [gmailAutoInstructions, setGmailAutoInstructions] = useState("");
     const [gmailBulkModal, setGmailBulkModal] = useState(false);
+    const gmailAutoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const gmailAutoRunningRef = useRef(false);
     const PLACEHOLDER_TEXTS = useMemo(() => [
         "Describe your query or paste a concept...",
         "Ask me anything about your studies...",
@@ -484,6 +486,51 @@ const Chat = () => {
             fetchGmailEmails()
         }
     }, [gmailConnected, rightSidebarTab, isRightSidebarCollapsed, fetchGmailEmails])
+
+    // ── Gmail Auto-Reply Polling ──
+    const doAutoReplyCycle = useCallback(async () => {
+        if (gmailAutoRunningRef.current || !gmailAutoOn) return;
+        gmailAutoRunningRef.current = true;
+        try {
+            if (gmailAutoMode === "all") {
+                const { triggerGoogleAutoReplyAll } = await import("@/lib/chat-api");
+                const res = await triggerGoogleAutoReplyAll(5);
+                if (res.success && res.replied && res.replied > 0) {
+                    setGmailAutoStatus(`Auto-replied to ${res.replied} email(s) ✓`);
+                }
+            } else if (gmailAutoMode === "to" && gmailAutoTargetEmail.trim()) {
+                const { getGoogleAgentUnread, triggerGoogleAutoReply } = await import("@/lib/chat-api");
+                const unreadRes = await getGoogleAgentUnread(20);
+                if (unreadRes.success && unreadRes.emails?.length) {
+                    const target = gmailAutoTargetEmail.trim().toLowerCase();
+                    const matching = unreadRes.emails.filter(
+                        (e: any) => e.from?.toLowerCase().includes(target)
+                    );
+                    for (const email of matching) {
+                        if (!gmailAutoOn) break;
+                        const replyRes = await triggerGoogleAutoReply(email.id);
+                        if (replyRes.success) {
+                            setGmailAutoStatus(`Auto-replied to ${target} ✓`);
+                        }
+                    }
+                }
+            }
+        } catch { /* silent — retry on next interval */ }
+        finally { gmailAutoRunningRef.current = false; }
+    }, [gmailAutoOn, gmailAutoMode, gmailAutoTargetEmail]);
+
+    useEffect(() => {
+        if (gmailAutoOn && gmailAutoMode) {
+            doAutoReplyCycle();
+            gmailAutoIntervalRef.current = setInterval(doAutoReplyCycle, 45000);
+        }
+        return () => {
+            if (gmailAutoIntervalRef.current) {
+                clearInterval(gmailAutoIntervalRef.current);
+                gmailAutoIntervalRef.current = null;
+            }
+        };
+    }, [gmailAutoOn, gmailAutoMode, doAutoReplyCycle]);
 
     // Listen for Gmail connected signal from popup (via localStorage)
     useEffect(() => {
@@ -2838,6 +2885,12 @@ STRICT RULES:
                                         {gmailSendResult && (
                                             <span className={`text-[8px] font-mono ${gmailSendResult.includes("✓") ? "text-green-500" : "text-red-400"}`}>{gmailSendResult}</span>
                                         )}
+                                        {gmailAutoOn && !gmailAutoStatus && !gmailSendResult && (
+                                            <span className="flex items-center gap-1 text-[8px] font-mono text-[#00DDDD]">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-[#00DDDD] animate-pulse" />
+                                                Watching{gmailAutoMode === "to" ? ` ${gmailAutoTargetEmail}` : ""}...
+                                            </span>
+                                        )}
                                         {gmailAutoStatus && !gmailSendResult && (
                                             <span className={`text-[8px] font-mono ${gmailAutoStatus.includes("✓") ? "text-green-500" : "text-red-400"}`}>{gmailAutoStatus}</span>
                                         )}
@@ -3040,14 +3093,20 @@ STRICT RULES:
                                                 <button onClick={() => { setGmailAutoShowModal(false); setGmailAutoOn(false); setGmailAutoMode(null); }}
                                                     className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/50 hover:bg-white/10" : "text-black/50 hover:bg-black/10"}`}
                                                 >Cancel</button>
-                                                <button onClick={() => {
+                                                <button onClick={async () => {
                                                     setGmailAutoShowModal(false);
-                                                    if (gmailAutoMode === "all") {
-                                                        handleTriggerAutoReply();
-                                                    } else if (gmailAutoMode === "to" && gmailAutoTargetEmail.trim()) {
-                                                        setGmailMailTo(gmailAutoTargetEmail.trim());
-                                                        setGmailConfirmSend(true);
-                                                    }
+                                                    if (!gmailAutoMode) return;
+                                                    try {
+                                                        const { setGoogleAgentContext } = await import("@/lib/chat-api");
+                                                        await setGoogleAgentContext({
+                                                            tone: gmailAutoTone,
+                                                            signature: gmailAutoSignature,
+                                                            instructions: gmailAutoInstructions,
+                                                            is_active: true,
+                                                            reply_strategy: gmailAutoMode
+                                                        });
+                                                    } catch { /* context save optional */ }
+                                                    setGmailAutoStatus(gmailAutoMode === "all" ? "Watching all emails..." : `Watching ${gmailAutoTargetEmail}...`);
                                                 }} disabled={!gmailAutoMode || (gmailAutoMode === "to" && !gmailAutoTargetEmail.trim())}
                                                     className={`px-4 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all disabled:opacity-50 ${isDarkMode ? "bg-[#00DDDD] text-black hover:bg-[#00DDDD]/90" : "bg-[#00DDDD] text-black hover:bg-[#00DDDD]/90"}`}
                                                 >Apply</button>
