@@ -2827,7 +2827,7 @@ STRICT RULES:
                                 <div className="mb-2 space-y-1.5">
                                     {/* To: field + Send/Bulk toggle */}
                                     <div className="flex items-center gap-2">
-                                        <span className={`text-[9px] font-mono uppercase tracking-widest shrink-0 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>To:</span>
+                                        <span className={`text-[9px] font-mono uppercase tracking-widest shrink-0 ${isDarkMode ? "text-white/60" : "text-black/70"}`}>To:</span>
                                         <div className="relative flex-1">
                                             <input
                                                 type="text"
@@ -2835,14 +2835,14 @@ STRICT RULES:
                                                 value={gmailMailTo}
                                                 onChange={(e) => setGmailMailTo(e.target.value)}
                                                 className={`w-full px-2 py-1.5 text-[10px] font-mono rounded border outline-none transition-all ${isDarkMode
-                                                    ? "bg-white/[0.03] border-white/10 text-white placeholder-white/20 focus:border-[#4285F4]/50"
-                                                    : "bg-black/[0.02] border-black/10 text-black placeholder-black/30 focus:border-[#4285F4]/50"
+                                                    ? "bg-white/[0.05] border-white/20 text-white placeholder-white/30 focus:border-[#4285F4]/50"
+                                                    : "bg-black/[0.04] border-black/30 text-black placeholder-black/50 focus:border-[#4285F4]/70"
                                                     }`}
                                             />
                                         </div>
                                         <button
                                             onClick={() => setGmailMailTo("")}
-                                            className={`p-1.5 rounded transition-all ${isDarkMode ? "hover:bg-white/10 text-white/30" : "hover:bg-black/10 text-black/30"}`}
+                                            className={`p-1.5 rounded transition-all ${isDarkMode ? "hover:bg-white/10 text-white/50" : "hover:bg-black/10 text-black/60"}`}
                                             title="Clear"
                                         >
                                             <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -2859,8 +2859,8 @@ STRICT RULES:
                                             }}
                                             disabled={!gmailMailTo.trim() || !input.trim() || gmailSending}
                                             className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all disabled:opacity-30 ${isDarkMode
-                                                ? "border-white/15 text-white/60 hover:border-white/30 hover:text-white"
-                                                : "border-black/15 text-black/60 hover:border-black/30 hover:text-black"
+                                                ? "border-white/25 text-white/70 hover:border-white/40 hover:text-white"
+                                                : "border-black/30 text-black/80 hover:border-black/50 hover:text-black"
                                                 }`}
                                         >
                                             <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2875,8 +2875,8 @@ STRICT RULES:
                                                 if (next) setGmailAutoShowModal(true);
                                             }}
                                             className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all ${gmailAutoOn
-                                                ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/10 border-[#00DDDD] text-[#00DDDD]")
-                                                : (isDarkMode ? "border-white/15 text-white/60 hover:border-white/30 hover:text-white" : "border-black/15 text-black/60 hover:border-black/30 hover:text-black")
+                                                ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/15 border-[#00DDDD] text-[#00DDDD]")
+                                                : (isDarkMode ? "border-white/25 text-white/70 hover:border-white/40 hover:text-white" : "border-black/30 text-black/80 hover:border-black/50 hover:text-black")
                                                 }`}
                                         >
                                             <svg className={`h-3 w-3 ${gmailAutoOn ? "text-[#00DDDD]" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2889,8 +2889,8 @@ STRICT RULES:
                                             onClick={() => setGmailBulkModal(true)}
                                             disabled={gmailSending}
                                             className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all disabled:opacity-30 ${isDarkMode
-                                                ? "border-white/15 text-white/60 hover:border-white/30 hover:text-white"
-                                                : "border-black/15 text-black/60 hover:border-black/30 hover:text-black"
+                                                ? "border-white/25 text-white/70 hover:border-white/40 hover:text-white"
+                                                : "border-black/30 text-black/80 hover:border-black/50 hover:text-black"
                                                 }`}
                                         >
                                             <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2899,16 +2899,16 @@ STRICT RULES:
                                             Bulk
                                         </button>
                                         {gmailSendResult && (
-                                            <span className={`text-[8px] font-mono ${gmailSendResult.includes("✓") ? "text-green-500" : "text-red-400"}`}>{gmailSendResult}</span>
+                                            <span className={`text-[9px] font-mono font-semibold ${gmailSendResult.includes("✓") ? "text-green-600" : "text-red-500"}`}>{gmailSendResult}</span>
                                         )}
                                         {gmailAutoOn && !gmailAutoStatus && !gmailSendResult && (
-                                            <span className="flex items-center gap-1 text-[8px] font-mono text-[#00DDDD]">
+                                            <span className="flex items-center gap-1 text-[8px] font-mono font-semibold text-[#00DDDD]">
                                                 <span className="h-1.5 w-1.5 rounded-full bg-[#00DDDD] animate-pulse" />
                                                 Watching{gmailAutoMode === "to" ? ` ${gmailAutoTargetEmail}` : ""}...
                                             </span>
                                         )}
                                         {gmailAutoStatus && !gmailSendResult && (
-                                            <span className={`text-[8px] font-mono ${gmailAutoStatus.includes("✓") ? "text-green-500" : "text-red-400"}`}>{gmailAutoStatus}</span>
+                                            <span className={`text-[9px] font-mono font-semibold ${gmailAutoStatus.includes("✓") ? "text-green-600" : "text-red-500"}`}>{gmailAutoStatus}</span>
                                         )}
                                     </div>
                                 </div>
@@ -2924,13 +2924,13 @@ STRICT RULES:
                                         className="fixed inset-0 z-[150] flex items-center justify-center p-4"
                                         onClick={() => { setGmailConfirmSend(false); setGmailPolishedBody(""); }}
                                     >
-                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/40"} backdrop-blur-sm`} />
+                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/60"} backdrop-blur-sm`} />
                                         <motion.div
                                             initial={{ scale: 0.92, opacity: 0, y: 20 }}
                                             animate={{ scale: 1, opacity: 1, y: 0 }}
                                             exit={{ scale: 0.92, opacity: 0, y: 20 }}
                                             onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                            className={`relative w-full max-w-lg rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/10"}`}
+                                            className={`relative w-full max-w-lg rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/20"}`}
                                         >
                                             <div className="flex items-center gap-3 mb-4">
                                                 <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
@@ -2941,7 +2941,7 @@ STRICT RULES:
                                                 </div>
                                                 <div>
                                                     <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Send as Email</p>
-                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/80"}`}>
                                                         To: <span className="font-bold">{gmailMailTo.includes(",") ? `${gmailMailTo.split(",").length} recipients` : gmailMailTo}</span>
                                                     </p>
                                                 </div>
@@ -2949,9 +2949,9 @@ STRICT RULES:
 
                                             {/* Polished email body */}
                                             {gmailPolishing ? (
-                                                <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-white/[0.03]">
+                                                <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-white/[0.05]">
                                                     <div className="h-4 w-4 rounded-full border-2 border-t-transparent animate-spin border-[#4285F4]" />
-                                                    <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/50" : "text-black/50"}`}>AI is polishing your message...</span>
+                                                    <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/70" : "text-black/80"}`}>AI is polishing your message...</span>
                                                 </div>
                                             ) : gmailPolishedBody ? (
                                                 <>
@@ -2960,45 +2960,31 @@ STRICT RULES:
                                                         onChange={(e) => setGmailPolishedBody(e.target.value)}
                                                         rows={6}
                                                         className={`w-full mb-3 p-2.5 text-[10px] font-mono leading-relaxed rounded-lg border outline-none resize-none transition-all ${isDarkMode
-                                                            ? "bg-white/[0.03] border-white/10 text-white/80 focus:border-[#4285F4]/50"
-                                                            : "bg-black/[0.02] border-black/10 text-black/80 focus:border-[#4285F4]/50"
+                                                            ? "bg-white/[0.05] border-white/20 text-white/90 focus:border-[#4285F4]/50"
+                                                            : "bg-black/[0.04] border-black/30 text-black/90 focus:border-[#4285F4]/70"
                                                             }`}
                                                     />
-                                                    <div className="flex items-center gap-2 mb-4">
-                                                        <button
-                                                            onClick={async () => {
-                                                                setGmailPolishing(true);
-                                                                try {
-                                                                    const { sendChatCompletion } = await import("@/lib/chat-api");
-                                                                    const res = await sendChatCompletion({
-                                                                        messages: [
-                                                                            { role: "system", content: "You are an email writing assistant. Polish the following rough text into a professional, well-formatted email. Return ONLY the polished email body." },
-                                                                            { role: "user", content: input.trim() }
-                                                                        ]
-                                                                    });
-                                                                    setGmailPolishedBody((res as any)?.choices?.[0]?.message?.content || input.trim());
-                                                                } catch {
-                                                                    setGmailPolishedBody(input.trim());
-                                                                }
-                                                                setGmailPolishing(false);
-                                                            }}
-                                                            className={`flex items-center gap-1 px-2 py-1 text-[8px] font-mono rounded-md border transition-all ${isDarkMode ? "border-white/10 text-white/40 hover:border-white/30" : "border-black/10 text-black/40 hover:border-black/30"}`}
-                                                        >
-                                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
-                                                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                                                            </svg>
-                                                            Regenerate
-                                                        </button>
-                                                        <span className={`text-[7px] font-mono ${isDarkMode ? "text-white/25" : "text-black/25"}`}>Edit freely above</span>
-                                                    </div>
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
+                                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                        <rect x="2" y="4" width="20" height="16" rx="2" fill="#EA4335"/>
+                                                        <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Send as Email</p>
+                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/80"}`}>
+                                                        To: <span className="font-bold">{gmailMailTo.includes(",") ? `${gmailMailTo.split(",").length} recipients` : gmailMailTo}</span>
+                                                    </p>
+                                                </div>
+                                            </div>
                                                 </>
                                             ) : null}
 
                                             <div className="flex items-center gap-2 justify-end">
                                                 <button
                                                     onClick={() => { setGmailConfirmSend(false); setGmailPolishedBody(""); }}
-                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/50 hover:bg-white/10" : "text-black/50 hover:bg-black/10"}`}
+                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/70 hover:bg-white/10" : "text-black/80 hover:bg-black/10"}`}
                                                 >
                                                     Cancel
                                                 </button>
@@ -3025,13 +3011,13 @@ STRICT RULES:
                                         className="fixed inset-0 z-[150] flex items-center justify-center p-4"
                                         onClick={() => setGmailAutoShowModal(false)}
                                     >
-                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/40"} backdrop-blur-sm`} />
+                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/60"} backdrop-blur-sm`} />
                                         <motion.div
                                             initial={{ scale: 0.92, opacity: 0, y: 20 }}
                                             animate={{ scale: 1, opacity: 1, y: 0 }}
                                             exit={{ scale: 0.92, opacity: 0, y: 20 }}
                                             onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                            className={`relative w-full max-w-lg rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/10"}`}
+                                            className={`relative w-full max-w-lg rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/20"}`}
                                         >
                                             <div className="flex items-center gap-3 mb-4">
                                                 <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#00DDDD]/10" : "bg-[#00DDDD]/15"}`}>
@@ -3042,15 +3028,15 @@ STRICT RULES:
                                                 </div>
                                                 <div>
                                                     <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Auto Email Context</p>
-                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Set tone, signature, and mode for auto-replies</p>
+                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Set tone, signature, and mode for auto-replies</p>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-3 mb-4">
                                                 <div>
-                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Tone</label>
+                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Tone</label>
                                                     <select value={gmailAutoTone} onChange={(e) => setGmailAutoTone(e.target.value)}
-                                                        className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/[0.02] border-black/10 text-black"}`}
+                                                        className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white" : "bg-black/[0.04] border-black/30 text-black"}`}
                                                     >
                                                         <option value="professional">Professional</option>
                                                         <option value="casual">Casual</option>
@@ -3059,27 +3045,27 @@ STRICT RULES:
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Signature (optional)</label>
+                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Signature (optional)</label>
                                                     <textarea value={gmailAutoSignature} onChange={(e) => setGmailAutoSignature(e.target.value)} rows={2}
-                                                        className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none resize-none ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white/80" : "bg-black/[0.02] border-black/10 text-black/80"}`}
+                                                        className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none resize-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white/80" : "bg-black/[0.04] border-black/30 text-black/80"}`}
                                                         placeholder="Best regards,&#10;John Doe"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Instructions (optional)</label>
+                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Instructions (optional)</label>
                                                     <textarea value={gmailAutoInstructions} onChange={(e) => setGmailAutoInstructions(e.target.value)} rows={3}
-                                                        className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none resize-none ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white/80" : "bg-black/[0.02] border-black/10 text-black/80"}`}
+                                                        className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none resize-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white/80" : "bg-black/[0.04] border-black/30 text-black/80"}`}
                                                         placeholder="Be concise, always include a call to action..."
                                                     />
                                                 </div>
 
                                                 <div className="flex items-center gap-2 pt-2">
-                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Mode:</label>
+                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Mode:</label>
                                                     <button
                                                         onClick={() => setGmailAutoMode(gmailAutoMode === "all" ? null : "all")}
                                                         className={`px-2.5 py-1 text-[8px] font-mono rounded border transition-all ${gmailAutoMode === "all"
-                                                            ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/10 border-[#00DDDD] text-[#00DDDD]")
-                                                            : (isDarkMode ? "border-white/15 text-white/50" : "border-black/15 text-black/50")
+                                                            ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/15 border-[#00DDDD] text-[#00DDDD]")
+                                                            : (isDarkMode ? "border-white/25 text-white/70" : "border-black/30 text-black/70")
                                                             }`}
                                                     >
                                                         Auto All
@@ -3087,8 +3073,8 @@ STRICT RULES:
                                                     <button
                                                         onClick={() => setGmailAutoMode(gmailAutoMode === "to" ? null : "to")}
                                                         className={`px-2.5 py-1 text-[8px] font-mono rounded border transition-all ${gmailAutoMode === "to"
-                                                            ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/10 border-[#00DDDD] text-[#00DDDD]")
-                                                            : (isDarkMode ? "border-white/15 text-white/50" : "border-black/15 text-black/50")
+                                                            ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/15 border-[#00DDDD] text-[#00DDDD]")
+                                                            : (isDarkMode ? "border-white/25 text-white/70" : "border-black/30 text-black/70")
                                                             }`}
                                                     >
                                                         Auto To
@@ -3096,9 +3082,9 @@ STRICT RULES:
                                                 </div>
                                                 {gmailAutoMode === "to" && (
                                                     <div>
-                                                        <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Target Email</label>
+                                                        <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Target Email</label>
                                                         <input type="email" value={gmailAutoTargetEmail} onChange={(e) => setGmailAutoTargetEmail(e.target.value)}
-                                                            className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/[0.02] border-black/10 text-black"}`}
+                                                            className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white" : "bg-black/[0.04] border-black/30 text-black"}`}
                                                             placeholder="someone@example.com"
                                                         />
                                                     </div>
@@ -3107,7 +3093,7 @@ STRICT RULES:
 
                                             <div className="flex items-center gap-2 justify-end">
                                                 <button onClick={() => { setGmailAutoShowModal(false); setGmailAutoOn(false); setGmailAutoMode(null); }}
-                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/50 hover:bg-white/10" : "text-black/50 hover:bg-black/10"}`}
+                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/70 hover:bg-white/10" : "text-black/80 hover:bg-black/10"}`}
                                                 >Cancel</button>
                                                 <button onClick={async () => {
                                                     setGmailAutoShowModal(false);
@@ -3142,13 +3128,13 @@ STRICT RULES:
                                         className="fixed inset-0 z-[150] flex items-center justify-center p-4"
                                         onClick={() => setGmailBulkModal(false)}
                                     >
-                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/40"} backdrop-blur-sm`} />
+                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/60"} backdrop-blur-sm`} />
                                         <motion.div
                                             initial={{ scale: 0.92, opacity: 0, y: 20 }}
                                             animate={{ scale: 1, opacity: 1, y: 0 }}
                                             exit={{ scale: 0.92, opacity: 0, y: 20 }}
                                             onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                            className={`relative w-full max-w-md rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/10"}`}
+                                            className={`relative w-full max-w-md rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/20"}`}
                                         >
                                             <div className="flex items-center gap-3 mb-4">
                                                 <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
@@ -3158,13 +3144,13 @@ STRICT RULES:
                                                 </div>
                                                 <div>
                                                     <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Bulk Email Send</p>
-                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Upload CSV file with columns: email, message</p>
+                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Upload CSV file with columns: email, message</p>
                                                 </div>
                                             </div>
 
-                                            <div className={`mb-3 p-2 rounded-lg ${isDarkMode ? "bg-white/[0.03] border border-white/5" : "bg-black/[0.02] border border-black/5"}`}>
-                                                <p className={`text-[7px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Accepted CSV format</p>
-                                                <pre className={`text-[8px] font-mono leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                                            <div className={`mb-3 p-2.5 rounded-lg ${isDarkMode ? "bg-white/[0.05] border border-white/10" : "bg-black/[0.06] border border-black/25"}`}>
+                                                <p className={`text-[7px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? "text-white/50" : "text-black/60"}`}>Accepted CSV format</p>
+                                                <pre className={`text-[8px] font-mono leading-relaxed ${isDarkMode ? "text-white/70" : "text-black/80"}`}>
 email,message{'\n'}
 john@example.com,Hello John check this out{'\n'}
 jane@example.com,"Hey Jane, here is the update"</pre>
@@ -3177,13 +3163,13 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                                     const file = e.dataTransfer.files[0];
                                                     if (file) handleBulkExcelUpload(file);
                                                 }}
-                                                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${isDarkMode ? "border-white/20 hover:border-[#00DDDD]/50 text-white/40" : "border-black/20 hover:border-[#00DDDD]/50 text-black/40"}`}
+                                                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${isDarkMode ? "border-white/30 hover:border-[#00DDDD]/50 text-white/60" : "border-black/40 hover:border-[#00DDDD]/60 text-black/80"}`}
                                                 onClick={() => bulkFileInputRef.current?.click()}
                                             >
-                                                <svg className="h-8 w-8 mx-auto mb-2 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <svg className="h-8 w-8 mx-auto mb-2 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
                                                 </svg>
-                                                <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Drop CSV file here or click to browse</p>
+                                                <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/50" : "text-black/80"}`}>Drop CSV file here or click to browse</p>
                                             </div>
                                             <input ref={bulkFileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => {
                                                 const file = e.target.files?.[0];
@@ -3192,15 +3178,15 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                             }} />
 
                                             {gmailSending && (
-                                                <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-white/[0.03]">
+                                                <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-white/[0.05]">
                                                     <div className="h-3 w-3 rounded-full border-2 border-t-transparent animate-spin border-[#00DDDD]" />
-                                                    <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/50" : "text-black/50"}`}>Sending emails...</span>
+                                                    <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/70" : "text-black/80"}`}>Sending emails...</span>
                                                 </div>
                                             )}
 
                                             <div className="flex items-center gap-2 justify-end mt-3">
                                                 <button onClick={() => setGmailBulkModal(false)}
-                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/50 hover:bg-white/10" : "text-black/50 hover:bg-black/10"}`}
+                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/70 hover:bg-white/10" : "text-black/80 hover:bg-black/10"}`}
                                                 >Close</button>
                                             </div>
                                         </motion.div>
