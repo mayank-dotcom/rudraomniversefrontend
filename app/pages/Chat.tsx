@@ -2094,9 +2094,8 @@ STRICT RULES:
                                             <div className="flex flex-col">
                                                 <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
                                                 <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : "Pro Member"}</span>
-                                            </div>
-                                        )}
-                                    </div>
+                            </div>
+                        </div>
                                 <div className="flex items-center gap-2">
                                     {isGlobalAdmin && (
                                         <button
@@ -2547,7 +2546,10 @@ STRICT RULES:
                                         >
                                             <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[90%] md:max-w-[80%]" : "items-start max-w-[90%] md:max-w-[85%]"}`}>
                                                 <div className="flex items-center gap-3 mb-4">
-                                                    <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/80 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/30") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]" : "text-black/60")}`}>
+                                                    <span className={`text-[9px] font-mono uppercase tracking-[0.2em] flex items-center gap-1.5 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/80 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/30") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]" : "text-black/60")}`}>
+                                                        {msg.role === "assistant" && isLoading && i === messages.length - 1 && (
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-[#00DDDD] animate-pulse" />
+                                                        )}
                                                         {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
                                                     </span>
                                                     <span className={`text-[9px] font-mono ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/60 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/20") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]" : "text-black/60")}`}>{msg.timestamp}</span>
@@ -3107,9 +3109,8 @@ STRICT RULES:
                                                             className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white" : "bg-black/[0.04] border-black/30 text-black"}`}
                                                             placeholder="someone@example.com"
                                                         />
-                                                    </div>
-                                                )}
-                                            </div>
+                            </div>
+                        </div>
 
                                             <div className="flex items-center gap-2 justify-end">
                                                 <button onClick={() => { setGmailAutoShowModal(false); setGmailAutoOn(false); setGmailAutoMode(null); }}
@@ -3214,8 +3215,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                 )}
                             </AnimatePresence>
 
-                            {!mcqSession && (
-                            <div id="walkthrough-input-area" className={`relative flex border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
+                            <div id="walkthrough-input-area" className={`relative flex border-2 transition-all duration-300 ${mcqSession ? "opacity-40 pointer-events-none" : ""} ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
                                 <div className="flex-1 min-w-0 flex">
                                     <div className="flex items-center gap-1 md:gap-2 pl-1.5 md:pl-3 pt-3 pb-2.5 self-end">
                                         <button
@@ -3410,7 +3410,6 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                     )}
                                 </div>
                             </div>
-                            )}
                         </div>
                     </div>
                 </div>
