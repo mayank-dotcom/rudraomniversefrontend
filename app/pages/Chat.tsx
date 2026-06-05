@@ -135,7 +135,7 @@ const hasEmbeddedImage = (content: string): string | null => {
 };
 
 const stripEmbeddedImage = (content: string): string => {
-    return content.replace(/!\[.*?\]\((data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)\)/g, '').replace(/!\[.*?\]\((https?:\/\/[^\s)]+\.(?:png|jpe?g|gif|webp|svg|bmp)(?:\?.*?)?)\)/g, '').replace(/\n{3,}/g, '\n\n').trim();
+    return content.replace(/<!--.*?-->/g, '').replace(/!\[.*?\]\((data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)\)/g, '').replace(/!\[.*?\]\((https?:\/\/[^\s)]+\.(?:png|jpe?g|gif|webp|svg|bmp)(?:\?.*?)?)\)/g, '').replace(/\n{3,}/g, '\n\n').trim();
 };
 
 const buildChatTitle = (value: string) => {
@@ -2439,7 +2439,7 @@ STRICT RULES:
                                                         <div className={`relative group/img-wrapper ${
                                                             selectedEngine === "AI Image Lab"
                                                                 ? "max-w-[450px]"
-                                                                : "max-w-[280px] md:max-w-[320px]"
+                                                                : "w-full"
                                                         }`}>
                                                             <img
                                                                 src={msg.content}
@@ -2447,7 +2447,7 @@ STRICT RULES:
                                                                 className={`w-full object-contain rounded-2xl border border-white/10 shadow-2xl transition-transform duration-300 group-hover/img-wrapper:scale-[1.01] ${
                                                                     selectedEngine === "AI Image Lab"
                                                                         ? "max-h-[350px]"
-                                                                        : "max-h-[200px] md:max-h-[240px]"
+                                                                        : "max-h-[300px] md:max-h-[400px]"
                                                                 }`}
                                                             />
                                                             <button
@@ -2476,7 +2476,7 @@ STRICT RULES:
                                                                     <div className={`relative group/img-wrapper ${
                                                                         selectedEngine === "AI Image Lab"
                                                                             ? "max-w-[450px]"
-                                                                            : "max-w-[280px] md:max-w-[320px]"
+                                                                            : "w-full"
                                                                     }`}>
                                                                         <img
                                                                             src={embedImgUrl}
@@ -2484,7 +2484,7 @@ STRICT RULES:
                                                                             className={`w-full object-contain rounded-2xl border border-white/10 shadow-2xl transition-transform duration-300 group-hover/img-wrapper:scale-[1.01] ${
                                                                                 selectedEngine === "AI Image Lab"
                                                                                     ? "max-h-[350px]"
-                                                                                    : "max-h-[200px] md:max-h-[240px]"
+                                                                                    : "max-h-[300px] md:max-h-[400px]"
                                                                             }`}
                                                                         />
                                                                         <button
