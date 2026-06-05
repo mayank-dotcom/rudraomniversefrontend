@@ -1625,8 +1625,8 @@ STRICT RULES:
 
                 setIsLoading(false);
 
-                // ── Enhance response for employees via Chat API ──
-                if (showEmployeeView && aiContent && currentChatId) {
+                // ── Enhance response ──
+                if (aiContent && currentChatId && !isImageGenMode) {
                     try {
                         setShowDots(true);
                         const enhanced = await enhanceViaChatApi(trimmedInput, aiContent);
@@ -1644,7 +1644,7 @@ STRICT RULES:
                             });
                         }
                     } catch {
-                        // Use original response if enhancement fails
+                        // Use original if fails
                     } finally {
                         setShowDots(false);
                     }
@@ -1733,8 +1733,8 @@ STRICT RULES:
 
                 setIsLoading(false);
 
-                // ── Enhance response for employees via Chat API ──
-                if (showEmployeeView && aiContent && !isImageGenMode && !isImage) {
+                // ── Enhance response ──
+                if (aiContent && !isImageGenMode && !isImage) {
                     try {
                         setShowDots(true);
                         const enhanced = await enhanceViaChatApi(trimmedInput, aiContent);
@@ -1752,7 +1752,7 @@ STRICT RULES:
                             });
                         }
                     } catch {
-                        // Use original response if enhancement fails
+                        // Use original if fails
                     } finally {
                         setShowDots(false);
                     }

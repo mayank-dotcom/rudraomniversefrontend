@@ -2056,37 +2056,15 @@ export async function sendChatCompletion(payload: {
 
 export async function enhanceViaChatApi(message: string, aiResponse: string): Promise<string> {
   try {
-    const res = await fetch(`${API_BASE}/chat`, {
+    const res = await fetch(`${API_BASE}/enhance`, {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify({
-        messages: [
-          {
-            role: "system",
-            content: `You are a professional response enhancer. Enhance the given AI response to be more professional, detailed, well-structured, and comprehensive.
-
-Rules:
-1. Maintain the original meaning and intent - don't change facts or core information
-2. Improve grammar, clarity, and professionalism
-3. Add relevant structure using markdown where appropriate
-4. Expand on key points with additional relevant context
-5. Keep the tone professional and authoritative
-6. Do NOT add information that contradicts the original response
-7. Do NOT use emojis
-8. Return ONLY the enhanced response text, no explanations or meta commentary`
-          },
-          {
-            role: "user",
-            content: `Original message: ${message}\n\nOriginal AI response: ${aiResponse}\n\nEnhance the above AI response.`
-          }
-        ]
-      }),
+      body: JSON.stringify({ message, ai_response: aiResponse }),
     })
-    const data = await res.json()
-    if (data.success && data.data?.[0]?.message?.content) {
-      return data.data[0].message.content
+    const data = await parseJson<{ success: boolean; enhanced?: string; error?: string }>(res)
+    if (data.success && data.enhanced) {
+      return data.enhanced
     }
-    if (data.response) return data.response
     return aiResponse
   } catch {
     return aiResponse
