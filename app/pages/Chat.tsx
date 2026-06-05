@@ -2711,6 +2711,37 @@ STRICT RULES:
                                 )}
                             </AnimatePresence>
                             {showDots && <DotsLoader isDarkMode={isDarkMode} />}
+
+                            {/* MCQ Options Panel — below the question message */}
+                            {mcqSession && (() => {
+                                const q = mcqSession.questions[mcqSession.currentIndex];
+                                const hasAnswered = mcqSession.answers[mcqSession.currentIndex] !== null;
+                                return (
+                                    <div className={`mb-6 p-6 ${isDarkMode ? "bg-[#0d0d0d] border-white/10" : "bg-[#f5f5f5] border-black/30"} border-2 rounded-2xl`}>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {q.options.map((opt, oi) => {
+                                                const isSelected = mcqSession.answers[mcqSession.currentIndex] === oi;
+                                                return (
+                                                    <button
+                                                        key={oi}
+                                                        onClick={() => handleMcqOptionClick(oi)}
+                                                        disabled={hasAnswered}
+                                                        className={`p-4 rounded-xl border text-xs font-mono text-left transition-all ${isSelected
+                                                            ? `${isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"} font-bold scale-[1.02]`
+                                                            : hasAnswered
+                                                                ? `${isDarkMode ? "border-white/10 text-white/30" : "border-black/20 text-black/30"}`
+                                                                : `${isDarkMode ? "border-white/20 text-white/70 hover:border-white/50 hover:bg-white/5" : "border-black/20 text-black/70 hover:border-black/50 hover:bg-black/5"}`
+                                                            }`}
+                                                    >
+                                                        {opt}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )
+                            })()}
+
                             <div ref={messagesEndRef} />
                         </div>
                     </div>
@@ -2752,36 +2783,6 @@ STRICT RULES:
                                     </motion.div>
                                 )}
                             </AnimatePresence>
-
-                            {/* MCQ Options Panel */}
-                            {mcqSession && (() => {
-                                const q = mcqSession.questions[mcqSession.currentIndex];
-                                const hasAnswered = mcqSession.answers[mcqSession.currentIndex] !== null;
-                                return (
-                                    <div className={`mb-4 p-6 ${isDarkMode ? "bg-[#0d0d0d] border-white/10" : "bg-white border-black/30"} border-2 rounded-2xl`}>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {q.options.map((opt, oi) => {
-                                                const isSelected = mcqSession.answers[mcqSession.currentIndex] === oi;
-                                                return (
-                                                    <button
-                                                        key={oi}
-                                                        onClick={() => handleMcqOptionClick(oi)}
-                                                        disabled={hasAnswered}
-                                                        className={`p-4 rounded-xl border text-xs font-mono text-left transition-all ${isSelected
-                                                            ? `${isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"} font-bold scale-[1.02]`
-                                                            : hasAnswered
-                                                                ? `${isDarkMode ? "border-white/10 text-white/30" : "border-black/20 text-black/30"}`
-                                                                : `${isDarkMode ? "border-white/20 text-white/70 hover:border-white/50 hover:bg-white/5" : "border-black/20 text-black/70 hover:border-black/50 hover:bg-black/5"}`
-                                                            }`}
-                                                    >
-                                                        {opt}
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                    </div>
-                                )
-                            })()}
 
                             {selectedEngine === "AI Image Lab" && (
                                 <div className="hidden sm:block mb-3 w-full">
