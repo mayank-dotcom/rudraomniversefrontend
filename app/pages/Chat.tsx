@@ -8,7 +8,7 @@ import {
     UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Check, Clock, Trash2, Inbox,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
-    Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2, LayoutDashboard, Share
+    Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2, LayoutDashboard, Share, Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
@@ -2548,7 +2548,7 @@ STRICT RULES:
                                                 <div className="flex items-center gap-3 mb-4">
                                                     <span className={`text-[9px] font-mono uppercase tracking-[0.2em] flex items-center gap-1.5 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/80 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/30") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]" : "text-black/60")}`}>
                                                         {msg.role === "assistant" && isLoading && i === messages.length - 1 && (
-                                                            <span className="h-2.5 w-2.5 rounded-full border-2 border-t-transparent animate-spin border-[#00DDDD] inline-block" />
+                                                            <Loader2 className="h-3 w-3 animate-spin text-[#00DDDD] shrink-0" />
                                                         )}
                                                         {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
                                                     </span>

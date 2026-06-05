@@ -32,9 +32,9 @@ const PlanCard = ({ plan, isDarkMode, onEdit }: { plan: any, isDarkMode: boolean
                 const strikeOffVal = (plan.strike_off_price && plan.strike_off_price > 0) ? plan.strike_off_price : getPlanStrikeOff(String(plan.id))?.price_inr;
                 if (strikeOffVal) {
                     return (
-                        <div className="mb-6">
-                            <p className={`text-2xl font-display font-black line-through ${isDarkMode ? "text-white/40" : "text-black/30"}`}>₹{strikeOffVal}</p>
+                        <div className="flex items-baseline gap-2 mb-6">
                             <p className={`text-3xl font-display font-black ${isDarkMode ? "text-white" : "text-black"}`}>₹{plan.price_inr || plan.price}</p>
+                            <p className={`text-lg font-display font-black line-through ${isDarkMode ? "text-white/40" : "text-black/30"}`}>₹{strikeOffVal}</p>
                         </div>
                     )
                 }
