@@ -1966,13 +1966,15 @@ export async function sendAiRequestStream(
 
   let buffer = "";
   let lastChunkTime = Date.now();
+  let toolExecuting = false;
   try {
     while (true) {
+      const timeoutMs = toolExecuting ? 120000 : 5000;
       const result: { done: boolean; value?: Uint8Array } | null = await Promise.race([
         reader.read().then(r => ({ ...r, _timedout: false })),
         new Promise<any>(resolve => {
           const check = () => {
-            if (Date.now() - lastChunkTime >= 5000) {
+            if (Date.now() - lastChunkTime >= timeoutMs) {
               resolve({ done: true, value: undefined, _timedout: true });
             } else {
               setTimeout(check, 500);
@@ -2004,12 +2006,17 @@ export async function sendAiRequestStream(
             onChunk(fullText);
             continue;
           }
+          if (parsed.type === "tool_start") {
+            toolExecuting = true;
+            continue;
+          }
           if (parsed.type === "tool_result" && parsed.content) {
+            toolExecuting = false;
             fullText += parsed.content;
             onChunk(fullText);
             continue;
           }
-          // Skip metadata events (credits, tool_start, error)
+          // Skip metadata events (credits, error)
           if (parsed.type) continue;
 
           // OpenAI-standard delta format (fallback)
