@@ -282,6 +282,14 @@ const Chat = () => {
     const [gmailSending, setGmailSending] = useState(false);
     const [gmailSendResult, setGmailSendResult] = useState("");
     const [gmailAutoStatus, setGmailAutoStatus] = useState("");
+    const [gmailAutoOn, setGmailAutoOn] = useState(false);
+    const [gmailAutoShowModal, setGmailAutoShowModal] = useState(false);
+    const [gmailAutoMode, setGmailAutoMode] = useState<"all" | "to" | null>(null);
+    const [gmailAutoTargetEmail, setGmailAutoTargetEmail] = useState("");
+    const [gmailAutoTone, setGmailAutoTone] = useState("professional");
+    const [gmailAutoSignature, setGmailAutoSignature] = useState("");
+    const [gmailAutoInstructions, setGmailAutoInstructions] = useState("");
+    const [gmailBulkModal, setGmailBulkModal] = useState(false);
     const PLACEHOLDER_TEXTS = useMemo(() => [
         "Describe your query or paste a concept...",
         "Ask me anything about your studies...",
@@ -296,6 +304,7 @@ const Chat = () => {
     const editingInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const bulkFileInputRef = useRef<HTMLInputElement>(null);
     const requestStartTime = useRef<number>(0);
     const engineSelectRef = useRef<HTMLDivElement>(null);
     const stopGenerationRef = useRef(false);
@@ -634,6 +643,60 @@ const Chat = () => {
             setGmailAutoStatus(res.success ? (res.message || "Bulk auto-reply completed ✓") : (res.error || "Failed"));
         } catch (e: any) {
             setGmailAutoStatus("Failed: " + (e.message || "Unknown error"));
+        } finally {
+            setGmailSending(false);
+        }
+    };
+
+    const handleBulkExcelUpload = async (file: File) => {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (!ext || !['xlsx', 'xls', 'csv'].includes(ext)) {
+            setGmailSendResult("Please upload an Excel (.xlsx/.xls) or CSV file");
+            return;
+        }
+        setGmailSending(true);
+        setGmailSendResult("");
+        setGmailAutoStatus("Reading file...");
+        try {
+            const reader = new FileReader();
+            const text = await new Promise<string>((resolve, reject) => {
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = () => reject(new Error("Failed to read file"));
+                if (ext === 'csv') reader.readAsText(file);
+                else reader.readAsArrayBuffer(file);
+            });
+
+            let rows: { email: string; message: string }[];
+            if (ext === 'csv') {
+                rows = text.split('\n').filter(Boolean).slice(1).map(line => {
+                    const [email, message] = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+                    return { email, message };
+                }).filter(r => r.email && r.message);
+            } else {
+                // Excel file — use a simple CSV-like parser for now (or integrate xlsx library)
+                setGmailSendResult("Excel parsing not available. Please use CSV format.");
+                setGmailSending(false);
+                return;
+            }
+
+            if (!rows.length) {
+                setGmailSendResult("No valid rows found. Expected columns: email, message");
+                setGmailSending(false);
+                return;
+            }
+
+            const { sendGoogleEmail } = await import("@/lib/chat-api");
+            let sent = 0, failed = 0;
+            for (const r of rows) {
+                try {
+                    const res = await sendGoogleEmail({ to: r.email, subject: "Message from Rudranex AI", body: r.message });
+                    if (res.success) sent++; else failed++;
+                } catch { failed++; }
+            }
+            setGmailAutoStatus(`Bulk sent: ${sent}✓ ${failed}✗`);
+            setGmailSendResult(`Sent to ${sent}/${rows.length} (${failed} failed)`);
+        } catch (e: any) {
+            setGmailSendResult("Bulk failed: " + (e.message || "Unknown error"));
         } finally {
             setGmailSending(false);
         }
@@ -1290,7 +1353,7 @@ STRICT RULES:
         }
 
         // Gmail mode: if To is filled, polish with AI then show confirmation
-        if (rightSidebarTab === "gmail" && showEmployeeView && gmailConnected && gmailMailTo.trim()) {
+        if (rightSidebarTab === "gmail" && showEmployeeView && gmailMailTo.trim()) {
             setGmailPolishing(true);
             setGmailPolishedBody("");
             setGmailConfirmSend(true);
@@ -2743,21 +2806,24 @@ STRICT RULES:
                                             Send
                                         </button>
                                         <button
-                                            onClick={handleTriggerAutoReply}
-                                            disabled={gmailSending}
-                                            className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all disabled:opacity-30 ${isDarkMode
-                                                ? "border-white/15 text-white/60 hover:border-white/30 hover:text-white"
-                                                : "border-black/15 text-black/60 hover:border-black/30 hover:text-black"
+                                            onClick={() => {
+                                                const next = !gmailAutoOn;
+                                                setGmailAutoOn(next);
+                                                if (next) setGmailAutoShowModal(true);
+                                            }}
+                                            className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all ${gmailAutoOn
+                                                ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/10 border-[#00DDDD] text-[#00DDDD]")
+                                                : (isDarkMode ? "border-white/15 text-white/60 hover:border-white/30 hover:text-white" : "border-black/15 text-black/60 hover:border-black/30 hover:text-black")
                                                 }`}
                                         >
-                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <svg className={`h-3 w-3 ${gmailAutoOn ? "text-[#00DDDD]" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
                                                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                                             </svg>
-                                            Auto
+                                            {gmailAutoOn ? "Auto ON" : "Auto"}
                                         </button>
                                         <button
-                                            onClick={handleTriggerBulkAutoReply}
+                                            onClick={() => setGmailBulkModal(true)}
                                             disabled={gmailSending}
                                             className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all disabled:opacity-30 ${isDarkMode
                                                 ? "border-white/15 text-white/60 hover:border-white/30 hover:text-white"
@@ -2767,7 +2833,7 @@ STRICT RULES:
                                             <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
                                             </svg>
-                                            Bulk Auto
+                                            Bulk
                                         </button>
                                         {gmailSendResult && (
                                             <span className={`text-[8px] font-mono ${gmailSendResult.includes("✓") ? "text-green-500" : "text-red-400"}`}>{gmailSendResult}</span>
@@ -2874,6 +2940,186 @@ STRICT RULES:
                                                 >
                                                     {gmailSending ? "Sending..." : "Send"}
                                                 </button>
+                                            </div>
+                                        </motion.div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* ─── Auto Context Modal ─── */}
+                            <AnimatePresence>
+                                {gmailAutoShowModal && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="fixed inset-0 z-[150] flex items-center justify-center p-4"
+                                        onClick={() => setGmailAutoShowModal(false)}
+                                    >
+                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/40"} backdrop-blur-sm`} />
+                                        <motion.div
+                                            initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                                            exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                            className={`relative w-full max-w-lg rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/10"}`}
+                                        >
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#00DDDD]/10" : "bg-[#00DDDD]/15"}`}>
+                                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="#00DDDD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Auto Email Context</p>
+                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Set tone, signature, and mode for auto-replies</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-3 mb-4">
+                                                <div>
+                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Tone</label>
+                                                    <select value={gmailAutoTone} onChange={(e) => setGmailAutoTone(e.target.value)}
+                                                        className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/[0.02] border-black/10 text-black"}`}
+                                                    >
+                                                        <option value="professional">Professional</option>
+                                                        <option value="casual">Casual</option>
+                                                        <option value="formal">Formal</option>
+                                                        <option value="direct">Direct</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Signature (optional)</label>
+                                                    <textarea value={gmailAutoSignature} onChange={(e) => setGmailAutoSignature(e.target.value)} rows={2}
+                                                        className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none resize-none ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white/80" : "bg-black/[0.02] border-black/10 text-black/80"}`}
+                                                        placeholder="Best regards,&#10;John Doe"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Instructions (optional)</label>
+                                                    <textarea value={gmailAutoInstructions} onChange={(e) => setGmailAutoInstructions(e.target.value)} rows={3}
+                                                        className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none resize-none ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white/80" : "bg-black/[0.02] border-black/10 text-black/80"}`}
+                                                        placeholder="Be concise, always include a call to action..."
+                                                    />
+                                                </div>
+
+                                                <div className="flex items-center gap-2 pt-2">
+                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Mode:</label>
+                                                    <button
+                                                        onClick={() => setGmailAutoMode(gmailAutoMode === "all" ? null : "all")}
+                                                        className={`px-2.5 py-1 text-[8px] font-mono rounded border transition-all ${gmailAutoMode === "all"
+                                                            ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/10 border-[#00DDDD] text-[#00DDDD]")
+                                                            : (isDarkMode ? "border-white/15 text-white/50" : "border-black/15 text-black/50")
+                                                            }`}
+                                                    >
+                                                        Auto All
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setGmailAutoMode(gmailAutoMode === "to" ? null : "to")}
+                                                        className={`px-2.5 py-1 text-[8px] font-mono rounded border transition-all ${gmailAutoMode === "to"
+                                                            ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/10 border-[#00DDDD] text-[#00DDDD]")
+                                                            : (isDarkMode ? "border-white/15 text-white/50" : "border-black/15 text-black/50")
+                                                            }`}
+                                                    >
+                                                        Auto To
+                                                    </button>
+                                                </div>
+                                                {gmailAutoMode === "to" && (
+                                                    <div>
+                                                        <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Target Email</label>
+                                                        <input type="email" value={gmailAutoTargetEmail} onChange={(e) => setGmailAutoTargetEmail(e.target.value)}
+                                                            className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/[0.02] border-black/10 text-black"}`}
+                                                            placeholder="someone@example.com"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center gap-2 justify-end">
+                                                <button onClick={() => { setGmailAutoShowModal(false); setGmailAutoOn(false); setGmailAutoMode(null); }}
+                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/50 hover:bg-white/10" : "text-black/50 hover:bg-black/10"}`}
+                                                >Cancel</button>
+                                                <button onClick={() => {
+                                                    setGmailAutoShowModal(false);
+                                                    if (gmailAutoMode === "all") {
+                                                        handleTriggerAutoReply();
+                                                    } else if (gmailAutoMode === "to" && gmailAutoTargetEmail.trim()) {
+                                                        setGmailMailTo(gmailAutoTargetEmail.trim());
+                                                        setGmailConfirmSend(true);
+                                                    }
+                                                }} disabled={!gmailAutoMode || (gmailAutoMode === "to" && !gmailAutoTargetEmail.trim())}
+                                                    className={`px-4 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all disabled:opacity-50 ${isDarkMode ? "bg-[#00DDDD] text-black hover:bg-[#00DDDD]/90" : "bg-[#00DDDD] text-black hover:bg-[#00DDDD]/90"}`}
+                                                >Apply</button>
+                                            </div>
+                                        </motion.div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* ─── Bulk Email Modal (Excel Upload) ─── */}
+                            <AnimatePresence>
+                                {gmailBulkModal && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="fixed inset-0 z-[150] flex items-center justify-center p-4"
+                                        onClick={() => setGmailBulkModal(false)}
+                                    >
+                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/40"} backdrop-blur-sm`} />
+                                        <motion.div
+                                            initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                                            exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                            className={`relative w-full max-w-md rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/10"}`}
+                                        >
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
+                                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="#EA4335" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Bulk Email Send</p>
+                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Upload Excel file with columns: email, message</p>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                onDragOver={(e) => e.preventDefault()}
+                                                onDrop={(e) => {
+                                                    e.preventDefault();
+                                                    const file = e.dataTransfer.files[0];
+                                                    if (file) handleBulkExcelUpload(file);
+                                                }}
+                                                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${isDarkMode ? "border-white/20 hover:border-[#00DDDD]/50 text-white/40" : "border-black/20 hover:border-[#00DDDD]/50 text-black/40"}`}
+                                                onClick={() => bulkFileInputRef.current?.click()}
+                                            >
+                                                <svg className="h-8 w-8 mx-auto mb-2 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+                                                </svg>
+                                                <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Drop Excel file here or click to browse</p>
+                                                <p className={`text-[7px] font-mono mt-1 ${isDarkMode ? "text-white/20" : "text-black/20"}`}>Columns: email, message</p>
+                                            </div>
+                                            <input ref={bulkFileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleBulkExcelUpload(file);
+                                                e.target.value = "";
+                                            }} />
+
+                                            {gmailSending && (
+                                                <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-white/[0.03]">
+                                                    <div className="h-3 w-3 rounded-full border-2 border-t-transparent animate-spin border-[#00DDDD]" />
+                                                    <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/50" : "text-black/50"}`}>Sending emails...</span>
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center gap-2 justify-end mt-3">
+                                                <button onClick={() => setGmailBulkModal(false)}
+                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/50 hover:bg-white/10" : "text-black/50 hover:bg-black/10"}`}
+                                                >Close</button>
                                             </div>
                                         </motion.div>
                                     </motion.div>
