@@ -125,6 +125,19 @@ const isImageContent = (content: string): boolean => {
     return false;
 };
 
+const hasEmbeddedImage = (content: string): string | null => {
+    if (!content) return null;
+    const dataUriMatch = content.match(/!\[.*?\]\((data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)\)/);
+    if (dataUriMatch) return dataUriMatch[1];
+    const urlMatch = content.match(/!\[.*?\]\((https?:\/\/[^\s)]+\.(?:png|jpe?g|gif|webp|svg|bmp)(?:\?.*?)?)\)/);
+    if (urlMatch) return urlMatch[1];
+    return null;
+};
+
+const stripEmbeddedImage = (content: string): string => {
+    return content.replace(/!\[.*?\]\((data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)\)/g, '').replace(/!\[.*?\]\((https?:\/\/[^\s)]+\.(?:png|jpe?g|gif|webp|svg|bmp)(?:\?.*?)?)\)/g, '').replace(/\n{3,}/g, '\n\n').trim();
+};
+
 const buildChatTitle = (value: string) => {
     const normalized = value.trim().replace(/\s+/g, " ");
     if (!normalized) return "New Chat";
@@ -2446,14 +2459,55 @@ STRICT RULES:
                                                                 <span className="text-[10px] font-mono uppercase tracking-wider font-bold pr-1">Download</span>
                                                             </button>
                                                         </div>
-                                                    ) : (
-                                                        <MarkdownRenderer 
-                                                            content={msg.content} 
-                                                            isDarkMode={isDarkMode} 
-                                                            onDownloadImage={handleDownloadImage}
-                                                            isImageCompact={selectedEngine !== "AI Image Lab"}
-                                                        />
-                                                    )}
+                                                    ) : (() => {
+                                                        const embedImgUrl = hasEmbeddedImage(msg.content);
+                                                        if (embedImgUrl) {
+                                                            const textOnly = stripEmbeddedImage(msg.content);
+                                                            return (
+                                                                <div className="flex flex-col gap-3">
+                                                                    {textOnly && (
+                                                                        <MarkdownRenderer 
+                                                                            content={textOnly} 
+                                                                            isDarkMode={isDarkMode} 
+                                                                            onDownloadImage={handleDownloadImage}
+                                                                            isImageCompact={selectedEngine !== "AI Image Lab"}
+                                                                        />
+                                                                    )}
+                                                                    <div className={`relative group/img-wrapper ${
+                                                                        selectedEngine === "AI Image Lab"
+                                                                            ? "max-w-[450px]"
+                                                                            : "max-w-[280px] md:max-w-[320px]"
+                                                                    }`}>
+                                                                        <img
+                                                                            src={embedImgUrl}
+                                                                            alt="Generated image"
+                                                                            className={`w-full object-contain rounded-2xl border border-white/10 shadow-2xl transition-transform duration-300 group-hover/img-wrapper:scale-[1.01] ${
+                                                                                selectedEngine === "AI Image Lab"
+                                                                                    ? "max-h-[350px]"
+                                                                                    : "max-h-[200px] md:max-h-[240px]"
+                                                                            }`}
+                                                                        />
+                                                                        <button
+                                                                            onClick={() => handleDownloadImage(embedImgUrl)}
+                                                                            title="Download Image"
+                                                                            className="absolute top-4 right-4 p-3 rounded-full bg-black/80 hover:bg-black text-white hover:text-[#00DDDD] border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1.5 hover:scale-105 active:scale-95"
+                                                                        >
+                                                                            <FileDown className="h-4 w-4" />
+                                                                            <span className="text-[10px] font-mono uppercase tracking-wider font-bold pr-1">Download</span>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <MarkdownRenderer 
+                                                                content={msg.content} 
+                                                                isDarkMode={isDarkMode} 
+                                                                onDownloadImage={handleDownloadImage}
+                                                                isImageCompact={selectedEngine !== "AI Image Lab"}
+                                                            />
+                                                        );
+                                                    })()}
 
                                                     {msg.role === "assistant" && responseTime !== null && i === messages.length - 1 && (
                                                         <div className={`text-[8px] font-mono mt-4 text-right ${isDarkMode ? "text-white" : "text-black"}`}>
