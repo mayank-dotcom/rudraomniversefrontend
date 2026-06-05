@@ -26,6 +26,7 @@ import {
     sendAiRequest,
     sendAiRequestStream,
     sendMessageFeedback,
+    enhanceChatResponse,
     getSubscriptionStatus,
     getPlanFeatures,
     getFeatureIdForEngine,
@@ -1624,6 +1625,31 @@ STRICT RULES:
 
                 setIsLoading(false);
 
+                // ── Enhance response for employees ──
+                if (showEmployeeView && aiContent && currentChatId) {
+                    try {
+                        setShowDots(true);
+                        const enhanceResult = await enhanceChatResponse(trimmedInput, aiContent);
+                        if (enhanceResult.success && enhanceResult.enhanced_response) {
+                            aiContent = enhanceResult.enhanced_response;
+                            setMessages((prev) => {
+                                const updated = [...prev];
+                                for (let i = updated.length - 1; i >= 0; i--) {
+                                    if (updated[i].role === "assistant") {
+                                        updated[i] = { ...updated[i], content: aiContent };
+                                        break;
+                                    }
+                                }
+                                return updated;
+                            });
+                        }
+                    } catch {
+                        // Use original response if enhancement fails
+                    } finally {
+                        setShowDots(false);
+                    }
+                }
+
                 if (currentChatId && aiContent) {
                     try {
                         const [savedUser, savedAssistant] = await Promise.all([
@@ -1706,6 +1732,31 @@ STRICT RULES:
                 });
 
                 setIsLoading(false);
+
+                // ── Enhance response for employees ──
+                if (showEmployeeView && aiContent && !isImageGenMode && !isImage) {
+                    try {
+                        setShowDots(true);
+                        const enhanceResult = await enhanceChatResponse(trimmedInput, aiContent);
+                        if (enhanceResult.success && enhanceResult.enhanced_response) {
+                            aiContent = enhanceResult.enhanced_response;
+                            setMessages((prev) => {
+                                const updated = [...prev];
+                                for (let i = updated.length - 1; i >= 0; i--) {
+                                    if (updated[i].role === "assistant") {
+                                        updated[i] = { ...updated[i], content: aiContent };
+                                        break;
+                                    }
+                                }
+                                return updated;
+                            });
+                        }
+                    } catch {
+                        // Use original response if enhancement fails
+                    } finally {
+                        setShowDots(false);
+                    }
+                }
 
                 if (isImageGenMode) {
                     saveImageToHistory(userMessage, { role: "assistant", content: aiContent, timestamp: formatTimestamp() });
@@ -2553,6 +2604,11 @@ STRICT RULES:
                                                         {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
                                                     </span>
                                                     <span className={`text-[9px] font-mono ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/60 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/20") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]" : "text-black/60")}`}>{msg.timestamp}</span>
+                                                    {msg.role === "assistant" && showEmployeeView && !(isLoading && i === messages.length - 1) && (
+                                                        <span className={`text-[8px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border ${isDarkMode ? "border-[#00DDDD]/40 text-[#00DDDD]/80" : "border-[#00AAAA]/40 text-[#00AAAA]/80"}`}>
+                                                            Enhanced
+                                                        </span>
+                                                    )}
                                                 </div>
 
                                                 <div className={`py-1.5 px-4 md:py-2 md:px-5 ${msg.role === "user"

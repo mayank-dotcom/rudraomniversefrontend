@@ -2054,6 +2054,26 @@ export async function sendChatCompletion(payload: {
   })
 }
 
+export interface EnhanceChatResponse {
+  success: boolean
+  original_response?: string
+  enhanced_response?: string
+  error?: string
+}
+
+export async function enhanceChatResponse(message: string, aiResponse: string): Promise<EnhanceChatResponse> {
+  const res = await fetch(`${API_BASE}/enhance-chat`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ message, ai_response: aiResponse }),
+  })
+  const data = await parseJson<EnhanceChatResponse>(res)
+  if (!res.ok || !data.success) {
+    return { success: false, enhanced_response: aiResponse, error: data.error || "Failed to enhance response" }
+  }
+  return data
+}
+
 export async function generateTTSAudio(text: string, language: string = 'hi-IN') {
   try {
     const res = await fetch(`${API_BASE}/tts/generate`, {
