@@ -53,7 +53,8 @@ import {
   FolderOpen,
   Download,
   Share2,
-  Move
+  Move,
+  Menu
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -128,6 +129,7 @@ export default function LibraryPage() {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false)
   const [moveAssetId, setMoveAssetId] = useState<string | null>(null)
   const [expandedAsset, setExpandedAsset] = useState<LibraryAsset | null>(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   
   // Fetch assets and galleries from backend
   const fetchAssets = useCallback(async () => {
@@ -570,8 +572,18 @@ export default function LibraryPage() {
       {/* Main Core Layout: Sidebar + Grid View */}
       <div className="pt-20 flex min-h-[calc(100vh-80px)]">
         
+        {/* Backdrop Overlay for Mobile Sidebar */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 top-20 bg-black/50 backdrop-blur-sm z-25 md:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
         {/* ================= LEFT SIDEBAR ================= */}
-        <aside className={`w-64 border-r flex flex-col justify-between select-none shrink-0 sticky top-20 h-[calc(100vh-80px)] overflow-y-auto scrollbar-hide transition-colors duration-300 ${
+        <aside className={`fixed md:sticky top-20 left-0 z-30 md:z-auto h-[calc(100vh-80px)] w-64 border-r flex flex-col justify-between select-none shrink-0 overflow-y-auto scrollbar-hide transition-all duration-300 ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        } ${
           isDarkMode ? "border-white/5 bg-[#08080a]" : "border-black/5 bg-[#f1f3f5]"
         }`}>
           
@@ -583,7 +595,7 @@ export default function LibraryPage() {
               </span>
               
               <button
-                onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); }}
+                onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); setIsSidebarOpen(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "featured"
                     ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
@@ -598,7 +610,7 @@ export default function LibraryPage() {
               </button>
 
               <button
-                onClick={() => { setActiveCategory("public_showcase"); setIsUploadDragging(false); }}
+                onClick={() => { setActiveCategory("public_showcase"); setIsUploadDragging(false); setIsSidebarOpen(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "public_showcase"
                     ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
@@ -613,7 +625,7 @@ export default function LibraryPage() {
               </button>
 
               <button
-                onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); }}
+                onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); setIsSidebarOpen(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "recent"
                     ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
@@ -628,7 +640,7 @@ export default function LibraryPage() {
               </button>
 
               <button
-                onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); }}
+                onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); setIsSidebarOpen(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "saved"
                     ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
@@ -666,7 +678,7 @@ export default function LibraryPage() {
               </div>
 
               <button
-                onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); }}
+                onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); setIsSidebarOpen(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
                   activeCategory === "all"
                     ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
@@ -701,6 +713,7 @@ export default function LibraryPage() {
                         setSelectedGalleryId(g.id);
                         setActiveCategory("gallery");
                         setIsUploadDragging(false);
+                        setIsSidebarOpen(false);
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-left transition-all font-sans ${
                         isSelected
@@ -736,12 +749,12 @@ export default function LibraryPage() {
         </aside>
 
         {/* ================= RIGHT MAIN CONTENT GRID ================= */}
-        <main className={`flex-1 overflow-y-auto px-8 py-8 pb-32 relative transition-colors duration-300 ${
+        <main className={`flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 pb-32 relative transition-colors duration-300 ${
           isDarkMode ? "bg-[#09090b] bg-mesh" : "bg-[#f8f9fa]"
         }`}>
           
           {/* Header */}
-          <div className={`flex justify-between items-end mb-6 border-b pb-5 transition-colors duration-300 ${
+          <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 border-b pb-5 transition-colors duration-300 ${
             isDarkMode ? "border-white/5" : "border-black/5"
           }`}>
             <div>
@@ -763,6 +776,17 @@ export default function LibraryPage() {
               </div>
               
               <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  className={`md:hidden p-2 rounded-lg border transition-colors ${
+                    isDarkMode
+                      ? "bg-white/5 border-white/10 text-white hover:bg-white/10"
+                      : "bg-white border-black/10 text-black hover:bg-black/[0.03]"
+                  }`}
+                  title="Toggle Sidebar"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
                 <h1 className="text-2xl font-display font-semibold tracking-tight flex items-center gap-3">
                   {activeCategory === "featured" && "Featured Concept Showcase"}
                   {activeCategory === "public_showcase" && "Community Shared Prompts"}
@@ -1260,17 +1284,17 @@ export default function LibraryPage() {
           </div>
 
           {/* ================= FLOATING FILTER BAR ================= */}
-          <div className="fixed bottom-6 left-[calc(50%+128px)] -translate-x-1/2 flex flex-col items-center gap-3 z-40 max-w-[1000px] w-[95%] md:w-[80%] shrink-0">
+          <div className="fixed bottom-6 left-1/2 md:left-[calc(50%+128px)] -translate-x-1/2 flex flex-col items-center gap-3 z-40 max-w-[1000px] w-[95%] md:w-[80%] shrink-0">
             
             {/* Core Pill Bar */}
-            <div className={`w-full flex items-center justify-between gap-3 p-2 border rounded-full transition-all duration-300 ${
+            <div className={`w-full flex flex-wrap md:flex-nowrap items-center justify-between gap-2 p-2 border rounded-2xl md:rounded-full transition-all duration-300 ${
               isDarkMode
                 ? "bg-[#101014]/90 border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-white/20"
                 : "bg-white border-black/10 shadow-[0_10px_30px_rgba(0,0,0,0.08)] hover:border-black/20"
             }`}>
               
               {/* Middle Configurations Pills */}
-              <div className="flex items-center gap-2 select-none text-[10px] font-sans font-medium shrink-0">
+              <div className="flex items-center gap-1.5 select-none text-[10px] font-sans font-medium shrink-0 w-full sm:w-auto justify-between sm:justify-start">
                 
                 {/* Created On filter */}
                 <button
@@ -1278,7 +1302,8 @@ export default function LibraryPage() {
                   className="px-4 py-2 rounded-full bg-[#00DDDD] text-black font-semibold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 border-none shadow-[0_0_15px_rgba(0,221,221,0.2)]"
                 >
                   <Clock className="h-3.5 w-3.5" />
-                  <span>Created: {createdOnFilter === "all" ? "All Time" : createdOnFilter === "today" ? "Today" : createdOnFilter === "week" ? "Last 7 Days" : "Last 30 Days"}</span>
+                  <span className="hidden sm:inline">Created: {createdOnFilter === "all" ? "All Time" : createdOnFilter === "today" ? "Today" : createdOnFilter === "week" ? "Last 7 Days" : "Last 30 Days"}</span>
+                  <span className="sm:hidden">{createdOnFilter === "all" ? "All" : createdOnFilter === "today" ? "Today" : createdOnFilter === "week" ? "7 Days" : "30 Days"}</span>
                 </button>
 
                 {/* Personal/Community filter */}
@@ -1287,7 +1312,8 @@ export default function LibraryPage() {
                   className="px-4 py-2 rounded-full bg-[#00DDDD] text-black font-semibold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 border-none shadow-[0_0_15px_rgba(0,221,221,0.2)]"
                 >
                   <Globe className="h-3.5 w-3.5" />
-                  <span>Source: {sourceFilter === "all" ? "All" : sourceFilter === "personal" ? "Personal" : "Community"}</span>
+                  <span className="hidden sm:inline">Source: {sourceFilter === "all" ? "All" : sourceFilter === "personal" ? "Personal" : "Community"}</span>
+                  <span className="sm:hidden">{sourceFilter === "all" ? "All" : sourceFilter === "personal" ? "Pers." : "Comm."}</span>
                 </button>
 
               </div>
