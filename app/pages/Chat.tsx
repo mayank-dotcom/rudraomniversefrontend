@@ -2095,7 +2095,8 @@ STRICT RULES:
                                                 <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
                                                 <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : "Pro Member"}</span>
                             </div>
-                        </div>
+                        )}
+                                    </div>
                                 <div className="flex items-center gap-2">
                                     {isGlobalAdmin && (
                                         <button
@@ -3110,7 +3111,8 @@ STRICT RULES:
                                                             placeholder="someone@example.com"
                                                         />
                             </div>
-                        </div>
+                        )}
+                                            </div>
 
                                             <div className="flex items-center gap-2 justify-end">
                                                 <button onClick={() => { setGmailAutoShowModal(false); setGmailAutoOn(false); setGmailAutoMode(null); }}
