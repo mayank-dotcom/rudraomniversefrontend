@@ -2507,15 +2507,17 @@ async function googleFetch(url: string, options?: RequestInit) {
     ...options,
     headers: { "x-api-key": getApiKey() || "", ...options?.headers as Record<string, string> }
   })
-  if (!res.ok) {
-    return { success: false as const, error: `Request failed with status ${res.status}` }
-  }
   const text = await res.text()
+  let parsed: any
   try {
-    return JSON.parse(text)
+    parsed = JSON.parse(text)
   } catch {
-    return { success: false as const, error: "Invalid response from server" }
+    parsed = null
   }
+  if (!res.ok) {
+    return { success: false as const, error: parsed?.error || parsed?.details || `Request failed with status ${res.status}` }
+  }
+  return parsed || { success: false as const, error: "Invalid response from server" }
 }
 
 export async function getGoogleAuthUrl(redirectUri?: string) {
