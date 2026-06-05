@@ -1429,7 +1429,8 @@ STRICT RULES:
                         { role: "user", content: trimmedInput }
                     ]
                 });
-                setGmailPolishedBody((res as any)?.choices?.[0]?.message?.content || trimmedInput);
+                const polished = (res as any)?.response || res.data?.[0]?.message?.content || trimmedInput;
+                setGmailPolishedBody(polished);
             } catch {
                 setGmailPolishedBody(trimmedInput);
             }
