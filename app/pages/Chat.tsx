@@ -2716,8 +2716,27 @@ STRICT RULES:
                             {mcqSession && (() => {
                                 const q = mcqSession.questions[mcqSession.currentIndex];
                                 const hasAnswered = mcqSession.answers[mcqSession.currentIndex] !== null;
+                                const totalQ = mcqSession.questions.length;
                                 return (
                                     <div className={`mb-6 p-6 ${isDarkMode ? "bg-[#0d0d0d] border-white/10" : "bg-[#f5f5f5] border-black/30"} border-2 rounded-2xl`}>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                                                    Q{mcqSession.currentIndex + 1}/{totalQ}
+                                                </span>
+                                                {mcqSession.examType && (
+                                                    <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                                                        {mcqSession.examType}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={() => setMcqSession(null)}
+                                                className={`flex items-center gap-1 px-2.5 py-1 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all ${isDarkMode ? "border-red-500/40 text-red-400 hover:border-red-500 hover:text-red-500" : "border-red-500/50 text-red-600 hover:border-red-500 hover:text-red-700"}`}
+                                            >
+                                                Exit Quiz
+                                            </button>
+                                        </div>
                                         <div className="grid grid-cols-2 gap-3">
                                             {q.options.map((opt, oi) => {
                                                 const isSelected = mcqSession.answers[mcqSession.currentIndex] === oi;
@@ -3195,6 +3214,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                 )}
                             </AnimatePresence>
 
+                            {!mcqSession && (
                             <div id="walkthrough-input-area" className={`relative flex border-2 transition-all duration-300 ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
                                 <div className="flex-1 min-w-0 flex">
                                     <div className="flex items-center gap-1 md:gap-2 pl-1.5 md:pl-3 pt-3 pb-2.5 self-end">
@@ -3390,6 +3410,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                     )}
                                 </div>
                             </div>
+                            )}
                         </div>
                     </div>
                 </div>
