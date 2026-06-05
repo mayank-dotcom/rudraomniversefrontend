@@ -495,8 +495,14 @@ const Chat = () => {
             if (gmailAutoMode === "all") {
                 const { triggerGoogleAutoReplyAll } = await import("@/lib/chat-api");
                 const res = await triggerGoogleAutoReplyAll(5);
-                if (res.success && res.replied && res.replied > 0) {
-                    setGmailAutoStatus(`Auto-replied to ${res.replied} email(s) ✓`);
+                if (res.success) {
+                    if (res.replied && res.replied > 0) {
+                        setGmailAutoStatus(`Auto-replied to ${res.replied} email(s) ✓`);
+                    } else {
+                        setGmailAutoStatus("Watching all emails...");
+                    }
+                } else {
+                    setGmailAutoStatus(res.error || "Auto-reply failed");
                 }
             } else if (gmailAutoMode === "to" && gmailAutoTargetEmail.trim()) {
                 const { getGoogleAgentUnread, triggerGoogleAutoReply } = await import("@/lib/chat-api");
@@ -506,16 +512,26 @@ const Chat = () => {
                     const matching = unreadRes.emails.filter(
                         (e: any) => e.from?.toLowerCase().includes(target)
                     );
-                    for (const email of matching) {
-                        if (!gmailAutoOn) break;
-                        const replyRes = await triggerGoogleAutoReply(email.id);
-                        if (replyRes.success) {
-                            setGmailAutoStatus(`Auto-replied to ${target} ✓`);
+                    if (matching.length > 0) {
+                        for (const email of matching) {
+                            if (!gmailAutoOn) break;
+                            const replyRes = await triggerGoogleAutoReply(email.id);
+                            if (replyRes?.success) {
+                                setGmailAutoStatus(`Auto-replied to ${target} ✓`);
+                            } else {
+                                setGmailAutoStatus(replyRes?.error || `Reply to ${target} failed`);
+                            }
                         }
+                    } else {
+                        setGmailAutoStatus(`Watching ${gmailAutoTargetEmail}...`);
                     }
+                } else {
+                    setGmailAutoStatus(unreadRes?.error || `Watching ${gmailAutoTargetEmail}...`);
                 }
             }
-        } catch { /* silent — retry on next interval */ }
+        } catch (e: any) {
+            setGmailAutoStatus("Auto-reply error: " + (e.message || "Unknown"));
+        }
         finally { gmailAutoRunningRef.current = false; }
     }, [gmailAutoOn, gmailAutoMode, gmailAutoTargetEmail]);
 
