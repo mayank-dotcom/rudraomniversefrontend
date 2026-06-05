@@ -1453,7 +1453,7 @@ export default function LibraryPage() {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Image Container - 80% width on desktop */}
-              <div className="flex-[4] flex items-center justify-center bg-black/60 p-3 md:p-6 relative min-h-[40vh] md:min-h-0">
+              <div id="expanded-image-wrap" className="flex-[4] flex items-center justify-center bg-black/60 p-3 md:p-6 relative min-h-[40vh] md:min-h-0">
                 <img
                   src={expandedAsset.asset_url}
                   alt={expandedAsset.prompt || "Concept visual"}
@@ -1595,16 +1595,36 @@ export default function LibraryPage() {
 
                 {/* Bottom actions */}
                 <div className={`px-5 py-3 border-t space-y-2 shrink-0 ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`}>
-                  <a
-                    href={expandedAsset.asset_url}
-                    download={`rudra-${expandedAsset.id}.png`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider bg-[#00DDDD] text-black hover:bg-[#00c5c5] transition-all active:scale-[0.98] shadow-lg shadow-[#00dddd]/10"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Download Image
-                  </a>
+                  <div className="grid grid-cols-2 gap-2">
+                    <a
+                      href={expandedAsset.asset_url}
+                      download={`rudra-${expandedAsset.id}.png`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider bg-[#00DDDD] text-black hover:bg-[#00c5c5] transition-all active:scale-[0.98] shadow-lg shadow-[#00dddd]/10"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Download
+                    </a>
+                    <button
+                      onClick={() => {
+                        const el = document.getElementById("expanded-image-wrap")
+                        if (el?.requestFullscreen) {
+                          el.requestFullscreen()
+                        } else {
+                          window.open(expandedAsset.asset_url, "_blank")
+                        }
+                      }}
+                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider border transition-all active:scale-[0.98] ${
+                        isDarkMode
+                          ? "border-white/[0.06] text-white/60 hover:border-white/20 hover:text-white"
+                          : "border-black/[0.06] text-black/60 hover:border-black/20 hover:text-black"
+                      }`}
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" />
+                      Fullscreen
+                    </button>
+                  </div>
                   <button
                     onClick={() => { navigator.clipboard.writeText(expandedAsset.asset_url); toast.success("Image URL copied!"); }}
                     className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider border transition-all active:scale-[0.98] ${

@@ -28,7 +28,8 @@ import {
     sendMessageFeedback,
     getSubscriptionStatus,
     getPlanFeatures,
-    getFeatureIdForEngine
+    getFeatureIdForEngine,
+    discontinueAccount
 } from "@/lib/chat-api";
 import { processFile, ProcessedFile } from "@/lib/file-processor";
 import { toast } from "sonner";
@@ -478,6 +479,33 @@ const Chat = () => {
         window.addEventListener("storage", handleStorage)
         return () => window.removeEventListener("storage", handleStorage)
     }, [rightSidebarTab, isRightSidebarCollapsed, fetchGmailEmails])
+
+    const handleDiscontinueAccount = async () => {
+        const confirmDelete = window.confirm(
+            "Are you sure you want to discontinue your account? All your chats, custom personas, and settings will be permanently deleted. This action cannot be undone."
+        );
+        if (!confirmDelete) return;
+
+        try {
+            await discontinueAccount();
+            toast.success("Account deleted successfully.");
+            
+            // Clear all credentials
+            removeApiKey();
+            removeUserInfo();
+            removeUserRole();
+            removeSchoolName();
+            removeEnterpriseName();
+            setStoredActiveChatId(null);
+            setAuthed(false);
+            setUserName("");
+            setUserEmail("");
+            window.location.href = "/";
+        } catch (error: any) {
+            console.error("Failed to delete account:", error);
+            toast.error(error.message || "Failed to delete account. Please try again.");
+        }
+    };
 
     const handleConnectGmail = async () => {
         setGmailConnecting(true)
@@ -3013,7 +3041,7 @@ STRICT RULES:
                                     ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
                                     : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")}`}
                             >
-                                Usage
+                                Settings
                             </button>
                             {!showEmployeeView && (
                                 <button
@@ -3210,6 +3238,19 @@ STRICT RULES:
                                             </button>
                                         </Link>
                                     ) : null}
+
+                                    {!getSchoolName() && !getEnterpriseName() && userRole !== "global_admin" && (
+                                        <div className={`mt-8 ${isMobile ? "mb-10" : ""}`}>
+                                            <button
+                                                onClick={handleDiscontinueAccount}
+                                                className={`w-full py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all border rounded-md font-bold ${isDarkMode
+                                                    ? "border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                                                    : "border-red-500/30 text-red-600 hover:bg-red-500/5 hover:border-red-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.15)]"}`}
+                                            >
+                                                discontinue
+                                            </button>
+                                        </div>
+                                    )}
                                 </>
                             )}
 

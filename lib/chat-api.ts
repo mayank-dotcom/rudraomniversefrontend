@@ -217,6 +217,19 @@ export async function getWalletProfile() {
   return data
 }
 
+export async function discontinueAccount() {
+  const res = await fetch(`${API_BASE}/user/discontinue`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to discontinue account.")
+  }
+  return data
+}
+
+
 export interface ReferralStatsResponse {
   success: boolean
   my_referral_code: string
