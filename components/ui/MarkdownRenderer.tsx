@@ -146,8 +146,13 @@ export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage,
         // Remove anything related to kroki.io (markdown images, plain URLs)
         processed = processed.replace(/!\[.*?\]\(https?:\/\/kroki\.io[^\s)]*\)/g, '');
         processed = processed.replace(/https?:\/\/kroki\.io\/\S+/g, '');
-        // Remove unwanted diagram-like markdown images from any external renderer
-        processed = processed.replace(/!\[(?:Diagram|Chart|Visual|Image).*?\]\(https?:\/\/[^\s)]+\)/g, '');
+        // Remove unwanted diagram-like markdown images from any external renderer, but allow mermaid.ink and pollinations.ai
+        processed = processed.replace(/!\[(?:Diagram|Chart|Visual|Image).*?\]\((https?:\/\/[^\s)]+)\)/g, (match, url) => {
+            if (url.includes('mermaid.ink') || url.includes('pollinations.ai')) {
+                return match;
+            }
+            return '';
+        });
 
         if (blocks.length > 1) {
             // If there are duplicate consecutive mermaid blocks, keep only the first of each duplicate pair
