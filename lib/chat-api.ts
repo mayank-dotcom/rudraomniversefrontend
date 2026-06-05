@@ -2054,24 +2054,43 @@ export async function sendChatCompletion(payload: {
   })
 }
 
-export interface EnhanceChatResponse {
-  success: boolean
-  original_response?: string
-  enhanced_response?: string
-  error?: string
-}
+export async function enhanceViaChatApi(message: string, aiResponse: string): Promise<string> {
+  try {
+    const res = await fetch(`${API_BASE}/chat`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "system",
+            content: `You are a professional response enhancer. Enhance the given AI response to be more professional, detailed, well-structured, and comprehensive.
 
-export async function enhanceChatResponse(message: string, aiResponse: string): Promise<EnhanceChatResponse> {
-  const res = await fetch(`${API_BASE}/enhance-chat`, {
-    method: "POST",
-    headers: getHeaders(),
-    body: JSON.stringify({ message, ai_response: aiResponse }),
-  })
-  const data = await parseJson<EnhanceChatResponse>(res)
-  if (!res.ok || !data.success) {
-    return { success: false, enhanced_response: aiResponse, error: data.error || "Failed to enhance response" }
+Rules:
+1. Maintain the original meaning and intent - don't change facts or core information
+2. Improve grammar, clarity, and professionalism
+3. Add relevant structure using markdown where appropriate
+4. Expand on key points with additional relevant context
+5. Keep the tone professional and authoritative
+6. Do NOT add information that contradicts the original response
+7. Do NOT use emojis
+8. Return ONLY the enhanced response text, no explanations or meta commentary`
+          },
+          {
+            role: "user",
+            content: `Original message: ${message}\n\nOriginal AI response: ${aiResponse}\n\nEnhance the above AI response.`
+          }
+        ]
+      }),
+    })
+    const data = await res.json()
+    if (data.success && data.data?.[0]?.message?.content) {
+      return data.data[0].message.content
+    }
+    if (data.response) return data.response
+    return aiResponse
+  } catch {
+    return aiResponse
   }
-  return data
 }
 
 export async function generateTTSAudio(text: string, language: string = 'hi-IN') {

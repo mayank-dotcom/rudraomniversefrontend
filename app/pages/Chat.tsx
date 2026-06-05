@@ -26,7 +26,7 @@ import {
     sendAiRequest,
     sendAiRequestStream,
     sendMessageFeedback,
-    enhanceChatResponse,
+    enhanceViaChatApi,
     getSubscriptionStatus,
     getPlanFeatures,
     getFeatureIdForEngine,
@@ -1625,13 +1625,13 @@ STRICT RULES:
 
                 setIsLoading(false);
 
-                // ── Enhance response for employees ──
+                // ── Enhance response for employees via Chat API ──
                 if (showEmployeeView && aiContent && currentChatId) {
                     try {
                         setShowDots(true);
-                        const enhanceResult = await enhanceChatResponse(trimmedInput, aiContent);
-                        if (enhanceResult.success && enhanceResult.enhanced_response) {
-                            aiContent = enhanceResult.enhanced_response;
+                        const enhanced = await enhanceViaChatApi(trimmedInput, aiContent);
+                        if (enhanced && enhanced !== aiContent) {
+                            aiContent = enhanced;
                             setMessages((prev) => {
                                 const updated = [...prev];
                                 for (let i = updated.length - 1; i >= 0; i--) {
@@ -1733,13 +1733,13 @@ STRICT RULES:
 
                 setIsLoading(false);
 
-                // ── Enhance response for employees ──
+                // ── Enhance response for employees via Chat API ──
                 if (showEmployeeView && aiContent && !isImageGenMode && !isImage) {
                     try {
                         setShowDots(true);
-                        const enhanceResult = await enhanceChatResponse(trimmedInput, aiContent);
-                        if (enhanceResult.success && enhanceResult.enhanced_response) {
-                            aiContent = enhanceResult.enhanced_response;
+                        const enhanced = await enhanceViaChatApi(trimmedInput, aiContent);
+                        if (enhanced && enhanced !== aiContent) {
+                            aiContent = enhanced;
                             setMessages((prev) => {
                                 const updated = [...prev];
                                 for (let i = updated.length - 1; i >= 0; i--) {
