@@ -172,20 +172,20 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
                 ? "Enter a referral code and get 20% discount on plan purchases!"
                 : "Enter a friend&apos;s referral code and earn 10 coins instantly!"}
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2">
               <input
                 type="text"
                 value={referralInput}
                 onChange={(e) => setReferralInput(e.target.value.toUpperCase())}
                 placeholder="Enter code"
-                className={`flex-1 px-3 py-2.5 text-[11px] font-mono uppercase tracking-widest border-2 ${isDarkMode ? "bg-white/5 border-white/30 text-white placeholder:text-white/40" : "bg-transparent border-black text-black placeholder:text-black"} focus:outline-none focus:border-[#00DDDD] transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
+                className={`w-full px-3 py-2.5 text-[11px] font-mono uppercase tracking-widest border-2 ${isDarkMode ? "bg-white/5 border-white/30 text-white placeholder:text-white/40" : "bg-transparent border-black text-black placeholder:text-black"} focus:outline-none focus:border-[#00DDDD] transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
                 maxLength={20}
                 onKeyDown={(e) => e.key === "Enter" && handleApplyReferral()}
               />
               <button
                 onClick={handleApplyReferral}
                 disabled={isApplying || !referralInput.trim()}
-                className={`px-4 py-2.5 text-[9px] font-mono font-bold uppercase tracking-[0.2em] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border-2 ${isDarkMode ? "bg-white text-black border-white/10 hover:bg-white/90" : "bg-white text-black border-black hover:bg-black/90"}`}
+                className={`w-full px-4 py-2.5 text-[9px] font-mono font-bold uppercase tracking-[0.2em] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border-2 ${isDarkMode ? "bg-white text-black border-white/10 hover:bg-white/90" : "bg-white text-black border-black hover:bg-black/90"}`}
               >
                 {isApplying ? "..." : "Apply"}
               </button>
