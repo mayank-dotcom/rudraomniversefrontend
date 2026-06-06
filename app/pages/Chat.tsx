@@ -3569,8 +3569,8 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                     })()}
 
                                     {/* Tokens Remaining Circle */}
-                                    <div className="relative w-32 h-32 mx-auto mb-8 flex-shrink-0">
-                                        <svg className="w-full h-full rotate-[-90deg]">
+                                    <div className="relative w-32 h-32 mx-auto mb-8 flex-shrink-0 overflow-hidden">
+                                        <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 128 128">
                                             <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "rgba(0, 221, 221, 0.1)" : "rgba(0, 221, 221, 0.05)"} strokeWidth="6" />
                                             <circle
                                                 cx="64" cy="64" r="58" fill="none"
@@ -3583,7 +3583,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                                         : 364 - ((subscription.tokens_remaining ?? 0) / subscription.subscription.details.monthly_tokens) * 364
                                                 )}
                                                 strokeLinecap="round"
-                                                className="transition-all duration-1000 drop-shadow-[0_0_8px_rgba(0,221,221,0.5)]"
+                                                className="transition-all duration-1000"
                                             />
                                         </svg>
                                         <div className="absolute inset-0 flex items-center justify-center flex-col">
