@@ -132,7 +132,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
       <div className="p-4 space-y-5">
 
         {/* Tab Bar */}
-        <div className={`flex border-2 ${isDarkMode ? "border-white/30" : "border-black"}`}>
+        <div className={`flex gap-1 border-2 ${isDarkMode ? "border-white/30" : "border-black"}`}>
           <button onClick={() => setWalletTab("coins")} className={tabClass("coins")}>
             <div className="flex items-center justify-center gap-1.5">
               <Wallet className="h-3 w-3" />
@@ -155,7 +155,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
 
         {/* Coins Tab */}
         {walletTab === "coins" && (
-          <div className={`p-5 border-2 ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
+          <div className={`p-5 border-2 min-h-[240px] ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
             <div className="flex items-center gap-2 mb-4">
               <Coins className={`h-4 w-4 ${isDarkMode ? "text-yellow-500" : "text-black"}`} style={spinSlow} />
               <p className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/60" : "text-black"}`}>
@@ -196,7 +196,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
           <div className="space-y-4">
             {/* Enter Referral Code - hidden after use */}
             {!hasEnteredReferral && (
-              <div className={`p-5 border-2 ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
+              <div className={`p-5 border-2 min-h-[240px] ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <Gift className={`h-3.5 w-3.5 ${isDarkMode ? "text-yellow-500" : "text-black"}`} />
                   <p className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/60" : "text-black"}`}>
@@ -234,7 +234,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
 
             {/* Share Your Referral Code */}
             {referralStats?.my_referral_code && (
-              <div className={`p-5 border-2 ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
+              <div className={`p-5 border-2 min-h-[240px] ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <Users className={`h-3.5 w-3.5 ${isDarkMode ? "text-yellow-500" : "text-black"}`} />
                   <p className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/60" : "text-black"}`}>
@@ -278,7 +278,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
         {walletTab === "history" && (
           <>
             {wallet?.recent_transactions && wallet.recent_transactions.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-2 min-h-[240px]">
                 {wallet.recent_transactions.slice(0, 10).map((tx, i) => {
                   const Icon = getTransactionIcon(tx.type)
                   const isCredit = tx.type !== "PURCHASE_REDEEM"
@@ -303,7 +303,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
                 })}
               </div>
             ) : (
-              <div className="text-center py-8">
+              <div className="text-center py-8 min-h-[240px] flex flex-col items-center justify-center">
                 <Coins className={`h-8 w-8 mx-auto mb-3 ${isDarkMode ? "text-yellow-500/40" : "text-black/20"}`} />
                 <p className={`text-[11px] ${isDarkMode ? "text-white/60" : "text-black/40"}`}>
                   No transactions yet
