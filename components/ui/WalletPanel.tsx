@@ -156,39 +156,56 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
 
         {/* Coins Tab */}
         {walletTab === "coins" && (
-          <div className={`p-5 border-2 min-h-[320px] flex flex-col justify-between ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
-            <div className="flex items-center gap-2 mb-4">
-              <Coins className="h-4 w-4 text-yellow-500" style={spinSlow} />
-              <p className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/60" : "text-black"}`}>
-                Current Balance
+          <div className={`relative overflow-hidden p-5 border-2 min-h-[320px] flex flex-col justify-between ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-5">
+                <div className={`h-6 w-6 flex items-center justify-center rounded-full ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
+                  <Coins className="h-3 w-3 text-yellow-500" style={spinSlow} />
+                </div>
+                <p className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/60" : "text-black"}`}>
+                  Current Balance
+                </p>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="font-display font-bold tracking-tight text-yellow-500" style={{ fontSize: "48px", lineHeight: 1 }}>
+                  {wallet?.wallet_balance ?? 0}
+                </span>
+                <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
+                  coins
+                </span>
+              </div>
+              <p className={`text-[9px] font-mono mt-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                Available balance
               </p>
             </div>
-            <div className="flex items-baseline gap-2 mb-4">
-              <span className={`font-display font-bold tracking-tight ${isDarkMode ? "text-white" : "text-black"}`} style={{ fontSize: "36px" }}>
-                {wallet?.wallet_balance ?? 0}
-              </span>
-              <span className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/50" : "text-black"}`}>
-                coins
-              </span>
-            </div>
-            <div className={`flex gap-6 pt-3 border-t-2 ${isDarkMode ? "border-white/20" : "border-black/20"}`}>
-              <div>
-                <p className={`text-[8px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/50" : "text-black"}`}>
-                  Total Earned
-                </p>
-                <p className={`text-sm font-bold ${isDarkMode ? "text-white" : "text-black"}`}>
-                  {wallet?.total_earned ?? 0}
-                </p>
+            <div className={`relative z-10 pt-4 border-t-2 ${isDarkMode ? "border-white/20" : "border-black/20"}`}>
+              <div className="flex gap-8">
+                <div>
+                  <p className={`text-[7px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                    Total Earned
+                  </p>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <Coins className="h-2.5 w-2.5 text-yellow-500" />
+                    <p className={`text-sm font-bold ${isDarkMode ? "text-white" : "text-black"}`}>
+                      {wallet?.total_earned ?? 0}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <p className={`text-[7px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                    Redeemed
+                  </p>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <ArrowUpRight className="h-2.5 w-2.5 text-red-400" />
+                    <p className={`text-sm font-bold ${isDarkMode ? "text-white" : "text-black"}`}>
+                      {wallet?.total_redeemed ?? 0}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className={`text-[8px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/50" : "text-black"}`}>
-                  Redeemed
-                </p>
-                <p className={`text-sm font-bold ${isDarkMode ? "text-white" : "text-black"}`}>
-                  {wallet?.total_redeemed ?? 0}
-                </p>
-              </div>
             </div>
+            <div className={`absolute -right-10 -top-10 w-44 h-44 rounded-full border-[12px] ${isDarkMode ? "border-yellow-500/10" : "border-yellow-500/20"}`} />
+            <div className={`absolute -right-4 -bottom-4 w-24 h-24 rounded-full border-8 ${isDarkMode ? "border-yellow-500/8" : "border-yellow-500/15"}`} />
           </div>
         )}
 
