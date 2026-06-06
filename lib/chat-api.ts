@@ -196,6 +196,7 @@ export interface WalletTransaction {
 export interface WalletProfileResponse {
   success: boolean
   referral_code?: string
+  referral_code_entered?: string
   invited_friends: number
   successful_referrals: number
   wallet_balance: number

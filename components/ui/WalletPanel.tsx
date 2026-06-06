@@ -148,7 +148,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
         </div>
 
         {/* Referral Code Entry */}
-        {!wallet?.referral_code && (
+        {!wallet?.referral_code_entered && (
           <div className={`p-5 border-2 ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
             <div className="flex items-center gap-2 mb-3">
               <Gift className={`h-3.5 w-3.5 ${isDarkMode ? "text-yellow-500" : "text-black"}`} />
