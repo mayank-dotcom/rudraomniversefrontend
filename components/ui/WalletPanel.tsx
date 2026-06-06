@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Wallet, Copy, Check, Gift, ArrowUpRight, Loader2, Coins, TrendingUp, Users, Sparkles } from "lucide-react"
+import { Wallet, Copy, Check, Gift, ArrowUpRight, Loader2, Coins, TrendingUp, Users, Sparkles, Search } from "lucide-react"
 import { getWalletProfile, getReferralStats, applyReferralCode, WalletProfileResponse, ReferralStatsResponse } from "@/lib/chat-api"
 import { toast } from "sonner"
 
@@ -22,6 +22,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
   const [referralApplied, setReferralApplied] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [walletTab, setWalletTab] = useState<"coins" | "referral" | "history">("coins")
+  const [searchQuery, setSearchQuery] = useState("")
 
   const fetchData = useCallback(async () => {
     setIsLoading(true)
@@ -155,9 +156,9 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
 
         {/* Coins Tab */}
         {walletTab === "coins" && (
-          <div className={`p-5 border-2 min-h-[240px] ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
+          <div className={`p-5 border-2 min-h-[320px] flex flex-col justify-between ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
             <div className="flex items-center gap-2 mb-4">
-              <Coins className={`h-4 w-4 ${isDarkMode ? "text-yellow-500" : "text-black"}`} style={spinSlow} />
+              <Coins className="h-4 w-4 text-yellow-500" style={spinSlow} />
               <p className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/60" : "text-black"}`}>
                 Current Balance
               </p>
@@ -198,7 +199,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
             {!hasEnteredReferral && (
               <div className={`p-5 border-2 min-h-[240px] ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Gift className={`h-3.5 w-3.5 ${isDarkMode ? "text-yellow-500" : "text-black"}`} />
+                  <Gift className="h-3.5 w-3.5 text-yellow-500" />
                   <p className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/60" : "text-black"}`}>
                     Have a referral code?
                   </p>
@@ -236,7 +237,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
             {referralStats?.my_referral_code && (
               <div className={`p-5 border-2 min-h-[240px] ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Users className={`h-3.5 w-3.5 ${isDarkMode ? "text-yellow-500" : "text-black"}`} />
+                  <Users className="h-3.5 w-3.5 text-yellow-500" />
                   <p className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/60" : "text-black"}`}>
                     Share Your Referral Code
                   </p>
@@ -277,34 +278,61 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
         {/* History Tab */}
         {walletTab === "history" && (
           <>
+            <div className={`border-2 ${isDarkMode ? "border-white/30" : "border-black"}`}>
+              <div className="flex items-center gap-2 px-3 py-2.5">
+                <TrendingUp className={`h-3 w-3 shrink-0 ${isDarkMode ? "text-white/50" : "text-black/50"}`} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search transactions..."
+                  className={`w-full text-[10px] font-mono bg-transparent border-none outline-none ${isDarkMode ? "text-white placeholder:text-white/40" : "text-black placeholder:text-black/40"}`}
+                />
+              </div>
+            </div>
             {wallet?.recent_transactions && wallet.recent_transactions.length > 0 ? (
-              <div className="space-y-2 min-h-[240px]">
-                {wallet.recent_transactions.slice(0, 10).map((tx, i) => {
-                  const Icon = getTransactionIcon(tx.type)
-                  const isCredit = tx.type !== "PURCHASE_REDEEM"
-                  return (
-                    <div key={tx.id || i} className={`flex items-start gap-3 p-3 border-2 ${isDarkMode ? "bg-white/[0.06] border-white/30" : "bg-black/[0.02] border-black"}`}>
-                      <div className={`h-7 w-7 flex items-center justify-center shrink-0 ${isDarkMode ? "bg-white/10" : "bg-black/5"}`}>
-                        <Icon className={`h-3 w-3 ${isDarkMode ? "text-yellow-500" : "text-black"}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-[10px] font-medium truncate ${isDarkMode ? "text-white" : "text-black"}`}>
-                          {tx.description}
-                        </p>
-                        <p className={`text-[8px] font-mono mt-0.5 ${isDarkMode ? "text-white/50" : "text-black/60"}`}>
-                          {formatDate(tx.created_at)}
-                        </p>
-                      </div>
-                      <span className={`text-[11px] font-bold font-mono shrink-0 ${isCredit ? "text-green-400" : "text-red-400"}`}>
-                        {isCredit ? "+" : "-"}{tx.amount}
-                      </span>
-                    </div>
+              <div className="space-y-2 min-h-[240px] max-h-[400px] overflow-y-auto">
+                {wallet.recent_transactions
+                  .filter((tx) =>
+                    !searchQuery || tx.description?.toLowerCase().includes(searchQuery.toLowerCase())
                   )
-                })}
+                  .slice(0, 20)
+                  .map((tx, i) => {
+                    const Icon = getTransactionIcon(tx.type)
+                    const isCredit = tx.type !== "PURCHASE_REDEEM"
+                    return (
+                      <div key={tx.id || i} className={`flex items-start gap-3 p-3 border-2 ${isDarkMode ? "bg-white/[0.06] border-white/30" : "bg-black/[0.02] border-black"}`}>
+                        <div className={`h-7 w-7 flex items-center justify-center shrink-0 ${isDarkMode ? "bg-white/10" : "bg-black/5"}`}>
+                          <Icon className="h-3 w-3 text-yellow-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-[10px] font-medium truncate ${isDarkMode ? "text-white" : "text-black"}`}>
+                            {tx.description}
+                          </p>
+                          <p className={`text-[8px] font-mono mt-0.5 ${isDarkMode ? "text-white/50" : "text-black/60"}`}>
+                            {formatDate(tx.created_at)}
+                          </p>
+                        </div>
+                        <span className={`text-[11px] font-bold font-mono shrink-0 ${isCredit ? "text-green-400" : "text-red-400"}`}>
+                          {isCredit ? "+" : "-"}{tx.amount}
+                        </span>
+                      </div>
+                    )
+                  })}
+                {wallet.recent_transactions.filter((tx) =>
+                  !searchQuery || tx.description?.toLowerCase().includes(searchQuery.toLowerCase())
+                ).length === 0 && (
+                  <div className="text-center py-8 min-h-[240px] flex flex-col items-center justify-center">
+                    <Search className="h-6 w-6 mx-auto mb-3 text-yellow-500/40" />
+                    <p className={`text-[11px] ${isDarkMode ? "text-white/60" : "text-black/40"}`}>
+                      No matching transactions
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-8 min-h-[240px] flex flex-col items-center justify-center">
-                <Coins className={`h-8 w-8 mx-auto mb-3 ${isDarkMode ? "text-yellow-500/40" : "text-black/20"}`} />
+                <Coins className="h-8 w-8 mx-auto mb-3 text-yellow-500/40" />
                 <p className={`text-[11px] ${isDarkMode ? "text-white/60" : "text-black/40"}`}>
                   No transactions yet
                 </p>
