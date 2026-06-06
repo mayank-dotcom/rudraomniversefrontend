@@ -196,7 +196,7 @@ export interface WalletTransaction {
 export interface WalletProfileResponse {
   success: boolean
   referral_code?: string
-  referral_code_entered?: string
+  referral_code_entered?: string | boolean
   invited_friends: number
   successful_referrals: number
   wallet_balance: number
@@ -254,17 +254,10 @@ export async function getReferralStats() {
 }
 
 export async function applyReferralCode(referralCode: string) {
-  const apiKey = getApiKey()
-  if (!apiKey) throw new Error("Not authenticated")
-  const userInfo = getUserInfo()
-  const res = await fetch(`${API_BASE}/auth/register/complete`, {
+  const res = await fetch(`${API_BASE}/referrals/apply`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      api_key: apiKey,
-      name: userInfo?.name || "User",
-      referral_code: referralCode,
-    }),
+    headers: getHeaders(),
+    body: JSON.stringify({ referral_code: referralCode }),
   })
   const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
   if (!res.ok || !data.success) {

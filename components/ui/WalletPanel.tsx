@@ -19,9 +19,12 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
   const [referralInput, setReferralInput] = useState("")
   const [isApplying, setIsApplying] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [referralApplied, setReferralApplied] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     setIsLoading(true)
+    setFetchError(null)
     try {
       const [walletData, statsData] = await Promise.all([
         getWalletProfile(),
@@ -31,6 +34,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
       setReferralStats(statsData)
     } catch (err: any) {
       console.warn("Failed to load wallet data:", err.message)
+      setFetchError(err.message || "Failed to load wallet data")
     } finally {
       setIsLoading(false)
     }
@@ -39,6 +43,10 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  const hasWelcomeBonus = wallet?.recent_transactions?.some(tx => tx.type === 'WELCOME_BONUS') ?? false
+
+  const hasEnteredReferral = wallet?.referral_code_entered || referralApplied
 
   const handleApplyReferral = async () => {
     const code = referralInput.trim()
@@ -49,7 +57,10 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
     setIsApplying(true)
     try {
       await applyReferralCode(code)
-      toast.success("Referral code applied! You earned 10 coins.")
+      setReferralApplied(true)
+      toast.success(hasWelcomeBonus
+        ? "Referral code applied! You now get 20% discount on plan purchases."
+        : "Referral code applied! You earned 10 coins.")
       setReferralInput("")
       fetchData()
     } catch (err: any) {
@@ -147,8 +158,8 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
           </div>
         </div>
 
-        {/* Referral Code Entry */}
-        {!wallet?.referral_code_entered && (
+        {/* Referral Code Entry - hidden after use */}
+        {!hasEnteredReferral && (
           <div className={`p-5 border-2 ${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/5 border-black"}`}>
             <div className="flex items-center gap-2 mb-3">
               <Gift className={`h-3.5 w-3.5 ${isDarkMode ? "text-yellow-500" : "text-black"}`} />
@@ -157,7 +168,9 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
               </p>
             </div>
             <p className={`text-[11px] mb-4 ${isDarkMode ? "text-white/70" : "text-black"}`}>
-              Enter a friend&apos;s referral code and earn 10 coins instantly!
+              {hasWelcomeBonus
+                ? "Enter a referral code and get 20% discount on plan purchases!"
+                : "Enter a friend&apos;s referral code and earn 10 coins instantly!"}
             </p>
             <div className="flex gap-2">
               <input
@@ -165,8 +178,9 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
                 value={referralInput}
                 onChange={(e) => setReferralInput(e.target.value.toUpperCase())}
                 placeholder="Enter code"
-                className={`flex-1 px-3 py-2.5 text-[11px] font-mono uppercase tracking-widest border-2 ${isDarkMode ? "bg-white/5 border-white/30 text-white placeholder:text-white/40" : "bg-transparent border-black text-black placeholder:text-black"} focus:outline-none focus:border-[#00DDDD] transition-colors`}
+                className={`flex-1 px-3 py-2.5 text-[11px] font-mono uppercase tracking-widest border-2 ${isDarkMode ? "bg-white/5 border-white/30 text-white placeholder:text-white/40" : "bg-transparent border-black text-black placeholder:text-black"} focus:outline-none focus:border-[#00DDDD] transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
                 maxLength={20}
+                onKeyDown={(e) => e.key === "Enter" && handleApplyReferral()}
               />
               <button
                 onClick={handleApplyReferral}
@@ -176,6 +190,9 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
                 {isApplying ? "..." : "Apply"}
               </button>
             </div>
+            {fetchError && (
+              <p className="text-[9px] mt-2 text-red-400 font-mono">{fetchError}</p>
+            )}
           </div>
         )}
 
