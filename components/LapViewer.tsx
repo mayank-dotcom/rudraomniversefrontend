@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useRef, useEffect, useState } from "react";
+import { Suspense, useRef } from "react";
 import { Canvas, useFrame, useLoader } from "@react-three/fiber";
 import { Decal, useVideoTexture } from "@react-three/drei";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
@@ -15,22 +15,22 @@ function LapModel({ progress }: { progress: number }) {
     loop: true,
     start: true,
   });
-  const [hasVertexColors, setHasVertexColors] = useState(false);
 
-  useEffect(() => {
-    if (geometry) {
-      geometry.computeVertexNormals();
-      const hasColors = !!geometry.attributes.color;
-      setHasVertexColors(hasColors);
-      const box = new THREE.Box3().setFromObject(new THREE.Mesh(geometry));
-      const center = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 3.5 / maxDim;
-      geometry.translate(-center.x, -center.y, -center.z);
-      geometry.scale(scale, scale, scale);
-    }
-  }, [geometry]);
+  // Center and scale the geometry in render phase so it's ready before Decal mounts
+  if (geometry && !geometry.userData.isCenteredAndScaled) {
+    geometry.computeVertexNormals();
+    geometry.computeBoundingBox();
+    const box = geometry.boundingBox!;
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 3.5 / maxDim;
+    geometry.translate(-center.x, -center.y, -center.z);
+    geometry.scale(scale, scale, scale);
+    geometry.userData.isCenteredAndScaled = true;
+  }
+
+  const hasVertexColors = !!(geometry && geometry.attributes.color);
 
   useFrame(() => {
     if (meshRef.current) {
