@@ -1,0 +1,108 @@
+"use client";
+
+import { Suspense, useRef, useEffect, useState } from "react";
+import { Canvas, useFrame, useLoader } from "@react-three/fiber";
+import { Decal, useVideoTexture } from "@react-three/drei";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
+import * as THREE from "three";
+
+function LapModel({ progress }: { progress: number }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const geometry = useLoader(STLLoader, "/Lap.stl");
+  const screenTexture = useVideoTexture("/video.mp4", {
+    unsuspend: "canplay",
+    muted: true,
+    loop: true,
+    start: true,
+  });
+  const [hasVertexColors, setHasVertexColors] = useState(false);
+
+  useEffect(() => {
+    if (geometry) {
+      geometry.computeVertexNormals();
+      const hasColors = !!geometry.attributes.color;
+      setHasVertexColors(hasColors);
+      const box = new THREE.Box3().setFromObject(new THREE.Mesh(geometry));
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = 3.5 / maxDim;
+      geometry.translate(-center.x, -center.y, -center.z);
+      geometry.scale(scale, scale, scale);
+    }
+  }, [geometry]);
+
+  useFrame(() => {
+    if (meshRef.current) {
+      const baseRot = 1.5 * Math.PI;
+      const extraRot = 20 * Math.PI / 180;
+
+      const enterEnd = 1 / 3;
+      const zoomEnd = 2 / 3;
+
+      let yPos = 0;
+      let scaleMul = 1;
+      let rotX = baseRot;
+
+      if (progress < enterEnd) {
+        const t = progress / enterEnd;
+        const eased = 1 - Math.pow(1 - t, 3);
+        yPos = -5 * (1 - eased);
+        scaleMul = 1;
+        rotX = baseRot;
+      } else if (progress < zoomEnd) {
+        const t = (progress - enterEnd) / (zoomEnd - enterEnd);
+        const eased = t * t;
+        yPos = -1.5 * eased;
+        scaleMul = 1 + eased;
+        rotX = baseRot + extraRot * eased;
+      } else {
+        const t = (progress - zoomEnd) / (1 - zoomEnd);
+        const eased = t * t;
+        yPos = -1.5;
+        scaleMul = 2 + eased;
+        rotX = baseRot + extraRot;
+      }
+
+      meshRef.current.rotation.x = rotX;
+      meshRef.current.position.y = yPos;
+      meshRef.current.scale.set(scaleMul, scaleMul, scaleMul);
+    }
+  });
+
+  return (
+    <mesh ref={meshRef} geometry={geometry}>
+      {hasVertexColors ? (
+        <meshStandardMaterial vertexColors metalness={0.85} roughness={0.15} envMapIntensity={1.5} />
+      ) : (
+        <meshStandardMaterial color="#C8C8D0" metalness={0.85} roughness={0.15} envMapIntensity={1.5} />
+      )}
+      <Decal
+        position={[0, 1.13, 0.02]}
+        rotation={[Math.PI / 3, 0, 0]}
+        scale={[3.2, 2.1, 1]}
+        map={screenTexture}
+        depthTest
+      />
+    </mesh>
+  );
+}
+
+export default function LapViewer({ progress = 0 }: { progress?: number }) {
+  return (
+    <Canvas
+      camera={{ position: [0, 0, 4], fov: 50 }}
+      dpr={[1, 2]}
+      gl={{ antialias: true, alpha: true }}
+      style={{ background: "transparent" }}
+    >
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[2, 3, 4]} intensity={1.5} />
+      <directionalLight position={[-3, 1, -2]} intensity={0.6} />
+      <pointLight position={[0, -2, 0]} intensity={0.4} />
+      <Suspense fallback={null}>
+        <LapModel progress={progress} />
+      </Suspense>
+    </Canvas>
+  );
+}
