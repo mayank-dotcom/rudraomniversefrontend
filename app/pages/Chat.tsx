@@ -49,6 +49,7 @@ import { GraduationCap as MockIcon } from "lucide-react";
 import WelcomeBox from "@/components/ui/WelcomeBox";
 import WalletPanel from "@/components/ui/WalletPanel";
 import OnboardingWalkthrough from "@/components/OnboardingWalkthrough";
+import SettingsModal from "@/components/ui/SettingsModal";
 
 interface Message {
     role: "user" | "assistant" | "system";
@@ -325,6 +326,26 @@ const Chat = () => {
     const abortControllerRef = useRef<AbortController | null>(null);
     const styleCardsScrollRef = useRef<HTMLDivElement>(null);
 
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    const [settingsPanel, setSettingsPanel] = useState<"persona" | "plan" | "faq" | "bug" | "deactivate">("persona");
+    const [showProfileDropup, setShowProfileDropup] = useState(false);
+    const [emptyChats, setEmptyChats] = useState<Set<string>>(new Set());
+    const profileDropupRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (profileDropupRef.current && !profileDropupRef.current.contains(event.target as Node)) {
+                setShowProfileDropup(false);
+            }
+        };
+        if (showProfileDropup) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [showProfileDropup]);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (engineSelectRef.current && !engineSelectRef.current.contains(event.target as Node)) {
@@ -357,8 +378,8 @@ const Chat = () => {
     const isGlobalAdmin = userRole === "global_admin";
     const showEmployeeView = userRole === "employee" || userRole === "enterprise_admin" || userRole === "manager" || userRole === "school_admin" || userRole === "faculty" || (isGlobalAdmin && !isEnterpriseMode);
     const visibleEngines = showEmployeeView
-        ? engines.filter(e => !employeeRestrictedEngines.includes(e.name))
-        : engines.filter(e => e.name !== "Assistant Mode");
+        ? engines.filter(e => !employeeRestrictedEngines.includes(e.name) && e.name !== "Persona Mode")
+        : engines.filter(e => e.name !== "Assistant Mode" && e.name !== "Persona Mode");
 
     useEffect(() => {
         setSelectedEngine(showEmployeeView ? "Assistant Mode" : "Explore Mode");
@@ -1004,6 +1025,22 @@ const Chat = () => {
 
         try {
             const data = await getChatHistory(chatId);
+            if (data.messages && data.messages.length === 0) {
+                setEmptyChats((prev) => {
+                    const next = new Set(prev);
+                    next.add(chatId);
+                    return next;
+                });
+            } else {
+                setEmptyChats((prev) => {
+                    if (prev.has(chatId)) {
+                        const next = new Set(prev);
+                        next.delete(chatId);
+                        return next;
+                    }
+                    return prev;
+                });
+            }
             hydrateMessages(data.messages);
         } catch (error) {
             const message = error instanceof Error ? error.message : "Unable to load chat history.";
@@ -1091,6 +1128,11 @@ const Chat = () => {
             setChats((prev) => [data.chat, ...prev]);
             setActiveChatId(data.chat.id);
             setStoredActiveChatId(data.chat.id);
+            setEmptyChats((prev) => {
+                const next = new Set(prev);
+                next.add(data.chat.id);
+                return next;
+            });
             setMessages(getWelcomeMessages());
             setSearchQuery("");
         } catch (error) {
@@ -1203,8 +1245,13 @@ const Chat = () => {
     };
 
     const handlePersonaSelect = (persona: Persona) => {
-        setSelectedPersona(persona);
-        setSelectedEngine("Persona Mode");
+        if (!persona.name) {
+            setSelectedPersona(null);
+            setSelectedEngine(showEmployeeView ? "Assistant Mode" : "Explore Mode");
+        } else {
+            setSelectedPersona(persona);
+            setSelectedEngine("Persona Mode");
+        }
     };
 
     const scrollStyleCards = (direction: "left" | "right") => {
@@ -1484,6 +1531,18 @@ STRICT RULES:
                 setActiveChatId(created.chat.id);
                 setStoredActiveChatId(created.chat.id);
                 setChats((prev) => [created.chat, ...prev]);
+            }
+
+            if (currentChatId) {
+                const chatIdStr = currentChatId;
+                setEmptyChats((prev) => {
+                    if (prev.has(chatIdStr)) {
+                        const next = new Set(prev);
+                        next.delete(chatIdStr);
+                        return next;
+                    }
+                    return prev;
+                });
             }
 
             let userContent: any = trimmedInput;
@@ -2048,17 +2107,19 @@ STRICT RULES:
                     {/* Bottom Right: Maximize layout button + circular send button */}
                     <div className="flex items-center gap-2">
                         {/* Maximize Layout Button */}
-                        <button
-                            onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
-                            className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
-                                !isRightSidebarCollapsed 
-                                    ? (isDarkMode ? "bg-white/10 text-white" : "bg-black/10 text-black") 
-                                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
-                            }`}
-                            title="Toggle Right Panel Layout"
-                        >
-                            <Maximize2 className="h-3.5 w-3.5" />
-                        </button>
+                        {showEmployeeView && (
+                            <button
+                                onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
+                                className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
+                                    !isRightSidebarCollapsed 
+                                        ? (isDarkMode ? "bg-white/10 text-white" : "bg-black/10 text-black") 
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                                }`}
+                                title="Toggle Right Panel Layout"
+                            >
+                                <Maximize2 className="h-3.5 w-3.5" />
+                            </button>
+                        )}
 
                         {/* Send / Stop Generation Button */}
                         {isLoading ? (
@@ -2161,7 +2222,7 @@ STRICT RULES:
                     onClick={() => setIsSidebarCollapsed(true)}
                 />
             )}
-            {isMobile && !isRightSidebarCollapsed && (
+            {showEmployeeView && isMobile && !isRightSidebarCollapsed && (
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 transition-opacity duration-300"
                     onClick={() => setIsRightSidebarCollapsed(true)}
@@ -2348,9 +2409,80 @@ STRICT RULES:
                         )}
 
                         {/* Footer & User Profile */}
-                        <div className={`p-4 border-t ${isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"} flex flex-col gap-3`}>
+                        <div className={`p-4 border-t ${isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"} flex flex-col gap-3 relative`}>
+                            {showProfileDropup && (
+                                <div 
+                                    ref={profileDropupRef}
+                                    className={`absolute bottom-16 left-4 right-4 z-[100] rounded-xl border p-1.5 shadow-2xl backdrop-blur-xl ${
+                                        isDarkMode
+                                            ? "bg-[#0d0d0c]/95 border-white/10 text-white"
+                                            : "bg-white/95 border-black/10 text-black"
+                                    }`}
+                                >
+                                    {/* Personalization Option */}
+                                    <button
+                                        onClick={() => {
+                                            setShowProfileDropup(false);
+                                            setSettingsPanel("persona");
+                                            setIsSettingsModalOpen(true);
+                                        }}
+                                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${
+                                            isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
+                                        }`}
+                                    >
+                                        <Sparkles className="h-3.5 w-3.5 opacity-60 text-[#00DDDD]" />
+                                        <span>Personalization</span>
+                                    </button>
+
+                                    {/* Wallet Option */}
+                                    <button
+                                        onClick={() => {
+                                            setShowProfileDropup(false);
+                                            setSettingsPanel("plan");
+                                            setIsSettingsModalOpen(true);
+                                        }}
+                                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${
+                                            isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
+                                        }`}
+                                    >
+                                        <Wallet className="h-3.5 w-3.5 opacity-60 text-[#00DDDD]" />
+                                        <span>Wallet</span>
+                                    </button>
+
+                                    {/* Divider */}
+                                    <div className={`my-1 h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                                    {/* Logout Option */}
+                                    <button
+                                        onClick={() => {
+                                            setShowProfileDropup(false);
+                                            removeApiKey();
+                                            removeUserInfo();
+                                            removeUserRole();
+                                            removeSchoolName();
+                                            removeEnterpriseName();
+                                            setStoredActiveChatId(null);
+                                            setAuthed(false);
+                                            setUserName("");
+                                            setUserEmail("");
+                                            window.location.href = "/";
+                                        }}
+                                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left text-red-500 transition-colors ${
+                                            isDarkMode ? "hover:bg-red-500/10" : "hover:bg-red-500/5"
+                                        }`}
+                                    >
+                                        <LogOut className="h-3.5 w-3.5" />
+                                        <span>Logout</span>
+                                    </button>
+                                </div>
+                            )}
+
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 min-w-0">
+                                <button
+                                    onClick={() => setShowProfileDropup(!showProfileDropup)}
+                                    className="flex items-center gap-2 min-w-0 text-left cursor-pointer hover:opacity-80 transition-opacity"
+                                    title="Profile Options"
+                                >
                                     <div className={`h-8 w-8 rounded-full flex items-center justify-center relative shrink-0 ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border`}>
                                         <User className={`h-4 w-4 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
                                     </div>
@@ -2358,7 +2490,7 @@ STRICT RULES:
                                         <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
                                         <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : "Pro Member"}</span>
                                     </div>
-                                </div>
+                                </button>
                                 <div className="flex items-center gap-1.5">
                                     {isGlobalAdmin && (
                                         <button
@@ -2372,6 +2504,20 @@ STRICT RULES:
                                             {isEnterpriseMode ? "ENT" : "REG"}
                                         </button>
                                     )}
+                                    <button
+                                        onClick={() => {
+                                            setSettingsPanel("persona");
+                                            setIsSettingsModalOpen(true);
+                                        }}
+                                        title="Settings"
+                                        className={`p-1.5 rounded-lg border transition-colors ${
+                                            isDarkMode
+                                                ? "border-white/10 text-white/60 hover:text-[#00DDDD] hover:bg-white/5"
+                                                : "border-black/10 text-black/60 hover:text-[#00DDDD] hover:bg-black/5"
+                                        }`}
+                                    >
+                                        <Settings className="h-3.5 w-3.5" />
+                                    </button>
                                     <button
                                         onClick={() => {
                                             removeApiKey();
@@ -2541,20 +2687,22 @@ STRICT RULES:
                         </button>
 
                         {/* Right Sidebar Toggler */}
-                        <button
-                            onClick={() => {
-                                setIsRightSidebarCollapsed(!isRightSidebarCollapsed);
-                                if (isMobile) setIsSidebarCollapsed(true);
-                            }}
-                            className={`p-2 border rounded-xl transition-all duration-200 cursor-pointer ${
-                                !isRightSidebarCollapsed
-                                    ? (isDarkMode ? "bg-white/10 border-white/20 text-white" : "bg-black/10 border-black/20 text-black")
-                                    : (isDarkMode ? "border-white/10 text-white hover:bg-white/5 hover:border-white/20" : "border-black/10 text-black hover:bg-black/5 hover:border-black/20")
-                            }`}
-                            title="Toggle Right Panel"
-                        >
-                            <UserCog className="h-4 w-4" />
-                        </button>
+                        {showEmployeeView && (
+                            <button
+                                onClick={() => {
+                                    setIsRightSidebarCollapsed(!isRightSidebarCollapsed);
+                                    if (isMobile) setIsSidebarCollapsed(true);
+                                }}
+                                className={`p-2 border rounded-xl transition-all duration-200 cursor-pointer ${
+                                    !isRightSidebarCollapsed
+                                        ? (isDarkMode ? "bg-white/10 border-white/20 text-white" : "bg-black/10 border-black/20 text-black")
+                                        : (isDarkMode ? "border-white/10 text-white hover:bg-white/5 hover:border-white/20" : "border-black/10 text-black hover:bg-black/5 hover:border-black/20")
+                                }`}
+                                title="Toggle Right Panel"
+                            >
+                                <UserCog className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
                 </header>
 
@@ -2569,7 +2717,7 @@ STRICT RULES:
 
                         {/* Chat Area */}
                         <div className="space-y-16">
-                            {isHistoryLoading && <ChatLoader isDarkMode={isDarkMode} />}
+                            {isHistoryLoading && !(activeChatId ? (chats.find(c => c.id === activeChatId)?.title === "New Chat" || emptyChats.has(activeChatId)) : true) && <ChatLoader isDarkMode={isDarkMode} />}
                             <AnimatePresence initial={false}>
                                 {messages.length === 0 || messages.every((msg) => msg.localOnly) ? (
                                     <div className="flex flex-col items-center justify-center min-h-[50vh] max-w-2xl mx-auto px-4 text-center">
@@ -2978,8 +3126,9 @@ STRICT RULES:
             </div>
 
             {/* Right Sidebar */}
-            <aside
-                style={{ width: isRightSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${rightSidebarWidth}px`) }}
+            {showEmployeeView && (
+                <aside
+                    style={{ width: isRightSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${rightSidebarWidth}px`) }}
                 className={`h-full border-l-2 ${isRightSidebarCollapsed && isMobile ? "border-l-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-white"} flex flex-col ${isMobile ? "fixed right-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
             >
                 {!isRightSidebarCollapsed ? (
@@ -3175,7 +3324,7 @@ STRICT RULES:
                                         </div>
                                     </div>
 
-                                    {!userRole || userRole === "student" ? (
+                                    {!userRole || (userRole as any) === "student" ? (
                                         <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : "mt-12"}`}>
                                             <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(0,221,221,0.5)] transition-all duration-300">
                                                 <div className="bubble-layer bubble-1"></div>
@@ -3465,7 +3614,7 @@ STRICT RULES:
                         </div>
 
                         {/* Upgrade Button right below Wallet/Mail */}
-                        {(!userRole || userRole === "student") && (
+                        {(!userRole || (userRole as any) === "student") && (
                             <div className="w-full flex items-center justify-center px-2 pt-[21px] pb-4">
                                 <Link href="/pricing" title="Upgrade Now" className="block cursor-pointer">
                                     <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-[rgba(0,221,221,0.2)]`}>
@@ -3581,6 +3730,7 @@ STRICT RULES:
                     {isRightSidebarCollapsed ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                 </button>
             </aside>
+            )}
 
             {/* ─── EMAIL DETAIL MODAL (root level) ─── */}
             <AnimatePresence>
@@ -3820,6 +3970,23 @@ STRICT RULES:
                 onHost={handleBattleArenaHost}
                 onJoin={handleBattleArenaJoin}
                 isDarkMode={isDarkMode}
+            />
+
+            {/* Settings Modal */}
+            <SettingsModal
+                isOpen={isSettingsModalOpen}
+                onClose={() => setIsSettingsModalOpen(false)}
+                isDarkMode={isDarkMode}
+                isMobile={isMobile}
+                subscription={subscription}
+                isSubscriptionLoading={isSubscriptionLoading}
+                onPersonaSelect={handlePersonaSelect}
+                currentPersona={selectedPersona}
+                onDeactivate={handleDiscontinueAccount}
+                userRole={userRole}
+                userName={userName}
+                userEmail={userEmail}
+                initialPanel={settingsPanel}
             />
 
             {/* ─── Bulk Email Modal (Excel Upload) ─── */}
