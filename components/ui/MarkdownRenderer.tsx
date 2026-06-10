@@ -14,7 +14,63 @@ interface MarkdownRendererProps {
     isDarkMode: boolean;
     onDownloadImage?: (url: string, filename?: string) => void;
     isImageCompact?: boolean;
+    isGenerating?: boolean;
 }
+
+function decodeLenient(base64Str: string): string {
+    try {
+        const clean = base64Str.replace(/[^A-Za-z0-9+\/]/g, "");
+        const padLength = (4 - (clean.length % 4)) % 4;
+        const padded = clean + "=".repeat(padLength);
+        const raw = atob(padded);
+        try {
+            return decodeURIComponent(escape(raw));
+        } catch {
+            return raw;
+        }
+    } catch {
+        return "";
+    }
+}
+
+
+function getCleanMermaidCode(code: string): string {
+    const trimmed = code.trim();
+    if (!trimmed) return "";
+    
+    // Only attempt base64 decoding on known base64-encoded mermaid prefixes.
+    // JSV7 = base64 of "%%{" (init config), eyJ = base64 of "{" (JSON init)
+    // This prevents normal mermaid syntax from being falsely treated as base64.
+    if (trimmed.startsWith("JSV7") || trimmed.startsWith("eyJ")) {
+        const decoded = decodeLenient(trimmed);
+        if (decoded && (
+            decoded.includes("%%{") ||
+            decoded.includes("graph") ||
+            decoded.includes("mindmap") ||
+            decoded.includes("sequenceDiagram") ||
+            decoded.includes("flowchart") ||
+            decoded.includes("gantt") ||
+            decoded.includes("classDiagram")
+        )) {
+            return decoded;
+        }
+    }
+    return code;
+}
+
+function buildMermaidUrl(code: string): string {
+    try {
+        const cleanCode = getCleanMermaidCode(code);
+        const base64 = btoa(unescape(encodeURIComponent(cleanCode)))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+        return `https://mermaid.ink/img/${base64}?type=png`;
+    } catch {
+        return "";
+    }
+}
+
 
 function CodeBlock({ code, language, isDarkMode }: { code: string; language: string; isDarkMode: boolean }) {
   const [copied, setCopied] = React.useState(false)
@@ -96,25 +152,52 @@ function CodeBlock({ code, language, isDarkMode }: { code: string; language: str
   )
 }
 
-function MermaidImage({ code, onDownloadImage }: { code: string; onDownloadImage?: (url: string, filename?: string) => void }) {
-    const src = React.useMemo(() => {
-        try {
-            const base64 = btoa(unescape(encodeURIComponent(code)));
-            return `https://mermaid.ink/img/${base64}?type=png`;
-        } catch {
-            return "";
-        }
-    }, [code]);
+function MermaidImage({ code, onDownloadImage, isGenerating }: { code: string; onDownloadImage?: (url: string, filename?: string) => void; isGenerating?: boolean }) {
+    // Only build the URL when streaming stops (isGenerating → false).
+    // This prevents flickering (re-requesting on every chunk) and 400 errors from partial code.
+    const [imgSrc, setImgSrc] = React.useState(isGenerating ? "" : buildMermaidUrl(code));
 
-    if (!src) return null;
+    // When isGenerating flips from true → false, capture the final complete code and build the URL.
+    const prevGenerating = React.useRef(isGenerating);
+    React.useEffect(() => {
+        const wasGenerating = prevGenerating.current;
+        prevGenerating.current = isGenerating;
+
+        if (wasGenerating && !isGenerating) {
+            // Stream just finished — now it's safe to build the final URL
+            setImgSrc(buildMermaidUrl(code));
+        } else if (!isGenerating && !imgSrc) {
+            // Non-streaming render (e.g. chat history) — build immediately
+            setImgSrc(buildMermaidUrl(code));
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isGenerating]);
+
+    // While streaming is active, always show the loading placeholder
+    if (isGenerating) {
+        return (
+            <div className="my-4 w-full h-[200px] rounded-lg animate-pulse flex items-center justify-center border border-white/10 bg-white/5 backdrop-blur-md">
+                <div className="flex flex-col items-center gap-2">
+                    <div className="w-6 h-6 rounded-full border-2 border-t-transparent border-accent animate-spin" />
+                    <span className="text-xs font-mono text-white/40">Generating diagram...</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (!imgSrc) return null;
 
     return (
-        <span className="block my-4 relative group/img-wrapper">
+        <span className="block my-4 relative group/img-wrapper min-h-[100px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt="Mermaid diagram" className="max-w-full h-auto rounded-lg" />
+            <img 
+                src={imgSrc} 
+                alt="Mermaid diagram" 
+                className="max-w-full h-auto rounded-lg opacity-100 scale-100 transition-all duration-300"
+            />
             {onDownloadImage && (
                 <button
-                    onClick={() => onDownloadImage(src)}
+                    onClick={() => onDownloadImage(imgSrc)}
                     title="Download Image"
                     className="absolute top-2 right-2 p-2 rounded-full bg-black/80 hover:bg-black text-white border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1 hover:scale-105 active:scale-95"
                     style={{ "--hover-color": "var(--brand-accent)" } as React.CSSProperties}
@@ -129,7 +212,7 @@ function MermaidImage({ code, onDownloadImage }: { code: string; onDownloadImage
     );
 }
 
-export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage, isImageCompact }: MarkdownRendererProps) {
+export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage, isImageCompact, isGenerating = false }: MarkdownRendererProps) {
     const processedContent = React.useMemo(() => {
         let processed = content;
         processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$');
@@ -146,12 +229,48 @@ export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage,
             blocks.push(match[1].trim());
         }
 
+        // Deduplicate and filter mermaid.ink URLs to prevent duplicate rendering
+        const seenMermaidUrls = new Set<string>();
+        
+        // Remove markdown images: ![alt](url) matching mermaid.ink, or keep the first if no code blocks are present
+        processed = processed.replace(/!\[.*?\]\((https?:\/\/mermaid\.ink\/[^)]+)\)/g, (match, url) => {
+            if (blocks.length > 0) {
+                return '';
+            }
+            if (seenMermaidUrls.has(url)) {
+                return '';
+            }
+            seenMermaidUrls.add(url);
+            return match;
+        });
+
+        // Remove markdown links: [text](url) matching mermaid.ink, or keep the first if no code blocks are present
+        processed = processed.replace(/(?<!\!)\[.*?\]\((https?:\/\/mermaid\.ink\/[^)]+)\)/g, (match, url) => {
+            if (blocks.length > 0) {
+                return '';
+            }
+            if (seenMermaidUrls.has(url)) {
+                return '';
+            }
+            seenMermaidUrls.add(url);
+            return match;
+        });
+
+        // Remove raw/plain mermaid.ink URLs
+        processed = processed.replace(/(https?:\/\/mermaid\.ink\/\S+)/g, (match, url) => {
+            if (blocks.length > 0 || seenMermaidUrls.has(url)) {
+                return '';
+            }
+            seenMermaidUrls.add(url);
+            return match;
+        });
+
         // Remove anything related to kroki.io (markdown images, plain URLs)
         processed = processed.replace(/!\[.*?\]\(https?:\/\/kroki\.io[^\s)]*\)/g, '');
         processed = processed.replace(/https?:\/\/kroki\.io\/\S+/g, '');
-        // Remove unwanted diagram-like markdown images from any external renderer, but allow mermaid.ink and pollinations.ai
+        // Remove unwanted diagram-like markdown images from any external renderer, but allow pollinations.ai and mermaid.ink
         processed = processed.replace(/!\[(?:Diagram|Chart|Visual|Image).*?\]\((https?:\/\/[^\s)]+)\)/g, (match, url) => {
-            if (url.includes('mermaid.ink') || url.includes('pollinations.ai')) {
+            if (url.includes('pollinations.ai') || url.includes('mermaid.ink')) {
                 return match;
             }
             return '';
@@ -208,6 +327,19 @@ export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage,
                         const { src, alt } = props;
                         if (!src || typeof src !== "string") return null;
                         if (src === "image_url" || src === "placeholder" || src === "") return null;
+
+                        // Check if it's a mermaid.ink URL (possibly with spaces/corrupted base64)
+                        if (src.includes("mermaid.ink/img/")) {
+                            const match = /mermaid\.ink\/img\/([^?#\s)]+)/.exec(src);
+                            if (match) {
+                                const base64Part = match[1];
+                                const cleanCode = getCleanMermaidCode(base64Part);
+                                if (cleanCode && cleanCode !== base64Part) {
+                                    return <MermaidImage code={cleanCode} onDownloadImage={onDownloadImage} isGenerating={isGenerating} />;
+                                }
+                            }
+                        }
+
                         return (
                             <span className={`block my-4 relative group/img-wrapper ${
                                 isImageCompact ? "max-w-[280px] md:max-w-[320px]" : "max-w-full"
@@ -256,7 +388,7 @@ export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage,
                         const lang = match?.[1] || "";
 
                         if (lang === "mermaid") {
-                            return <MermaidImage code={String(children)} onDownloadImage={onDownloadImage} />;
+                            return <MermaidImage code={String(children)} onDownloadImage={onDownloadImage} isGenerating={isGenerating} />;
                         }
 
                         return (
@@ -311,23 +443,31 @@ export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage,
                     },
                     strong(props) {
                         const { children } = props;
-                        return <strong className={`font-bold ${isDarkMode ? "" : "text-[#008A8A]"}`} style={isDarkMode ? { color: "var(--brand-accent)" } : undefined}>{children}</strong>;
+                        return <strong className={`underline decoration-1 ${isDarkMode ? "text-white" : "text-black"}`} style={{fontFamily: "var(--font-edu-cursive)", textUnderlineOffset: "3px", fontWeight: "normal"}}>{children}</strong>;
                     },
                     h1(props) {
                         const { children } = props;
-                        return <h1 className={`${isDarkMode ? "border-white/10" : "text-[#008A8A] border-black/10"} text-2xl md:text-3xl font-black mt-8 mb-4 pb-2 border-b`} style={isDarkMode ? { color: "var(--brand-accent)" } : undefined}>{children}</h1>;
+                        return <h1 className={`${isDarkMode ? "text-white border-white/10" : "text-black border-black/10"} text-4xl md:text-5xl mt-8 mb-4 pb-2 border-b`} style={{fontFamily: "var(--font-edu-cursive)"}}>{children}</h1>;
                     },
                     h2(props) {
                         const { children } = props;
-                        return <h2 className={`${isDarkMode ? "" : "text-[#008A8A]"} text-xl md:text-2xl font-bold mt-6 mb-3`} style={isDarkMode ? { color: "var(--brand-accent)" } : undefined}>{children}</h2>;
+                        return <h2 className={`${isDarkMode ? "text-white" : "text-black"} text-3xl md:text-4xl mt-6 mb-3`} style={{fontFamily: "var(--font-edu-cursive)"}}>{children}</h2>;
                     },
                     h3(props) {
                         const { children } = props;
-                        return <h3 className={`${isDarkMode ? "" : "text-[#008A8A]"} text-lg md:text-xl font-semibold mt-5 mb-2`} style={isDarkMode ? { color: "var(--brand-accent)" } : undefined}>{children}</h3>;
+                        return <h3 className={`${isDarkMode ? "text-white" : "text-black"} text-2xl md:text-3xl mt-5 mb-2`} style={{fontFamily: "var(--font-edu-cursive)"}}>{children}</h3>;
                     },
                     h4(props) {
                         const { children } = props;
-                        return <h4 className={`${isDarkMode ? "" : "text-[#008A8A]"} text-base md:text-lg font-semibold mt-4 mb-2`} style={isDarkMode ? { color: "var(--brand-accent)" } : undefined}>{children}</h4>;
+                        return <h4 className={`${isDarkMode ? "text-white" : "text-black"} text-xl md:text-2xl mt-4 mb-2`} style={{fontFamily: "var(--font-edu-cursive)"}}>{children}</h4>;
+                    },
+                    h5(props) {
+                        const { children } = props;
+                        return <h5 className={`${isDarkMode ? "text-white" : "text-black"} text-lg md:text-xl mt-3 mb-1`} style={{fontFamily: "var(--font-edu-cursive)"}}>{children}</h5>;
+                    },
+                    h6(props) {
+                        const { children } = props;
+                        return <h6 className={`${isDarkMode ? "text-white" : "text-black"} text-base md:text-lg mt-3 mb-1`} style={{fontFamily: "var(--font-edu-cursive)"}}>{children}</h6>;
                     },
                     p(props) {
                         const { children } = props;

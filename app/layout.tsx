@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Instrument_Serif, Orbitron, Hanken_Grotesk } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Serif, Orbitron, Hanken_Grotesk, Edu_NSW_ACT_Cursive } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import "@/lib/i18n";
@@ -30,6 +30,11 @@ const orbitron = Orbitron({
   subsets: ["latin"],
 });
 
+const eduCursive = Edu_NSW_ACT_Cursive({
+  variable: "--font-edu-cursive",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Rudranex AI",
   description: "Rudranex AI: Student Mode, Coding, Interview Prep, and more — all in one.",
@@ -48,7 +53,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${hankenGrotesk.variable} ${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} ${orbitron.variable} h-full antialiased`}
+      className={`${hankenGrotesk.variable} ${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} ${orbitron.variable} ${eduCursive.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}

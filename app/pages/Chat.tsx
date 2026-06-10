@@ -40,6 +40,7 @@ import { toast } from "sonner";
 
 import ChatLoader from "@/components/ui/ChatLoader";
 import DotsLoader from "@/components/ui/DotsLoader";
+import { MultiStepLoader } from "@/components/ui/multi-step-loader";
 import MarkdownRenderer from "@/components/ui/MarkdownRenderer";
 import InterviewPrepModal from "@/components/InterviewPrepModal";
 import MockPaperModal, { MockPaperConfig } from "@/components/MockPaperModal";
@@ -117,6 +118,14 @@ const chatAccentFont = Space_Grotesk({
     weight: ["400", "500", "700"],
     variable: "--font-chat-accent",
 });
+
+const GENERATION_STEPS = [
+    { text: "Analyzing your input..." },
+    { text: "Processing request..." },
+    { text: "Generating response..." },
+    { text: "Refining output..." },
+    { text: "Finalizing..." },
+];
 
 const getWelcomeMessages = (): Message[] => [
     {
@@ -328,6 +337,8 @@ const Chat = () => {
         t("hint_4"),
         t("hint_5"),
     ], [t]);
+    const placeholderTextsRef = useRef(PLACEHOLDER_TEXTS);
+    useEffect(() => { placeholderTextsRef.current = PLACEHOLDER_TEXTS; }, [PLACEHOLDER_TEXTS]);
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
     const [typedPlaceholder, setTypedPlaceholder] = useState(PLACEHOLDER_TEXTS[0]);
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
@@ -920,7 +931,8 @@ const Chat = () => {
         let charPos = 0;
         let interval: ReturnType<typeof setInterval>;
         const startTyping = () => {
-            const text = PLACEHOLDER_TEXTS[placeholderIndex];
+            const text = placeholderTextsRef.current[placeholderIndex % placeholderTextsRef.current.length];
+
             charPos = 0;
             interval = setInterval(() => {
                 charPos++;
@@ -937,7 +949,8 @@ const Chat = () => {
         };
         startTyping();
         return () => clearInterval(interval);
-    }, [placeholderIndex, PLACEHOLDER_TEXTS, isProcessingFile]);
+    }, [placeholderIndex, isProcessingFile]);
+
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -1754,30 +1767,8 @@ STRICT RULES:
 
                 setIsLoading(false);
 
-                // ── Enhance response ──
-                if (aiContent && currentChatId && !isImageGenMode) {
-                    try {
-                        setShowDots(true);
-                        const enhanced = await enhanceViaChatApi(trimmedInput, aiContent);
-                        if (enhanced && enhanced !== aiContent) {
-                            aiContent = enhanced;
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                for (let i = updated.length - 1; i >= 0; i--) {
-                                    if (updated[i].role === "assistant") {
-                                        updated[i] = { ...updated[i], content: aiContent };
-                                        break;
-                                    }
-                                }
-                                return updated;
-                            });
-                        }
-                    } catch {
-                        // Use original if fails
-                    } finally {
-                        setShowDots(false);
-                    }
-                }
+                // ── Enhance response disabled to prevent duplicate request ──
+
 
                 if (currentChatId && aiContent) {
                     try {
@@ -1862,30 +1853,7 @@ STRICT RULES:
 
                 setIsLoading(false);
 
-                // ── Enhance response ──
-                if (aiContent && !isImageGenMode && !isImage) {
-                    try {
-                        setShowDots(true);
-                        const enhanced = await enhanceViaChatApi(trimmedInput, aiContent);
-                        if (enhanced && enhanced !== aiContent) {
-                            aiContent = enhanced;
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                for (let i = updated.length - 1; i >= 0; i--) {
-                                    if (updated[i].role === "assistant") {
-                                        updated[i] = { ...updated[i], content: aiContent };
-                                        break;
-                                    }
-                                }
-                                return updated;
-                            });
-                        }
-                    } catch {
-                        // Use original if fails
-                    } finally {
-                        setShowDots(false);
-                    }
-                }
+                // ── Enhance response disabled to prevent duplicate request ──
 
                 if (isImageGenMode) {
                     saveImageToHistory(userMessage, { role: "assistant", content: aiContent, timestamp: formatTimestamp() });
@@ -2934,6 +2902,7 @@ STRICT RULES:
                                                                             isDarkMode={isDarkMode}
                                                                             onDownloadImage={handleDownloadImage}
                                                                             isImageCompact={selectedEngine !== "AI Image Lab"}
+                                                                            isGenerating={isLoading && i === messages.length - 1}
                                                                         />
                                                                     )}
                                                                     <div className={`relative group/img-wrapper ${selectedEngine === "AI Image Lab"
@@ -2966,6 +2935,7 @@ STRICT RULES:
                                                                 isDarkMode={isDarkMode}
                                                                 onDownloadImage={handleDownloadImage}
                                                                 isImageCompact={selectedEngine !== "AI Image Lab"}
+                                                                isGenerating={isLoading && i === messages.length - 1}
                                                             />
                                                         );
                                                     })()}
@@ -2980,17 +2950,17 @@ STRICT RULES:
                                                 </div>
 
                                                 {/* Action Buttons */}
-                                                <div className={`flex items-center gap-2 mt-2 ${msg.role === "user" ? "justify-end" : "justify-start px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"}`}>
+                                                <div className={`flex items-center gap-2 mt-2 ${msg.role === "user" ? "justify-end" : "justify-start px-2"}`}>
                                                     {msg.role === "user" ? (
                                                         <>
-                                                            <button onClick={() => setInput(msg.content)} title="Edit & resend" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5"}`}>
-                                                                <Edit3 className="h-3.5 w-3.5" />
+                                                            <button onClick={() => setInput(msg.content)} title="Edit & resend" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}>
+                                                                <Edit3 className="h-5 w-5" />
                                                             </button>
-                                                            <button onClick={() => copyToClipboard(msg.content, i)} title="Copy message" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5"}`}>
+                                                            <button onClick={() => copyToClipboard(msg.content, i)} title="Copy message" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}>
                                                                 {copiedMsgIndex === i ? (
-                                                                    <Check className="h-3.5 w-3.5 text-emerald-400" />
+                                                                    <Check className="h-5 w-5 text-emerald-400" />
                                                                 ) : (
-                                                                    <Copy className="h-3.5 w-3.5" />
+                                                                    <Copy className="h-5 w-5" />
                                                                 )}
                                                             </button>
                                                         </>
@@ -3001,36 +2971,36 @@ STRICT RULES:
                                                                 onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, 1)}
                                                                 className={`p-1.5 transition-all rounded-lg ${msg.feedback === 1
                                                                     ? "text-emerald-400 bg-emerald-500/10"
-                                                                    : (isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5")
+                                                                    : (isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5")
                                                                     }`}
                                                             >
-                                                                <ThumbsUp className="h-3.5 w-3.5" />
+                                                                <ThumbsUp className="h-5 w-5" />
                                                             </button>
                                                             <button
                                                                 title="Dislike"
                                                                 onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, -1)}
                                                                 className={`p-1.5 transition-all rounded-lg ${msg.feedback === -1
                                                                     ? "text-red-400 bg-red-500/10"
-                                                                    : (isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5")
+                                                                    : (isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5")
                                                                     }`}
                                                             >
-                                                                <ThumbsDown className="h-3.5 w-3.5" />
+                                                                <ThumbsDown className="h-5 w-5" />
                                                             </button>
-                                                            <button onClick={() => copyToClipboard(msg.content, i)} title="Copy message" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5"}`}>
+                                                            <button onClick={() => copyToClipboard(msg.content, i)} title="Copy message" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}>
                                                                 {copiedMsgIndex === i ? (
-                                                                    <Check className="h-3.5 w-3.5 text-emerald-400" />
+                                                                    <Check className="h-5 w-5 text-emerald-400" />
                                                                 ) : (
-                                                                    <Copy className="h-3.5 w-3.5" />
+                                                                    <Copy className="h-5 w-5" />
                                                                 )}
                                                             </button>
-                                                            <button onClick={() => retryMessage(i)} title="Regenerate" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5"}`}>
-                                                                <RotateCcw className="h-3.5 w-3.5" />
+                                                            <button onClick={() => retryMessage(i)} title="Regenerate" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}>
+                                                                <RotateCcw className="h-5 w-5" />
                                                             </button>
-                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5"}`}>
-                                                                <FileDown className="h-3.5 w-3.5" />
+                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}>
+                                                                <FileDown className="h-5 w-5" />
                                                             </button>
-                                                            <button onClick={() => { if (navigator.share) { navigator.share({ title: "Rudranex AI Response", text: msg.content }); } else { navigator.clipboard.writeText(msg.content); toast.success("Link copied to clipboard"); } }} title="Share" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5"}`}>
-                                                                <Share className="h-3.5 w-3.5" />
+                                                            <button onClick={() => { if (navigator.share) { navigator.share({ title: "Rudranex AI Response", text: msg.content }); } else { navigator.clipboard.writeText(msg.content); toast.success("Link copied to clipboard"); } }} title="Share" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}>
+                                                                <Share className="h-5 w-5" />
                                                             </button>
                                                         </>
                                                     )}
@@ -3040,7 +3010,7 @@ STRICT RULES:
                                     ))
                                 )}
                             </AnimatePresence>
-                            {showDots && <DotsLoader isDarkMode={isDarkMode} />}
+                            <MultiStepLoader loadingStates={GENERATION_STEPS} loading={isLoading && messages[messages.length - 1]?.role !== "assistant"} duration={1500} isInline={true} />
 
                             {/* MCQ Options Panel — below the question message */}
                             {mcqSession && (() => {
