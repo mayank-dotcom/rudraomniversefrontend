@@ -85,8 +85,8 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className={`text-xl font-serif font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Persona Mode</h3>
-                <p className={`text-[11px] font-mono mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Configure how the AI behaves in every conversation</p>
+                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Persona Mode</h3>
+                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Configure how the AI behaves in every conversation</p>
             </div>
 
             {currentPersona && (
@@ -96,13 +96,13 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
                             <Sparkles className="h-3.5 w-3.5" />
                         </div>
                         <div>
-                            <p className={`text-[11px] font-mono font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{currentPersona.name}</p>
-                            <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Active Persona</p>
+                            <p className={`text-[11px] font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{currentPersona.name}</p>
+                            <p className={`text-[9px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Active Persona</p>
                         </div>
                     </div>
                     <button
                         onClick={() => onPersonaSelect({ name: "", systemPrompt: "", predefined: true })}
-                        className={`text-[9px] font-mono px-3 py-1.5 rounded-lg border transition-all ${isDarkMode ? "border-white/10 text-white/50 hover:text-white hover:border-white/30" : "border-black/10 text-black/50 hover:text-black hover:border-black/30"}`}
+                        className={`text-[9px] font-sans px-3 py-1.5 rounded-lg border transition-all ${isDarkMode ? "border-white/10 text-white/50 hover:text-white hover:border-white/30" : "border-black/10 text-black/50 hover:text-black hover:border-black/30"}`}
                     >
                         Clear
                     </button>
@@ -114,7 +114,7 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
                     <button
                         key={t}
                         onClick={() => setTab(t)}
-                        className={`flex-1 py-2.5 text-[9px] font-mono uppercase tracking-[0.15em] transition-all ${tab === t
+                        className={`flex-1 py-2.5 text-[9px] font-sans uppercase tracking-[0.15em] transition-all ${tab === t
                             ? isDarkMode ? "border-b-2 border-white text-white font-bold" : "border-b-2 border-black text-black font-bold"
                             : isDarkMode ? "text-white/40 hover:text-white/70" : "text-black/40 hover:text-black/70"
                         }`}
@@ -138,7 +138,7 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
                                 }`}
                             >
                                 <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-[11px] font-mono font-bold uppercase tracking-widest">{p.name}</span>
+                                    <span className="text-[11px] font-sans font-bold uppercase tracking-widest">{p.name}</span>
                                     {isActive && <Check className="h-3.5 w-3.5 shrink-0" />}
                                 </div>
                                 <p className="text-[9px] leading-relaxed opacity-60 font-sans line-clamp-2">{p.systemPrompt}</p>
@@ -151,26 +151,26 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
             {tab === "custom" && (
                 <div className="space-y-5">
                     <div>
-                        <label className={`block text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>Persona Name</label>
+                        <label className={`block text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>Persona Name</label>
                         <input
                             type="text"
                             value={customName}
                             onChange={(e) => setCustomName(e.target.value)}
                             placeholder="e.g. Code Mentor, Math Genius..."
-                            className={`w-full p-3.5 text-xs font-mono border rounded-xl focus:outline-none transition-all ${isDarkMode
+                            className={`w-full p-3.5 text-xs font-sans border rounded-xl focus:outline-none transition-all ${isDarkMode
                                 ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/40"
                                 : "bg-black/5 border-black/10 text-black placeholder:text-black/20 focus:border-black/40"
                             }`}
                         />
                     </div>
                     <div>
-                        <label className={`block text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>System Prompt</label>
+                        <label className={`block text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>System Prompt</label>
                         <textarea
                             value={customPrompt}
                             onChange={(e) => setCustomPrompt(e.target.value)}
                             placeholder="Describe how this AI persona should behave..."
                             rows={5}
-                            className={`w-full p-3.5 text-xs font-mono border rounded-xl focus:outline-none transition-all resize-none ${isDarkMode
+                            className={`w-full p-3.5 text-xs font-sans border rounded-xl focus:outline-none transition-all resize-none ${isDarkMode
                                 ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/40"
                                 : "bg-black/5 border-black/10 text-black placeholder:text-black/20 focus:border-black/40"
                             }`}
@@ -179,7 +179,7 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
                     <button
                         onClick={handleCreateCustom}
                         disabled={!customName.trim() || !customPrompt.trim()}
-                        className={`w-full py-3.5 text-[10px] font-mono font-black uppercase tracking-[0.25em] rounded-xl transition-all disabled:opacity-30 flex items-center justify-center gap-2 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
+                        className={`w-full py-3.5 text-[10px] font-sans font-black uppercase tracking-[0.25em] rounded-xl transition-all disabled:opacity-30 flex items-center justify-center gap-2 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
                     >
                         <UserPlus className="h-3.5 w-3.5" />
                         Create Persona
@@ -211,8 +211,8 @@ function PlanPanel({ isDarkMode, subscription, isSubscriptionLoading }: {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className={`text-xl font-serif font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Plan Details</h3>
-                <p className={`text-[11px] font-mono mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Your current subscription and usage</p>
+                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Plan Details</h3>
+                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Your current subscription and usage</p>
             </div>
 
             {/* Plan Badge */}
@@ -226,24 +226,24 @@ function PlanPanel({ isDarkMode, subscription, isSubscriptionLoading }: {
                             {isSubscriptionLoading ? (
                                 <div className={`h-4 w-24 rounded ${isDarkMode ? "bg-white/10" : "bg-black/10"} animate-pulse`} />
                             ) : (
-                                <p className={`text-sm font-serif font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{planName}</p>
+                                <p className={`text-sm font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{planName}</p>
                             )}
-                            <p className={`text-[9px] font-mono mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Active Plan</p>
+                            <p className={`text-[9px] font-sans mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Active Plan</p>
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className={`text-xl font-mono font-black ${isDarkMode ? "text-white" : "text-black"}`}>
+                        <p className={`text-xl font-sans font-black ${isDarkMode ? "text-white" : "text-black"}`}>
                             {isSubscriptionLoading ? "—" : tokensRemaining.toLocaleString()}
                         </p>
-                        <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>TOKENS LEFT</p>
+                        <p className={`text-[8px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>TOKENS LEFT</p>
                     </div>
                 </div>
 
                 {/* Token Progress */}
                 <div className="space-y-1.5">
                     <div className="flex justify-between">
-                        <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Tokens Remaining</span>
-                        <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{tokensRemaining} / {monthlyTokens}</span>
+                        <span className={`text-[9px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Tokens Remaining</span>
+                        <span className={`text-[9px] font-sans ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{tokensRemaining} / {monthlyTokens}</span>
                     </div>
                     <div className={`h-1.5 rounded-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
                         <div
@@ -259,8 +259,8 @@ function PlanPanel({ isDarkMode, subscription, isSubscriptionLoading }: {
                 {metrics.map((m) => (
                     <div key={m.label} className={`p-4 rounded-xl border ${isDarkMode ? "border-white/8 bg-white/[0.02]" : "border-black/8 bg-black/[0.01]"}`}>
                         <div className="flex justify-between items-center mb-2">
-                            <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{m.label}</span>
-                            <span className={`text-[10px] font-mono font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{m.used} <span className={`font-normal opacity-40`}>/ {m.limit || "—"}</span></span>
+                            <span className={`text-[10px] font-sans ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{m.label}</span>
+                            <span className={`text-[10px] font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{m.used} <span className={`font-normal opacity-40`}>/ {m.limit || "—"}</span></span>
                         </div>
                         {m.limit > 0 && (
                             <div className={`h-1 rounded-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
@@ -276,7 +276,7 @@ function PlanPanel({ isDarkMode, subscription, isSubscriptionLoading }: {
 
             <a
                 href="/pricing"
-                className={`flex items-center justify-center gap-2 w-full py-3.5 text-[10px] font-mono font-black uppercase tracking-[0.25em] rounded-xl transition-all ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
+                className={`flex items-center justify-center gap-2 w-full py-3.5 text-[10px] font-sans font-black uppercase tracking-[0.25em] rounded-xl transition-all ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
             >
                 <Zap className="h-3.5 w-3.5 fill-current" />
                 Upgrade Plan
@@ -292,8 +292,8 @@ function FAQPanel({ isDarkMode }: { isDarkMode: boolean }) {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className={`text-xl font-serif font-bold ${isDarkMode ? "text-white" : "text-black"}`}>FAQ</h3>
-                <p className={`text-[11px] font-mono mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Frequently asked questions</p>
+                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>FAQ</h3>
+                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Frequently asked questions</p>
             </div>
             <div className="space-y-2.5">
                 {FAQ_ITEMS.map((item, i) => (
@@ -367,8 +367,8 @@ function BugPanel({ isDarkMode, userEmail }: { isDarkMode: boolean; userEmail: s
     return (
         <div className="space-y-6">
             <div>
-                <h3 className={`text-xl font-serif font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Bug Report</h3>
-                <p className={`text-[11px] font-mono mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Help us improve by reporting issues</p>
+                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Bug Report</h3>
+                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Help us improve by reporting issues</p>
             </div>
 
             {submitted ? (
@@ -380,11 +380,11 @@ function BugPanel({ isDarkMode, userEmail }: { isDarkMode: boolean; userEmail: s
                     <div className={`h-16 w-16 rounded-2xl flex items-center justify-center ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}>
                         <Check className="h-8 w-8" />
                     </div>
-                    <p className={`text-sm font-serif font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Report Submitted!</p>
-                    <p className={`text-[11px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Our team will look into this shortly.</p>
+                    <p className={`text-sm font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Report Submitted!</p>
+                    <p className={`text-[11px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Our team will look into this shortly.</p>
                     <button
                         onClick={() => setSubmitted(false)}
-                        className={`mt-2 text-[9px] font-mono uppercase tracking-[0.15em] px-4 py-2 rounded-lg border transition-all ${isDarkMode ? "border-white/10 text-white/40 hover:text-white hover:border-white/30" : "border-black/10 text-black/40 hover:text-black hover:border-black/30"}`}
+                        className={`mt-2 text-[9px] font-sans uppercase tracking-[0.15em] px-4 py-2 rounded-lg border transition-all ${isDarkMode ? "border-white/10 text-white/40 hover:text-white hover:border-white/30" : "border-black/10 text-black/40 hover:text-black hover:border-black/30"}`}
                     >
                         Report Another
                     </button>
@@ -392,13 +392,13 @@ function BugPanel({ isDarkMode, userEmail }: { isDarkMode: boolean; userEmail: s
             ) : (
                 <div className="space-y-5">
                     <div>
-                        <label className={`block text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>Issue Type</label>
+                        <label className={`block text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>Issue Type</label>
                         <div className="grid grid-cols-2 gap-2">
                             {issueTypes.map((t) => (
                                 <button
                                     key={t}
                                     onClick={() => setType(t)}
-                                    className={`py-2.5 px-3 text-[9px] font-mono rounded-xl border transition-all ${type === t
+                                    className={`py-2.5 px-3 text-[9px] font-sans rounded-xl border transition-all ${type === t
                                         ? isDarkMode ? "bg-white text-black border-white font-bold" : "bg-black text-white border-black font-bold"
                                         : isDarkMode ? "border-white/10 text-white/50 hover:border-white/30 hover:text-white/80" : "border-black/10 text-black/50 hover:border-black/30 hover:text-black/80"
                                     }`}
@@ -410,13 +410,13 @@ function BugPanel({ isDarkMode, userEmail }: { isDarkMode: boolean; userEmail: s
                     </div>
 
                     <div>
-                        <label className={`block text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>Description</label>
+                        <label className={`block text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>Description</label>
                         <textarea
                             value={desc}
                             onChange={(e) => setDesc(e.target.value)}
                             placeholder="Describe the issue in detail — what happened, what you expected, and steps to reproduce..."
                             rows={5}
-                            className={`w-full p-3.5 text-xs font-mono border rounded-xl focus:outline-none transition-all resize-none ${isDarkMode
+                            className={`w-full p-3.5 text-xs font-sans border rounded-xl focus:outline-none transition-all resize-none ${isDarkMode
                                 ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/40"
                                 : "bg-black/5 border-black/10 text-black placeholder:text-black/20 focus:border-black/40"
                             }`}
@@ -424,13 +424,13 @@ function BugPanel({ isDarkMode, userEmail }: { isDarkMode: boolean; userEmail: s
                     </div>
 
                     {error && (
-                        <p className="text-[10px] font-mono text-red-400">{error}</p>
+                        <p className="text-[10px] font-sans text-red-400">{error}</p>
                     )}
 
                     <button
                         onClick={handleSubmit}
                         disabled={!desc.trim() || submitting}
-                        className={`w-full py-3.5 text-[10px] font-mono font-black uppercase tracking-[0.25em] rounded-xl transition-all disabled:opacity-30 flex items-center justify-center gap-2 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
+                        className={`w-full py-3.5 text-[10px] font-sans font-black uppercase tracking-[0.25em] rounded-xl transition-all disabled:opacity-30 flex items-center justify-center gap-2 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
                     >
                         {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                         {submitting ? "Submitting..." : "Submit Report"}
@@ -451,8 +451,8 @@ function DeactivatePanel({ isDarkMode, onDeactivate, userEmail }: { isDarkMode: 
     return (
         <div className="space-y-6">
             <div>
-                <h3 className={`text-xl font-serif font-bold text-red-500`}>Deactivate Account</h3>
-                <p className={`text-[11px] font-mono mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Permanently delete your account and all data</p>
+                <h3 className={`text-xl font-sans font-bold text-red-500`}>Deactivate Account</h3>
+                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Permanently delete your account and all data</p>
             </div>
 
             <div className={`p-4 rounded-xl border border-red-500/20 ${isDarkMode ? "bg-red-500/5" : "bg-red-500/3"}`}>
@@ -460,7 +460,7 @@ function DeactivatePanel({ isDarkMode, onDeactivate, userEmail }: { isDarkMode: 
                     <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
                     <div className="space-y-1.5">
                         <p className="text-[11px] font-sans font-semibold text-red-500">This action is permanent and cannot be undone.</p>
-                        <ul className={`text-[10px] font-mono space-y-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                        <ul className={`text-[10px] font-sans space-y-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                             <li>• All your chats will be deleted</li>
                             <li>• All custom personas will be removed</li>
                             <li>• Your subscription will be cancelled</li>
@@ -471,7 +471,7 @@ function DeactivatePanel({ isDarkMode, onDeactivate, userEmail }: { isDarkMode: 
             </div>
 
             <div>
-                <label className={`block text-[9px] font-mono uppercase tracking-[0.15em] mb-2 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                <label className={`block text-[9px] font-sans uppercase tracking-[0.15em] mb-2 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                     Type <span className="text-red-400 font-bold">delete my account</span> to confirm
                 </label>
                 <input
@@ -479,7 +479,7 @@ function DeactivatePanel({ isDarkMode, onDeactivate, userEmail }: { isDarkMode: 
                     value={inputVal}
                     onChange={(e) => setInputVal(e.target.value)}
                     placeholder="delete my account"
-                    className={`w-full p-3.5 text-xs font-mono border rounded-xl focus:outline-none transition-all ${isDarkMode
+                    className={`w-full p-3.5 text-xs font-sans border rounded-xl focus:outline-none transition-all ${isDarkMode
                         ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-red-500/50"
                         : "bg-black/5 border-black/10 text-black placeholder:text-black/20 focus:border-red-500/50"
                     }`}
@@ -489,7 +489,7 @@ function DeactivatePanel({ isDarkMode, onDeactivate, userEmail }: { isDarkMode: 
             <button
                 onClick={() => { if (isMatch) onDeactivate(); }}
                 disabled={!isMatch}
-                className={`w-full py-3.5 text-[10px] font-mono font-black uppercase tracking-[0.2em] rounded-xl transition-all flex items-center justify-center gap-2 ${isMatch
+                className={`w-full py-3.5 text-[10px] font-sans font-black uppercase tracking-[0.2em] rounded-xl transition-all flex items-center justify-center gap-2 ${isMatch
                     ? "bg-red-500 text-white hover:bg-red-600 cursor-pointer"
                     : isDarkMode ? "bg-red-500/10 text-red-500/30 border border-red-500/20 cursor-not-allowed" : "bg-red-500/5 text-red-500/30 border border-red-500/20 cursor-not-allowed"
                 }`}
@@ -543,7 +543,7 @@ export default function SettingsModal({
                     onClick={onClose}
                 >
                     {/* Backdrop */}
-                    <div className={`absolute inset-0 backdrop-blur-md ${isDarkMode ? "bg-black/80" : "bg-white/80"}`} />
+                    <div className={`absolute inset-0 ${isDarkMode ? "bg-black/80" : "bg-[#f2f1f0]/80"}`} />
 
                     {/* Modal */}
                     <motion.div
@@ -551,9 +551,9 @@ export default function SettingsModal({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.96, y: 16 }}
                         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                        className={`relative w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden flex ${isMobile ? "flex-col max-h-[90dvh]" : "flex-row h-[580px]"} ${isDarkMode
+                         className={`relative w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden flex ${isMobile ? "flex-col max-h-[90dvh]" : "flex-row max-h-[80vh]"} ${isDarkMode
                             ? "bg-[#0d0d0c] border-white/10"
-                            : "bg-white border-black/10"
+                            : "bg-[#f2f1f0] border-black/10"
                         }`}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -562,8 +562,8 @@ export default function SettingsModal({
                             {/* Header */}
                             {!isMobile && (
                                 <div className="px-5 py-5 border-b border-inherit">
-                                    <p className={`text-xs font-serif font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Settings</p>
-                                    <p className={`text-[9px] font-mono mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>{userName || "User"}</p>
+                                    <p className={`text-xs font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Settings</p>
+                                    <p className={`text-[9px] font-sans mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>{userName || "User"}</p>
                                 </div>
                             )}
                             {navItems.map(({ id, label, icon: Icon }) => {
@@ -573,7 +573,7 @@ export default function SettingsModal({
                                     <button
                                         key={id}
                                         onClick={() => setActivePanel(id)}
-                                        className={`${isMobile ? "flex-shrink-0 flex flex-col items-center py-3 px-4 gap-1" : "flex items-center gap-3 px-5 py-3.5 w-full text-left"} transition-all text-[10px] font-mono uppercase tracking-[0.12em] ${
+                                        className={`${isMobile ? "flex-shrink-0 flex flex-col items-center py-3 px-4 gap-1" : "flex items-center gap-3 px-5 py-3.5 w-full text-left"} transition-all text-[10px] font-sans uppercase tracking-[0.12em] ${
                                             isActive
                                                 ? isDanger
                                                     ? "text-red-500 font-bold" + (isDarkMode ? " bg-red-500/10" : " bg-red-500/5")
