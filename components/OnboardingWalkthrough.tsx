@@ -19,6 +19,18 @@ interface OnboardingWalkthroughProps {
   setIsSidebarCollapsed: (v: boolean) => void;
   setIsRightSidebarCollapsed: (v: boolean) => void;
   isDarkMode: boolean;
+  accent?: string;
+}
+
+function getContrastColor(hex: string): string {
+  if (!hex) return "#ffffff";
+  const h = hex.replace("#", "");
+  if (h.length < 6) return "#ffffff";
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 128 ? "#000000" : "#ffffff";
 }
 
 export default function OnboardingWalkthrough({
@@ -28,7 +40,9 @@ export default function OnboardingWalkthrough({
   setIsSidebarCollapsed,
   setIsRightSidebarCollapsed,
   isDarkMode,
+  accent,
 }: OnboardingWalkthroughProps) {
+  const activeAccent = accent || "#00DDDD";
   const [currentStep, setCurrentStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [coords, setCoords] = useState<{ x: number; y: number; placement: string } | null>(null);
@@ -53,7 +67,7 @@ export default function OnboardingWalkthrough({
         description: isMobile 
           ? "Tap the message icon in the header to open the sidebar. Here you can start a new chat, search sessions, and review your history."
           : "Collapse or expand this sidebar to view your chat sessions history, start a new chat, or search previous discussions.",
-        targetSelector: isMobile ? undefined : "#walkthrough-sidebar-toggle",
+        targetSelector: isMobile ? undefined : "#walkthrough-sidebar",
         placement: isMobile ? "center" : "right",
       },
       {
@@ -315,7 +329,7 @@ export default function OnboardingWalkthrough({
                   <motion.div
                     animate={{ y: [-4, 2, -4] }}
                     transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
-                    className="text-[#00DDDD] drop-shadow-[0_0_8px_rgba(0,221,221,0.8)]"
+                    style={{ color: activeAccent, filter: `drop-shadow(0 0 8px ${activeAccent})` }}
                   >
                     <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                       <path d="M12 4l-8 8h6v8h4v-8h6z" />
@@ -331,7 +345,8 @@ export default function OnboardingWalkthrough({
                     <motion.div
                       animate={{ x: [-4, 2, -4] }}
                       transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
-                      className="text-[#00DDDD] shrink-0 drop-shadow-[0_0_8px_rgba(0,221,221,0.8)]"
+                      style={{ color: activeAccent, filter: `drop-shadow(0 0 8px ${activeAccent})` }}
+                      className="shrink-0"
                     >
                       <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                         <path d="M4 12l8-8v6h8v4h-8v6z" />
@@ -350,21 +365,23 @@ export default function OnboardingWalkthrough({
                   <div className="w-full h-0.5 bg-white/10 mb-4 rounded-full overflow-hidden">
                     <motion.div
                       animate={{ width: `${progressPercentage}%` }}
-                      className="h-full bg-[#00DDDD]"
+                      style={{ backgroundColor: activeAccent }}
+                      className="h-full"
                       transition={{ duration: 0.3 }}
                     />
                   </div>
 
                   {/* Header Info */}
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-[8px] font-mono tracking-[0.25em] text-[#00DDDD] uppercase">
+                    <span style={{ color: activeAccent }} className="text-[8px] font-mono tracking-[0.25em] uppercase">
                       RUDRANEX TOUR // STEP {String(currentStep + 1).padStart(2, "0")}
                     </span>
                     <button
                       onClick={handleClose}
                       className={`p-1 transition-all rounded ${
-                        isDarkMode ? "hover:bg-white/5 hover:text-[#00DDDD]" : "hover:bg-black/5 hover:text-[#00c5c5]"
+                        isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
                       }`}
+                      style={{ color: activeAccent }}
                       title="Skip Tour"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -374,8 +391,8 @@ export default function OnboardingWalkthrough({
                   {/* Title & Description */}
                   <div className="mb-5">
                     <h3 className={`text-sm font-bold tracking-tight mb-2 flex items-center gap-2 ${isDarkMode ? "text-white" : "text-black"}`}>
-                      {currentStep === 0 && <Sparkles className="h-4 w-4 text-[#00DDDD] animate-pulse" />}
-                      {currentStep === steps.length - 1 && <CheckCircle className="h-4 w-4 text-[#00DDDD]" />}
+                      {currentStep === 0 && <Sparkles style={{ color: activeAccent }} className="h-4 w-4 animate-pulse" />}
+                      {currentStep === steps.length - 1 && <CheckCircle style={{ color: activeAccent }} className="h-4 w-4" />}
                       {steps[currentStep].title}
                     </h3>
                     <p className={`text-xs leading-relaxed font-sans font-light ${isDarkMode ? "text-white/95" : "text-neutral-800"}`}>
@@ -409,7 +426,12 @@ export default function OnboardingWalkthrough({
                       )}
                       <button
                         onClick={handleNext}
-                        className="p-2.5 bg-[#00DDDD] text-black hover:bg-[#00c5c5] hover:shadow-[0_0_15px_rgba(0,221,221,0.6)] hover:scale-105 active:scale-95 rounded-full flex items-center justify-center transition-all"
+                        style={{
+                          backgroundColor: activeAccent,
+                          color: getContrastColor(activeAccent),
+                          boxShadow: `0 0 15px ${activeAccent}66`
+                        }}
+                        className="p-2.5 hover:scale-105 active:scale-95 rounded-full flex items-center justify-center transition-all"
                         title={currentStep === steps.length - 1 ? "Finish" : "Next"}
                       >
                         {currentStep === steps.length - 1 ? (
@@ -428,7 +450,8 @@ export default function OnboardingWalkthrough({
                     <motion.div
                       animate={{ x: [2, -4, 2] }}
                       transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
-                      className="text-[#00DDDD] shrink-0 drop-shadow-[0_0_8px_rgba(0,221,221,0.8)]"
+                      style={{ color: activeAccent, filter: `drop-shadow(0 0 8px ${activeAccent})` }}
+                      className="shrink-0"
                     >
                       <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                         <path d="M20 12l-8-8v6H4v4h8v6z" />
@@ -444,7 +467,7 @@ export default function OnboardingWalkthrough({
                   <motion.div
                     animate={{ y: [2, -4, 2] }}
                     transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
-                    className="text-[#00DDDD] drop-shadow-[0_0_8px_rgba(0,221,221,0.8)]"
+                    style={{ color: activeAccent, filter: `drop-shadow(0 0 8px ${activeAccent})` }}
                   >
                     <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                       <path d="M12 20l-8-8h6V4h4v8h6z" />
