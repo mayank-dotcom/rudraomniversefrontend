@@ -116,7 +116,10 @@ function MermaidImage({ code, onDownloadImage }: { code: string; onDownloadImage
                 <button
                     onClick={() => onDownloadImage(src)}
                     title="Download Image"
-                    className="absolute top-2 right-2 p-2 rounded-full bg-black/80 hover:bg-black text-white hover:text-[#00DDDD] border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1 hover:scale-105 active:scale-95"
+                    className="absolute top-2 right-2 p-2 rounded-full bg-black/80 hover:bg-black text-white border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1 hover:scale-105 active:scale-95"
+                    style={{ "--hover-color": "var(--brand-accent)" } as React.CSSProperties}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--brand-accent)" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "" }}
                 >
                     <FileDown className="h-3.5 w-3.5" />
                     <span className="text-[9px] font-mono uppercase tracking-wider font-bold pr-0.5">Download</span>
@@ -181,9 +184,9 @@ export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage,
             `}
             style={{
                 '--tw-prose-body': isDarkMode ? '#fff' : '#000',
-                '--tw-prose-headings': isDarkMode ? '#00DDDD' : '#008A8A',
+                '--tw-prose-headings': isDarkMode ? 'var(--brand-accent)' : '#008A8A',
                 '--tw-prose-links': isDarkMode ? '#fff' : '#000',
-                '--tw-prose-bold': isDarkMode ? '#00DDDD' : '#008A8A',
+                '--tw-prose-bold': isDarkMode ? 'var(--brand-accent)' : '#008A8A',
                 '--tw-prose-counters': isDarkMode ? '#fff' : '#000',
                 '--tw-prose-bullets': isDarkMode ? '#fff' : '#000',
                 '--tw-prose-hr': isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
@@ -223,7 +226,9 @@ export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage,
                                     <button
                                         onClick={() => onDownloadImage(src)}
                                         title="Download Image"
-                                        className="absolute top-2 right-2 p-2 rounded-full bg-black/80 hover:bg-black text-white hover:text-[#00DDDD] border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1 hover:scale-105 active:scale-95"
+                                        className="absolute top-2 right-2 p-2 rounded-full bg-black/80 hover:bg-black text-white border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1 hover:scale-105 active:scale-95"
+                                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--brand-accent)" }}
+                                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "" }}
                                     >
                                         <FileDown className="h-3.5 w-3.5" />
                                         <span className="text-[9px] font-mono uppercase tracking-wider font-bold pr-0.5">Download</span>
@@ -306,23 +311,23 @@ export default function MarkdownRenderer({ content, isDarkMode, onDownloadImage,
                     },
                     strong(props) {
                         const { children } = props;
-                        return <strong className={`${isDarkMode ? "text-[#00DDDD]" : "text-[#008A8A]"} font-bold`}>{children}</strong>;
+                        return <strong className={`font-bold ${isDarkMode ? "" : "text-[#008A8A]"}`} style={isDarkMode ? { color: "var(--brand-accent)" } : undefined}>{children}</strong>;
                     },
                     h1(props) {
                         const { children } = props;
-                        return <h1 className={`${isDarkMode ? "text-[#00DDDD] border-white/10" : "text-[#008A8A] border-black/10"} text-2xl md:text-3xl font-black mt-8 mb-4 pb-2 border-b`}>{children}</h1>;
+                        return <h1 className={`${isDarkMode ? "border-white/10" : "text-[#008A8A] border-black/10"} text-2xl md:text-3xl font-black mt-8 mb-4 pb-2 border-b`} style={isDarkMode ? { color: "var(--brand-accent)" } : undefined}>{children}</h1>;
                     },
                     h2(props) {
                         const { children } = props;
-                        return <h2 className={`${isDarkMode ? "text-[#00DDDD]" : "text-[#008A8A]"} text-xl md:text-2xl font-bold mt-6 mb-3`}>{children}</h2>;
+                        return <h2 className={`${isDarkMode ? "" : "text-[#008A8A]"} text-xl md:text-2xl font-bold mt-6 mb-3`} style={isDarkMode ? { color: "var(--brand-accent)" } : undefined}>{children}</h2>;
                     },
                     h3(props) {
                         const { children } = props;
-                        return <h3 className={`${isDarkMode ? "text-[#00DDDD]" : "text-[#008A8A]"} text-lg md:text-xl font-semibold mt-5 mb-2`}>{children}</h3>;
+                        return <h3 className={`${isDarkMode ? "" : "text-[#008A8A]"} text-lg md:text-xl font-semibold mt-5 mb-2`} style={isDarkMode ? { color: "var(--brand-accent)" } : undefined}>{children}</h3>;
                     },
                     h4(props) {
                         const { children } = props;
-                        return <h4 className={`${isDarkMode ? "text-[#00DDDD]" : "text-[#008A8A]"} text-base md:text-lg font-semibold mt-4 mb-2`}>{children}</h4>;
+                        return <h4 className={`${isDarkMode ? "" : "text-[#008A8A]"} text-base md:text-lg font-semibold mt-4 mb-2`} style={isDarkMode ? { color: "var(--brand-accent)" } : undefined}>{children}</h4>;
                     },
                     p(props) {
                         const { children } = props;

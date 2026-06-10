@@ -266,6 +266,21 @@ export async function applyReferralCode(referralCode: string) {
   return data
 }
 
+export async function uploadProfilePicture(file: File) {
+  const formData = new FormData()
+  formData.append("image", file)
+  const res = await fetch(`${API_BASE}/user/profile-picture`, {
+    method: "POST",
+    headers: { "x-api-key": getApiKey() || "" },
+    body: formData,
+  })
+  const data = await parseJson<{ success: boolean; url?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to upload profile picture")
+  }
+  return data
+}
+
 export interface BuyPlanResponse {
   success: boolean
   message: string

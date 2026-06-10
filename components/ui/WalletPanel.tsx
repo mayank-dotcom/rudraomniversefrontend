@@ -113,7 +113,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
       active
         ? isDarkMode
           ? "bg-white text-black"
-          : "bg-[#00DDDD] text-white"
+          : "text-white"
         : isDarkMode
           ? "text-white/40 hover:text-white hover:bg-white/5"
           : "text-black hover:bg-black/5"
@@ -134,19 +134,19 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
 
         {/* Tab Bar */}
         <div className={`flex gap-1 border-2 ${isDarkMode ? "border-white/30" : "border-black"}`}>
-          <button onClick={() => setWalletTab("coins")} className={tabClass("coins")}>
+          <button onClick={() => setWalletTab("coins")} className={tabClass("coins")} style={walletTab === "coins" && !isDarkMode ? { backgroundColor: "var(--brand-accent)" } : undefined}>
             <div className="flex items-center justify-center gap-1.5">
               <Wallet className="h-3 w-3" />
               Coins
             </div>
           </button>
-          <button onClick={() => setWalletTab("referral")} className={tabClass("referral")}>
+          <button onClick={() => setWalletTab("referral")} className={tabClass("referral")} style={walletTab === "referral" && !isDarkMode ? { backgroundColor: "var(--brand-accent)" } : undefined}>
             <div className="flex items-center justify-center gap-1.5">
               <Users className="h-3 w-3" />
               Referral
             </div>
           </button>
-          <button onClick={() => setWalletTab("history")} className={tabClass("history")}>
+          <button onClick={() => setWalletTab("history")} className={tabClass("history")} style={walletTab === "history" && !isDarkMode ? { backgroundColor: "var(--brand-accent)" } : undefined}>
             <div className="flex items-center justify-center gap-1.5">
               <TrendingUp className="h-3 w-3" />
               History
@@ -232,7 +232,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
                     value={referralInput}
                     onChange={(e) => setReferralInput(e.target.value.toUpperCase())}
                     placeholder="Enter code"
-                    className={`w-full px-3 py-2.5 text-[11px] font-mono uppercase tracking-widest border-2 ${isDarkMode ? "bg-white/5 border-white/30 text-white placeholder:text-white/40" : "bg-transparent border-black text-black placeholder:text-black"} focus:outline-none focus:border-[#00DDDD] transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
+                    className={`w-full px-3 py-2.5 text-[11px] font-mono uppercase tracking-widest border-2 ${isDarkMode ? "bg-white/5 border-white/30 text-white placeholder:text-white/40" : "bg-transparent border-black text-black placeholder:text-black"} focus:outline-none focus:border-[var(--brand-accent)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
                     maxLength={20}
                     onKeyDown={(e) => e.key === "Enter" && handleApplyReferral()}
                   />
@@ -260,7 +260,7 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
                   </p>
                 </div>
                 <div className="flex items-center gap-2 mb-3">
-                  <code className={`flex-1 px-3 py-2 text-sm font-mono font-bold tracking-widest ${isDarkMode ? "bg-white/10 text-[#00DDDD]" : "bg-black/10 text-[#00DDDD]"}`}>
+                  <code className={`flex-1 px-3 py-2 text-sm font-mono font-bold tracking-widest ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} style={{ color: "var(--brand-accent)" }}>
                     {referralStats.my_referral_code}
                   </code>
                   <button
@@ -278,13 +278,13 @@ export default function WalletPanel({ isDarkMode, isMobile }: WalletPanelProps) 
                     <p className={`text-[8px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/50" : "text-black"}`}>
                       Referrals
                     </p>
-                    <p className="text-sm font-bold text-[#00DDDD]">{referralStats.total_referrals}</p>
+                    <p className="text-sm font-bold" style={{ color: "var(--brand-accent)" }}>{referralStats.total_referrals}</p>
                   </div>
                   <div>
                     <p className={`text-[8px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/50" : "text-black"}`}>
                       Paid Referrals
                     </p>
-                    <p className="text-sm font-bold text-[#00DDDD]">{referralStats.paid_referrals}</p>
+                    <p className="text-sm font-bold" style={{ color: "var(--brand-accent)" }}>{referralStats.paid_referrals}</p>
                   </div>
                 </div>
               </div>

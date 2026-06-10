@@ -7,13 +7,14 @@ import {
     ChevronLeft, ChevronRight, Moon, Sun, GraduationCap,
     UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Check, Clock, Trash2, Inbox,
-    Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
+    Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles, Pencil,
     Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2, LayoutDashboard, Share, Loader2,
     Settings, Bell, Key, ChevronDown, Compass, Palette, Globe, Maximize2, ArrowUp } from "lucide-react";
 import Link from "next/link";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
 import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole, getSchoolName, getEnterpriseName, removeUserRole, removeSchoolName, removeEnterpriseName } from "@/lib/auth";
 import { useTheme } from "@/lib/theme-context";
+import { useTranslation } from "react-i18next";
 import {
     ChatSummary,
     createChat,
@@ -50,6 +51,19 @@ import WelcomeBox from "@/components/ui/WelcomeBox";
 import WalletPanel from "@/components/ui/WalletPanel";
 import OnboardingWalkthrough from "@/components/OnboardingWalkthrough";
 import SettingsModal from "@/components/ui/SettingsModal";
+import PersonalizationModal from "@/components/ui/PersonalizationModal";
+import WalletModal from "@/components/ui/WalletModal";
+
+function getContrastColor(hex: string): string {
+    if (!hex) return "";
+    const h = hex.replace("#", "");
+    if (h.length < 6) return "#ffffff";
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 128 ? "#000000" : "#ffffff";
+}
 
 interface Message {
     role: "user" | "assistant" | "system";
@@ -208,6 +222,7 @@ const LAB_IMAGES_COL_3 = [
 ];
 
 const Chat = () => {
+    const { t, i18n } = useTranslation();
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
@@ -306,12 +321,12 @@ const Chat = () => {
     const gmailAutoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const gmailAutoRunningRef = useRef(false);
     const PLACEHOLDER_TEXTS = useMemo(() => [
-        "Describe your query or paste a concept...",
-        "Ask me anything about your studies...",
-        "Upload a file or type your question...",
-        "How can I assist your learning today?",
-        "Paste a topic and I'll explain it..."
-    ], []);
+        t("hint_1"),
+        t("hint_2"),
+        t("hint_3"),
+        t("hint_4"),
+        t("hint_5"),
+    ], [t]);
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
     const [typedPlaceholder, setTypedPlaceholder] = useState(PLACEHOLDER_TEXTS[0]);
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
@@ -326,8 +341,18 @@ const Chat = () => {
     const abortControllerRef = useRef<AbortController | null>(null);
     const styleCardsScrollRef = useRef<HTMLDivElement>(null);
 
+    const [accent, setAccent] = useState<string>("");
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            setAccent(localStorage.getItem("rudranex_accent") || "");
+        }
+    }, []);
+
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [settingsPanel, setSettingsPanel] = useState<"persona" | "plan" | "faq" | "bug" | "deactivate">("persona");
+    const [isPersonalizationModalOpen, setIsPersonalizationModalOpen] = useState(false);
+    const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
     const [showProfileDropup, setShowProfileDropup] = useState(false);
     const [emptyChats, setEmptyChats] = useState<Set<string>>(new Set());
     const profileDropupRef = useRef<HTMLDivElement>(null);
@@ -1619,6 +1644,19 @@ STRICT RULES:
                 }
             }
 
+            // ── Inject Hindi instruction when Hindi language is selected ──
+            if (i18n.language === "hi") {
+                const hindiInstruction = "hindi mei answer kro. ";
+                if (typeof userContent === "string") {
+                    userContent = hindiInstruction + userContent;
+                } else if (Array.isArray(userContent)) {
+                    const firstText = userContent.find((item: any) => item.type === "text");
+                    if (firstText) {
+                        firstText.text = hindiInstruction + firstText.text;
+                    }
+                }
+            }
+
             const userMessage: Message = {
                 role: "user",
                 content: displayContent,
@@ -1982,7 +2020,7 @@ STRICT RULES:
                             e.currentTarget.style.height = 'auto';
                             e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
                         }}
-                        placeholder={isProcessingFile ? "Processing file..." : "Ask anything..."}
+                        placeholder={isProcessingFile ? t("processing_file") : t("ask_anything")}
                         rows={isCenteredEmptyState ? 2 : 1}
                         className={`flex-1 min-w-0 bg-transparent resize-none no-scrollbar ${
                             isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"
@@ -2003,14 +2041,14 @@ STRICT RULES:
                                     ? "border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white" 
                                     : "border-black/10 bg-black/5 text-black/80 hover:bg-black/10 hover:text-black"
                             }`}
-                            title="Add files"
+                            title={t("add_files")}
                         >
                             {isProcessingFile ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                                 <Paperclip className="h-3.5 w-3.5" />
                             )}
-                            <span>Add files</span>
+                            <span>{t("add_files")}</span>
                         </button>
                         <input
                             type="file"
@@ -2032,7 +2070,7 @@ STRICT RULES:
                                         ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm") 
                                         : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
                                 }`}
-                                title="Pro Mode"
+                                title={t("pro_mode")}
                             >
                                 <Sparkles className="h-3.5 w-3.5" />
                             </button>
@@ -2045,7 +2083,7 @@ STRICT RULES:
                                         ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm") 
                                         : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
                                 }`}
-                                title="Code Agent"
+                                title={t("code_agent")}
                             >
                                 <Code className="h-3.5 w-3.5" />
                             </button>
@@ -2058,7 +2096,7 @@ STRICT RULES:
                                         ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm") 
                                         : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
                                 }`}
-                                title="Web Search"
+                                title={t("web_search")}
                             >
                                 <Globe className="h-3.5 w-3.5" />
                             </button>
@@ -2077,7 +2115,7 @@ STRICT RULES:
                                         ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm") 
                                         : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
                                 }`}
-                                title="Visual / Image Lab Style"
+                                title={t("image_style")}
                             >
                                 <Palette className="h-3.5 w-3.5" />
                             </button>
@@ -2097,7 +2135,7 @@ STRICT RULES:
                                         ? "bg-red-500/20 text-red-400 animate-pulse" 
                                         : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
                                 }`}
-                                title={isRecording ? "Stop recording" : "Voice input"}
+                                title={isRecording ? t("stop_recording") : t("voice_input")}
                             >
                                 <Mic className="h-3.5 w-3.5" />
                             </button>
@@ -2126,7 +2164,7 @@ STRICT RULES:
                             <button
                                 onClick={handleStopGeneration}
                                 className="h-8 w-8 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all duration-200 shadow-lg"
-                                title="Stop generation"
+                                title={t("stop_generation")}
                             >
                                 <Pause className="h-3 w-3 fill-white stroke-none" />
                             </button>
@@ -2136,10 +2174,20 @@ STRICT RULES:
                                 disabled={isHistoryLoading || isProcessingFile || !input.trim()}
                                 className={`h-8 w-8 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${
                                     input.trim() 
-                                        ? (isDarkMode ? "bg-white text-black hover:bg-white/95" : "bg-black text-white hover:bg-black/95") 
+                                        ? (accent 
+                                            ? "hover:opacity-90" 
+                                            : (isDarkMode ? "bg-white text-black hover:bg-white/95" : "bg-black text-white hover:bg-black/95")) 
                                         : (isDarkMode ? "bg-white/10 text-white/30 cursor-not-allowed" : "bg-black/10 text-black/30 cursor-not-allowed")
                                 }`}
-                                title="Send message"
+                                style={
+                                    input.trim() && accent 
+                                        ? {
+                                              backgroundColor: accent,
+                                              color: getContrastColor(accent),
+                                          } 
+                                        : undefined
+                                }
+                                title={t("send_message")}
                             >
                                 <ArrowUp className="h-4 w-4 stroke-[2.5]" />
                             </button>
@@ -2151,7 +2199,7 @@ STRICT RULES:
     };
 
     return (
-        <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black flex overflow-hidden transition-colors duration-500 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+        <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full ${isDarkMode ? "bg-[#0d0d0c] text-white" : "bg-[#f4f3f2] text-black"} selection:bg-white selection:text-black flex overflow-hidden transition-colors duration-500 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
             <style dangerouslySetInnerHTML={{
                 __html: `
                 @keyframes bounceArrowLeft {
@@ -2232,7 +2280,7 @@ STRICT RULES:
             <aside
                 id="walkthrough-sidebar"
                 style={{ width: isSidebarCollapsed ? "0px" : (isMobile ? "280px" : `${sidebarWidth}px`) }}
-                className={`h-full border-r ${isSidebarCollapsed ? "border-r-0" : isDarkMode ? "border-white/10" : "border-black/10"} ${isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f9f9f8]"} flex flex-col ${isMobile ? "fixed left-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
+                className={`h-full border-r ${isSidebarCollapsed ? "border-r-0" : isDarkMode ? "border-white/10" : "border-black/10"} ${isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f4f3f2]"} flex flex-col ${isMobile ? "fixed left-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
             >
                 {!isSidebarCollapsed && (
                     <div className="flex flex-col h-full overflow-hidden">
@@ -2242,13 +2290,13 @@ STRICT RULES:
                                 <svg className={`w-5 h-5 ${isDarkMode ? "text-white/80" : "text-black/80"}`} fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M3 4h18v2H3V4zm2 4h2v10H5V8zm4 0h2v10H9V8zm4 0h2v10h-2V8zm4 0h2v10h-2V8zM3 20h18v2H3v-2z" />
                                 </svg>
-                                <span className={`font-serif italic font-bold text-lg ${isDarkMode ? "text-white" : "text-black"}`}>Arena</span>
+                                <span className={`font-serif italic font-bold text-lg ${isDarkMode ? "text-white" : "text-black"}`}>{t("arena")}</span>
                                 <ChevronDown className="w-3.5 h-3.5 opacity-40" />
                             </div>
                             <button
                                 onClick={() => setIsSidebarCollapsed(true)}
                                 className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5"}`}
-                                title="Collapse Sidebar"
+                                title={t("collapse_sidebar")}
                             >
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
@@ -2267,7 +2315,7 @@ STRICT RULES:
                                 }`}
                             >
                                 <Plus className="w-4 h-4" />
-                                <span>New Chat</span>
+                                <span>{t("new_chat")}</span>
                             </button>
 
                             {/* Leaderboard Button */}
@@ -2280,7 +2328,7 @@ STRICT RULES:
                                 }`}
                             >
                                 <Swords className="w-4 h-4" />
-                                <span>Leaderboard</span>
+                                <span>{t("leaderboard")}</span>
                             </Link>
 
                             {/* Clean Search Input */}
@@ -2288,7 +2336,7 @@ STRICT RULES:
                                 <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`} />
                                 <input
                                     type="text"
-                                    placeholder="Search chats..."
+                                    placeholder={t("search_chats")}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className={`w-full bg-transparent border rounded-xl py-1.5 pl-9 pr-3 text-xs font-sans focus:outline-none transition-all ${
@@ -2303,15 +2351,15 @@ STRICT RULES:
                         {/* Recent History Section */}
                         <div className={`flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-4 ${isDarkMode ? "custom-scrollbar text-zinc-300" : "light-scrollbar text-zinc-700"}`}>
                             <div className="space-y-1">
-                                <div className={`px-2 text-[9px] font-bold font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Today</div>
+                                <div className={`px-2 text-[9px] font-bold font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>{t("today")}</div>
                                 {isSessionsLoading && (
                                     <div className={`px-2 py-3 text-xs opacity-50`}>
-                                        Loading sessions...
+                                        {t("loading_sessions")}
                                     </div>
                                 )}
                                 {!isSessionsLoading && filteredChats.length === 0 && (
                                     <div className={`px-2 py-3 text-xs opacity-50`}>
-                                        {searchQuery ? "No matching sessions" : "No chats yet"}
+                                        {searchQuery ? t("no_matching_sessions") : t("no_chats_yet")}
                                     </div>
                                 )}
                                 {!isSessionsLoading && filteredChats.map((chat) => (
@@ -2354,14 +2402,14 @@ STRICT RULES:
                                                 <button
                                                     onClick={() => handleStartEditing(chat)}
                                                     className="p-1 hover:bg-white/10 rounded transition-colors text-inherit"
-                                                    title="Rename"
+                                                    title={t("rename")}
                                                 >
                                                     <Edit3 className="h-3 w-3" />
                                                 </button>
                                                 <button
                                                     onClick={() => void handleDeleteChat(chat.id)}
                                                     className="p-1 hover:bg-red-500/20 hover:text-red-500 rounded transition-colors text-inherit"
-                                                    title="Delete"
+                                                    title={t("delete")}
                                                 >
                                                     <Trash2 className="h-3 w-3" />
                                                 </button>
@@ -2378,11 +2426,11 @@ STRICT RULES:
                                 <div className="flex items-start justify-between">
                                     <div className="flex flex-col gap-1">
                                         <div className="flex items-center gap-1.5">
-                                            <span className="text-[10px] font-bold text-white uppercase tracking-wider">Battle Arena</span>
-                                            <span className="bg-[#4285f4] text-white text-[8px] font-bold px-1 rounded">NEW</span>
+                                            <span className="text-[10px] font-bold text-white uppercase tracking-wider">{t("battle_arena")}</span>
+                                            <span className="bg-[#4285f4] text-white text-[8px] font-bold px-1 rounded">{t("new_badge")}</span>
                                         </div>
-                                        <h5 className="text-[11px] font-bold text-white/95">Get More Done With Agents</h5>
-                                        <p className="text-[10px] text-zinc-400 leading-normal">Start evaluating agentic AI on Arena today. Learn more.</p>
+                                        <h5 className="text-[11px] font-bold text-white/95">{t("get_more_done")}</h5>
+                                        <p className="text-[10px] text-zinc-400 leading-normal">{t("arena_desc")}</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-2 mt-1 z-10">
@@ -2390,7 +2438,7 @@ STRICT RULES:
                                         onClick={() => setIsBattleArenaModalOpen(true)}
                                         className="flex-1 py-1.5 px-2 bg-white text-black font-semibold text-[10px] rounded-lg text-center hover:bg-gray-200 transition-colors cursor-pointer"
                                     >
-                                        Try it now
+                                        {t("try_now")}
                                     </button>
                                     <button
                                         onClick={() => {
@@ -2399,7 +2447,7 @@ STRICT RULES:
                                         }}
                                         className="py-1.5 px-2 bg-zinc-900 border border-zinc-800 text-white font-medium text-[10px] rounded-lg text-center hover:bg-zinc-800 transition-colors cursor-pointer"
                                     >
-                                        Hide
+                                        {t("hide")}
                                     </button>
                                 </div>
                                 <div className="absolute right-[-10px] bottom-[-10px] w-16 h-16 opacity-10 pointer-events-none">
@@ -2413,40 +2461,40 @@ STRICT RULES:
                             {showProfileDropup && (
                                 <div 
                                     ref={profileDropupRef}
-                                    className={`absolute bottom-16 left-4 right-4 z-[100] rounded-xl border p-1.5 shadow-2xl backdrop-blur-xl ${
+                                    className={`absolute bottom-[68px] left-4 right-4 z-[100] rounded-xl border p-1.5 shadow-2xl ${
                                         isDarkMode
-                                            ? "bg-[#0d0d0c]/95 border-white/10 text-white"
-                                            : "bg-white/95 border-black/10 text-black"
+                                            ? "bg-[#222120]/95 border-white/10 text-white"
+                                            : "bg-[#f2f1f0]/95 border-black/10 text-black"
                                     }`}
                                 >
                                     {/* Personalization Option */}
                                     <button
                                         onClick={() => {
                                             setShowProfileDropup(false);
-                                            setSettingsPanel("persona");
-                                            setIsSettingsModalOpen(true);
+                                            setIsPersonalizationModalOpen(true);
                                         }}
                                         className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${
                                             isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
                                         }`}
                                     >
-                                        <Sparkles className="h-3.5 w-3.5 opacity-60 text-[#00DDDD]" />
-                                        <span>Personalization</span>
+                                        <div className={`h-3.5 w-3.5 rounded-full flex items-center justify-center shrink-0 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
+                                            <User className="h-2.5 w-2.5 opacity-60" />
+                                        </div>
+                                        <span>{t("persona")}</span>
                                     </button>
 
                                     {/* Wallet Option */}
                                     <button
                                         onClick={() => {
                                             setShowProfileDropup(false);
-                                            setSettingsPanel("plan");
-                                            setIsSettingsModalOpen(true);
+                                            setIsWalletModalOpen(true);
                                         }}
                                         className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${
                                             isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
                                         }`}
                                     >
-                                        <Wallet className="h-3.5 w-3.5 opacity-60 text-[#00DDDD]" />
-                                        <span>Wallet</span>
+                                        <Wallet className="h-3.5 w-3.5 opacity-60" />
+                                        <span>{t("wallet")}</span>
                                     </button>
 
                                     {/* Divider */}
@@ -2472,7 +2520,7 @@ STRICT RULES:
                                         }`}
                                     >
                                         <LogOut className="h-3.5 w-3.5" />
-                                        <span>Logout</span>
+                                        <span>{t("logout")}</span>
                                     </button>
                                 </div>
                             )}
@@ -2481,14 +2529,14 @@ STRICT RULES:
                                 <button
                                     onClick={() => setShowProfileDropup(!showProfileDropup)}
                                     className="flex items-center gap-2 min-w-0 text-left cursor-pointer hover:opacity-80 transition-opacity"
-                                    title="Profile Options"
+                                            title={t("profile_options")}
                                 >
                                     <div className={`h-8 w-8 rounded-full flex items-center justify-center relative shrink-0 ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border`}>
                                         <User className={`h-4 w-4 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
-                                        <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : "Pro Member"}</span>
+                                        <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || t("user_fallback")}</span>
+                                        <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? t("admin_role") : userRole === "faculty" ? t("faculty_role") : userRole === "enterprise_admin" ? t("admin_role") : userRole === "manager" ? t("manager_role") : userRole === "global_admin" ? t("admin_role") : subscription?.subscription?.plan_name || t("free_trial")}</span>
                                     </div>
                                 </button>
                                 <div className="flex items-center gap-1.5">
@@ -2498,10 +2546,10 @@ STRICT RULES:
                                                 setIsEnterpriseMode(!isEnterpriseMode);
                                                 setRightSidebarTab(isEnterpriseMode ? "gmail" : "wallet");
                                             }}
-                                            className={`p-1.5 border rounded-lg transition-all text-[8px] font-mono ${isDarkMode ? "border-white/10 text-white/60 hover:text-white" : "border-black/10 text-black/60 hover:text-black"} ${isEnterpriseMode ? "text-[#00DDDD]" : ""}`}
-                                            title={isEnterpriseMode ? "Switch to Regular Mode" : "Switch to Enterprise Mode"}
+                                            className={`p-1.5 border rounded-lg transition-all text-[8px] font-mono ${isDarkMode ? "border-white/10 text-white/60 hover:text-white" : "border-black/10 text-black/60 hover:text-black"} ${isEnterpriseMode ? "text-accent" : ""}`}
+                                            title={isEnterpriseMode ? t("switch_regular") : t("switch_enterprise")}
                                         >
-                                            {isEnterpriseMode ? "ENT" : "REG"}
+                                            {isEnterpriseMode ? t("ent") : t("reg")}
                                         </button>
                                     )}
                                     <button
@@ -2509,11 +2557,11 @@ STRICT RULES:
                                             setSettingsPanel("persona");
                                             setIsSettingsModalOpen(true);
                                         }}
-                                        title="Settings"
+                                        title={t("settings")}
                                         className={`p-1.5 rounded-lg border transition-colors ${
                                             isDarkMode
-                                                ? "border-white/10 text-white/60 hover:text-[#00DDDD] hover:bg-white/5"
-                                                : "border-black/10 text-black/60 hover:text-[#00DDDD] hover:bg-black/5"
+                                                ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5"
+                                                : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"
                                         }`}
                                     >
                                         <Settings className="h-3.5 w-3.5" />
@@ -2531,7 +2579,7 @@ STRICT RULES:
                                             setUserEmail("");
                                             window.location.href = "/";
                                         }}
-                                        title="Logout"
+                                        title={t("logout_title")}
                                         className={`p-1.5 rounded-lg border transition-colors ${
                                             isDarkMode
                                                 ? "border-white/10 text-white/60 hover:text-red-400 hover:bg-white/5"
@@ -2543,12 +2591,6 @@ STRICT RULES:
                                 </div>
                             </div>
                             
-                            {/* Privacy, Terms, Cookies links */}
-                            <div className="flex items-center justify-between text-[9px] font-mono tracking-wider opacity-45 px-0.5">
-                                <Link href="/terms" className="hover:underline">Terms of Use</Link>
-                                <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
-                                <Link href="/privacy" className="hover:underline">Cookies</Link>
-                            </div>
                         </div>
                     </div>
                 )}
@@ -2557,7 +2599,7 @@ STRICT RULES:
             {/* Main Chat Area */}
             <div className="flex-1 flex flex-col relative h-full overflow-hidden">
                 {/* Fixed Header / Navbar */}
-                <header className={`h-16 flex-shrink-0 flex items-center justify-between px-6 md:px-10 relative z-30 transition-colors duration-500 border-b ${isDarkMode ? "bg-[#121110]/20 border-white/5" : "bg-white/20 border-black/5"} backdrop-blur-md`}>
+                <header className={`h-16 flex-shrink-0 flex items-center justify-between px-6 md:px-10 relative z-30 transition-colors duration-500 border-b ${isDarkMode ? "bg-[#0d0d0c] border-white/5" : "bg-[#f4f3f2] border-black/5"}`}>
                     {/* Left: Engine / Mode Dropdown Selector */}
                     <div className="flex items-center gap-3">
                         {/* Mobile left-sidebar toggle button */}
@@ -2578,7 +2620,7 @@ STRICT RULES:
                             <button
                                 onClick={() => setIsSidebarCollapsed(false)}
                                 className={`p-2 border rounded-xl transition-all cursor-pointer ${isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"}`}
-                                title="Open Sidebar"
+                                title={t("open_sidebar")}
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </button>
@@ -2631,7 +2673,7 @@ STRICT RULES:
                                                 }}
                                                 className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg text-left transition-colors cursor-pointer ${
                                                     selectedEngine === engine.name
-                                                        ? (isDarkMode ? "bg-white/5 text-[#00DDDD]" : "bg-black/5 text-[#00DDDD] font-semibold")
+                                                        ? (isDarkMode ? "bg-white/5 text-accent" : "bg-black/5 text-accent font-semibold")
                                                         : (isDarkMode ? "text-white/70 hover:bg-white/5 hover:text-white" : "text-black/70 hover:bg-black/5 hover:text-black")
                                                 }`}
                                             >
@@ -2666,10 +2708,10 @@ STRICT RULES:
                                         ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
                                         : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
                                 }`}
-                                title="Start Workspace Tour"
+                                title={t("start_tour")}
                             >
                                 <Sparkles className="h-3 w-3 opacity-70" />
-                                <span>Quick Tour</span>
+                                <span>{t("quick_tour")}</span>
                             </button>
                         )}
 
@@ -2681,7 +2723,7 @@ STRICT RULES:
                                     ? "border-white/10 text-white hover:bg-white/5 hover:border-white/20"
                                     : "border-black/10 text-black hover:bg-black/5 hover:border-black/20"
                             }`}
-                            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                            title={isDarkMode ? t("switch_light") : t("switch_dark")}
                         >
                             {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                         </button>
@@ -2698,7 +2740,7 @@ STRICT RULES:
                                         ? (isDarkMode ? "bg-white/10 border-white/20 text-white" : "bg-black/10 border-black/20 text-black")
                                         : (isDarkMode ? "border-white/10 text-white hover:bg-white/5 hover:border-white/20" : "border-black/10 text-black hover:bg-black/5 hover:border-black/20")
                                 }`}
-                                title="Toggle Right Panel"
+                                title={t("toggle_panel")}
                             >
                                 <UserCog className="h-4 w-4" />
                             </button>
@@ -2727,7 +2769,7 @@ STRICT RULES:
                                             transition={{ duration: 0.5 }}
                                             className={`font-serif italic text-4xl sm:text-5xl md:text-6xl mb-8 tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}
                                         >
-                                            What would you like to do?
+                                            {t("what_would_you_like")}
                                         </motion.h1>
                                         <motion.div 
                                             initial={{ opacity: 0, y: 10 }}
@@ -2751,13 +2793,13 @@ STRICT RULES:
                                                 <div className="flex items-center gap-3 mb-4">
                                                     <span className={`text-[9px] font-mono uppercase tracking-[0.2em] flex items-center gap-1.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                                         {msg.role === "assistant" && isLoading && i === messages.length - 1 && (
-                                                            <Loader2 className="h-3 w-3 animate-spin text-[#00DDDD] shrink-0" />
+                                                            <Loader2 className="h-3 w-3 animate-spin text-accent shrink-0" />
                                                         )}
-                                                        {msg.role === "assistant" ? "Rudra AI" : "You"}
+                                                        {msg.role === "assistant" ? t("rudra_ai") : t("you_label")}
                                                     </span>
                                                     <span className={`text-[9px] font-mono ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/60 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/20") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]" : "text-black/60")}`}>{msg.timestamp}</span>
                                                     {msg.role === "assistant" && showEmployeeView && !(isLoading && i === messages.length - 1) && (
-                                                        <span className={`text-[8px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border ${isDarkMode ? "border-[#00DDDD]/40 text-[#00DDDD]/80" : "border-[#00AAAA]/40 text-[#00AAAA]/80"}`}>
+                                                        <span className={`text-[8px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border ${isDarkMode ? "border-accent/40 text-accent/80" : "border-[#00AAAA]/40 text-[#00AAAA]/80"}`}>
                                                             Enhanced
                                                         </span>
                                                     )}
@@ -2789,7 +2831,7 @@ STRICT RULES:
                                                             <button
                                                                 onClick={() => handleDownloadImage(msg.content)}
                                                                 title="Download Image"
-                                                                className="absolute top-4 right-4 p-3 rounded-full bg-black/80 hover:bg-black text-white hover:text-[#00DDDD] border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1.5 hover:scale-105 active:scale-95"
+                                                                className="absolute top-4 right-4 p-3 rounded-full bg-black/80 hover:bg-black text-white hover:text-accent border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1.5 hover:scale-105 active:scale-95"
                                                             >
                                                                 <FileDown className="h-4 w-4" />
                                                                 <span className="text-[10px] font-mono uppercase tracking-wider font-bold pr-1">Download</span>
@@ -2826,7 +2868,7 @@ STRICT RULES:
                                                                         <button
                                                                             onClick={() => handleDownloadImage(embedImgUrl)}
                                                                             title="Download Image"
-                                                                            className="absolute top-4 right-4 p-3 rounded-full bg-black/80 hover:bg-black text-white hover:text-[#00DDDD] border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1.5 hover:scale-105 active:scale-95"
+                                                                            className="absolute top-4 right-4 p-3 rounded-full bg-black/80 hover:bg-black text-white hover:text-accent border border-white/20 shadow-lg backdrop-blur-md opacity-0 group-hover/img-wrapper:opacity-100 transition-all duration-300 scale-90 group-hover/img-wrapper:scale-100 flex items-center justify-center gap-1.5 hover:scale-105 active:scale-95"
                                                                         >
                                                                             <FileDown className="h-4 w-4" />
                                                                             <span className="text-[10px] font-mono uppercase tracking-wider font-bold pr-1">Download</span>
@@ -3073,11 +3115,11 @@ STRICT RULES:
                                                     if (next) setGmailAutoShowModal(true);
                                                 }}
                                                 className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all ${gmailAutoOn
-                                                    ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/15 border-[#00DDDD] text-[#00DDDD]")
+                                                    ? (isDarkMode ? "bg-accent/20 border-accent text-accent" : "bg-accent/15 border-accent text-accent")
                                                     : (isDarkMode ? "border-white/25 text-white/70 hover:border-white/40 hover:text-white" : "border-black/30 text-black/80 hover:border-black/50 hover:text-black")
                                                     }`}
                                             >
-                                                <svg className={`h-3 w-3 ${gmailAutoOn ? "text-[#00DDDD]" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <svg className={`h-3 w-3 ${gmailAutoOn ? "text-accent" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                     <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
                                                     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                                                 </svg>
@@ -3100,8 +3142,8 @@ STRICT RULES:
                                                 <span className={`text-[9px] font-mono font-semibold ${gmailSendResult.includes("✓") ? "text-green-600" : "text-red-500"}`}>{gmailSendResult}</span>
                                             )}
                                             {gmailAutoOn && !gmailAutoStatus && !gmailSendResult && (
-                                                <span className="flex items-center gap-1 text-[8px] font-mono font-semibold text-[#00DDDD]">
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-[#00DDDD] animate-pulse" />
+                                                <span className="flex items-center gap-1 text-[8px] font-mono font-semibold text-accent">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
                                                     Watching{gmailAutoMode === "to" ? ` ${gmailAutoTargetEmail}` : ""}...
                                                 </span>
                                             )}
@@ -3129,7 +3171,7 @@ STRICT RULES:
             {showEmployeeView && (
                 <aside
                     style={{ width: isRightSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${rightSidebarWidth}px`) }}
-                className={`h-full border-l-2 ${isRightSidebarCollapsed && isMobile ? "border-l-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-white"} flex flex-col ${isMobile ? "fixed right-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
+                className={`h-full border-l-2 ${isRightSidebarCollapsed && isMobile ? "border-l-0" : isDarkMode ? "border-white/10" : "border-black/10"} ${isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f9f9f8]"} flex flex-col ${isMobile ? "fixed right-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}
             >
                 {!isRightSidebarCollapsed ? (
                     <div className="flex flex-col h-full overflow-hidden">
@@ -3141,7 +3183,7 @@ STRICT RULES:
                                     ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
                                     : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/50 hover:bg-black/5")}`}
                             >
-                                Settings
+                                {t("settings")}
                             </button>
                             {!showEmployeeView && (
                                 <button
@@ -3151,7 +3193,7 @@ STRICT RULES:
                                         : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/50 hover:bg-black/5")}`}
                                 >
                                     <Wallet className="h-3 w-3" />
-                                    Wallet
+                                    {t("wallet")}
                                 </button>
                             )}
                             {showEmployeeView && (
@@ -3165,7 +3207,7 @@ STRICT RULES:
                                         <rect x="2" y="4" width="20" height="16" rx="2" fill="currentColor"/>
                                         <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
                                     </svg>
-                                    Gmail
+                                    {t("gmail")}
                                 </button>
                             )}
                         </div>
@@ -3176,13 +3218,13 @@ STRICT RULES:
                                     {/* Plan Badge */}
                                     <div className="flex items-start mb-8">
                                         <div className="flex flex-col">
-                                            <span className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-black bg-white px-2 py-0.5" : "text-white bg-black px-2 py-0.5"} mb-1 pl-4`}>Active Plan</span>
+                                            <span className={`text-[8px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-black bg-white px-2 py-0.5" : "text-white bg-black px-2 py-0.5"} mb-1 pl-4`}>{t("active_plan")}</span>
                                             <div className="flex items-stretch gap-2">
                                                 <div className={`flex items-center justify-center ${isDarkMode ? "bg-black border-2 border-white" : "bg-white border-2 border-black"} px-2`}>
-                                                    <div className={`h-1.5 w-1.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(0,221,221,0.5)] ${subscription?.subscription ? 'bg-[#00DDDD]' : 'bg-amber-500'}`} />
+                                                    <div className={`h-1.5 w-1.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(var(--brand-accent-rgb),0.5)] ${subscription?.subscription ? 'bg-accent' : 'bg-amber-500'}`} />
                                                 </div>
                                                 <span className={`flex items-center text-xs font-bold ${isDarkMode ? "text-black bg-white px-2 border-2 border-transparent" : "text-white bg-black px-2 border-2 border-transparent"} tracking-widest uppercase`}>
-                                                    {isSubscriptionLoading ? "Loading..." : (subscription?.subscription?.plan_name || "Free Trial")}
+{isSubscriptionLoading ? t("loading") : (subscription?.subscription?.plan_name || t("free_trial"))}
                                                 </span>
                                             </div>
                                         </div>
@@ -3201,7 +3243,7 @@ STRICT RULES:
                                                 <div className={`flex items-center gap-3 mb-6 px-4 py-3 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
                                                     <GraduationCap className={`h-4 w-4 shrink-0 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
                                                     <div className="flex flex-col min-w-0">
-                                                        <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>School</span>
+                                                        <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("school")}</span>
                                                         <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{schoolName}</span>
                                                     </div>
                                                 </div>
@@ -3212,7 +3254,7 @@ STRICT RULES:
                                                 <div className={`flex items-center gap-3 mb-6 px-4 py-3 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
                                                     <Building2 className={`h-4 w-4 shrink-0 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
                                                     <div className="flex flex-col min-w-0">
-                                                        <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Enterprise</span>
+                                                        <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("enterprise")}</span>
                                                         <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{enterpriseName}</span>
                                                     </div>
                                                 </div>
@@ -3241,7 +3283,7 @@ STRICT RULES:
                                         </svg>
                                         <div className="absolute inset-0 flex items-center justify-center flex-col">
                                             <span className={`text-lg font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{subscription?.tokens_remaining ?? 0}</span>
-                                            <span className={`text-[6px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Tokens Left</span>
+                                            <span className={`text-[6px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("tokens_left")}</span>
                                         </div>
                                     </div>
 
@@ -3250,7 +3292,7 @@ STRICT RULES:
                                         {/* Chat+Code (Chat + Coding Tokens) */}
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Chat+Code</span>
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>{t("chat_code")}</span>
                                                 <span className={isDarkMode ? "text-white" : "text-black"}>
                                                     {(subscription?.usage?.chat_tokens_used ?? 0) + (subscription?.usage?.coding_tokens_used ?? 0)} / {subscription?.subscription?.details?.monthly_tokens || 1}
                                                 </span>
@@ -3269,7 +3311,7 @@ STRICT RULES:
                                         {/* Images Today */}
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>Images Today</span>
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>{t("images_today")}</span>
                                                 <span className={isDarkMode ? "text-white" : "text-black"}>
                                                     {subscription?.usage?.daily_images ?? 0} / {subscription?.subscription?.details?.daily_image_limit || 1}
                                                 </span>
@@ -3288,7 +3330,7 @@ STRICT RULES:
                                         {/* TTS Minutes */}
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>TTS Minutes</span>
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>{t("tts_minutes")}</span>
                                                 <span className={isDarkMode ? "text-white" : "text-black"}>
                                                     {subscription?.usage?.tts_minutes_used ?? 0} / {subscription?.subscription?.details?.tts_minutes_limit || 1}
                                                 </span>
@@ -3307,7 +3349,7 @@ STRICT RULES:
                                         {/* STT Minutes */}
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-[8px] font-mono uppercase tracking-widest">
-                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>STT Minutes</span>
+                                                <span className={isDarkMode ? "text-white/50" : "text-black/50"}>{t("stt_minutes")}</span>
                                                 <span className={isDarkMode ? "text-white" : "text-black"}>
                                                     {subscription?.usage?.stt_minutes_used ?? 0} / {subscription?.subscription?.details?.stt_minutes_limit || 1}
                                                 </span>
@@ -3326,7 +3368,7 @@ STRICT RULES:
 
                                     {!userRole || (userRole as any) === "student" ? (
                                         <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : "mt-12"}`}>
-                                            <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(0,221,221,0.5)] transition-all duration-300">
+                                            <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(var(--brand-accent-rgb),0.5)] transition-all duration-300">
                                                 <div className="bubble-layer bubble-1"></div>
                                                 <div className="bubble-layer bubble-2"></div>
                                                 <div className="bubble-layer bubble-3"></div>
@@ -3334,7 +3376,7 @@ STRICT RULES:
                                                 <div className="bubble-layer bubble-5"></div>
                                                 <div className="bubble-layer bubble-6"></div>
                                                 <div className="bubble-layer bubble-7"></div>
-                                                <span>Upgrade Now</span>
+                                                <span>{t("upgrade_now")}</span>
                                             </button>
                                         </Link>
                                     ) : null}
@@ -3347,7 +3389,7 @@ STRICT RULES:
                                                     ? "border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]"
                                                     : "border-red-500/30 text-red-600 hover:bg-red-500/5 hover:border-red-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.15)]"}`}
                                             >
-                                                discontinue
+                                                {t("discontinue")}
                                             </button>
                                         </div>
                                     )}
@@ -3581,7 +3623,7 @@ STRICT RULES:
                         {/* Top: Plan Indicator using Clock icon from the Plan Badge */}
                         <div className="flex flex-col items-center gap-6 w-full px-2">
                             <div
-                                title={`Active Plan: ${isSubscriptionLoading ? "Loading..." : (subscription?.subscription?.plan_name || "Free Trial")}`}
+                                title={`${t("active_plan")}: ${isSubscriptionLoading ? t("loading") : (subscription?.subscription?.plan_name || t("free_trial"))}`}
                                 className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative cursor-help`}
                             >
                                 <Clock className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
@@ -3591,7 +3633,7 @@ STRICT RULES:
                             {!showEmployeeView && (
                                 <button
                                     onClick={() => { setRightSidebarTab("wallet"); setIsRightSidebarCollapsed(false) }}
-                                    title="Wallet"
+                                    title={t("wallet")}
                                     className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative cursor-pointer hover:scale-110 transition-all ${rightSidebarTab === "wallet" && !isRightSidebarCollapsed ? "ring-1 ring-white" : ""}`}
                                 >
                                     <Wallet className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
@@ -3600,10 +3642,10 @@ STRICT RULES:
                             {showEmployeeView && (
                                 <button
                                     onClick={() => { setRightSidebarTab("gmail"); setIsRightSidebarCollapsed(false) }}
-                                    title="Gmail"
+                                    title={t("gmail")}
                                     className={`h-8 w-8 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative cursor-pointer hover:scale-110 transition-all ${rightSidebarTab === "gmail" && !isRightSidebarCollapsed ? "ring-1 ring-white" : ""}`}
                                 >
-                                    <svg className={`h-4 w-4 ${gmailConnected ? "text-[#00DDDD]" : (isDarkMode ? "text-white" : "text-black")}`} viewBox="0 0 24 24" fill="none">
+                                    <svg className={`h-4 w-4 ${gmailConnected ? "text-accent" : (isDarkMode ? "text-white" : "text-black")}`} viewBox="0 0 24 24" fill="none">
                                         <rect x="2" y="4" width="20" height="16" rx="2" fill="currentColor"/>
                                         <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
                                     </svg>
@@ -3616,8 +3658,8 @@ STRICT RULES:
                         {/* Upgrade Button right below Wallet/Mail */}
                         {(!userRole || (userRole as any) === "student") && (
                             <div className="w-full flex items-center justify-center px-2 pt-[21px] pb-4">
-                                <Link href="/pricing" title="Upgrade Now" className="block cursor-pointer">
-                                    <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-[rgba(0,221,221,0.2)]`}>
+                                <Link href="/pricing" title={t("upgrade_now")} className="block cursor-pointer">
+                                    <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-[rgba(var(--brand-accent-rgb),0.2)]`}>
                                         <div className="bubble-layer bubble-1"></div>
                                         <div className="bubble-layer bubble-2"></div>
                                         <div className="bubble-layer bubble-3"></div>
@@ -3650,7 +3692,7 @@ STRICT RULES:
                                                 : 125.6 - ((subscription.tokens_remaining ?? 0) / subscription.subscription.details.monthly_tokens) * 125.6
                                         )}
                                         strokeLinecap="round"
-                                        className="transition-all duration-1000 drop-shadow-[0_0_4px_rgba(0,221,221,0.5)]"
+                                        className="transition-all duration-1000 drop-shadow-[0_0_4px_rgba(var(--brand-accent-rgb),0.5)]"
                                     />
                                 </svg>
                                 <div className="scale-[0.6] flex items-center justify-center">
@@ -3660,52 +3702,52 @@ STRICT RULES:
 
                             {/* Chat+Code (Chat + Coding Tokens) Metric */}
                             <div
-                                title={`Chat+Code: ${(subscription?.usage?.chat_tokens_used ?? 0) + (subscription?.usage?.coding_tokens_used ?? 0)} / ${subscription?.subscription?.details?.monthly_tokens || 1}`}
+                                title={`${t("chat_code")}: ${(subscription?.usage?.chat_tokens_used ?? 0) + (subscription?.usage?.coding_tokens_used ?? 0)} / ${subscription?.subscription?.details?.monthly_tokens || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
                                 <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                    Chat+Code
+                                    {t("chat_code")}
                                 </span>
-                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
+                                <span className="text-[10px] font-mono font-bold text-accent">
                                     {(subscription?.usage?.chat_tokens_used ?? 0) + (subscription?.usage?.coding_tokens_used ?? 0)}
                                 </span>
                             </div>
 
                             {/* IMG (Images Today) Metric */}
                             <div
-                                title={`Images Today: ${subscription?.usage?.daily_images ?? 0} / ${subscription?.subscription?.details?.daily_image_limit || 1}`}
+                                title={`${t("images_today")}: ${subscription?.usage?.daily_images ?? 0} / ${subscription?.subscription?.details?.daily_image_limit || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
                                 <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                    IMG
+                                    {t("img_label")}
                                 </span>
-                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
+                                <span className="text-[10px] font-mono font-bold text-accent">
                                     {subscription?.usage?.daily_images ?? 0}
                                 </span>
                             </div>
 
                             {/* TTS Metric */}
                             <div
-                                title={`TTS Minutes: ${subscription?.usage?.tts_minutes_used ?? 0} / ${subscription?.subscription?.details?.tts_minutes_limit || 1}`}
+                                title={`${t("tts_minutes")}: ${subscription?.usage?.tts_minutes_used ?? 0} / ${subscription?.subscription?.details?.tts_minutes_limit || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
                                 <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                    TTS
+                                    {t("tts_label")}
                                 </span>
-                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
+                                <span className="text-[10px] font-mono font-bold text-accent">
                                     {subscription?.usage?.tts_minutes_used ?? 0}
                                 </span>
                             </div>
 
                             {/* STT Metric */}
                             <div
-                                title={`STT Minutes: ${subscription?.usage?.stt_minutes_used ?? 0} / ${subscription?.subscription?.details?.stt_minutes_limit || 1}`}
+                                title={`${t("stt_minutes")}: ${subscription?.usage?.stt_minutes_used ?? 0} / ${subscription?.subscription?.details?.stt_minutes_limit || 1}`}
                                 className="flex flex-col items-center gap-0.5 cursor-help"
                             >
                                 <span className={`text-[9px] font-mono font-black ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                    STT
+                                    {t("stt_label")}
                                 </span>
-                                <span className="text-[10px] font-mono font-bold text-[#00DDDD]">
+                                <span className="text-[10px] font-mono font-bold text-accent">
                                     {subscription?.usage?.stt_minutes_used ?? 0}
                                 </span>
                             </div>
@@ -3978,8 +4020,6 @@ STRICT RULES:
                 onClose={() => setIsSettingsModalOpen(false)}
                 isDarkMode={isDarkMode}
                 isMobile={isMobile}
-                subscription={subscription}
-                isSubscriptionLoading={isSubscriptionLoading}
                 onPersonaSelect={handlePersonaSelect}
                 currentPersona={selectedPersona}
                 onDeactivate={handleDiscontinueAccount}
@@ -3987,6 +4027,25 @@ STRICT RULES:
                 userName={userName}
                 userEmail={userEmail}
                 initialPanel={settingsPanel}
+                onAccentChange={setAccent}
+            />
+
+            {/* Personalization Modal */}
+            <PersonalizationModal
+                isOpen={isPersonalizationModalOpen}
+                onClose={() => setIsPersonalizationModalOpen(false)}
+                isDarkMode={isDarkMode}
+                userName={userName}
+                userEmail={userEmail}
+                userRole={userRole}
+            />
+
+            {/* Wallet Modal */}
+            <WalletModal
+                isOpen={isWalletModalOpen}
+                onClose={() => setIsWalletModalOpen(false)}
+                isDarkMode={isDarkMode}
+                isMobile={isMobile}
             />
 
             {/* ─── Bulk Email Modal (Excel Upload) ─── */}
@@ -4034,7 +4093,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                                     const file = e.dataTransfer.files[0];
                                                     if (file) handleBulkExcelUpload(file);
                                                 }}
-                                                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${isDarkMode ? "border-white/30 hover:border-[#00DDDD]/50 text-white/60" : "border-black/40 hover:border-[#00DDDD]/60 text-black/80"}`}
+                                                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${isDarkMode ? "border-white/30 hover:border-accent/50 text-white/60" : "border-black/40 hover:border-accent/60 text-black/80"}`}
                                                 onClick={() => bulkFileInputRef.current?.click()}
                                             >
                                                 <svg className="h-8 w-8 mx-auto mb-2 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -4050,7 +4109,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
 
                                             {gmailSending && (
                                                 <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-white/[0.05]">
-                                                    <div className="h-3 w-3 rounded-full border-2 border-t-transparent animate-spin border-[#00DDDD]" />
+                                                    <div className="h-3 w-3 rounded-full border-2 border-t-transparent animate-spin border-accent" />
                                                     <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/70" : "text-black/80"}`}>Sending emails...</span>
                                                 </div>
                                             )}
@@ -4171,7 +4230,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                                 className={`relative w-full max-w-lg rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/20"}`}
                                             >
                                                 <div className="flex items-center gap-3 mb-4">
-                                                    <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#00DDDD]/10" : "bg-[#00DDDD]/15"}`}>
+                                                    <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-accent/10" : "bg-accent/15"}`}>
                                                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                             <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
                                                             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
@@ -4215,7 +4274,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                                         <button
                                                             onClick={() => setGmailAutoMode(gmailAutoMode === "all" ? null : "all")}
                                                             className={`px-2.5 py-1 text-[8px] font-mono rounded border transition-all ${gmailAutoMode === "all"
-                                                                ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/15 border-[#00DDDD] text-[#00DDDD]")
+                                                                ? (isDarkMode ? "bg-accent/20 border-accent text-accent" : "bg-accent/15 border-accent text-accent")
                                                                 : (isDarkMode ? "border-white/25 text-white/70" : "border-black/30 text-black/70")
                                                                 }`}
                                                         >
@@ -4224,7 +4283,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                                         <button
                                                             onClick={() => setGmailAutoMode(gmailAutoMode === "to" ? null : "to")}
                                                             className={`px-2.5 py-1 text-[8px] font-mono rounded border transition-all ${gmailAutoMode === "to"
-                                                                ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/15 border-[#00DDDD] text-[#00DDDD]")
+                                                                ? (isDarkMode ? "bg-accent/20 border-accent text-accent" : "bg-accent/15 border-accent text-accent")
                                                                 : (isDarkMode ? "border-white/25 text-white/70" : "border-black/30 text-black/70")
                                                                 }`}
                                                         >
@@ -4261,7 +4320,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                                         } catch { /* context save optional */ }
                                                         setGmailAutoStatus(gmailAutoMode === "all" ? "Watching all emails..." : `Watching ${gmailAutoTargetEmail}...`);
                                                     }} disabled={!gmailAutoMode || (gmailAutoMode === "to" && !gmailAutoTargetEmail.trim())}
-                                                        className={`px-4 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all disabled:opacity-50 ${isDarkMode ? "bg-[#00DDDD] text-black hover:bg-[#00DDDD]/90" : "bg-[#00DDDD] text-black hover:bg-[#00DDDD]/90"}`}
+                                                        className={`px-4 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all disabled:opacity-50 ${isDarkMode ? "bg-accent text-black hover:bg-accent/90" : "bg-accent text-black hover:bg-accent/90"}`}
                                                     >Apply</button>
                                                 </div>
                                             </motion.div>

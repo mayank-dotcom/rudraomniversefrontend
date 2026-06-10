@@ -14,12 +14,33 @@ const ThemeContext = createContext<ThemeContextType>({
   setDarkMode: () => {},
 })
 
+const ACCENT_STORAGE_KEY = "rudranex_accent";
+
+function hexToRgb(hex: string): string {
+  if (!hex) return "0, 0, 0";
+  const h = hex.replace("#", "");
+  return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
+}
+
+function applyStoredAccent() {
+  if (typeof window === "undefined") return;
+  const color = localStorage.getItem(ACCENT_STORAGE_KEY);
+  if (color) {
+    document.documentElement.style.setProperty("--brand-accent", color);
+    document.documentElement.style.setProperty("--brand-accent-rgb", hexToRgb(color));
+  } else {
+    document.documentElement.style.removeProperty("--brand-accent");
+    document.documentElement.style.removeProperty("--brand-accent-rgb");
+  }
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
+    applyStoredAccent()
     const stored = localStorage.getItem("rudranex_theme")
     if (stored !== null) {
       setIsDarkMode(stored === "dark")

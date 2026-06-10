@@ -16,8 +16,8 @@ export function getUserInfo(): UserInfo | null {
   if (typeof window !== "undefined") {
     const name = localStorage.getItem("rudranex_user_name")
     const email = localStorage.getItem("rudranex_user_email")
-    if (name && email) {
-      return { name, email }
+    if (name) {
+      return { name, email: email || "" }
     }
   }
   return null
@@ -143,5 +143,26 @@ export function getEnterpriseName(): string | null {
 export function removeEnterpriseName() {
   if (typeof window !== "undefined") {
     localStorage.removeItem(ENTERPRISE_NAME_STORAGE)
+  }
+}
+
+const PROFILE_PICTURE_STORAGE = "rudranex_profile_picture"
+
+export function setProfilePicture(url: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(PROFILE_PICTURE_STORAGE, url)
+  }
+}
+
+export function getProfilePicture(): string | null {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem(PROFILE_PICTURE_STORAGE)
+  }
+  return null
+}
+
+export function removeProfilePicture() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(PROFILE_PICTURE_STORAGE)
   }
 }

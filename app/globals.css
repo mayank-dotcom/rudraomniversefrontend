@@ -11,6 +11,7 @@
   --font-mono: var(--font-geist-mono), monospace;
   --font-orbitron: var(--font-orbitron), sans-serif;
   --color-cyan: #A855F7;
+  --color-accent: var(--brand-accent);
 }
 
 .dark {
@@ -52,6 +53,8 @@ body {
   color: var(--foreground);
   transition: background-color 0.5s ease, color 0.5s ease;
 }
+
+:root { --brand-accent: #00DDDD; --brand-accent-rgb: 0, 221, 221; }
 
 /* ═══════════════════════════════════════
    PREMIUM DARK MODE UTILITIES
@@ -450,4 +453,31 @@ html:not(.dark) .hover\:border-white\/20:hover {
 }
 .rotate-y-180 {
   transform: rotateY(180deg);
+}
+
+/* ═══════════════════════════════════════
+   GOOGLE TRANSLATE OVERRIDES (FULL-SITE LOCALIZATION)
+   ═══════════════════════════════════════ */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame,
+.goog-te-banner,
+iframe[class*="goog-te-banner-frame"],
+iframe[id*="goog-te-banner-frame"] {
+  display: none !important;
+}
+
+body {
+  top: 0px !important;
+}
+
+.goog-tooltip,
+.goog-tooltip:hover,
+.goog-te-balloon-frame,
+.goog-te-balloon-wrapper {
+  display: none !important;
+}
+
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
 }

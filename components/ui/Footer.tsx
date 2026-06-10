@@ -231,8 +231,8 @@ export default function Footer() {
                                     }`}
                                 >
                                     <div className={`p-2.5 rounded-lg flex items-center justify-center shrink-0 ${
-                                        isDarkMode ? "bg-white/10 text-[#00DDDD]" : "bg-black text-[#00DDDD]"
-                                    }`}>
+                                        isDarkMode ? "bg-white/10" : "bg-black"
+                                    }`} style={{ color: "var(--brand-accent)" }}>
                                         <Mail className="w-5 h-5" />
                                     </div>
                                     <div className="flex flex-col min-w-0">
@@ -254,8 +254,8 @@ export default function Footer() {
                                     }`}
                                 >
                                     <div className={`p-2.5 rounded-lg flex items-center justify-center shrink-0 ${
-                                        isDarkMode ? "bg-white/10 text-[#00DDDD]" : "bg-black text-[#00DDDD]"
-                                    }`}>
+                                        isDarkMode ? "bg-white/10" : "bg-black"
+                                    }`} style={{ color: "var(--brand-accent)" }}>
                                         <MapPin className="w-5 h-5" />
                                     </div>
                                     <div className="flex flex-col">
@@ -293,8 +293,8 @@ export default function Footer() {
                                         }`}
                                     >
                                         <div className={`p-2 rounded-lg flex items-center justify-center shrink-0 ${
-                                            isDarkMode ? "bg-white/10 text-[#00DDDD]" : "bg-black text-[#00DDDD]"
-                                        }`}>
+                                        isDarkMode ? "bg-white/10" : "bg-black"
+                                    }`} style={{ color: "var(--brand-accent)" }}>
                                             <Phone className="w-4 h-4" />
                                         </div>
                                         <div className="flex flex-col">

@@ -18,23 +18,32 @@ import {
     Loader2,
     Wallet,
     Zap,
+    Settings,
+    Sun,
+    Moon,
+    Globe,
 } from "lucide-react";
 import { getApiKey } from "@/lib/auth";
+import { useTheme } from "@/lib/theme-context";
+import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 
 // ─── Persona types ────────────────────────────────────────────────────────────
 export interface Persona {
     name: string;
     systemPrompt: string;
     predefined: boolean;
+    nameKey?: string;
+    promptKey?: string;
 }
 
 const PREDEFINED_PERSONAS: Persona[] = [
-    { name: "Teacher", systemPrompt: "You are a knowledgeable teacher who explains concepts thoroughly with examples, analogies, and structured lessons. Adapt your teaching style to the student's level.", predefined: true },
-    { name: "Tutor", systemPrompt: "You are a patient tutor who guides students step-by-step without giving direct answers. Ask probing questions to help them discover solutions themselves.", predefined: true },
-    { name: "Interviewer", systemPrompt: "You are a professional interviewer conducting a mock interview. Ask relevant questions, evaluate answers, provide constructive feedback, and track the candidate's performance.", predefined: true },
-    { name: "Career Coach", systemPrompt: "You are a career coach providing professional advice on career paths, skill development, resume building, and interview preparation. Be practical and encouraging.", predefined: true },
-    { name: "Study Buddy", systemPrompt: "You are a friendly study buddy who makes learning collaborative and fun. Use casual language, share tips, and help with revision in an engaging way.", predefined: true },
-    { name: "Explainer", systemPrompt: "You are an expert at simplifying complex topics. Break down difficult concepts into simple terms using everyday examples. Assume no prior knowledge.", predefined: true },
+    { name: "Teacher", nameKey: "persona_teacher_name", systemPrompt: "", promptKey: "persona_teacher_prompt", predefined: true },
+    { name: "Tutor", nameKey: "persona_tutor_name", systemPrompt: "", promptKey: "persona_tutor_prompt", predefined: true },
+    { name: "Interviewer", nameKey: "persona_interviewer_name", systemPrompt: "", promptKey: "persona_interviewer_prompt", predefined: true },
+    { name: "Career Coach", nameKey: "persona_career_coach_name", systemPrompt: "", promptKey: "persona_career_coach_prompt", predefined: true },
+    { name: "Study Buddy", nameKey: "persona_study_buddy_name", systemPrompt: "", promptKey: "persona_study_buddy_prompt", predefined: true },
+    { name: "Explainer", nameKey: "persona_explainer_name", systemPrompt: "", promptKey: "persona_explainer_prompt", predefined: true },
 ];
 
 const FAQ_ITEMS = [
@@ -48,7 +57,7 @@ const FAQ_ITEMS = [
 ];
 
 // ─── Panel IDs ────────────────────────────────────────────────────────────────
-type Panel = "persona" | "plan" | "faq" | "bug" | "deactivate";
+type Panel = "general" | "persona" | "faq" | "bug" | "deactivate";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface SettingsModalProps {
@@ -56,8 +65,6 @@ interface SettingsModalProps {
     onClose: () => void;
     isDarkMode: boolean;
     isMobile: boolean;
-    subscription: any;
-    isSubscriptionLoading: boolean;
     onPersonaSelect: (persona: Persona) => void;
     currentPersona: Persona | null;
     onDeactivate: () => void;
@@ -65,14 +72,17 @@ interface SettingsModalProps {
     userName: string;
     userEmail: string;
     initialPanel?: Panel;
+    onAccentChange?: (color: string) => void;
 }
 
 // ─── Persona Panel ─────────────────────────────────────────────────────────
-function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
+export function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona, accent }: {
     isDarkMode: boolean;
     onPersonaSelect: (p: Persona) => void;
     currentPersona: Persona | null;
+    accent: string;
 }) {
+    const { t } = useTranslation();
     const [tab, setTab] = useState<"predefined" | "custom">("predefined");
     const [customName, setCustomName] = useState("");
     const [customPrompt, setCustomPrompt] = useState("");
@@ -85,8 +95,8 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Persona Mode</h3>
-                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Configure how the AI behaves in every conversation</p>
+                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{t("persona_mode")}</h3>
+                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("persona_subtitle")}</p>
             </div>
 
             {currentPersona && (
@@ -97,29 +107,37 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
                         </div>
                         <div>
                             <p className={`text-[11px] font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{currentPersona.name}</p>
-                            <p className={`text-[9px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Active Persona</p>
+                            <p className={`text-[9px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("active_persona")}</p>
                         </div>
                     </div>
                     <button
                         onClick={() => onPersonaSelect({ name: "", systemPrompt: "", predefined: true })}
-                        className={`text-[9px] font-sans px-3 py-1.5 rounded-lg border transition-all ${isDarkMode ? "border-white/10 text-white/50 hover:text-white hover:border-white/30" : "border-black/10 text-black/50 hover:text-black hover:border-black/30"}`}
+                        className={`text-[9px] font-sans px-3 py-1.5 rounded-lg border transition-all ${isDarkMode ? "border-white/10 text-white/50 hover:text-white" : "border-black/10 text-black/50 hover:text-black"}`}
+                        style={{
+                            borderColor: accent ? `${accent}30` : undefined,
+                            color: accent ? accent : undefined
+                        }}
                     >
-                        Clear
+                        {t("clear")}
                     </button>
                 </div>
             )}
 
             <div className={`flex border-b ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                {(["predefined", "custom"] as const).map((t) => (
+                {(["predefined", "custom"] as const).map((tabVal) => (
                     <button
-                        key={t}
-                        onClick={() => setTab(t)}
-                        className={`flex-1 py-2.5 text-[9px] font-sans uppercase tracking-[0.15em] transition-all ${tab === t
-                            ? isDarkMode ? "border-b-2 border-white text-white font-bold" : "border-b-2 border-black text-black font-bold"
+                        key={tabVal}
+                        onClick={() => setTab(tabVal)}
+                        className={`flex-1 py-2.5 text-[9px] font-sans uppercase tracking-[0.15em] transition-all ${tab === tabVal
+                            ? isDarkMode ? (accent ? "font-bold" : "border-b-2 border-white text-white font-bold") : (accent ? "font-bold" : "border-b-2 border-black text-black font-bold")
                             : isDarkMode ? "text-white/40 hover:text-white/70" : "text-black/40 hover:text-black/70"
                         }`}
+                        style={{
+                            borderBottom: tab === tabVal && accent ? `2px solid ${accent}` : undefined,
+                            color: tab === tabVal && accent ? accent : undefined
+                        }}
                     >
-                        {t === "predefined" ? "Predefined" : "Custom"}
+                        {tabVal === "predefined" ? t("predefined") : t("custom")}
                     </button>
                 ))}
             </div>
@@ -133,15 +151,22 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
                                 key={p.name}
                                 onClick={() => onPersonaSelect(p)}
                                 className={`w-full text-left p-4 rounded-xl border transition-all ${isActive
-                                    ? isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"
+                                    ? accent
+                                        ? ""
+                                        : (isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black")
                                     : isDarkMode ? "bg-white/[0.03] border-white/10 text-white/70 hover:border-white/25 hover:bg-white/[0.06]" : "bg-black/[0.02] border-black/10 text-black/70 hover:border-black/25 hover:bg-black/[0.04]"
                                 }`}
+                                style={{
+                                    backgroundColor: isActive && accent ? accent : undefined,
+                                    borderColor: isActive && accent ? accent : undefined,
+                                    color: isActive && accent ? getContrastColor(accent) : undefined
+                                }}
                             >
                                 <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-[11px] font-sans font-bold uppercase tracking-widest">{p.name}</span>
+                                    <span className="text-[11px] font-sans font-bold uppercase tracking-widest">{p.nameKey ? t(p.nameKey) : p.name}</span>
                                     {isActive && <Check className="h-3.5 w-3.5 shrink-0" />}
                                 </div>
-                                <p className="text-[9px] leading-relaxed opacity-60 font-sans line-clamp-2">{p.systemPrompt}</p>
+                                <p className="text-[9px] leading-relaxed opacity-60 font-sans line-clamp-2">{p.promptKey ? t(p.promptKey) : p.systemPrompt}</p>
                             </button>
                         );
                     })}
@@ -151,12 +176,12 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
             {tab === "custom" && (
                 <div className="space-y-5">
                     <div>
-                        <label className={`block text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>Persona Name</label>
+                        <label className={`block text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>{t("persona_name")}</label>
                         <input
                             type="text"
                             value={customName}
                             onChange={(e) => setCustomName(e.target.value)}
-                            placeholder="e.g. Code Mentor, Math Genius..."
+                            placeholder={t("persona_name_placeholder")}
                             className={`w-full p-3.5 text-xs font-sans border rounded-xl focus:outline-none transition-all ${isDarkMode
                                 ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/40"
                                 : "bg-black/5 border-black/10 text-black placeholder:text-black/20 focus:border-black/40"
@@ -164,11 +189,11 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
                         />
                     </div>
                     <div>
-                        <label className={`block text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>System Prompt</label>
+                        <label className={`block text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>{t("system_prompt")}</label>
                         <textarea
                             value={customPrompt}
                             onChange={(e) => setCustomPrompt(e.target.value)}
-                            placeholder="Describe how this AI persona should behave..."
+                            placeholder={t("system_prompt_placeholder")}
                             rows={5}
                             className={`w-full p-3.5 text-xs font-sans border rounded-xl focus:outline-none transition-all resize-none ${isDarkMode
                                 ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/40"
@@ -179,10 +204,18 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
                     <button
                         onClick={handleCreateCustom}
                         disabled={!customName.trim() || !customPrompt.trim()}
-                        className={`w-full py-3.5 text-[10px] font-sans font-black uppercase tracking-[0.25em] rounded-xl transition-all disabled:opacity-30 flex items-center justify-center gap-2 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
+                        className={`w-full py-3.5 text-[10px] font-sans font-black uppercase tracking-[0.25em] rounded-xl transition-all disabled:opacity-30 flex items-center justify-center gap-2 ${
+                            accent
+                                ? "hover:opacity-90"
+                                : (isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")
+                        }`}
+                        style={{
+                            backgroundColor: accent || undefined,
+                            color: accent ? getContrastColor(accent) : undefined
+                        }}
                     >
                         <UserPlus className="h-3.5 w-3.5" />
-                        Create Persona
+                        {t("create_persona")}
                     </button>
                 </div>
             )}
@@ -191,28 +224,30 @@ function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona }: {
 }
 
 // ─── Plan Panel ────────────────────────────────────────────────────────────
-function PlanPanel({ isDarkMode, subscription, isSubscriptionLoading }: {
+export function PlanPanel({ isDarkMode, subscription, isSubscriptionLoading, accent }: {
     isDarkMode: boolean;
     subscription: any;
     isSubscriptionLoading: boolean;
+    accent: string;
 }) {
-    const planName = subscription?.subscription?.plan_name || "Free Trial";
+    const { t } = useTranslation();
+    const planName = subscription?.subscription?.plan_name || t("free_trial");
     const tokensRemaining = subscription?.tokens_remaining ?? 0;
     const monthlyTokens = subscription?.subscription?.details?.monthly_tokens || 1;
     const usage = subscription?.usage;
 
     const metrics = [
-        { label: "Chat + Code Tokens", used: (usage?.chat_tokens_used ?? 0) + (usage?.coding_tokens_used ?? 0), limit: monthlyTokens },
-        { label: "Daily Images", used: usage?.daily_images ?? 0, limit: subscription?.subscription?.details?.daily_image_limit ?? 0 },
-        { label: "TTS Minutes", used: usage?.tts_minutes_used ?? 0, limit: subscription?.subscription?.details?.tts_minutes_limit ?? 0 },
-        { label: "STT Minutes", used: usage?.stt_minutes_used ?? 0, limit: subscription?.subscription?.details?.stt_minutes_limit ?? 0 },
+        { label: t("chat_code"), used: (usage?.chat_tokens_used ?? 0) + (usage?.coding_tokens_used ?? 0), limit: monthlyTokens },
+        { label: t("daily_images_label"), used: usage?.daily_images ?? 0, limit: subscription?.subscription?.details?.daily_image_limit ?? 0 },
+        { label: t("tts_minutes"), used: usage?.tts_minutes_used ?? 0, limit: subscription?.subscription?.details?.tts_minutes_limit ?? 0 },
+        { label: t("stt_minutes"), used: usage?.stt_minutes_used ?? 0, limit: subscription?.subscription?.details?.stt_minutes_limit ?? 0 },
     ];
 
     return (
         <div className="space-y-6">
             <div>
-                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Plan Details</h3>
-                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Your current subscription and usage</p>
+                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{t("plan_details")}</h3>
+                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("plan_details_subtitle")}</p>
             </div>
 
             {/* Plan Badge */}
@@ -228,21 +263,21 @@ function PlanPanel({ isDarkMode, subscription, isSubscriptionLoading }: {
                             ) : (
                                 <p className={`text-sm font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{planName}</p>
                             )}
-                            <p className={`text-[9px] font-sans mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Active Plan</p>
+                            <p className={`text-[9px] font-sans mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("active_plan")}</p>
                         </div>
                     </div>
                     <div className="text-right">
                         <p className={`text-xl font-sans font-black ${isDarkMode ? "text-white" : "text-black"}`}>
                             {isSubscriptionLoading ? "—" : tokensRemaining.toLocaleString()}
                         </p>
-                        <p className={`text-[8px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>TOKENS LEFT</p>
+                        <p className={`text-[8px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("tokens_left")}</p>
                     </div>
                 </div>
 
                 {/* Token Progress */}
                 <div className="space-y-1.5">
                     <div className="flex justify-between">
-                        <span className={`text-[9px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Tokens Remaining</span>
+                        <span className={`text-[9px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("tokens_remaining")}</span>
                         <span className={`text-[9px] font-sans ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{tokensRemaining} / {monthlyTokens}</span>
                     </div>
                     <div className={`h-1.5 rounded-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
@@ -276,10 +311,18 @@ function PlanPanel({ isDarkMode, subscription, isSubscriptionLoading }: {
 
             <a
                 href="/pricing"
-                className={`flex items-center justify-center gap-2 w-full py-3.5 text-[10px] font-sans font-black uppercase tracking-[0.25em] rounded-xl transition-all ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
+                className={`flex items-center justify-center gap-2 w-full py-3.5 text-[10px] font-sans font-black uppercase tracking-[0.25em] rounded-xl transition-all ${
+                    accent
+                        ? "hover:opacity-90"
+                        : (isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")
+                }`}
+                style={{
+                    backgroundColor: accent || undefined,
+                    color: accent ? getContrastColor(accent) : undefined
+                }}
             >
                 <Zap className="h-3.5 w-3.5 fill-current" />
-                Upgrade Plan
+                {t("upgrade_plan")}
             </a>
         </div>
     );
@@ -287,13 +330,14 @@ function PlanPanel({ isDarkMode, subscription, isSubscriptionLoading }: {
 
 // ─── FAQ Panel ─────────────────────────────────────────────────────────────
 function FAQPanel({ isDarkMode }: { isDarkMode: boolean }) {
+    const { t } = useTranslation();
     const [open, setOpen] = useState<number | null>(null);
 
     return (
         <div className="space-y-6">
             <div>
-                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>FAQ</h3>
-                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Frequently asked questions</p>
+                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{t("faq")}</h3>
+                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("faq_subtitle")}</p>
             </div>
             <div className="space-y-2.5">
                 {FAQ_ITEMS.map((item, i) => (
@@ -302,7 +346,7 @@ function FAQPanel({ isDarkMode }: { isDarkMode: boolean }) {
                             onClick={() => setOpen(open === i ? null : i)}
                             className={`w-full flex items-center justify-between p-4 text-left transition-colors ${isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"}`}
                         >
-                            <span className={`text-[11px] font-sans font-medium pr-4 ${isDarkMode ? "text-white/90" : "text-black/90"}`}>{item.q}</span>
+                            <span className={`text-[11px] font-sans font-medium pr-4 ${isDarkMode ? "text-white/90" : "text-black/90"}`}>{t(`faq_q${i + 1}`)}</span>
                             {open === i
                                 ? <ChevronDown className={`h-3.5 w-3.5 shrink-0 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
                                 : <ChevronRight className={`h-3.5 w-3.5 shrink-0 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
@@ -318,7 +362,7 @@ function FAQPanel({ isDarkMode }: { isDarkMode: boolean }) {
                                     className="overflow-hidden"
                                 >
                                     <p className={`px-4 pb-4 text-[11px] font-sans leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-                                        {item.a}
+                                        {t(`faq_a${i + 1}`)}
                                     </p>
                                 </motion.div>
                             )}
@@ -331,14 +375,15 @@ function FAQPanel({ isDarkMode }: { isDarkMode: boolean }) {
 }
 
 // ─── Bug Report Panel ──────────────────────────────────────────────────────
-function BugPanel({ isDarkMode, userEmail }: { isDarkMode: boolean; userEmail: string }) {
+function BugPanel({ isDarkMode, userEmail, accent }: { isDarkMode: boolean; userEmail: string; accent: string }) {
+    const { t } = useTranslation();
     const [type, setType] = useState("UI Bug");
     const [desc, setDesc] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState("");
 
-    const issueTypes = ["UI Bug", "Chat Not Working", "Payment Issue", "Performance Issue", "Feature Request", "Other"];
+    const issueTypes = [t("ui_bug"), t("chat_not_working"), t("payment_issue"), t("performance_issue"), t("feature_request"), t("other_issue")];
 
     const handleSubmit = async () => {
         if (!desc.trim()) return;
@@ -358,7 +403,7 @@ function BugPanel({ isDarkMode, userEmail }: { isDarkMode: boolean; userEmail: s
             setSubmitted(true);
             setDesc("");
         } catch {
-            setError("Failed to submit. Please try emailing support@rudranex.com");
+            setError(t("failed_submit"));
         } finally {
             setSubmitting(false);
         }
@@ -367,8 +412,8 @@ function BugPanel({ isDarkMode, userEmail }: { isDarkMode: boolean; userEmail: s
     return (
         <div className="space-y-6">
             <div>
-                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Bug Report</h3>
-                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Help us improve by reporting issues</p>
+                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{t("bug_report")}</h3>
+                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("bug_report_subtitle")}</p>
             </div>
 
             {submitted ? (
@@ -377,31 +422,48 @@ function BugPanel({ isDarkMode, userEmail }: { isDarkMode: boolean; userEmail: s
                     animate={{ opacity: 1, scale: 1 }}
                     className={`flex flex-col items-center py-10 gap-4 text-center`}
                 >
-                    <div className={`h-16 w-16 rounded-2xl flex items-center justify-center ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}>
+                    <div
+                        className={`h-16 w-16 rounded-2xl flex items-center justify-center ${accent ? "" : (isDarkMode ? "bg-white text-black" : "bg-black text-white")}`}
+                        style={{
+                            backgroundColor: accent || undefined,
+                            color: accent ? getContrastColor(accent) : undefined
+                        }}
+                    >
                         <Check className="h-8 w-8" />
                     </div>
-                    <p className={`text-sm font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Report Submitted!</p>
-                    <p className={`text-[11px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Our team will look into this shortly.</p>
+                    <p className={`text-sm font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{t("report_submitted")}</p>
+                    <p className={`text-[11px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("report_submitted_desc")}</p>
                     <button
                         onClick={() => setSubmitted(false)}
-                        className={`mt-2 text-[9px] font-sans uppercase tracking-[0.15em] px-4 py-2 rounded-lg border transition-all ${isDarkMode ? "border-white/10 text-white/40 hover:text-white hover:border-white/30" : "border-black/10 text-black/40 hover:text-black hover:border-black/30"}`}
+                        className={`mt-2 text-[9px] font-sans uppercase tracking-[0.15em] px-4 py-2 rounded-lg border transition-all ${isDarkMode ? "border-white/10 text-white/40 hover:text-white" : "border-black/10 text-black/40 hover:text-black"}`}
+                        style={{
+                            borderColor: accent ? `${accent}30` : undefined,
+                            color: accent ? accent : undefined
+                        }}
                     >
-                        Report Another
+                        {t("report_another")}
                     </button>
                 </motion.div>
             ) : (
                 <div className="space-y-5">
                     <div>
-                        <label className={`block text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>Issue Type</label>
+                        <label className={`block text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>{t("issue_type")}</label>
                         <div className="grid grid-cols-2 gap-2">
                             {issueTypes.map((t) => (
                                 <button
                                     key={t}
                                     onClick={() => setType(t)}
                                     className={`py-2.5 px-3 text-[9px] font-sans rounded-xl border transition-all ${type === t
-                                        ? isDarkMode ? "bg-white text-black border-white font-bold" : "bg-black text-white border-black font-bold"
+                                        ? accent
+                                            ? "font-bold"
+                                            : (isDarkMode ? "bg-white text-black border-white font-bold" : "bg-black text-white border-black font-bold")
                                         : isDarkMode ? "border-white/10 text-white/50 hover:border-white/30 hover:text-white/80" : "border-black/10 text-black/50 hover:border-black/30 hover:text-black/80"
                                     }`}
+                                    style={{
+                                        backgroundColor: type === t && accent ? accent : undefined,
+                                        borderColor: type === t && accent ? accent : undefined,
+                                        color: type === t && accent ? getContrastColor(accent) : undefined
+                                    }}
                                 >
                                     {t}
                                 </button>
@@ -410,11 +472,11 @@ function BugPanel({ isDarkMode, userEmail }: { isDarkMode: boolean; userEmail: s
                     </div>
 
                     <div>
-                        <label className={`block text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>Description</label>
+                        <label className={`block text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"} mb-2`}>{t("description")}</label>
                         <textarea
                             value={desc}
                             onChange={(e) => setDesc(e.target.value)}
-                            placeholder="Describe the issue in detail — what happened, what you expected, and steps to reproduce..."
+                            placeholder={t("bug_description_placeholder")}
                             rows={5}
                             className={`w-full p-3.5 text-xs font-sans border rounded-xl focus:outline-none transition-all resize-none ${isDarkMode
                                 ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/40"
@@ -430,10 +492,18 @@ function BugPanel({ isDarkMode, userEmail }: { isDarkMode: boolean; userEmail: s
                     <button
                         onClick={handleSubmit}
                         disabled={!desc.trim() || submitting}
-                        className={`w-full py-3.5 text-[10px] font-sans font-black uppercase tracking-[0.25em] rounded-xl transition-all disabled:opacity-30 flex items-center justify-center gap-2 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
+                        className={`w-full py-3.5 text-[10px] font-sans font-black uppercase tracking-[0.25em] rounded-xl transition-all disabled:opacity-30 flex items-center justify-center gap-2 ${
+                            accent
+                                ? "hover:opacity-90"
+                                : (isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")
+                        }`}
+                        style={{
+                            backgroundColor: accent || undefined,
+                            color: accent ? getContrastColor(accent) : undefined
+                        }}
                     >
                         {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                        {submitting ? "Submitting..." : "Submit Report"}
+                        {submitting ? t("submitting") : t("submit_report")}
                     </button>
                 </div>
             )}
@@ -443,6 +513,7 @@ function BugPanel({ isDarkMode, userEmail }: { isDarkMode: boolean; userEmail: s
 
 // ─── Deactivate Panel ──────────────────────────────────────────────────────
 function DeactivatePanel({ isDarkMode, onDeactivate, userEmail }: { isDarkMode: boolean; onDeactivate: () => void; userEmail: string }) {
+    const { t } = useTranslation();
     const [confirmed, setConfirmed] = useState(false);
     const [inputVal, setInputVal] = useState("");
 
@@ -451,19 +522,19 @@ function DeactivatePanel({ isDarkMode, onDeactivate, userEmail }: { isDarkMode: 
     return (
         <div className="space-y-6">
             <div>
-                <h3 className={`text-xl font-sans font-bold text-red-500`}>Deactivate Account</h3>
-                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Permanently delete your account and all data</p>
+                <h3 className={`text-xl font-sans font-bold text-red-500`}>{t("deactivate_account")}</h3>
+                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("deactivate_subtitle")}</p>
             </div>
 
             <div className={`p-4 rounded-xl border border-red-500/20 ${isDarkMode ? "bg-red-500/5" : "bg-red-500/3"}`}>
                 <div className="flex items-start gap-3">
                     <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
                     <div className="space-y-1.5">
-                        <p className="text-[11px] font-sans font-semibold text-red-500">This action is permanent and cannot be undone.</p>
+                        <p className="text-[11px] font-sans font-semibold text-red-500">{t("permanent_warning")}</p>
                         <ul className={`text-[10px] font-sans space-y-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                            <li>• All your chats will be deleted</li>
-                            <li>• All custom personas will be removed</li>
-                            <li>• Your subscription will be cancelled</li>
+                            <li>• {t("chats_deleted")}</li>
+                            <li>• {t("personas_removed")}</li>
+                            <li>• {t("subscription_cancelled")}</li>
                             <li>• Account: <span className="text-red-400">{userEmail}</span></li>
                         </ul>
                     </div>
@@ -472,13 +543,13 @@ function DeactivatePanel({ isDarkMode, onDeactivate, userEmail }: { isDarkMode: 
 
             <div>
                 <label className={`block text-[9px] font-sans uppercase tracking-[0.15em] mb-2 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                    Type <span className="text-red-400 font-bold">delete my account</span> to confirm
+                    {t("type_to_confirm")}
                 </label>
                 <input
                     type="text"
                     value={inputVal}
                     onChange={(e) => setInputVal(e.target.value)}
-                    placeholder="delete my account"
+                    placeholder={t("delete_account_placeholder")}
                     className={`w-full p-3.5 text-xs font-sans border rounded-xl focus:outline-none transition-all ${isDarkMode
                         ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-red-500/50"
                         : "bg-black/5 border-black/10 text-black placeholder:text-black/20 focus:border-red-500/50"
@@ -495,8 +566,268 @@ function DeactivatePanel({ isDarkMode, onDeactivate, userEmail }: { isDarkMode: 
                 }`}
             >
                 <Trash2 className="h-3.5 w-3.5" />
-                Delete My Account
+                {t("delete_my_account")}
             </button>
+        </div>
+    );
+}
+
+// ─── Accent colour options ─────────────────────────────────────────────────
+const ACCENT_COLORS = [
+    { name: "Cyan", value: "#00DDDD" },
+    { name: "Blue", value: "#3B82F6" },
+    { name: "Purple", value: "#8B5CF6" },
+    { name: "Green", value: "#10B981" },
+    { name: "Orange", value: "#F59E0B" },
+    { name: "Pink", value: "#EC4899" },
+    { name: "Red", value: "#EF4444" },
+    { name: "Black", value: "#000000" },
+];
+
+const DEFAULT_ACCENT = "";
+const ACCENT_STORAGE_KEY = "rudranex_accent";
+
+function hexToRgb(hex: string): string {
+    if (!hex) return "0, 0, 0";
+    const h = hex.replace("#", "");
+    return `${parseInt(h.substring(0, 2), 16)}, ${parseInt(h.substring(2, 4), 16)}, ${parseInt(h.substring(4, 6), 16)}`;
+}
+
+function getContrastColor(hex: string): string {
+    if (!hex) return "";
+    const h = hex.replace("#", "");
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 128 ? "#000000" : "#ffffff";
+}
+
+function getAccentColor(): string {
+    if (typeof window === "undefined") return DEFAULT_ACCENT;
+    return localStorage.getItem(ACCENT_STORAGE_KEY) || DEFAULT_ACCENT;
+}
+
+function setAccentColor(color: string) {
+    if (!color) {
+        localStorage.removeItem(ACCENT_STORAGE_KEY);
+        if (typeof window !== "undefined") {
+            document.documentElement.style.removeProperty("--brand-accent");
+            document.documentElement.style.removeProperty("--brand-accent-rgb");
+        }
+    } else {
+        localStorage.setItem(ACCENT_STORAGE_KEY, color);
+        if (typeof window !== "undefined") {
+            document.documentElement.style.setProperty("--brand-accent", color);
+            document.documentElement.style.setProperty("--brand-accent-rgb", hexToRgb(color));
+        }
+    }
+}
+
+function applyStoredAccent() {
+    const color = getAccentColor();
+    setAccentColor(color);
+}
+
+
+// ─── Settings Custom Dropdown ──────────────────────────────────────────────
+interface SettingsDropdownOption {
+    label: string | React.ReactNode;
+    value: string;
+}
+
+interface SettingsDropdownProps {
+    value: string;
+    onChange: (value: string) => void;
+    options: SettingsDropdownOption[];
+    isDarkMode: boolean;
+    accent?: string;
+    widthClass?: string;
+    dropUp?: boolean;
+}
+
+function SettingsDropdown({ value, onChange, options, isDarkMode, accent, widthClass = "w-48", dropUp }: SettingsDropdownProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        if (isOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [isOpen]);
+
+    const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+    return (
+        <div className="relative" ref={containerRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-xl font-medium transition-all duration-200 cursor-pointer ${
+                    isDarkMode
+                        ? "border-white/10 text-white/90 bg-white/5 hover:bg-white/10 hover:border-white/20"
+                        : "border-black/10 text-black/90 bg-black/5 hover:bg-black/10 hover:border-black/20"
+                }`}
+            >
+                <span>{selectedOption.label}</span>
+                <ChevronDown className={`w-3.5 h-3.5 opacity-40 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {isOpen && (
+                <div className={`absolute right-0 ${dropUp ? "bottom-full mb-2" : "mt-2"} ${widthClass} max-h-60 overflow-y-auto rounded-xl border p-1 shadow-xl z-[400] backdrop-blur-xl ${
+                    isDarkMode
+                        ? "bg-[#0d0d0c]/95 border-white/10 text-white"
+                        : "bg-white/95 border-black/10 text-black"
+                } ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+                    {options.map((option) => {
+                        const isSelected = option.value === value;
+                        const activeTextColor = accent ? accent : undefined;
+                        return (
+                            <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                    onChange(option.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg text-left transition-colors cursor-pointer ${
+                                    isSelected
+                                        ? (isDarkMode 
+                                            ? "bg-white/5 font-semibold text-white" 
+                                            : "bg-black/5 font-semibold text-black")
+                                        : (isDarkMode ? "text-white/70 hover:bg-white/5 hover:text-white" : "text-black/70 hover:bg-black/5 hover:text-black")
+                                }`}
+                                style={isSelected && accent ? { color: accent } : undefined}
+                            >
+                                <span className="truncate">{option.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── General Panel ────────────────────────────────────────────────────────
+interface GeneralPanelProps {
+    isDarkMode: boolean;
+    accent: string;
+    onAccentChange: (color: string) => void;
+}
+
+function GeneralPanel({ isDarkMode, accent, onAccentChange }: GeneralPanelProps) {
+    const { t } = useTranslation();
+    const { toggleTheme } = useTheme();
+    const [language, setLanguageState] = useState(() => {
+        if (typeof window === "undefined") return "en";
+        return localStorage.getItem("rudranex_language") || "en";
+    });
+
+    const handleLanguageChange = (val: string) => {
+        setLanguageState(val);
+        localStorage.setItem("rudranex_language", val);
+        i18n.changeLanguage(val);
+    };
+
+    const appearanceOptions = [
+        { label: t("dark"), value: "dark" },
+        { label: t("light"), value: "light" }
+    ];
+
+    const accentOptions = [
+        { label: "Default", value: "default" },
+        ...ACCENT_COLORS.map(c => ({ label: c.name, value: c.value }))
+    ];
+
+    const languageOptions = [
+        { label: "English", value: "en" },
+        { label: "हिन्दी (Hindi)", value: "hi" }
+    ];
+
+    return (
+        <div className="space-y-6">
+            <div>
+                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{t("general")}</h3>
+                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("customize_experience")}</p>
+            </div>
+
+            <div className={`divide-y ${isDarkMode ? "divide-white/10" : "divide-black/10"} font-sans`}>
+                {/* Theme / Appearance Row */}
+                <div className="py-4 flex items-center justify-between">
+                    <div>
+                        <h4 className={`text-[13px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}>{t("appearance")}</h4>
+                        <p className={`text-[11px] ${isDarkMode ? "text-white/40" : "text-black/40"} mt-0.5`}>{t("switch_appearance")}</p>
+                    </div>
+                    <div>
+                        <SettingsDropdown
+                            value={isDarkMode ? "dark" : "light"}
+                            onChange={(val) => {
+                                if (val === "dark" && !isDarkMode) toggleTheme();
+                                if (val === "light" && isDarkMode) toggleTheme();
+                            }}
+                            options={appearanceOptions}
+                            isDarkMode={isDarkMode}
+                            accent={accent}
+                        />
+                    </div>
+                </div>
+
+                {/* Accent Color Row */}
+                <div className="py-4 flex items-center justify-between">
+                    <div>
+                        <h4 className={`text-[13px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}>{t("accent_color")}</h4>
+                        <p className={`text-[11px] ${isDarkMode ? "text-white/40" : "text-black/40"} mt-0.5`}>{t("select_highlight")}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span
+                            className="h-2.5 w-2.5 rounded-full border border-white/10"
+                            style={{
+                                backgroundColor: accent || (isDarkMode ? "#ffffff" : "#000000"),
+                            }}
+                        />
+                        <SettingsDropdown
+                            value={accent || "default"}
+                            onChange={(val) => {
+                                if (val === "default") {
+                                    onAccentChange("");
+                                } else {
+                                    onAccentChange(val);
+                                }
+                            }}
+                            options={accentOptions}
+                            isDarkMode={isDarkMode}
+                            accent={accent}
+                        />
+                    </div>
+                </div>
+
+                {/* Language Row */}
+                <div className="py-4 flex items-center justify-between">
+                    <div>
+                        <h4 className={`text-[13px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}>{t("language")}</h4>
+                        <p className={`text-[11px] ${isDarkMode ? "text-white/40" : "text-black/40"} mt-0.5`}>{t("select_language")}</p>
+                    </div>
+                    <div>
+                        <SettingsDropdown
+                            value={language}
+                            onChange={handleLanguageChange}
+                            options={languageOptions}
+                            isDarkMode={isDarkMode}
+                            accent={accent}
+                            dropUp
+                        />
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
@@ -507,8 +838,6 @@ export default function SettingsModal({
     onClose,
     isDarkMode,
     isMobile,
-    subscription,
-    isSubscriptionLoading,
     onPersonaSelect,
     currentPersona,
     onDeactivate,
@@ -516,19 +845,26 @@ export default function SettingsModal({
     userName,
     userEmail,
     initialPanel = "persona",
+    onAccentChange,
 }: SettingsModalProps) {
+    const { t } = useTranslation();
     const [activePanel, setActivePanel] = useState<Panel>(initialPanel);
+    const [accent, setAccent] = useState<string>("");
 
     useEffect(() => {
-        if (isOpen) setActivePanel(initialPanel);
+        if (isOpen) {
+            setActivePanel(initialPanel);
+            setAccent(getAccentColor());
+            applyStoredAccent();
+        }
     }, [isOpen, initialPanel]);
 
     const navItems: { id: Panel; label: string; icon: any }[] = [
-        { id: "persona", label: "Persona", icon: Sparkles },
-        { id: "plan", label: "Plan Details", icon: CreditCard },
-        { id: "faq", label: "FAQ", icon: HelpCircle },
-        { id: "bug", label: "Bug Report", icon: Bug },
-        { id: "deactivate", label: "Deactivate", icon: Trash2 },
+        { id: "general", label: t("general"), icon: Settings },
+        { id: "persona", label: t("persona"), icon: Sparkles },
+        { id: "faq", label: t("faq"), icon: HelpCircle },
+        { id: "bug", label: t("bug_report"), icon: Bug },
+        { id: "deactivate", label: t("deactivate"), icon: Trash2 },
     ];
 
     return (
@@ -558,30 +894,60 @@ export default function SettingsModal({
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Left Nav */}
-                        <div className={`${isMobile ? "flex flex-row border-b overflow-x-auto shrink-0" : "flex flex-col w-52 border-r shrink-0"} ${isDarkMode ? "border-white/8 bg-white/[0.02]" : "border-black/8 bg-black/[0.01]"}`}>
-                            {/* Header */}
-                            {!isMobile && (
-                                <div className="px-5 py-5 border-b border-inherit">
-                                    <p className={`text-xs font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Settings</p>
-                                    <p className={`text-[9px] font-sans mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>{userName || "User"}</p>
-                                </div>
-                            )}
+                        <div className={`${isMobile ? "flex flex-row border-b overflow-x-auto shrink-0" : "flex flex-col w-52 border-r shrink-0 py-4"} ${isDarkMode ? "border-white/8 bg-white/[0.02]" : "border-black/8 bg-black/[0.01]"}`}>
                             {navItems.map(({ id, label, icon: Icon }) => {
                                 const isActive = activePanel === id;
                                 const isDanger = id === "deactivate";
+                                
+                                let btnClasses = "";
+                                if (isMobile) {
+                                    btnClasses = "flex-shrink-0 flex flex-col items-center py-3 px-4 gap-1 transition-all text-[10px] font-sans uppercase tracking-[0.12em]";
+                                    if (isActive) {
+                                        if (isDanger) {
+                                            btnClasses += isDarkMode ? " text-red-500 font-bold bg-red-500/10 rounded-lg" : " text-red-500 font-bold bg-red-500/5 rounded-lg";
+                                        } else {
+                                            btnClasses += isDarkMode ? " bg-white/8 text-white font-bold rounded-lg px-3 py-3 my-1" : " bg-black/8 text-black font-bold rounded-lg px-3 py-3 my-1";
+                                        }
+                                    } else {
+                                        if (isDanger) {
+                                            btnClasses += " text-red-500/50 hover:text-red-500 hover:bg-red-500/5";
+                                        } else {
+                                            btnClasses += isDarkMode ? " text-white/40 hover:text-white/80 hover:bg-white/5" : " text-black/70 hover:text-black hover:bg-black/5";
+                                                                        }
+                                                                    }
+                                                                } else {
+                                                                    btnClasses = "flex items-center gap-3 px-4 py-3 mx-3 my-1 transition-all text-[10px] font-sans uppercase tracking-[0.12em] text-left rounded-xl";
+                                                                    if (isActive) {
+                                                                        if (isDanger) {
+                                                                            btnClasses += isDarkMode ? " text-red-500 font-bold bg-red-500/10" : " text-red-500 font-bold bg-red-500/5";
+                                                                        } else {
+                                                                            btnClasses += isDarkMode ? " bg-white/8 text-white font-bold" : " bg-black/8 text-black font-bold";
+                                                                        }
+                                                                    } else {
+                                                                        if (isDanger) {
+                                                                            btnClasses += isDarkMode ? " text-red-500/50 hover:text-red-500 hover:bg-red-500/5" : " text-red-500/50 hover:text-red-500 hover:bg-red-500/5";
+                                                                        } else {
+                                                                            btnClasses += isDarkMode ? " text-white/40 hover:text-white/80 hover:bg-white/5" : " text-black/70 hover:text-black hover:bg-black/5";
+                                        }
+                                    }
+                                }
+
+                                const activeBgColor = accent ? `rgba(${hexToRgb(accent)}, 0.15)` : undefined;
+                                const activeTextColor = accent ? accent : undefined;
+
                                 return (
                                     <button
                                         key={id}
                                         onClick={() => setActivePanel(id)}
-                                        className={`${isMobile ? "flex-shrink-0 flex flex-col items-center py-3 px-4 gap-1" : "flex items-center gap-3 px-5 py-3.5 w-full text-left"} transition-all text-[10px] font-sans uppercase tracking-[0.12em] ${
-                                            isActive
-                                                ? isDanger
-                                                    ? "text-red-500 font-bold" + (isDarkMode ? " bg-red-500/10" : " bg-red-500/5")
-                                                    : isDarkMode ? "bg-white/8 text-white font-bold border-r-2 border-white" : "bg-black/8 text-black font-bold border-r-2 border-black"
-                                                : isDanger
-                                                    ? isDarkMode ? "text-red-500/50 hover:text-red-500 hover:bg-red-500/5" : "text-red-500/50 hover:text-red-500 hover:bg-red-500/5"
-                                                    : isDarkMode ? "text-white/40 hover:text-white/80 hover:bg-white/5" : "text-black/40 hover:text-black/80 hover:bg-black/5"
-                                        }`}
+                                        className={btnClasses}
+                                        style={
+                                            isActive && !isDanger && accent
+                                                ? {
+                                                      backgroundColor: activeBgColor,
+                                                      color: activeTextColor,
+                                                  }
+                                                : undefined
+                                        }
                                     >
                                         <Icon className={`${isMobile ? "h-4 w-4" : "h-3.5 w-3.5"} shrink-0`} />
                                         <span className={isMobile ? "text-[8px]" : ""}>{label}</span>
@@ -591,8 +957,8 @@ export default function SettingsModal({
                         </div>
 
                         {/* Right Content */}
-                        <div className="flex-1 overflow-y-auto">
-                            <div className="p-6 h-full">
+                        <div className="flex-1 overflow-y-auto scrollbar-hide">
+                            <div className="p-6 pb-10 h-full">
                                 <AnimatePresence mode="wait">
                                     <motion.div
                                         key={activePanel}
@@ -601,17 +967,25 @@ export default function SettingsModal({
                                         exit={{ opacity: 0, x: -10 }}
                                         transition={{ duration: 0.15 }}
                                     >
-                                        {activePanel === "persona" && (
-                                            <PersonaPanel isDarkMode={isDarkMode} onPersonaSelect={onPersonaSelect} currentPersona={currentPersona} />
+                                        {activePanel === "general" && (
+                                            <GeneralPanel
+                                                isDarkMode={isDarkMode}
+                                                accent={accent}
+                                                onAccentChange={(color) => {
+                                                    setAccent(color);
+                                                    setAccentColor(color);
+                                                    onAccentChange?.(color);
+                                                }}
+                                            />
                                         )}
-                                        {activePanel === "plan" && (
-                                            <PlanPanel isDarkMode={isDarkMode} subscription={subscription} isSubscriptionLoading={isSubscriptionLoading} />
+                                        {activePanel === "persona" && (
+                                            <PersonaPanel isDarkMode={isDarkMode} onPersonaSelect={onPersonaSelect} currentPersona={currentPersona} accent={accent} />
                                         )}
                                         {activePanel === "faq" && (
                                             <FAQPanel isDarkMode={isDarkMode} />
                                         )}
                                         {activePanel === "bug" && (
-                                            <BugPanel isDarkMode={isDarkMode} userEmail={userEmail} />
+                                            <BugPanel isDarkMode={isDarkMode} userEmail={userEmail} accent={accent} />
                                         )}
                                         {activePanel === "deactivate" && (
                                             <DeactivatePanel isDarkMode={isDarkMode} onDeactivate={() => { onDeactivate(); onClose(); }} userEmail={userEmail} />

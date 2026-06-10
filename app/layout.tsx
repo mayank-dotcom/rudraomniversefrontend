@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif, Orbitron, Hanken_Grotesk } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
+import "@/lib/i18n";
 
 const hankenGrotesk = Hanken_Grotesk({
   variable: "--font-hanken",

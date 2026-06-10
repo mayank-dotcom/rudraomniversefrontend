@@ -25,8 +25,12 @@ export default function PageLoader() {
       `}} />
       <div className="relative flex items-center justify-center">
         <div
-          className={`absolute w-32 h-32 rounded-full border-2 border-transparent ${isDarkMode ? "border-t-[#00DDDD]/80" : "border-t-[#00DDDD]"} animate-spin`}
-          style={{ boxShadow: isDarkMode ? "0 0 30px rgba(0,221,221,0.15)" : "0 0 30px rgba(0,221,221,0.25)" }}
+          className={`absolute w-32 h-32 rounded-full border-2 border-transparent animate-spin`}
+          style={{
+            borderTopColor: "var(--brand-accent)",
+            opacity: isDarkMode ? 0.8 : 1,
+            boxShadow: isDarkMode ? "0 0 30px rgba(0,221,221,0.15)" : "0 0 30px rgba(0,221,221,0.25)",
+          }}
         />
         <div className={`absolute w-24 h-24 rounded-full border ${isDarkMode ? "border-white/5 animate-pulse" : "border-black/5 animate-pulse"}`} />
         <div className="w-16 h-16 relative flex items-center justify-center shrink-0">

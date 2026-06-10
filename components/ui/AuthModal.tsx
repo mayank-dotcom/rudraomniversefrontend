@@ -499,7 +499,7 @@ function StudentAuth({ onSuccess, isDarkMode }: { onSuccess: () => void; isDarkM
             type="text"
             placeholder="School Code"
             value={loginSchoolCode}
-            onChange={(e) => setLoginSchoolCode(e.target.value.toUpperCase())}
+            onChange={(e) => setLoginSchoolCode(e.target.value)}
             className={`w-full pl-12 pr-6 py-3.5 text-xs font-mono tracking-widest rounded-2xl focus:outline-none transition-all ${isDarkMode ? "bg-white/5 border border-white/5 focus:border-white/20 placeholder:text-white/20" : "bg-black/5 border border-black/5 focus:border-black/40 placeholder:text-black/40"}`}
           />
         </div>
