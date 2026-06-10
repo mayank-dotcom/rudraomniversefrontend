@@ -8,8 +8,8 @@ import {
     UserCog, Mic, ChevronUp,
     ThumbsUp, ThumbsDown, RotateCcw, Edit3, Copy, Check, Clock, Trash2, Inbox,
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles,
-    Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2, LayoutDashboard, Share, Loader2
-} from "lucide-react";
+    Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2, LayoutDashboard, Share, Loader2,
+    Settings, Bell, Key, ChevronDown, Compass, Palette, Globe, Maximize2, ArrowUp } from "lucide-react";
 import Link from "next/link";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
 import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole, getSchoolName, getEnterpriseName, removeUserRole, removeSchoolName, removeEnterpriseName } from "@/lib/auth";
@@ -226,10 +226,21 @@ const Chat = () => {
     const [input, setInput] = useState("");
     const [sidebarWidth, setSidebarWidth] = useState(260);
     const [rightSidebarWidth, setRightSidebarWidth] = useState(340);
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+        if (typeof window === "undefined") return true;
+        return window.innerWidth < 768;
+    });
     const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(true);
+    const [proActive, setProActive] = useState(false);
+    const [codeActive, setCodeActive] = useState(false);
+    const [webActive, setWebActive] = useState(false);
     const [isResizingLeft, setIsResizingLeft] = useState(false);
     const [isResizingRight, setIsResizingRight] = useState(false);
+    const [showEngineDropdown, setShowEngineDropdown] = useState(false);
+    const [showPromo, setShowPromo] = useState(() => {
+        if (typeof window === "undefined") return true;
+        return window.localStorage.getItem("arena_show_promo") !== "false";
+    });
     const { isDarkMode, toggleTheme } = useTheme();
     const [showEngineSelect, setShowEngineSelect] = useState(false);
     const [selectedEngine, setSelectedEngine] = useState(() => {
@@ -313,6 +324,18 @@ const Chat = () => {
     const stopGenerationRef = useRef(false);
     const abortControllerRef = useRef<AbortController | null>(null);
     const styleCardsScrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (engineSelectRef.current && !engineSelectRef.current.contains(event.target as Node)) {
+                setShowEngineDropdown(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     const [subscription, setSubscription] = useState<any>(null);
     const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
@@ -1849,6 +1872,223 @@ STRICT RULES:
 
     const isChatEmpty = messages.length === 0 || messages.every((msg) => msg.localOnly);
 
+    const renderInputContainer = (isCenteredEmptyState: boolean) => {
+        return (
+            <div 
+                id={isCenteredEmptyState ? undefined : "walkthrough-input-area"}
+                className={`w-full ${isCenteredEmptyState ? "max-w-2xl mx-auto mt-4" : "max-w-4xl"} rounded-3xl p-4 transition-all duration-300 ${
+                    isDarkMode 
+                        ? "bg-[#222120] border border-white/5 shadow-2xl" 
+                        : "bg-[#f2f1f0] border border-black/5 shadow-2xl"
+                } ${mcqSession ? "opacity-40 pointer-events-none" : ""}`}
+            >
+                {/* File Preview inside the container */}
+                {selectedFile && (
+                    <div className={`mb-3 p-2 rounded-xl flex items-center gap-3 w-fit ${isDarkMode ? "bg-white/5 text-white/90" : "bg-black/5 text-black/90"}`}>
+                        <div className="h-8 w-8 flex items-center justify-center bg-white/10 rounded-lg">
+                            {selectedFile.previewUrl ? (
+                                <img src={selectedFile.previewUrl} alt="Preview" className="h-full w-full object-cover rounded-lg" />
+                            ) : (
+                                <FileIcon className="h-4 w-4 opacity-70" />
+                            )}
+                        </div>
+                        <div className="flex flex-col text-left">
+                            <span className="text-[10px] font-sans font-semibold truncate max-w-[150px]">{selectedFile.name}</span>
+                            <span className="text-[8px] font-mono opacity-50 uppercase">{(selectedFile.size / 1024).toFixed(1)} KB</span>
+                        </div>
+                        <button
+                            onClick={() => setSelectedFile(null)}
+                            className="p-1 hover:bg-white/10 rounded-full transition-all"
+                        >
+                            <X className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                )}
+
+                <div className="flex items-start gap-2">
+                    <textarea
+                        value={input}
+                        onChange={(e) => {
+                            setInput(e.target.value);
+                            e.currentTarget.style.height = 'auto';
+                            e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey && !isProcessingFile) {
+                                e.preventDefault();
+                                void handleSend();
+                            }
+                        }}
+                        onInput={(e) => {
+                            e.currentTarget.style.height = 'auto';
+                            e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                        }}
+                        placeholder={isProcessingFile ? "Processing file..." : "Ask anything..."}
+                        rows={isCenteredEmptyState ? 2 : 1}
+                        className={`flex-1 min-w-0 bg-transparent resize-none no-scrollbar ${
+                            isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"
+                        } py-1.5 text-base focus:outline-none`}
+                        style={{ maxHeight: '30vh' }}
+                    />
+                </div>
+
+                <div className={`flex items-center justify-between mt-3 pt-2 border-t ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                    {/* Bottom Left: Add files button + minimal quick toggles */}
+                    <div className="flex items-center gap-2">
+                        {/* Add Files Button */}
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isLoading || isProcessingFile}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-sans font-medium transition-all duration-200 cursor-pointer ${
+                                isDarkMode 
+                                    ? "border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white" 
+                                    : "border-black/10 bg-black/5 text-black/80 hover:bg-black/10 hover:text-black"
+                            }`}
+                            title="Add files"
+                        >
+                            {isProcessingFile ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                                <Paperclip className="h-3.5 w-3.5" />
+                            )}
+                            <span>Add files</span>
+                        </button>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                            accept="image/*,application/pdf,text/plain,.md"
+                        />
+
+                        <div className={`h-4 w-px ${isDarkMode ? "bg-white/10" : "bg-black/10"} mx-1`} />
+
+                        {/* Minimal Quick Toggles */}
+                        <div className="flex items-center gap-1">
+                            {/* Pro Toggle */}
+                            <button
+                                onClick={() => setProActive(!proActive)}
+                                className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
+                                    proActive 
+                                        ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm") 
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                                }`}
+                                title="Pro Mode"
+                            >
+                                <Sparkles className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Code Toggle */}
+                            <button
+                                onClick={() => setCodeActive(!codeActive)}
+                                className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
+                                    codeActive 
+                                        ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm") 
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                                }`}
+                                title="Code Agent"
+                            >
+                                <Code className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Web Toggle */}
+                            <button
+                                onClick={() => setWebActive(!webActive)}
+                                className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
+                                    webActive 
+                                        ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm") 
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                                }`}
+                                title="Web Search"
+                            >
+                                <Globe className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Style Toggle */}
+                            <button
+                                onClick={() => {
+                                    if (selectedEngine === "AI Image Lab") {
+                                        setSelectedEngine("Assistant Mode");
+                                    } else {
+                                        setSelectedEngine("AI Image Lab");
+                                    }
+                                }}
+                                className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
+                                    selectedEngine === "AI Image Lab"
+                                        ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm") 
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                                }`}
+                                title="Visual / Image Lab Style"
+                            >
+                                <Palette className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Mic Toggle */}
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    if (isRecording) {
+                                        stopRecording();
+                                    } else {
+                                        startRecording();
+                                    }
+                                }}
+                                className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
+                                    isRecording 
+                                        ? "bg-red-500/20 text-red-400 animate-pulse" 
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                                }`}
+                                title={isRecording ? "Stop recording" : "Voice input"}
+                            >
+                                <Mic className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Bottom Right: Maximize layout button + circular send button */}
+                    <div className="flex items-center gap-2">
+                        {/* Maximize Layout Button */}
+                        <button
+                            onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
+                            className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
+                                !isRightSidebarCollapsed 
+                                    ? (isDarkMode ? "bg-white/10 text-white" : "bg-black/10 text-black") 
+                                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                            }`}
+                            title="Toggle Right Panel Layout"
+                        >
+                            <Maximize2 className="h-3.5 w-3.5" />
+                        </button>
+
+                        {/* Send / Stop Generation Button */}
+                        {isLoading ? (
+                            <button
+                                onClick={handleStopGeneration}
+                                className="h-8 w-8 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all duration-200 shadow-lg"
+                                title="Stop generation"
+                            >
+                                <Pause className="h-3 w-3 fill-white stroke-none" />
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => void handleSend()}
+                                disabled={isHistoryLoading || isProcessingFile || !input.trim()}
+                                className={`h-8 w-8 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${
+                                    input.trim() 
+                                        ? (isDarkMode ? "bg-white text-black hover:bg-white/95" : "bg-black text-white hover:bg-black/95") 
+                                        : (isDarkMode ? "bg-white/10 text-white/30 cursor-not-allowed" : "bg-black/10 text-black/30 cursor-not-allowed")
+                                }`}
+                                title="Send message"
+                            >
+                                <ArrowUp className="h-4 w-4 stroke-[2.5]" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black flex overflow-hidden transition-colors duration-500 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
             <style dangerouslySetInnerHTML={{
@@ -1894,6 +2134,23 @@ STRICT RULES:
                     -ms-overflow-style: none !important;
                     scrollbar-width: none !important;
                 }
+                @keyframes rainbow-glow {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                }
+                .rainbow-glow-border {
+                    background: linear-gradient(90deg, #4285f4, #9b51e0, #ea4335, #fbbc05, #34a853, #4285f4);
+                    background-size: 300% 300%;
+                    animation: rainbow-glow 6s ease infinite;
+                }
+                @keyframes pulse-shine {
+                    0%, 100% { transform: scale(1); opacity: 0.8; }
+                    50% { transform: scale(1.15); opacity: 1; filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6)); }
+                }
+                .shine-star {
+                    animation: pulse-shine 3s infinite ease-in-out;
+                }
             `}} />
             <div className={`absolute inset-0 noise opacity-[0.02] pointer-events-none ${isDarkMode ? "invert-0" : "invert"}`} />
 
@@ -1913,166 +2170,306 @@ STRICT RULES:
 
             <aside
                 id="walkthrough-sidebar"
-                style={{ width: isSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${sidebarWidth}px`) }}
-                className={`h-full border-r-2 ${isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white" : "border-black"} ${isDarkMode ? "bg-[#0a0a0a]" : "bg-white"} flex flex-col ${isMobile ? "fixed left-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
+                style={{ width: isSidebarCollapsed ? "0px" : (isMobile ? "280px" : `${sidebarWidth}px`) }}
+                className={`h-full border-r ${isSidebarCollapsed ? "border-r-0" : isDarkMode ? "border-white/10" : "border-black/10"} ${isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f9f9f8]"} flex flex-col ${isMobile ? "fixed left-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingLeft ? "transition-none" : ""}`}
             >
-                {!isSidebarCollapsed ? (
+                {!isSidebarCollapsed && (
                     <div className="flex flex-col h-full overflow-hidden">
-                        <div className={`p-6 border-b-2 ${isDarkMode ? "border-white" : "border-black"} flex items-center justify-between`}>
-                            <Link href="/" className="flex items-center gap-3">
-                                <div className="h-[44px] w-[44px] flex items-center justify-center overflow-hidden">
-                                    <img
-                                        src={isDarkMode ? "/dark.png" : "/light.png"}
-                                        alt="Logo"
-                                        className="h-full w-full object-contain transition-transform duration-300"
-                                        style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
-                                    />
-                                </div>
-                            </Link>
+                        {/* Header: Logo, Arena, Toggle */}
+                        <div className={`flex items-center justify-between px-5 py-4 border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                            <div className="flex items-center gap-2 cursor-pointer select-none">
+                                <svg className={`w-5 h-5 ${isDarkMode ? "text-white/80" : "text-black/80"}`} fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M3 4h18v2H3V4zm2 4h2v10H5V8zm4 0h2v10H9V8zm4 0h2v10h-2V8zm4 0h2v10h-2V8zM3 20h18v2H3v-2z" />
+                                </svg>
+                                <span className={`font-serif italic font-bold text-lg ${isDarkMode ? "text-white" : "text-black"}`}>Arena</span>
+                                <ChevronDown className="w-3.5 h-3.5 opacity-40" />
+                            </div>
+                            <button
+                                onClick={() => setIsSidebarCollapsed(true)}
+                                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5"}`}
+                                title="Collapse Sidebar"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Search and Action area */}
+                        <div className="px-4 pt-4 pb-2 space-y-2">
+                            {/* New Chat Button */}
                             <button
                                 onClick={handleCreateChat}
                                 disabled={isCreatingChat}
-                                title="New Chat"
-                                className={`p-2 transition-all duration-300 border-2 disabled:opacity-50 ${isDarkMode ? "bg-white border-white hover:bg-gray-200 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "bg-white border-black hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"} group`}
+                                className={`w-full flex items-center justify-center gap-2 py-2 px-3 text-xs border rounded-xl font-sans font-medium transition-all duration-200 ${
+                                    isDarkMode
+                                        ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                                        : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                                }`}
                             >
-                                <Plus className={`h-4 w-4 ${isDarkMode ? "text-black group-hover:text-black" : "text-black group-hover:text-black"} transition-transform group-hover:rotate-90`} />
+                                <Plus className="w-4 h-4" />
+                                <span>New Chat</span>
                             </button>
+
+                            {/* Leaderboard Button */}
+                            <Link
+                                href="/global-leaderboard"
+                                className={`w-full flex items-center justify-center gap-2 py-2 px-3 text-xs border rounded-xl font-sans font-medium transition-all duration-200 ${
+                                    isDarkMode
+                                        ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                                        : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                                }`}
+                            >
+                                <Swords className="w-4 h-4" />
+                                <span>Leaderboard</span>
+                            </Link>
+
+                            {/* Clean Search Input */}
+                            <div className="relative group">
+                                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`} />
+                                <input
+                                    type="text"
+                                    placeholder="Search chats..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className={`w-full bg-transparent border rounded-xl py-1.5 pl-9 pr-3 text-xs font-sans focus:outline-none transition-all ${
+                                        isDarkMode
+                                            ? "border-white/10 text-white placeholder:text-white/30 focus:border-white/25 focus:bg-white/5"
+                                            : "border-black/10 text-black placeholder:text-black/30 focus:border-black/25 focus:bg-black/5"
+                                    }`}
+                                />
+                            </div>
                         </div>
 
-                        {/* Sidebar Tab Switcher */}
-                        <div className={`flex ${isDarkMode ? "border-white" : "border-black"} border-b-2`}>
-                            <button
-                                onClick={() => setSidebarTab("history")}
-                                className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${sidebarTab === "history"
-                                    ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
-                                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
-                                    }`}
-                            >
-                                <Clock className="h-3 w-3 inline mr-1.5 -mt-0.5" />
-                                History
-                            </button>
-                            <button
-                                onClick={() => setSidebarTab("modes")}
-                                className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${sidebarTab === "modes"
-                                    ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
-                                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
-                                    }`}
-                            >
-                                <Bot className="h-3 w-3 inline mr-1.5 -mt-0.5" />
-                                Modes
-                            </button>
-                        </div>
-
-                        <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
-                            {sidebarTab === "history" && (
-                                <>
-                                    {sidebarWidth > 120 && (
-                                        <div className="mb-8">
-                                            <div className="relative group">
-                                                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 ${isDarkMode ? "text-white group-focus-within:text-white" : "text-black group-focus-within:text-black"} transition-colors`} />
+                        {/* Recent History Section */}
+                        <div className={`flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-4 ${isDarkMode ? "custom-scrollbar text-zinc-300" : "light-scrollbar text-zinc-700"}`}>
+                            <div className="space-y-1">
+                                <div className={`px-2 text-[9px] font-bold font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Today</div>
+                                {isSessionsLoading && (
+                                    <div className={`px-2 py-3 text-xs opacity-50`}>
+                                        Loading sessions...
+                                    </div>
+                                )}
+                                {!isSessionsLoading && filteredChats.length === 0 && (
+                                    <div className={`px-2 py-3 text-xs opacity-50`}>
+                                        {searchQuery ? "No matching sessions" : "No chats yet"}
+                                    </div>
+                                )}
+                                {!isSessionsLoading && filteredChats.map((chat) => (
+                                    <div
+                                        key={chat.id}
+                                        className={`group flex items-center justify-between rounded-lg px-2 py-1.5 transition-all text-xs ${
+                                            activeChatId === chat.id
+                                                ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
+                                                : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                                        }`}
+                                    >
+                                        {editingChatId === chat.id ? (
+                                            <div className="flex-1 flex items-center gap-1">
                                                 <input
+                                                    ref={editingChatId === chat.id ? editingInputRef : null}
                                                     type="text"
-                                                    placeholder="Search sessions..."
-                                                    value={searchQuery}
-                                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                                    className={`w-full ${isDarkMode ? "bg-white/5 border-white placeholder:text-white/30" : "bg-white border-black placeholder:text-black"} border p-2 pl-9 text-[10px] font-mono uppercase tracking-widest focus:outline-none focus:border-white transition-all ${isDarkMode ? "text-white" : "text-black"}`}
+                                                    value={editingTitle}
+                                                    onChange={(e) => setEditingTitle(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter") void handleRenameChat();
+                                                        if (e.key === "Escape") handleCancelEditing();
+                                                    }}
+                                                    onBlur={() => void handleRenameChat()}
+                                                    className="w-full bg-transparent border-none p-0 text-xs focus:ring-0 focus:outline-none"
+                                                    autoFocus
                                                 />
                                             </div>
-                                        </div>
-                                    )}
-
-                                    <div className="space-y-1">
-                                        {sidebarWidth > 120 && <span className={`px-2 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black"}`}>Recent Sessions</span>}
-                                        {isSessionsLoading && (
-                                            <div className={`px-3 py-4 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black"}`}>
-                                                Loading sessions...
-                                            </div>
-                                        )}
-                                        {!isSessionsLoading && filteredChats.length === 0 && (
-                                            <div className={`px-3 py-4 text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black"}`}>
-                                                {searchQuery ? "No matching sessions" : "No chats yet"}
-                                            </div>
-                                        )}
-                                        {!isSessionsLoading && filteredChats.map((chat) => (
-                                            <div
-                                                key={chat.id}
-                                                className={`group flex items-center gap-1 pr-2 transition-all duration-300 ${activeChatId === chat.id
-                                                    ? (isDarkMode ? "bg-[#00DDDD]/10 border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.3)]")
-                                                    : ""
-                                                    }`}
+                                        ) : (
+                                            <button
+                                                onClick={() => void openChat(chat.id)}
+                                                onDoubleClick={() => handleStartEditing(chat)}
+                                                className="flex-1 text-left truncate flex items-center gap-2.5 min-w-0"
                                             >
-                                                {editingChatId === chat.id ? (
-                                                    <div className="flex-1 flex items-center gap-1 p-1.5">
-                                                        <input
-                                                            ref={editingChatId === chat.id ? editingInputRef : null}
-                                                            type="text"
-                                                            value={editingTitle}
-                                                            onChange={(e) => setEditingTitle(e.target.value)}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === "Enter") void handleRenameChat();
-                                                                if (e.key === "Escape") handleCancelEditing();
-                                                            }}
-                                                            onBlur={() => void handleRenameChat()}
-                                                            className={`w-full p-2 text-xs border bg-transparent focus:outline-none ${isDarkMode ? "border-white/40 text-white" : "border-black/40 text-black"}`}
-                                                            autoFocus
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => void openChat(chat.id)}
-                                                        onDoubleClick={() => handleStartEditing(chat)}
-                                                        className={`flex-1 text-left p-3 text-xs flex items-center gap-3 transition-colors min-w-0 ${activeChatId === chat.id
-                                                            ? (isDarkMode ? "text-[#00DDDD]" : "text-black")
-                                                            : (isDarkMode ? "text-white/60 hover:bg-white/5" : "text-black hover:bg-black/5")
-                                                            }`}
-                                                    >
-                                                        <MessageSquare className={`h-3 w-3 flex-shrink-0 ${activeChatId === chat.id
-                                                            ? (isDarkMode ? "text-[#00DDDD]" : "text-black")
-                                                            : (isDarkMode ? "text-white/20" : "text-black")
-                                                            }`} />
-                                                        {sidebarWidth > 120 && <span className={`truncate font-sans ${activeChatId === chat.id ? "font-bold" : (isDarkMode ? "opacity-60" : "text-black")}`}>{chat.title}</span>}
-                                                    </button>
-                                                )}
-                                                {sidebarWidth > 120 && editingChatId !== chat.id && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleStartEditing(chat)}
-                                                            className={`${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-white hover:scale-110" : "text-black hover:scale-110"}`}
-                                                            aria-label={`Rename ${chat.title}`}
-                                                        >
-                                                            <Edit3 className="h-3 w-3" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => void handleDeleteChat(chat.id)}
-                                                            className={`${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-all duration-300 p-1.5 flex-shrink-0 ${isDarkMode ? "text-white/40 hover:text-red-400 hover:scale-110" : "text-black hover:text-red-600 hover:scale-110"}`}
-                                                            aria-label={`Delete ${chat.id}`}
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </button>
-                                                    </>
-                                                )}
+                                                <MessageSquare className="h-3.5 w-3.5 opacity-55 flex-shrink-0" />
+                                                <span className="truncate">{chat.title}</span>
+                                            </button>
+                                        )}
+                                        {editingChatId !== chat.id && (
+                                            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                                                <button
+                                                    onClick={() => handleStartEditing(chat)}
+                                                    className="p-1 hover:bg-white/10 rounded transition-colors text-inherit"
+                                                    title="Rename"
+                                                >
+                                                    <Edit3 className="h-3 w-3" />
+                                                </button>
+                                                <button
+                                                    onClick={() => void handleDeleteChat(chat.id)}
+                                                    className="p-1 hover:bg-red-500/20 hover:text-red-500 rounded transition-colors text-inherit"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="h-3 w-3" />
+                                                </button>
                                             </div>
-                                        ))}
-                                        {chatError && sidebarWidth > 120 && (
-                                            <p className="px-2 pt-3 text-[10px] text-red-400">{chatError}</p>
                                         )}
                                     </div>
-                                </>
-                            )}
+                                ))}
+                            </div>
+                        </div>
 
-                            {sidebarTab === "modes" && (
-                                <div className="space-y-1 px-1">
-                                    {sidebarWidth > 120 && <span className={`px-2 text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "text-white/20" : "text-black"}`}>AI Engines</span>}
+                        {/* Agent Promotion Card */}
+                        {showPromo && (
+                            <div className="p-3 mx-3 mb-2 rounded-xl bg-gradient-to-b from-zinc-900 to-black border border-white/5 relative overflow-hidden flex flex-col gap-2">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px] font-bold text-white uppercase tracking-wider">Battle Arena</span>
+                                            <span className="bg-[#4285f4] text-white text-[8px] font-bold px-1 rounded">NEW</span>
+                                        </div>
+                                        <h5 className="text-[11px] font-bold text-white/95">Get More Done With Agents</h5>
+                                        <p className="text-[10px] text-zinc-400 leading-normal">Start evaluating agentic AI on Arena today. Learn more.</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 mt-1 z-10">
+                                    <button
+                                        onClick={() => setIsBattleArenaModalOpen(true)}
+                                        className="flex-1 py-1.5 px-2 bg-white text-black font-semibold text-[10px] rounded-lg text-center hover:bg-gray-200 transition-colors cursor-pointer"
+                                    >
+                                        Try it now
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowPromo(false);
+                                            window.localStorage.setItem("arena_show_promo", "false");
+                                        }}
+                                        className="py-1.5 px-2 bg-zinc-900 border border-zinc-800 text-white font-medium text-[10px] rounded-lg text-center hover:bg-zinc-800 transition-colors cursor-pointer"
+                                    >
+                                        Hide
+                                    </button>
+                                </div>
+                                <div className="absolute right-[-10px] bottom-[-10px] w-16 h-16 opacity-10 pointer-events-none">
+                                    <Swords className="w-full h-full text-white" />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Footer & User Profile */}
+                        <div className={`p-4 border-t ${isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"} flex flex-col gap-3`}>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <div className={`h-8 w-8 rounded-full flex items-center justify-center relative shrink-0 ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border`}>
+                                        <User className={`h-4 w-4 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
+                                        <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : "Pro Member"}</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    {isGlobalAdmin && (
+                                        <button
+                                            onClick={() => {
+                                                setIsEnterpriseMode(!isEnterpriseMode);
+                                                setRightSidebarTab(isEnterpriseMode ? "gmail" : "wallet");
+                                            }}
+                                            className={`p-1.5 border rounded-lg transition-all text-[8px] font-mono ${isDarkMode ? "border-white/10 text-white/60 hover:text-white" : "border-black/10 text-black/60 hover:text-black"} ${isEnterpriseMode ? "text-[#00DDDD]" : ""}`}
+                                            title={isEnterpriseMode ? "Switch to Regular Mode" : "Switch to Enterprise Mode"}
+                                        >
+                                            {isEnterpriseMode ? "ENT" : "REG"}
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            removeApiKey();
+                                            removeUserInfo();
+                                            removeUserRole();
+                                            removeSchoolName();
+                                            removeEnterpriseName();
+                                            setStoredActiveChatId(null);
+                                            setAuthed(false);
+                                            setUserName("");
+                                            setUserEmail("");
+                                            window.location.href = "/";
+                                        }}
+                                        title="Logout"
+                                        className={`p-1.5 rounded-lg border transition-colors ${
+                                            isDarkMode
+                                                ? "border-white/10 text-white/60 hover:text-red-400 hover:bg-white/5"
+                                                : "border-black/10 text-black/60 hover:text-red-600 hover:bg-black/5"
+                                        }`}
+                                    >
+                                        <LogOut className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {/* Privacy, Terms, Cookies links */}
+                            <div className="flex items-center justify-between text-[9px] font-mono tracking-wider opacity-45 px-0.5">
+                                <Link href="/terms" className="hover:underline">Terms of Use</Link>
+                                <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
+                                <Link href="/privacy" className="hover:underline">Cookies</Link>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </aside>
+
+            {/* Main Chat Area */}
+            <div className="flex-1 flex flex-col relative h-full overflow-hidden">
+                {/* Fixed Header / Navbar */}
+                <header className={`h-16 flex-shrink-0 flex items-center justify-between px-6 md:px-10 relative z-30 transition-colors duration-500 border-b ${isDarkMode ? "bg-[#121110]/20 border-white/5" : "bg-white/20 border-black/5"} backdrop-blur-md`}>
+                    {/* Left: Engine / Mode Dropdown Selector */}
+                    <div className="flex items-center gap-3">
+                        {/* Mobile left-sidebar toggle button */}
+                        {isMobile && (
+                            <button
+                                onClick={() => {
+                                    setIsSidebarCollapsed(!isSidebarCollapsed);
+                                    setIsRightSidebarCollapsed(true);
+                                }}
+                                className={`p-2 border rounded-xl transition-all cursor-pointer ${isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"}`}
+                            >
+                                <MessageSquare className="h-4 w-4" />
+                            </button>
+                        )}
+                        
+                        {/* Desktop Left Sidebar Expand Toggle (shown when collapsed) */}
+                        {isSidebarCollapsed && !isMobile && (
+                            <button
+                                onClick={() => setIsSidebarCollapsed(false)}
+                                className={`p-2 border rounded-xl transition-all cursor-pointer ${isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"}`}
+                                title="Open Sidebar"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
+                        )}
+
+                        {/* Engine Dropdown Selector */}
+                        <div className="relative" ref={engineSelectRef}>
+                            <button
+                                onClick={() => setShowEngineDropdown(!showEngineDropdown)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-xl font-medium transition-all duration-200 cursor-pointer ${
+                                    isDarkMode
+                                        ? "border-white/10 text-white/90 bg-white/5 hover:bg-white/10 hover:border-white/20"
+                                        : "border-black/10 text-black/90 bg-black/5 hover:bg-black/10 hover:border-black/20"
+                                }`}
+                            >
+                                <Bot className="w-3.5 h-3.5 opacity-60" />
+                                <span>{selectedEngine}</span>
+                                <ChevronDown className={`w-3.5 h-3.5 opacity-40 transition-transform duration-200 ${showEngineDropdown ? "rotate-180" : ""}`} />
+                            </button>
+
+                            {showEngineDropdown && (
+                                <div className={`absolute left-0 mt-2 w-56 rounded-xl border p-1.5 shadow-xl z-50 backdrop-blur-xl ${
+                                    isDarkMode
+                                        ? "bg-[#0d0d0c]/95 border-white/10 text-white"
+                                        : "bg-white/95 border-black/10 text-black"
+                                }`}>
                                     {visibleEngines.map((engine) => {
-                                        const featureId = getFeatureIdForEngine(engine.name)
-                                        const isAvailable = planFeatures.length === 0 || planFeatures.includes(featureId)
+                                        const featureId = getFeatureIdForEngine(engine.name);
+                                        const isAvailable = planFeatures.length === 0 || planFeatures.includes(featureId);
                                         return (
                                             <button
                                                 key={engine.name}
                                                 onClick={() => {
+                                                    setShowEngineDropdown(false);
                                                     if (!isAvailable) {
-                                                        window.location.href = "/pricing"
-                                                        return
+                                                        window.location.href = "/pricing";
+                                                        return;
                                                     }
                                                     if (engine.name === "Interview Prep") {
                                                         setIsInterviewModalOpen(true);
@@ -2086,342 +2483,79 @@ STRICT RULES:
                                                         setSelectedEngine(engine.name);
                                                     }
                                                 }}
-                                                className={`w-full flex items-center gap-3 p-3 text-xs transition-all ${selectedEngine === engine.name
-                                                    ? (isDarkMode ? "bg-[#00DDDD]/10 text-[#00DDDD] border-l-2 border-[#00DDDD]" : "bg-[#00DDDD] text-white border-l-2 border-black shadow-[0_4px_20px_rgba(0,221,221,0.4)]")
-                                                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")
-                                                    }`}
+                                                className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg text-left transition-colors cursor-pointer ${
+                                                    selectedEngine === engine.name
+                                                        ? (isDarkMode ? "bg-white/5 text-[#00DDDD]" : "bg-black/5 text-[#00DDDD] font-semibold")
+                                                        : (isDarkMode ? "text-white/70 hover:bg-white/5 hover:text-white" : "text-black/70 hover:bg-black/5 hover:text-black")
+                                                }`}
                                             >
-                                                {(() => {
-                                                    const Icon = engine.icon as any;
-                                                    return (
-                                                        <Icon className={`h-4 w-4 flex-shrink-0 ${isDarkMode ? 'text-white' : (selectedEngine === engine.name ? 'text-white' : 'text-black')}`} />
-                                                    );
-                                                })()}
-                                                {sidebarWidth > 120 && (
-                                                    <div className="flex items-center justify-between w-full min-w-0">
-                                                        <span className="truncate">{engine.name}</span>
-                                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                                            {isAvailable ? (
-                                                                <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
-                                                            ) : (
-                                                                <XCircle className="h-3.5 w-3.5 text-red-400" />
-                                                            )}
-                                                        </div>
-                                                    </div>
+                                                <div className="flex items-center gap-2">
+                                                    {(() => {
+                                                        const Icon = engine.icon as any;
+                                                        return <Icon className="w-3.5 h-3.5 opacity-60" />;
+                                                    })()}
+                                                    <span>{engine.name}</span>
+                                                </div>
+                                                {isAvailable ? (
+                                                    <CheckCircle className="h-3 w-3 text-emerald-400 opacity-60" />
+                                                ) : (
+                                                    <XCircle className="h-3 w-3 text-red-400 opacity-60" />
                                                 )}
                                             </button>
-                                        )
+                                        );
                                     })}
-                                    {/* Library section */}
-                                    {sidebarWidth > 120 && (
-                                        <div className={`mx-2 my-3 h-px ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
-                                    )}
-                                    <Link
-                                        href="/library"
-                                        className={`w-full flex items-center gap-3 p-3 text-xs transition-all ${isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5"}`}
-                                    >
-                                        <BookOpen className={`h-4 w-4 flex-shrink-0 ${isDarkMode ? "text-white" : "text-black"}`} />
-                                        {sidebarWidth > 120 && (
-                                            <div className="flex items-center justify-between w-full min-w-0">
-                                                <span className="truncate font-medium">Image Library</span>
-                                                <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/30" : "text-black"}`}>v1.0</span>
-                                            </div>
-                                        )}
-                                    </Link>
                                 </div>
                             )}
                         </div>
-
-                        {/* User Profile */}
-                        {!isMobile && (
-                            <div id="walkthrough-profile-area" className={`p-6 border-t-2 ${isDarkMode ? "border-white bg-black/40" : "border-black bg-white"}`}>
-                                <div className="flex items-center justify-between mb-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`h-10 w-10 ${isDarkMode ? "bg-white/5 border-white" : "bg-white border-black"} border flex items-center justify-center relative group`}>
-                                            <User className={`h-5 w-5 ${isDarkMode ? "text-white" : "text-black"}`} />
-                                            <div className={`absolute top-0 left-0 w-1 h-1 border-t border-l ${isDarkMode ? "border-white" : "border-black"}`} />
-                                        </div>
-                                        {sidebarWidth > 120 && (
-                                            <div className="flex flex-col">
-                                                <span className={`text-xs font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
-                                                <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : "Pro Member"}</span>
-                            </div>
-                        )}
-                                    </div>
-                                <div className="flex items-center gap-2">
-                                    {isGlobalAdmin && (
-                                        <button
-                                            onClick={() => {
-                                                setIsEnterpriseMode(!isEnterpriseMode);
-                                                setRightSidebarTab(isEnterpriseMode ? "gmail" : "wallet");
-                                            }}
-                                            className={`p-2 border transition-all duration-300 group text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110" : "border-black bg-white hover:bg-gray-50 hover:scale-110"} ${isEnterpriseMode ? "text-[#00DDDD]" : "text-orange-400"}`}
-                                            title={isEnterpriseMode ? "Switch to Regular Mode" : "Switch to Enterprise Mode"}
-                                        >
-                                            {isEnterpriseMode ? "ENT" : "REG"}
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={toggleTheme}
-                                        className={`p-2 border transition-all duration-300 group ${isDarkMode ? "border-white hover:bg-white/5 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-black bg-white hover:bg-gray-50 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]"}`}
-                                        title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                                    >
-                                        <div className="group-hover:rotate-180 transition-transform duration-500">
-                                            {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
-                                        </div>
-                                    </button>
-                                </div>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        removeApiKey();
-                                        removeUserInfo();
-                                        removeUserRole();
-                                        removeSchoolName();
-                                        removeEnterpriseName();
-                                        setStoredActiveChatId(null);
-                                        setAuthed(false);
-                                        setUserName("");
-                                        setUserEmail("");
-                                        window.location.href = "/";
-                                    }}
-                                    title="Logout"
-                                    className={`w-full flex items-center justify-center gap-3 p-3 border-2 ${isDarkMode ? "border-white bg-white/5 text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-white" : "border-black bg-white text-[10px] font-mono uppercase tracking-widest hover:bg-red-500 hover:text-white hover:border-red-500 transition-all active:scale-95 text-black"}`}
-                                >
-                                    <LogOut className={`h-3 w-3 ${isDarkMode ? "text-white" : "text-black"}`} /> {sidebarWidth > 120 && "Logout session"}
-                                </button>
-                            </div>
-                        )}
                     </div>
-                ) : (
-                    <div className="flex flex-col h-full items-center py-6 justify-between overflow-hidden w-full">
-                        {/* Top: Logo */}
-                        <div className="flex flex-col items-center w-full">
-                            <Link href="/" className="flex items-center justify-center mb-4">
-                                <div className="h-10 w-10 flex items-center justify-center overflow-hidden">
-                                    <img
-                                        src={isDarkMode ? "/dark.png" : "/light.png"}
-                                        alt="Logo"
-                                        className="h-full w-full object-contain transition-transform duration-300"
-                                        style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
-                                    />
-                                </div>
-                            </Link>
-                            <div className={`h-[1px] w-8 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`} />
-                        </div>
 
-                        {/* Middle Group: All active icons tightly stacked with identical sizes */}
-                        <div className="flex flex-col items-center gap-3 w-full my-auto py-4">
+                    {/* Right Controls */}
+                    <div className="flex items-center gap-3">
+                        {/* Quick Tour Button */}
+                        {!showEmployeeView && !isMobile && (
                             <button
-                                onClick={handleCreateChat}
-                                disabled={isCreatingChat}
-                                title="New Chat"
-                                className={`h-11 w-11 flex items-center justify-center border-2 disabled:opacity-50 transition-all duration-300 ${isDarkMode
-                                    ? "bg-white border-white text-black hover:bg-gray-200 hover:scale-110"
-                                    : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110"
-                                    }`}
+                                onClick={() => setShowWalkthrough(true)}
+                                className={`px-3 py-1.5 border rounded-xl text-[10px] font-sans font-medium transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+                                    isDarkMode
+                                        ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                                        : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                                }`}
+                                title="Start Workspace Tour"
                             >
-                                <Plus className="h-4 w-4 text-black font-bold" />
+                                <Sparkles className="h-3 w-3 opacity-70" />
+                                <span>Quick Tour</span>
                             </button>
-
-                            <button
-                                onClick={() => {
-                                    setSidebarTab("history");
-                                    setIsSidebarCollapsed(false);
-                                }}
-                                title="History"
-                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${sidebarTab === "history"
-                                    ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-[#00DDDD] border-black text-white font-bold")
-                                    : (isDarkMode ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5" : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110")
-                                    }`}
-                            >
-                                <Clock className="h-4 w-4" />
-                            </button>
-
-                            <button
-                                onClick={() => {
-                                    setSidebarTab("modes");
-                                    setIsSidebarCollapsed(false);
-                                }}
-                                title="Modes"
-                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${sidebarTab === "modes"
-                                    ? (isDarkMode ? "bg-white border-white text-black font-bold" : "bg-black border-black text-white font-bold")
-                                    : (isDarkMode ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5" : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110")
-                                    }`}
-                            >
-                                <Bot className="h-4 w-4" />
-                            </button>
-
-                            <button
-                                onClick={toggleTheme}
-                                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                                className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${isDarkMode
-                                    ? "border-white/20 text-white/60 hover:border-white hover:text-white hover:bg-white/5"
-                                    : "bg-white border-black text-black hover:bg-gray-50 hover:scale-110"
-                                    }`}
-                            >
-                                {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
-                            </button>
-
-                        </div>
-
-                        {/* Bottom: Logout with identical size */}
-                        {!isMobile && (
-                            <div className="flex flex-col items-center w-full px-2">
-                                <button
-                                    onClick={() => {
-                                        removeApiKey();
-                                        removeUserInfo();
-                                        removeUserRole();
-                                        removeSchoolName();
-                                        removeEnterpriseName();
-                                        setStoredActiveChatId(null);
-                                        setAuthed(false);
-                                        setUserName("");
-                                        setUserEmail("");
-                                        window.location.href = "/";
-                                    }}
-                                    title="Logout"
-                                    className={`h-11 w-11 flex items-center justify-center border-2 transition-all duration-300 ${isDarkMode
-                                        ? "border-white/20 bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500"
-                                        : "bg-white border-black text-black hover:bg-red-500 hover:text-white hover:border-red-500"
-                                        }`}
-                                >
-                                    <LogOut className="h-4 w-4" />
-                                </button>
-                            </div>
                         )}
+
+                        {/* Theme Toggler */}
+                        <button
+                            onClick={toggleTheme}
+                            className={`p-2 border rounded-xl transition-all duration-200 cursor-pointer ${
+                                isDarkMode
+                                    ? "border-white/10 text-white hover:bg-white/5 hover:border-white/20"
+                                    : "border-black/10 text-black hover:bg-black/5 hover:border-black/20"
+                            }`}
+                            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                        >
+                            {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                        </button>
+
+                        {/* Right Sidebar Toggler */}
+                        <button
+                            onClick={() => {
+                                setIsRightSidebarCollapsed(!isRightSidebarCollapsed);
+                                if (isMobile) setIsSidebarCollapsed(true);
+                            }}
+                            className={`p-2 border rounded-xl transition-all duration-200 cursor-pointer ${
+                                !isRightSidebarCollapsed
+                                    ? (isDarkMode ? "bg-white/10 border-white/20 text-white" : "bg-black/10 border-black/20 text-black")
+                                    : (isDarkMode ? "border-white/10 text-white hover:bg-white/5 hover:border-white/20" : "border-black/10 text-black hover:bg-black/5 hover:border-black/20")
+                            }`}
+                            title="Toggle Right Panel"
+                        >
+                            <UserCog className="h-4 w-4" />
+                        </button>
                     </div>
-                )}
-
-                {/* Resize Handle */}
-                <div
-                    onMouseDown={startResizingLeft}
-                    className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-white/20 transition-colors z-30 ${isMobile ? "hidden" : ""}`}
-                />
-
-                {/* Left Toggle Button */}
-                <button
-                    id="walkthrough-sidebar-toggle"
-                    onClick={() => {
-                        const newCollapsed = !isSidebarCollapsed;
-                        setIsSidebarCollapsed(newCollapsed);
-                        if (!newCollapsed) {
-                            setIsRightSidebarCollapsed(true);
-                        }
-                    }}
-                    className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border-2 border-white/30 text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-left ${isMobile ? "hidden" : ""}`}
-                    style={isMobile && isSidebarCollapsed ? { left: "0.8rem" } : { right: isSidebarCollapsed ? "-2.2rem" : "-0.95rem" }}
-                >
-                    {isSidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-                </button>
-            </aside>
-
-            {/* Main Chat Area */}
-            <div className="flex-1 flex flex-col relative h-full overflow-hidden">
-                {/* Fixed Header / Navbar */}
-                <header className={`h-20 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-4 md:px-10 relative z-30`}>
-                    <div className="flex items-center gap-4">
-                        <div className="h-[44px] w-[44px] flex items-center justify-center overflow-hidden">
-                            <img
-                                src={isDarkMode ? "/dark.png" : "/light.png"}
-                                alt="Logo"
-                                className="h-full w-full object-contain transition-transform duration-300"
-                                style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
-                            />
-                        </div>
-                        {!isMobile && (
-                            <div className="h-5 flex items-center shrink-0 overflow-hidden ml-1">
-                                <img
-                                    src={isDarkMode ? "/dark_text.png" : "/light_text.png"}
-                                    alt="Rudranex"
-                                    className="h-full object-contain"
-                                />
-                            </div>
-                        )}
-                    </div>
-                    {isMobile ? (
-                        <div className="flex items-center gap-2">
-                            {/* Chat Sidebar Toggler */}
-                            <button
-                                onClick={() => {
-                                    setIsSidebarCollapsed(!isSidebarCollapsed);
-                                    setIsRightSidebarCollapsed(true);
-                                }}
-                                className={`p-2 border transition-all duration-300 ${isDarkMode ? "border-white/20 hover:bg-white/5 text-white" : "border-black bg-white text-black hover:bg-gray-50"}`}
-                                title="Toggle Sessions History"
-                            >
-                                <MessageSquare className="h-4 w-4" />
-                            </button>
-
-                            {/* Right Sidebar Toggler */}
-                            <button
-                                onClick={() => {
-                                    setIsRightSidebarCollapsed(!isRightSidebarCollapsed);
-                                    setIsSidebarCollapsed(true);
-                                }}
-                                className={`p-2 border transition-all duration-300 ${isDarkMode ? "border-white/20 hover:bg-white/5 text-white" : "border-black bg-white text-black hover:bg-gray-50"}`}
-                                title="Toggle Plan Details"
-                            >
-                                <UserCog className="h-4 w-4" />
-                            </button>
-
-                            {/* Theme Toggler */}
-                            <button
-                                onClick={toggleTheme}
-                                className={`p-2 border transition-all duration-300 ${isDarkMode ? "border-white/20 hover:bg-white/5 text-white" : "border-black bg-white text-black hover:bg-gray-50"}`}
-                                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                            >
-                                {isDarkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-black" />}
-                            </button>
-
-                            {/* Logout button */}
-                            <button
-                                onClick={() => {
-                                    removeApiKey();
-                                    removeUserInfo();
-                                    removeUserRole();
-                                    removeSchoolName();
-                                    removeEnterpriseName();
-                                    setStoredActiveChatId(null);
-                                    setAuthed(false);
-                                    setUserName("");
-                                    setUserEmail("");
-                                    window.location.href = "/";
-                                }}
-                                title="Logout"
-                                className={`p-2 border-2 transition-all active:scale-95 ${isDarkMode
-                                    ? "border-white bg-white/5 text-white hover:bg-red-500 hover:text-white hover:border-red-500"
-                                    : "border-black bg-white text-black hover:bg-red-500 hover:text-white hover:border-red-500"
-                                    }`}
-                            >
-                                <LogOut className="h-4 w-4" />
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-6">
-                            {!showEmployeeView && (
-                                <button
-                                    onClick={() => setShowWalkthrough(true)}
-                                    className={`px-3 py-1.5 border-2 text-[9px] font-mono uppercase tracking-widest transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-1.5 ${isDarkMode ? "border-white/20 bg-white/5 text-white hover:border-[#00DDDD] hover:text-[#00DDDD]" : "border-black/25 bg-black/5 text-black hover:border-[#00DDDD] hover:text-[#00DDDD]"}`}
-                                    title="Start Workspace Tour"
-                                >
-                                    <Sparkles className="h-3 w-3 animate-pulse" />
-                                    Quick Tour
-                                </button>
-                            )}
-                            <div className="hidden md:flex flex-col items-end gap-0.5">
-                                <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/70" : "text-white/30") : "text-black/40"}`}>Current Session</span>
-                                <div className="flex items-center gap-2">
-                                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${isDarkMode ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-emerald-500/10 border border-emerald-500/20"}`}>
-                                        <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                        <span className="text-[8px] font-mono text-emerald-500 uppercase tracking-widest">Active</span>
-                                    </div>
-                                    <span className={`text-xs ${isDarkMode ? "text-white/70" : "text-black/70"}`}>{activeChat?.title || "Unsaved chat"}</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </header>
 
                 <main className={`flex-1 ${isChatEmpty ? "overflow-y-hidden flex flex-col justify-center pt-20 md:pt-32 pb-16" : "overflow-y-auto block pt-10 pb-36"} px-4 md:px-20 relative z-10 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
@@ -2438,155 +2572,24 @@ STRICT RULES:
                             {isHistoryLoading && <ChatLoader isDarkMode={isDarkMode} />}
                             <AnimatePresence initial={false}>
                                 {messages.length === 0 || messages.every((msg) => msg.localOnly) ? (
-                                    selectedEngine === "AI Image Lab" ? (
-                                        <div className="w-full max-w-4xl mx-auto py-4 md:py-2 px-0">
-                                            {/* Redesigned AI Image Lab Header */}
-                                            <div className="text-center mb-4 md:mb-2 px-4 md:px-0">
-
-                                                <motion.h1
-                                                    initial={{ opacity: 0, y: -10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ duration: 0.5, delay: 0.1 }}
-                                                    className={`text-2xl sm:text-3xl md:text-5xl font-sans font-extrabold tracking-tight mb-2 md:mb-4 ${isDarkMode
-                                                        ? "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
-                                                        : "text-black"
-                                                        }`}
-                                                >
-                                                    Choose Your Visual Style
-                                                </motion.h1>
-                                                <motion.p
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ duration: 0.5, delay: 0.2 }}
-                                                    className={`text-xs sm:text-sm md:text-base font-sans max-w-xs sm:max-w-lg mx-auto ${isDarkMode ? "text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" : "text-black/60"
-                                                        }`}
-                                                >
-                                                    Select a style template and let your imagination come to life.
-                                                </motion.p>
-                                            </div>
-
-                                            {/* Style Cards Horizontally Scrollable Slider */}
-                                            <div className="relative w-full sm:px-12 px-0">
-                                                {/* Left Arrow Button - hidden on mobile, shown on sm+ */}
-                                                <button
-                                                    onClick={() => scrollStyleCards("left")}
-                                                    className={`hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 items-center justify-center shadow-2xl active:scale-90 ${isDarkMode
-                                                        ? "bg-black/90 border-white/15 text-white/95 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.5)]"
-                                                        : "bg-white/95 border-black/15 text-black hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.3)]"
-                                                        }`}
-                                                    title="Scroll Left"
-                                                >
-                                                    <ChevronLeft className="h-6 w-6 stroke-[2.5]" />
-                                                </button>
-
-                                                {/* Right Arrow Button - hidden on mobile, shown on sm+ */}
-                                                <button
-                                                    onClick={() => scrollStyleCards("right")}
-                                                    className={`hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full border-2 transition-all duration-300 items-center justify-center shadow-2xl active:scale-90 ${isDarkMode
-                                                        ? "bg-black/90 border-white/15 text-white/95 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.5)]"
-                                                        : "bg-white/95 border-black/15 text-black hover:text-[#00DDDD] hover:border-[#00DDDD] hover:shadow-[0_0_20px_rgba(0,221,221,0.3)]"
-                                                        }`}
-                                                    title="Scroll Right"
-                                                >
-                                                    <ChevronRight className="h-6 w-6 stroke-[2.5]" />
-                                                </button>
-
-                                                {/* Scrollable Container */}
-                                                <motion.div
-                                                    ref={styleCardsScrollRef}
-                                                    variants={{
-                                                        hidden: { opacity: 0 },
-                                                        show: {
-                                                            opacity: 1,
-                                                            transition: {
-                                                                staggerChildren: 0.05
-                                                            }
-                                                        }
-                                                    }}
-                                                    initial="hidden"
-                                                    animate="show"
-                                                    className="flex flex-row flex-nowrap overflow-x-auto no-scrollbar scroll-smooth gap-3 sm:gap-5 py-2 sm:py-1 w-full px-4 sm:px-0"
-                                                >
-                                                    {IMAGE_STYLES.map((style) => {
-                                                        const isSelected = selectedImageStyle === style.id;
-                                                        return (
-                                                            <motion.div
-                                                                key={style.id}
-                                                                variants={{
-                                                                    hidden: { opacity: 0, x: 30, scale: 0.95 },
-                                                                    show: {
-                                                                        opacity: 1,
-                                                                        x: 0,
-                                                                        scale: 1,
-                                                                        transition: {
-                                                                            type: "spring",
-                                                                            stiffness: 100,
-                                                                            damping: 15
-                                                                        }
-                                                                    }
-                                                                }}
-                                                                whileHover={{ scale: 1.03, y: -2 }}
-                                                                whileTap={{ scale: 0.98 }}
-                                                                onClick={() => {
-                                                                    setSelectedImageStyle(style.id);
-                                                                    // Find if input already starts with another style's prompt
-                                                                    const currentStyle = IMAGE_STYLES.find(s => input.startsWith(s.prompt));
-                                                                    if (currentStyle) {
-                                                                        setInput(input.replace(currentStyle.prompt, style.prompt));
-                                                                    } else {
-                                                                        setInput(style.prompt + input);
-                                                                    }
-                                                                    toast.success(`Active Style: ${style.label}`);
-                                                                }}
-                                                                className={`group relative w-[72vw] sm:w-[calc((100%-20px)/2)] md:w-[calc((100%-40px)/3)] flex-shrink-0 aspect-[4/3] sm:aspect-[16/10] overflow-hidden rounded-[1.5rem] sm:rounded-[2.2rem] cursor-pointer border-2 transition-all duration-300 ${isSelected
-                                                                    ? "border-[#00DDDD] shadow-[0_0_25px_rgba(0,221,221,0.4)]"
-                                                                    : isDarkMode
-                                                                        ? "border-white/5 hover:border-white/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.5)]"
-                                                                        : "border-black/5 hover:border-black/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.15)]"
-                                                                    }`}
-                                                            >
-                                                                {/* Background image preview */}
-                                                                <img
-                                                                    src={style.sample}
-                                                                    alt={style.label}
-                                                                    className="absolute inset-0 w-full h-full object-cover select-none transition-transform duration-500 ease-out group-hover:scale-105"
-                                                                    loading="lazy"
-                                                                />
-
-                                                                {/* Linear overlay */}
-                                                                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent transition-opacity duration-300 group-hover:opacity-90" />
-
-                                                                {/* Selected Check Indicator */}
-                                                                {isSelected && (
-                                                                    <div className="absolute top-2 right-2 sm:top-4 sm:right-4 h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-[#00DDDD] text-black flex items-center justify-center shadow-[0_0_12px_rgba(0,221,221,0.6)] z-20">
-                                                                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 stroke-[3]" />
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Label text */}
-                                                                <div className="absolute bottom-3 sm:bottom-5 left-3 sm:left-5 right-3 sm:right-5 text-left z-10">
-                                                                    <span className="text-white text-sm sm:text-base md:text-lg font-sans font-semibold tracking-tight leading-tight block group-hover:text-[#00DDDD] transition-colors duration-200">
-                                                                        {style.label}
-                                                                    </span>
-                                                                </div>
-                                                            </motion.div>
-                                                        );
-                                                    })}
-                                                </motion.div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <WelcomeBox
-                                            isDarkMode={isDarkMode}
-                                            onSelectEngine={(engine) => {
-                                                setSelectedEngine(engine);
-                                                setShowEngineSelect(false);
-                                            }}
-                                            onOpenMockPaper={() => setIsMockPaperModalOpen(true)}
-                                            onOpenInterview={() => setIsInterviewModalOpen(true)}
-                                            hiddenEngines={showEmployeeView ? employeeRestrictedEngines : []}
-                                        />
-                                    )
+                                    <div className="flex flex-col items-center justify-center min-h-[50vh] max-w-2xl mx-auto px-4 text-center">
+                                        <motion.h1 
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.5 }}
+                                            className={`font-serif italic text-4xl sm:text-5xl md:text-6xl mb-8 tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}
+                                        >
+                                            What would you like to do?
+                                        </motion.h1>
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.5, delay: 0.15 }}
+                                            className="w-full text-left"
+                                        >
+                                            {renderInputContainer(true)}
+                                        </motion.div>
+                                    </div>
                                 ) : (
                                     messages.map((msg, i) => (
                                         <motion.div
@@ -2598,11 +2601,11 @@ STRICT RULES:
                                         >
                                             <div className={`flex flex-col ${msg.role === "user" ? "items-end max-w-[90%] md:max-w-[80%]" : "items-start max-w-[90%] md:max-w-[85%]"}`}>
                                                 <div className="flex items-center gap-3 mb-4">
-                                                    <span className={`text-[9px] font-mono uppercase tracking-[0.2em] flex items-center gap-1.5 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/80 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/30") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]" : "text-black/60")}`}>
+                                                    <span className={`text-[9px] font-mono uppercase tracking-[0.2em] flex items-center gap-1.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                                         {msg.role === "assistant" && isLoading && i === messages.length - 1 && (
                                                             <Loader2 className="h-3 w-3 animate-spin text-[#00DDDD] shrink-0" />
                                                         )}
-                                                        {msg.role === "assistant" ? "§ RUDRA_AI" : "§ STUDENT_USER"}
+                                                        {msg.role === "assistant" ? "Rudra AI" : "You"}
                                                     </span>
                                                     <span className={`text-[9px] font-mono ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white/60 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]" : "text-white/20") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]" : "text-black/60")}`}>{msg.timestamp}</span>
                                                     {msg.role === "assistant" && showEmployeeView && !(isLoading && i === messages.length - 1) && (
@@ -2613,8 +2616,8 @@ STRICT RULES:
                                                 </div>
 
                                                 <div className={`py-1.5 px-4 md:py-2 md:px-5 ${msg.role === "user"
-                                                    ? (isDarkMode ? "bg-black border border-white/20 rounded-[18px_4px_18px_4px]" : (selectedEngine === "AI Image Lab" ? "bg-white border-2 border-black/10 rounded-[18px_4px_18px_4px]" : "bg-transparent border-2 border-black rounded-[18px_4px_18px_4px]"))
-                                                    : (isDarkMode ? "bg-transparent rounded-[2.5rem]" : "bg-transparent rounded-[2.5rem]")
+                                                    ? (isDarkMode ? "bg-[#222120] border border-white/5 rounded-2xl text-white" : "bg-[#f2f1f0] border border-black/5 rounded-2xl text-black")
+                                                    : "bg-transparent text-current"
                                                     } relative group`}>
                                                     {msg.role === "user" ? (
                                                         <p className={`text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white font-sans" : "text-black font-sans"}`}>
@@ -2700,26 +2703,21 @@ STRICT RULES:
                                                         </div>
                                                     )}
 
-                                                    {msg.role === "user" && (
-                                                        <>
-                                                            <div className={`absolute top-0 left-0 w-1.5 h-1.5 border-t border-l ${isDarkMode ? "border-white/40" : "border-black/40"}`} />
-                                                            <div className={`absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r ${isDarkMode ? "border-white/40" : "border-black/40"}`} />
-                                                        </>
-                                                    )}
+
                                                 </div>
 
                                                 {/* Action Buttons */}
-                                                <div className={`flex items-center gap-3 mt-3 ${msg.role === "user" ? "justify-end" : "justify-start px-8"}`}>
+                                                <div className={`flex items-center gap-2 mt-2 ${msg.role === "user" ? "justify-end" : "justify-start px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"}`}>
                                                     {msg.role === "user" ? (
                                                         <>
-                                                            <button onClick={() => setInput(msg.content)} title="Edit & resend" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
-                                    <Edit3 className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                            <button onClick={() => setInput(msg.content)} title="Edit & resend" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5"}`}>
+                                                                <Edit3 className="h-3.5 w-3.5" />
                                                             </button>
-                                                            <button onClick={() => copyToClipboard(msg.content, i)} title="Copy message" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
+                                                            <button onClick={() => copyToClipboard(msg.content, i)} title="Copy message" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5"}`}>
                                                                 {copiedMsgIndex === i ? (
-                                                                    <Check className="h-5 w-5 text-green-400 scale-110" />
+                                                                    <Check className="h-3.5 w-3.5 text-emerald-400" />
                                                                 ) : (
-                                                                    <Copy className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                                    <Copy className="h-3.5 w-3.5" />
                                                                 )}
                                                             </button>
                                                         </>
@@ -2728,38 +2726,38 @@ STRICT RULES:
                                                             <button
                                                                 title="Like"
                                                                 onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, 1)}
-                                                                className={`p-2 transition-all duration-300 group ${msg.feedback === 1
-                                                                    ? (isDarkMode ? "text-emerald-400" : "text-emerald-600")
-                                                                    : (isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-emerald-400 hover:scale-105" : "text-white/60 hover:text-white hover:scale-105") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-emerald-600 hover:scale-105" : "text-black/60 hover:text-black hover:scale-105"))
+                                                                className={`p-1.5 transition-all rounded-lg ${msg.feedback === 1
+                                                                    ? "text-emerald-400 bg-emerald-500/10"
+                                                                    : (isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5")
                                                                     }`}
                                                             >
-                                                                <ThumbsUp className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                                <ThumbsUp className="h-3.5 w-3.5" />
                                                             </button>
                                                             <button
                                                                 title="Dislike"
                                                                 onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, -1)}
-                                                                className={`p-2 transition-all duration-300 group ${msg.feedback === -1
-                                                                    ? (isDarkMode ? "text-red-400" : "text-red-600")
-                                                                    : (isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-red-400 hover:scale-105" : "text-white/60 hover:text-white hover:scale-105") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-red-600 hover:scale-105" : "text-black/60 hover:text-black hover:scale-105"))
+                                                                className={`p-1.5 transition-all rounded-lg ${msg.feedback === -1
+                                                                    ? "text-red-400 bg-red-500/10"
+                                                                    : (isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5")
                                                                     }`}
                                                             >
-                                                                                                                                    <ThumbsDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                                <ThumbsDown className="h-3.5 w-3.5" />
                                                             </button>
-                                                            <button onClick={() => copyToClipboard(msg.content, i)} title="Copy message" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
+                                                            <button onClick={() => copyToClipboard(msg.content, i)} title="Copy message" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5"}`}>
                                                                 {copiedMsgIndex === i ? (
-                                                                    <Check className="h-5 w-5 text-green-400 scale-110" />
+                                                                    <Check className="h-3.5 w-3.5 text-emerald-400" />
                                                                 ) : (
-                                                                    <Copy className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                                    <Copy className="h-3.5 w-3.5" />
                                                                 )}
                                                             </button>
-                                                            <button onClick={() => retryMessage(i)} title="Regenerate" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
-                                                                <RotateCcw className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                            <button onClick={() => retryMessage(i)} title="Regenerate" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5"}`}>
+                                                                <RotateCcw className="h-3.5 w-3.5" />
                                                             </button>
-                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
-                                                                <FileDown className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5"}`}>
+                                                                <FileDown className="h-3.5 w-3.5" />
                                                             </button>
-                                                            <button onClick={() => { if (navigator.share) { navigator.share({ title: "Rudranex AI Response", text: msg.content }); } else { navigator.clipboard.writeText(msg.content); toast.success("Link copied to clipboard"); } }} title="Share" className={`p-2 ${isDarkMode ? (selectedEngine === "AI Image Lab" ? "text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] hover:text-[#00DDDD]" : "text-white/60 hover:text-white") : (selectedEngine === "AI Image Lab" ? "text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] hover:text-[#00AAAA]" : "text-black/60 hover:text-black")} hover:scale-105 transition-all duration-300 group`}>
-                                                                <Share className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                            <button onClick={() => { if (navigator.share) { navigator.share({ title: "Rudranex AI Response", text: msg.content }); } else { navigator.clipboard.writeText(msg.content); toast.success("Link copied to clipboard"); } }} title="Share" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-white/40 hover:text-white/90 hover:bg-white/5" : "text-black/40 hover:text-black/90 hover:bg-black/5"}`}>
+                                                                <Share className="h-3.5 w-3.5" />
                                                             </button>
                                                         </>
                                                     )}
@@ -2826,651 +2824,157 @@ STRICT RULES:
                 </main>
 
                 {/* Input Bar */}
-                <div 
-                    className={`${isMobile ? "fixed" : "absolute"} ${isMobile ? "bottom-[10px]" : ""} left-0 right-0 z-50 p-4 md:p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}
-                    style={isMobile ? undefined : { bottom: '-2px' }}
-                >
-                    <div className={`w-full max-w-4xl relative mb-4 md:mb-0`}>
-                        <div className="relative">
-                            {/* File Preview */}
-                            <AnimatePresence>
-                                {selectedFile && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 10 }}
-                                        className={`absolute bottom-full left-4 mb-4 p-4 border-2 ${isDarkMode ? "bg-[#0d0d0d] border-white/20" : "bg-white border-black/20"} flex items-center gap-4 shadow-2xl z-40`}
-                                    >
-                                        <div className="h-12 w-12 flex items-center justify-center bg-white/5">
-                                            {selectedFile.previewUrl ? (
-                                                <img src={selectedFile.previewUrl} alt="Preview" className="h-full w-full object-cover" />
-                                            ) : (
-                                                <FileIcon className="h-6 w-6 opacity-40" />
-                                            )}
+                {!isChatEmpty && (
+                    <div 
+                        className={`${isMobile ? "fixed" : "absolute"} ${isMobile ? "bottom-[10px]" : ""} left-0 right-0 z-50 p-4 md:p-10 ${isDarkMode ? "bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]" : "bg-gradient-to-t from-white via-white"} to-transparent flex justify-center`}
+                        style={isMobile ? undefined : { bottom: '-2px' }}
+                    >
+                        <div className={`w-full max-w-4xl relative mb-4 md:mb-0`}>
+                            <div className="relative">
+                                
+    
+                                {selectedEngine === "AI Image Lab" && (
+                                    <div className="hidden sm:block mb-3 w-full">
+                                        <div className="flex flex-row flex-nowrap gap-1.5 md:gap-2 overflow-x-auto no-scrollbar w-full pb-1 scroll-smooth px-0.5 md:px-1">
+                                            {IMAGE_STYLES.map((style) => {
+                                                 const isSelected = selectedImageStyle === style.id;
+                                                 return (
+                                                     <button
+                                                         key={style.id}
+                                                         onClick={() => {
+                                                             setSelectedImageStyle(style.id);
+                                                             const currentStyle = IMAGE_STYLES.find(s => input.startsWith(s.prompt));
+                                                             if (currentStyle) {
+                                                                 setInput(input.replace(currentStyle.prompt, style.prompt));
+                                                             } else {
+                                                                 setInput(style.prompt + input);
+                                                             }
+                                                             toast.success(`Active Style: ${style.label}`);
+                                                         }}
+                                                         className={`group flex items-center gap-1.5 md:gap-2 px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-sans font-medium tracking-wide rounded-full border transition-all duration-200 flex-shrink-0 ${isSelected
+                                                             ? (isDarkMode ? "bg-white text-black border-white shadow-md font-bold" : "bg-black text-white border-black shadow-md font-bold")
+                                                             : isDarkMode
+                                                                 ? "bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white hover:border-white/20"
+                                                                 : "bg-black/5 text-black/70 border-black/10 hover:bg-black/10 hover:text-black hover:border-black/20"
+                                                             }`}
+                                                     >
+                                                         <img
+                                                             src={style.sample}
+                                                             alt=""
+                                                             className={`w-4 h-4 md:w-5 md:h-5 rounded-full object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-110 border ${isSelected ? "border-black/25" : "border-white/10"
+                                                                 }`}
+                                                             loading="lazy"
+                                                         />
+                                                         <span className="whitespace-nowrap">{style.label}</span>
+                                                     </button>
+                                                 );
+                                             })}
                                         </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-medium truncate max-w-[200px]">{selectedFile.name}</span>
-                                            <span className="text-[10px] font-mono opacity-40 uppercase">{(selectedFile.size / 1024).toFixed(1)} KB</span>
-                                        </div>
-                                        <button
-                                            onClick={() => setSelectedFile(null)}
-                                            className="p-1 hover:bg-white/10 hover:scale-110 hover:rotate-90 transition-all duration-300 rounded-full"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    </motion.div>
+                                    </div>
                                 )}
-                            </AnimatePresence>
-
-                            {selectedEngine === "AI Image Lab" && (
-                                <div className="hidden sm:block mb-3 w-full">
-                                    <div className="flex flex-row flex-nowrap gap-1.5 md:gap-2 overflow-x-auto no-scrollbar w-full pb-1 scroll-smooth px-0.5 md:px-1">
-                                        {IMAGE_STYLES.map((style) => {
-                                            const isSelected = selectedImageStyle === style.id;
-                                            return (
-                                                <button
-                                                    key={style.id}
-                                                    onClick={() => {
-                                                        setSelectedImageStyle(style.id);
-                                                        const currentStyle = IMAGE_STYLES.find(s => input.startsWith(s.prompt));
-                                                        if (currentStyle) {
-                                                            setInput(input.replace(currentStyle.prompt, style.prompt));
-                                                        } else {
-                                                            setInput(style.prompt + input);
-                                                        }
-                                                        toast.success(`Active Style: ${style.label}`);
-                                                    }}
-                                                    className={`group flex items-center gap-1.5 md:gap-2 px-2.5 md:px-3 py-1 md:py-1.5 text-[10px] md:text-xs font-sans font-medium tracking-wide rounded-full border-2 transition-all duration-300 flex-shrink-0 ${isSelected
-                                                        ? "bg-[#00DDDD] text-black border-[#00DDDD] shadow-[0_0_15px_rgba(0,221,221,0.45)] scale-[1.04] font-bold"
-                                                        : isDarkMode
-                                                            ? "bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white hover:border-white/20 hover:scale-[1.02]"
-                                                            : "bg-black/5 text-black/70 border-black/10 hover:bg-black/10 hover:text-black hover:border-black/20 hover:scale-[1.02]"
+                                {/* ─── Gmail Mail Toolbar ─── */}
+                                {rightSidebarTab === "gmail" && showEmployeeView && gmailConnected && (
+                                    <div className="mb-2 space-y-1.5">
+                                        {/* To: field + Send/Bulk toggle */}
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-[9px] font-mono uppercase tracking-widest shrink-0 ${isDarkMode ? "text-white/60" : "text-black/70"}`}>To:</span>
+                                            <div className="relative flex-1">
+                                                <input
+                                                    type="text"
+                                                    placeholder="email@example.com or comma,separated,emails"
+                                                    value={gmailMailTo}
+                                                    onChange={(e) => setGmailMailTo(e.target.value)}
+                                                    className={`w-full px-2 py-1.5 text-[10px] font-mono rounded border outline-none transition-all ${isDarkMode
+                                                        ? "bg-white/[0.05] border-white/20 text-white placeholder-white/30 focus:border-[#4285F4]/50"
+                                                        : "bg-black/[0.04] border-black/30 text-black placeholder-black/50 focus:border-[#4285F4]/70"
                                                         }`}
-                                                >
-                                                    <img
-                                                        src={style.sample}
-                                                        alt=""
-                                                        className={`w-4 h-4 md:w-5 md:h-5 rounded-full object-cover flex-shrink-0 transition-transform duration-300 group-hover:scale-110 border ${isSelected ? "border-black/20" : "border-white/10"
-                                                            }`}
-                                                        loading="lazy"
-                                                    />
-                                                    <span className="whitespace-nowrap">{style.label}</span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                            {/* ─── Gmail Mail Toolbar ─── */}
-                            {rightSidebarTab === "gmail" && showEmployeeView && gmailConnected && (
-                                <div className="mb-2 space-y-1.5">
-                                    {/* To: field + Send/Bulk toggle */}
-                                    <div className="flex items-center gap-2">
-                                        <span className={`text-[9px] font-mono uppercase tracking-widest shrink-0 ${isDarkMode ? "text-white/60" : "text-black/70"}`}>To:</span>
-                                        <div className="relative flex-1">
-                                            <input
-                                                type="text"
-                                                placeholder="email@example.com or comma,separated,emails"
-                                                value={gmailMailTo}
-                                                onChange={(e) => setGmailMailTo(e.target.value)}
-                                                className={`w-full px-2 py-1.5 text-[10px] font-mono rounded border outline-none transition-all ${isDarkMode
-                                                    ? "bg-white/[0.05] border-white/20 text-white placeholder-white/30 focus:border-[#4285F4]/50"
-                                                    : "bg-black/[0.04] border-black/30 text-black placeholder-black/50 focus:border-[#4285F4]/70"
-                                                    }`}
-                                            />
-                                        </div>
-                                        <button
-                                            onClick={() => setGmailMailTo("")}
-                                            className={`p-1.5 rounded transition-all ${isDarkMode ? "hover:bg-white/10 text-white/50" : "hover:bg-black/10 text-black/60"}`}
-                                            title="Clear"
-                                        >
-                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    {/* Action buttons */}
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                        <button
-                                            onClick={() => {
-                                                if (!gmailMailTo.trim() || !input.trim()) return;
-                                                setGmailConfirmSend(true);
-                                            }}
-                                            disabled={!gmailMailTo.trim() || !input.trim() || gmailSending}
-                                            className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all disabled:opacity-30 ${isDarkMode
-                                                ? "border-white/25 text-white/70 hover:border-white/40 hover:text-white"
-                                                : "border-black/30 text-black/80 hover:border-black/50 hover:text-black"
-                                                }`}
-                                        >
-                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M22 2L11 13" /><path d="M22 2L15 22l-4-9-9-4z" />
-                                            </svg>
-                                            Send
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                const next = !gmailAutoOn;
-                                                setGmailAutoOn(next);
-                                                if (next) setGmailAutoShowModal(true);
-                                            }}
-                                            className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all ${gmailAutoOn
-                                                ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/15 border-[#00DDDD] text-[#00DDDD]")
-                                                : (isDarkMode ? "border-white/25 text-white/70 hover:border-white/40 hover:text-white" : "border-black/30 text-black/80 hover:border-black/50 hover:text-black")
-                                                }`}
-                                        >
-                                            <svg className={`h-3 w-3 ${gmailAutoOn ? "text-[#00DDDD]" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
-                                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                                            </svg>
-                                            {gmailAutoOn ? "Auto ON" : "Auto"}
-                                        </button>
-                                        <button
-                                            onClick={() => setGmailBulkModal(true)}
-                                            disabled={gmailSending}
-                                            className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all disabled:opacity-30 ${isDarkMode
-                                                ? "border-white/25 text-white/70 hover:border-white/40 hover:text-white"
-                                                : "border-black/30 text-black/80 hover:border-black/50 hover:text-black"
-                                                }`}
-                                        >
-                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                            </svg>
-                                            Bulk
-                                        </button>
-                                        {gmailSendResult && (
-                                            <span className={`text-[9px] font-mono font-semibold ${gmailSendResult.includes("✓") ? "text-green-600" : "text-red-500"}`}>{gmailSendResult}</span>
-                                        )}
-                                        {gmailAutoOn && !gmailAutoStatus && !gmailSendResult && (
-                                            <span className="flex items-center gap-1 text-[8px] font-mono font-semibold text-[#00DDDD]">
-                                                <span className="h-1.5 w-1.5 rounded-full bg-[#00DDDD] animate-pulse" />
-                                                Watching{gmailAutoMode === "to" ? ` ${gmailAutoTargetEmail}` : ""}...
-                                            </span>
-                                        )}
-                                        {gmailAutoStatus && !gmailSendResult && (
-                                            <span className={`text-[9px] font-mono font-semibold ${gmailAutoStatus.includes("✓") ? "text-green-600" : "text-red-500"}`}>{gmailAutoStatus}</span>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ─── Send Confirmation Modal ─── */}
-                            <AnimatePresence>
-                                {gmailConfirmSend && gmailMailTo.trim() && (
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className="fixed inset-0 z-[150] flex items-center justify-center p-4"
-                                        onClick={() => { setGmailConfirmSend(false); setGmailPolishedBody(""); }}
-                                    >
-                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/60"} backdrop-blur-sm`} />
-                                        <motion.div
-                                            initial={{ scale: 0.92, opacity: 0, y: 20 }}
-                                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                                            exit={{ scale: 0.92, opacity: 0, y: 20 }}
-                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                            className={`relative w-full max-w-lg rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/20"}`}
-                                        >
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
-                                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                                        <rect x="2" y="4" width="20" height="16" rx="2" fill="#EA4335"/>
-                                                        <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-                                                    </svg>
-                                                </div>
-                                                <div>
-                                                    <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Send as Email</p>
-                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/80"}`}>
-                                                        To: <span className="font-bold">{gmailMailTo.includes(",") ? `${gmailMailTo.split(",").length} recipients` : gmailMailTo}</span>
-                                                    </p>
-                                                </div>
+                                                />
                                             </div>
-
-                                            {/* Polished email body */}
-                                            {gmailPolishing ? (
-                                                <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-white/[0.05]">
-                                                    <div className="h-4 w-4 rounded-full border-2 border-t-transparent animate-spin border-[#4285F4]" />
-                                                    <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/70" : "text-black/80"}`}>AI is polishing your message...</span>
-                                                </div>
-                                            ) : gmailPolishedBody ? (
-                                                <>
-                                                    <textarea
-                                                        value={gmailPolishedBody}
-                                                        onChange={(e) => setGmailPolishedBody(e.target.value)}
-                                                        rows={6}
-                                                        className={`w-full mb-3 p-2.5 text-[10px] font-mono leading-relaxed rounded-lg border outline-none resize-none transition-all ${isDarkMode
-                                                            ? "bg-white/[0.05] border-white/20 text-white/90 focus:border-[#4285F4]/50"
-                                                            : "bg-black/[0.04] border-black/30 text-black/90 focus:border-[#4285F4]/70"
-                                                            }`}
-                                                    />
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
-                                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                                        <rect x="2" y="4" width="20" height="16" rx="2" fill="#EA4335"/>
-                                                        <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-                                                    </svg>
-                                                </div>
-                                                <div>
-                                                    <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Send as Email</p>
-                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/80"}`}>
-                                                        To: <span className="font-bold">{gmailMailTo.includes(",") ? `${gmailMailTo.split(",").length} recipients` : gmailMailTo}</span>
-                                                    </p>
-                                                </div>
-                                            </div>
-                                                </>
-                                            ) : null}
-
-                                            <div className="flex items-center gap-2 justify-end">
-                                                <button
-                                                    onClick={() => { setGmailConfirmSend(false); setGmailPolishedBody(""); }}
-                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/70 hover:bg-white/10" : "text-black/80 hover:bg-black/10"}`}
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    onClick={() => handleMailSend(gmailPolishedBody || input.trim())}
-                                                    disabled={gmailSending || gmailPolishing}
-                                                    className={`px-4 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all disabled:opacity-50 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
-                                                >
-                                                    {gmailSending ? "Sending..." : "Send"}
-                                                </button>
-                                            </div>
-                                        </motion.div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            {/* ─── Auto Context Modal ─── */}
-                            <AnimatePresence>
-                                {gmailAutoShowModal && (
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className="fixed inset-0 z-[150] flex items-center justify-center p-4"
-                                        onClick={() => setGmailAutoShowModal(false)}
-                                    >
-                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/60"} backdrop-blur-sm`} />
-                                        <motion.div
-                                            initial={{ scale: 0.92, opacity: 0, y: 20 }}
-                                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                                            exit={{ scale: 0.92, opacity: 0, y: 20 }}
-                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                            className={`relative w-full max-w-lg rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/20"}`}
-                                        >
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#00DDDD]/10" : "bg-[#00DDDD]/15"}`}>
-                                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="#00DDDD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
-                                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                                                    </svg>
-                                                </div>
-                                                <div>
-                                                    <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Auto Email Context</p>
-                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Set tone, signature, and mode for auto-replies</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-3 mb-4">
-                                                <div>
-                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Tone</label>
-                                                    <select value={gmailAutoTone} onChange={(e) => setGmailAutoTone(e.target.value)}
-                                                        className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white" : "bg-black/[0.04] border-black/30 text-black"}`}
-                                                    >
-                                                        <option value="professional">Professional</option>
-                                                        <option value="casual">Casual</option>
-                                                        <option value="formal">Formal</option>
-                                                        <option value="direct">Direct</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Signature (optional)</label>
-                                                    <textarea value={gmailAutoSignature} onChange={(e) => setGmailAutoSignature(e.target.value)} rows={2}
-                                                        className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none resize-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white/80" : "bg-black/[0.04] border-black/30 text-black/80"}`}
-                                                        placeholder="Best regards,&#10;John Doe"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Instructions (optional)</label>
-                                                    <textarea value={gmailAutoInstructions} onChange={(e) => setGmailAutoInstructions(e.target.value)} rows={3}
-                                                        className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none resize-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white/80" : "bg-black/[0.04] border-black/30 text-black/80"}`}
-                                                        placeholder="Be concise, always include a call to action..."
-                                                    />
-                                                </div>
-
-                                                <div className="flex items-center gap-2 pt-2">
-                                                    <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Mode:</label>
-                                                    <button
-                                                        onClick={() => setGmailAutoMode(gmailAutoMode === "all" ? null : "all")}
-                                                        className={`px-2.5 py-1 text-[8px] font-mono rounded border transition-all ${gmailAutoMode === "all"
-                                                            ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/15 border-[#00DDDD] text-[#00DDDD]")
-                                                            : (isDarkMode ? "border-white/25 text-white/70" : "border-black/30 text-black/70")
-                                                            }`}
-                                                    >
-                                                        Auto All
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setGmailAutoMode(gmailAutoMode === "to" ? null : "to")}
-                                                        className={`px-2.5 py-1 text-[8px] font-mono rounded border transition-all ${gmailAutoMode === "to"
-                                                            ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/15 border-[#00DDDD] text-[#00DDDD]")
-                                                            : (isDarkMode ? "border-white/25 text-white/70" : "border-black/30 text-black/70")
-                                                            }`}
-                                                    >
-                                                        Auto To
-                                                    </button>
-                                                </div>
-                                                {gmailAutoMode === "to" && (
-                                                    <div>
-                                                        <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Target Email</label>
-                                                        <input type="email" value={gmailAutoTargetEmail} onChange={(e) => setGmailAutoTargetEmail(e.target.value)}
-                                                            className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white" : "bg-black/[0.04] border-black/30 text-black"}`}
-                                                            placeholder="someone@example.com"
-                                                        />
-                            </div>
-                        )}
-                                            </div>
-
-                                            <div className="flex items-center gap-2 justify-end">
-                                                <button onClick={() => { setGmailAutoShowModal(false); setGmailAutoOn(false); setGmailAutoMode(null); }}
-                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/70 hover:bg-white/10" : "text-black/80 hover:bg-black/10"}`}
-                                                >Cancel</button>
-                                                <button onClick={async () => {
-                                                    setGmailAutoShowModal(false);
-                                                    if (!gmailAutoMode) return;
-                                                    try {
-                                                        const { setGoogleAgentContext } = await import("@/lib/chat-api");
-                                                        await setGoogleAgentContext({
-                                                            tone: gmailAutoTone,
-                                                            signature: gmailAutoSignature,
-                                                            instructions: gmailAutoInstructions,
-                                                            is_active: true,
-                                                            reply_strategy: gmailAutoMode
-                                                        });
-                                                    } catch { /* context save optional */ }
-                                                    setGmailAutoStatus(gmailAutoMode === "all" ? "Watching all emails..." : `Watching ${gmailAutoTargetEmail}...`);
-                                                }} disabled={!gmailAutoMode || (gmailAutoMode === "to" && !gmailAutoTargetEmail.trim())}
-                                                    className={`px-4 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all disabled:opacity-50 ${isDarkMode ? "bg-[#00DDDD] text-black hover:bg-[#00DDDD]/90" : "bg-[#00DDDD] text-black hover:bg-[#00DDDD]/90"}`}
-                                                >Apply</button>
-                                            </div>
-                                        </motion.div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            {/* ─── Bulk Email Modal (Excel Upload) ─── */}
-                            <AnimatePresence>
-                                {gmailBulkModal && (
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className="fixed inset-0 z-[150] flex items-center justify-center p-4"
-                                        onClick={() => setGmailBulkModal(false)}
-                                    >
-                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/60"} backdrop-blur-sm`} />
-                                        <motion.div
-                                            initial={{ scale: 0.92, opacity: 0, y: 20 }}
-                                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                                            exit={{ scale: 0.92, opacity: 0, y: 20 }}
-                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                            className={`relative w-full max-w-md rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/20"}`}
-                                        >
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
-                                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="#EA4335" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
-                                                    </svg>
-                                                </div>
-                                                <div>
-                                                    <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Bulk Email Send</p>
-                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Upload CSV file with columns: email, message</p>
-                                                </div>
-                                            </div>
-
-                                            <div className={`mb-3 p-2.5 rounded-lg ${isDarkMode ? "bg-white/[0.05] border border-white/10" : "bg-black/[0.06] border border-black/25"}`}>
-                                                <p className={`text-[7px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? "text-white/50" : "text-black/60"}`}>Accepted CSV format</p>
-                                                <pre className={`text-[8px] font-mono leading-relaxed ${isDarkMode ? "text-white/70" : "text-black/80"}`}>
-email,message{'\n'}
-john@example.com,Hello John check this out{'\n'}
-jane@example.com,"Hey Jane, here is the update"</pre>
-                                            </div>
-
-                                            <div
-                                                onDragOver={(e) => e.preventDefault()}
-                                                onDrop={(e) => {
-                                                    e.preventDefault();
-                                                    const file = e.dataTransfer.files[0];
-                                                    if (file) handleBulkExcelUpload(file);
-                                                }}
-                                                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${isDarkMode ? "border-white/30 hover:border-[#00DDDD]/50 text-white/60" : "border-black/40 hover:border-[#00DDDD]/60 text-black/80"}`}
-                                                onClick={() => bulkFileInputRef.current?.click()}
-                                            >
-                                                <svg className="h-8 w-8 mx-auto mb-2 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
-                                                </svg>
-                                                <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/50" : "text-black/80"}`}>Drop CSV file here or click to browse</p>
-                                            </div>
-                                            <input ref={bulkFileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => {
-                                                const file = e.target.files?.[0];
-                                                if (file) handleBulkExcelUpload(file);
-                                                e.target.value = "";
-                                            }} />
-
-                                            {gmailSending && (
-                                                <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-white/[0.05]">
-                                                    <div className="h-3 w-3 rounded-full border-2 border-t-transparent animate-spin border-[#00DDDD]" />
-                                                    <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/70" : "text-black/80"}`}>Sending emails...</span>
-                                                </div>
-                                            )}
-
-                                            <div className="flex items-center gap-2 justify-end mt-3">
-                                                <button onClick={() => setGmailBulkModal(false)}
-                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/70 hover:bg-white/10" : "text-black/80 hover:bg-black/10"}`}
-                                                >Close</button>
-                                            </div>
-                                        </motion.div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            <div id="walkthrough-input-area" className={`relative flex border-2 transition-all duration-300 ${mcqSession ? "opacity-40 pointer-events-none" : ""} ${isDarkMode ? "border-white bg-[#0a0a0a] focus-within:border-white focus-within:shadow-[0_0_20px_rgba(255,255,255,0.08)]" : "border-black bg-white focus-within:border-black focus-within:shadow-[0_0_20px_rgba(0,0,0,0.08)]"}`}>
-                                <div className="flex-1 min-w-0 flex">
-                                    <div className="flex items-center gap-1 md:gap-2 pl-1.5 md:pl-3 pt-3 pb-2.5 self-end">
-                                        <button
-                                            onClick={() => fileInputRef.current?.click()}
-                                            disabled={isLoading || isProcessingFile}
-                                            className={`p-2 ${isDarkMode ? "text-white hover:text-[#D4AF37]" : "text-black hover:text-[#B8962E]"} transition-all active:scale-95`}
-                                            title="Attach File"
-                                        >
-                                            {isProcessingFile ? (
-                                                <div className="h-4 w-4 border-2 border-[#D4AF37] border-t-transparent animate-spin rounded-full" />
-                                            ) : (
-                                                <Paperclip className="h-4 w-4" />
-                                            )}
-                                        </button>
-                                        <input
-                                            type="file"
-                                            ref={fileInputRef}
-                                            onChange={handleFileChange}
-                                            className="hidden"
-                                            accept="image/*,application/pdf,text/plain,.md"
-                                        />
-                                    </div>
-
-                                    <textarea
-                                        value={input}
-                                        onChange={(e) => {
-                                            setInput(e.target.value);
-                                            e.currentTarget.style.height = 'auto';
-                                            e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                                        }}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter" && !e.shiftKey && !isProcessingFile) {
-                                                e.preventDefault();
-                                                void handleSend();
-                                            }
-                                        }}
-                                        onInput={(e) => {
-                                            e.currentTarget.style.height = 'auto';
-                                            e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                                        }}
-                                        placeholder={isProcessingFile ? "Processing file..." : typedPlaceholder}
-                                        rows={1}
-                                        className={`flex-1 min-w-0 bg-transparent resize-none no-scrollbar ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"} pt-4 pb-1 pl-2 text-base focus:outline-none`}
-                                        style={{ maxHeight: '40vh' }}
-                                    />
-                                </div>
-
-                                <div className="flex items-center justify-end gap-1.5 md:gap-2 pr-1.5 md:pr-3 pt-3 pb-2.5 flex-shrink-0 self-end">
-                                    {!input.trim() && !isProcessingFile && (
-                                        <div className="relative flex items-center justify-center mr-1">
-                                            <AnimatePresence>
-                                                {isRecording && (
-                                                    <>
-                                                        {/* Animated Pulse Circles */}
-                                                        <motion.div
-                                                            initial={{ scale: 0.8, opacity: 0 }}
-                                                            animate={{ scale: [1, 2, 2.5], opacity: [0.5, 0.2, 0] }}
-                                                            exit={{ scale: 0.8, opacity: 0 }}
-                                                            transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
-                                                            className="absolute w-8 h-8 rounded-full bg-[#00DDDD]"
-                                                        />
-                                                        <motion.div
-                                                            initial={{ scale: 0.8, opacity: 0 }}
-                                                            animate={{ scale: [1, 1.5, 2], opacity: [0.8, 0.4, 0] }}
-                                                            exit={{ scale: 0.8, opacity: 0 }}
-                                                            transition={{ repeat: Infinity, duration: 1.5, ease: "easeOut" }}
-                                                            className="absolute w-8 h-8 rounded-full bg-[#00DDDD]"
-                                                        />
-                                                        {/* Sound Waves */}
-                                                        <div className="absolute -top-10 flex gap-0.5 items-end justify-center h-8">
-                                                            {[1, 2, 3, 4, 5].map((i) => (
-                                                                <motion.div
-                                                                    key={i}
-                                                                    animate={{ height: [4, 16, 8, 24, 4] }}
-                                                                    transition={{
-                                                                        repeat: Infinity,
-                                                                        duration: 0.4 + (i * 0.1),
-                                                                        ease: "easeInOut"
-                                                                    }}
-                                                                    className="w-1 bg-[#00DDDD] rounded-full shadow-[0_0_10px_rgba(0,221,221,0.5)]"
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </AnimatePresence>
                                             <button
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    if (isRecording) {
-                                                        stopRecording();
-                                                    } else {
-                                                        startRecording();
-                                                    }
-                                                }}
-                                                className={`p-2 rounded-full transition-all duration-300 relative z-10 ${isRecording
-                                                    ? "bg-[#00DDDD] text-black scale-125 shadow-[0_0_20px_rgba(0,221,221,0.6)]"
-                                                    : (isDarkMode ? "text-white hover:text-[#00DDDD] hover:bg-[#00DDDD]/10" : "text-black hover:text-[#00DDDD] hover:bg-[#00DDDD]/10")
-                                                    }`}
-                                                title={isRecording ? "Click to stop" : "Click to speak"}
+                                                onClick={() => setGmailMailTo("")}
+                                                className={`p-1.5 rounded transition-all ${isDarkMode ? "hover:bg-white/10 text-white/50" : "hover:bg-black/10 text-black/60"}`}
+                                                title="Clear"
                                             >
-                                                <Mic className={`h-4 w-4 ${isRecording ? "animate-pulse" : ""}`} />
+                                                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                                </svg>
                                             </button>
                                         </div>
-                                    )}
-                                    <div className="relative" ref={engineSelectRef} id="walkthrough-engine-select">
-                                        <button
-                                            onClick={() => setShowEngineSelect(!showEngineSelect)}
-                                            className={`flex items-center gap-2 ${isMobile ? "p-2" : "px-3 py-2"} border-2 ${showEngineSelect ? "border-[#00DDDD] text-[#00DDDD]" : (isDarkMode ? "border-white text-white hover:border-[#00DDDD] hover:text-[#00DDDD]" : "border-black text-black hover:border-[#00DDDD] hover:text-[#00DDDD]")} text-[9px] font-mono uppercase tracking-widest transition-all duration-300 rounded`}
-                                        >
-                                            <Bot className="h-3.5 w-3.5" />
-                                            {!isMobile && selectedEngine}
-                                        </button>
-
-                                        <AnimatePresence>
-                                            {showEngineSelect && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    className={`absolute bottom-full right-0 mb-4 w-72 ${isDarkMode ? "bg-[#0d0d0d] border-white" : "bg-white border-black"} border p-2 shadow-2xl z-50`}
-                                                >
-
-                                                    <div className="space-y-1">
-                                                        {visibleEngines.map((engine) => {
-                                                            const featureId = getFeatureIdForEngine(engine.name)
-                                                            const isAvailable = !showEmployeeView || planFeatures.length === 0 || planFeatures.includes(featureId)
-                                                            return (
-                                                                <button
-                                                                    key={engine.name}
-                                                                    onClick={() => {
-                                                                        if (!isAvailable) {
-                                                                            setShowEngineSelect(false);
-                                                                            window.location.href = "/pricing"
-                                                                            return
-                                                                        }
-                                                                        if (engine.name === "Interview Prep") {
-                                                                            setShowEngineSelect(false);
-                                                                            setIsInterviewModalOpen(true);
-                                                                        } else if (engine.name === "Mock Paper Generator") {
-                                                                            setShowEngineSelect(false);
-                                                                            setIsMockPaperModalOpen(true);
-                                                                        } else if (engine.name === "Persona Mode") {
-                                                                            setShowEngineSelect(false);
-                                                                            setIsPersonaModalOpen(true);
-                                                                        } else if (engine.name === "Battle Arena") {
-                                                                            setShowEngineSelect(false);
-                                                                            setIsBattleArenaModalOpen(true);
-                                                                        } else {
-                                                                            setSelectedEngine(engine.name);
-                                                                            setShowEngineSelect(false);
-                                                                        }
-                                                                    }}
-                                                                    className={`w-full flex items-center justify-between p-3 transition-all duration-300 ${selectedEngine === engine.name ? (isDarkMode ? "bg-white/5 text-white scale-102" : "bg-black/5 text-black scale-102") : (isDarkMode ? "hover:bg-white/5 text-white hover:scale-105" : "hover:bg-black/5 text-black hover:scale-105")}`}
-                                                                >
-                                                                    <div className="flex items-center gap-4">
-                                                                        <engine.icon className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black/60"} group-hover:rotate-12 transition-transform`} />
-                                                                        <span className={`text-xs font-medium ${isDarkMode ? "text-white" : "text-black"}`}>{engine.name}</span>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        {isAvailable ? (
-                                                                            <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
-                                                                        ) : (
-                                                                            <XCircle className="h-3.5 w-3.5 text-red-400" />
-                                                                        )}
-                                                                    </div>
-                                                                </button>
-                                                            )
-                                                        })}
-                                                    </div>
-                                                </motion.div>
+                                        {/* Action buttons */}
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <button
+                                                onClick={() => {
+                                                    if (!gmailMailTo.trim() || !input.trim()) return;
+                                                    setGmailConfirmSend(true);
+                                                }}
+                                                disabled={!gmailMailTo.trim() || !input.trim() || gmailSending}
+                                                className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all disabled:opacity-30 ${isDarkMode
+                                                    ? "border-white/25 text-white/70 hover:border-white/40 hover:text-white"
+                                                    : "border-black/30 text-black/80 hover:border-black/50 hover:text-black"
+                                                    }`}
+                                            >
+                                                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M22 2L11 13" /><path d="M22 2L15 22l-4-9-9-4z" />
+                                                </svg>
+                                                Send
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    const next = !gmailAutoOn;
+                                                    setGmailAutoOn(next);
+                                                    if (next) setGmailAutoShowModal(true);
+                                                }}
+                                                className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all ${gmailAutoOn
+                                                    ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/15 border-[#00DDDD] text-[#00DDDD]")
+                                                    : (isDarkMode ? "border-white/25 text-white/70 hover:border-white/40 hover:text-white" : "border-black/30 text-black/80 hover:border-black/50 hover:text-black")
+                                                    }`}
+                                            >
+                                                <svg className={`h-3 w-3 ${gmailAutoOn ? "text-[#00DDDD]" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                                </svg>
+                                                {gmailAutoOn ? "Auto ON" : "Auto"}
+                                            </button>
+                                            <button
+                                                onClick={() => setGmailBulkModal(true)}
+                                                disabled={gmailSending}
+                                                className={`flex items-center gap-1 px-2.5 py-1.5 text-[8px] font-mono uppercase tracking-[0.15em] border rounded-md transition-all disabled:opacity-30 ${isDarkMode
+                                                    ? "border-white/25 text-white/70 hover:border-white/40 hover:text-white"
+                                                    : "border-black/30 text-black/80 hover:border-black/50 hover:text-black"
+                                                    }`}
+                                            >
+                                                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                                </svg>
+                                                Bulk
+                                            </button>
+                                            {gmailSendResult && (
+                                                <span className={`text-[9px] font-mono font-semibold ${gmailSendResult.includes("✓") ? "text-green-600" : "text-red-500"}`}>{gmailSendResult}</span>
                                             )}
-                                        </AnimatePresence>
+                                            {gmailAutoOn && !gmailAutoStatus && !gmailSendResult && (
+                                                <span className="flex items-center gap-1 text-[8px] font-mono font-semibold text-[#00DDDD]">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-[#00DDDD] animate-pulse" />
+                                                    Watching{gmailAutoMode === "to" ? ` ${gmailAutoTargetEmail}` : ""}...
+                                                </span>
+                                            )}
+                                            {gmailAutoStatus && !gmailSendResult && (
+                                                <span className={`text-[9px] font-mono font-semibold ${gmailAutoStatus.includes("✓") ? "text-green-600" : "text-red-500"}`}>{gmailAutoStatus}</span>
+                                            )}
+                                        </div>
                                     </div>
-                                    {isLoading ? (
-                                        <button
-                                            onClick={handleStopGeneration}
-                                            className="p-2 md:p-2.5 bg-[#00DDDD] hover:bg-[#00c5c5] transition-all hover:scale-105 active:scale-95 relative overflow-hidden group flex items-center justify-center rounded"
-                                            title="Pause generation"
-                                        >
-                                            <Pause className="h-3 w-3 text-black fill-black" />
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={() => void handleSend()}
-                                            disabled={isHistoryLoading || isProcessingFile}
-                                            className="p-2 md:p-2.5 bg-[#00DDDD] text-black hover:shadow-[0_0_25px_rgba(0,221,221,0.5)] transition-all hover:scale-105 active:scale-95 relative overflow-hidden group rounded"
-                                        >
-                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                                            <Send className="h-4 w-4 relative z-10" />
-                                        </button>
-                                    )}
-                                </div>
+                                )}
+    
+                                
+    
+                                
+    
+                                
+    
+                                {renderInputContainer(false)}
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* Right Sidebar */}
@@ -3485,8 +2989,8 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                             <button
                                 onClick={() => setRightSidebarTab("usage")}
                                 className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${rightSidebarTab === "usage"
-                                    ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
-                                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")}`}
+                                    ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
+                                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/50 hover:bg-black/5")}`}
                             >
                                 Settings
                             </button>
@@ -3494,8 +2998,8 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                 <button
                                     onClick={() => setRightSidebarTab("wallet")}
                                     className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 ${rightSidebarTab === "wallet"
-                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
-                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")}`}
+                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/50 hover:bg-black/5")}`}
                                 >
                                     <Wallet className="h-3 w-3" />
                                     Wallet
@@ -3505,8 +3009,8 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                 <button
                                     onClick={() => setRightSidebarTab("gmail")}
                                     className={`flex-1 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 ${rightSidebarTab === "gmail"
-                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-[#00DDDD] text-white font-bold shadow-[inset_0_-2px_0_rgba(0,0,0,0.2)]")
-                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black hover:bg-black/5")}`}
+                                        ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold")
+                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/50 hover:bg-black/5")}`}
                                 >
                                     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none">
                                         <rect x="2" y="4" width="20" height="16" rx="2" fill="currentColor"/>
@@ -3574,7 +3078,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                             <circle cx="64" cy="64" r="58" fill="none" stroke={isDarkMode ? "rgba(0, 221, 221, 0.1)" : "rgba(0, 221, 221, 0.05)"} strokeWidth="6" />
                                             <circle
                                                 cx="64" cy="64" r="58" fill="none"
-                                                stroke="#00DDDD"
+                                                stroke={isDarkMode ? "#ffffff" : "#000000"}
                                                 strokeWidth="6"
                                                 strokeDasharray="364"
                                                 strokeDashoffset={String(
@@ -3608,7 +3112,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                                     animate={{
                                                         width: `${Math.min(100, (((subscription?.usage?.chat_tokens_used ?? 0) + (subscription?.usage?.coding_tokens_used ?? 0)) / (subscription?.subscription?.details?.monthly_tokens || 1)) * 100)}%`
                                                     }}
-                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                    className={`h-full ${isDarkMode ? "bg-white" : "bg-black"}`}
                                                 />
                                             </div>
                                         </div>
@@ -3627,7 +3131,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                                     animate={{
                                                         width: `${Math.min(100, ((subscription?.usage?.daily_images ?? 0) / (subscription?.subscription?.details?.daily_image_limit || 1)) * 100)}%`
                                                     }}
-                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                    className={`h-full ${isDarkMode ? "bg-white" : "bg-black"}`}
                                                 />
                                             </div>
                                         </div>
@@ -3646,7 +3150,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                                     animate={{
                                                         width: `${Math.min(100, ((subscription?.usage?.tts_minutes_used ?? 0) / (subscription?.subscription?.details?.tts_minutes_limit || 1)) * 100)}%`
                                                     }}
-                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                    className={`h-full ${isDarkMode ? "bg-white" : "bg-black"}`}
                                                 />
                                             </div>
                                         </div>
@@ -3665,7 +3169,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                                     animate={{
                                                         width: `${Math.min(100, ((subscription?.usage?.stt_minutes_used ?? 0) / (subscription?.subscription?.details?.stt_minutes_limit || 1)) * 100)}%`
                                                     }}
-                                                    className="h-full bg-[#00DDDD] shadow-[0_0_10px_rgba(0,221,221,0.5)]"
+                                                    className={`h-full ${isDarkMode ? "bg-white" : "bg-black"}`}
                                                 />
                                             </div>
                                         </div>
@@ -3988,7 +3492,7 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                                     <circle cx="24" cy="24" r="20" fill="none" stroke={isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"} strokeWidth="3" />
                                     <circle
                                         cx="24" cy="24" r="20" fill="none"
-                                        stroke="#00DDDD"
+                                        stroke={isDarkMode ? "#ffffff" : "#000000"}
                                         strokeWidth="3"
                                         strokeDasharray="125.6"
                                         strokeDashoffset={String(
@@ -4317,6 +3821,286 @@ jane@example.com,"Hey Jane, here is the update"</pre>
                 onJoin={handleBattleArenaJoin}
                 isDarkMode={isDarkMode}
             />
+
+            {/* ─── Bulk Email Modal (Excel Upload) ─── */}
+                            <AnimatePresence>
+                                {gmailBulkModal && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="fixed inset-0 z-[150] flex items-center justify-center p-4"
+                                        onClick={() => setGmailBulkModal(false)}
+                                    >
+                                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/60"} backdrop-blur-sm`} />
+                                        <motion.div
+                                            initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                                            exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                            className={`relative w-full max-w-md rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/20"}`}
+                                        >
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
+                                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="#EA4335" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Bulk Email Send</p>
+                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Upload CSV file with columns: email, message</p>
+                                                </div>
+                                            </div>
+
+                                            <div className={`mb-3 p-2.5 rounded-lg ${isDarkMode ? "bg-white/[0.05] border border-white/10" : "bg-black/[0.06] border border-black/25"}`}>
+                                                <p className={`text-[7px] font-mono uppercase tracking-widest mb-1 ${isDarkMode ? "text-white/50" : "text-black/60"}`}>Accepted CSV format</p>
+                                                <pre className={`text-[8px] font-mono leading-relaxed ${isDarkMode ? "text-white/70" : "text-black/80"}`}>
+email,message{'\n'}
+john@example.com,Hello John check this out{'\n'}
+jane@example.com,"Hey Jane, here is the update"</pre>
+                                            </div>
+
+                                            <div
+                                                onDragOver={(e) => e.preventDefault()}
+                                                onDrop={(e) => {
+                                                    e.preventDefault();
+                                                    const file = e.dataTransfer.files[0];
+                                                    if (file) handleBulkExcelUpload(file);
+                                                }}
+                                                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${isDarkMode ? "border-white/30 hover:border-[#00DDDD]/50 text-white/60" : "border-black/40 hover:border-[#00DDDD]/60 text-black/80"}`}
+                                                onClick={() => bulkFileInputRef.current?.click()}
+                                            >
+                                                <svg className="h-8 w-8 mx-auto mb-2 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+                                                </svg>
+                                                <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/50" : "text-black/80"}`}>Drop CSV file here or click to browse</p>
+                                            </div>
+                                            <input ref={bulkFileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleBulkExcelUpload(file);
+                                                e.target.value = "";
+                                            }} />
+
+                                            {gmailSending && (
+                                                <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-white/[0.05]">
+                                                    <div className="h-3 w-3 rounded-full border-2 border-t-transparent animate-spin border-[#00DDDD]" />
+                                                    <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/70" : "text-black/80"}`}>Sending emails...</span>
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center gap-2 justify-end mt-3">
+                                                <button onClick={() => setGmailBulkModal(false)}
+                                                    className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/70 hover:bg-white/10" : "text-black/80 hover:bg-black/10"}`}
+                                                >Close</button>
+                                            </div>
+                                        </motion.div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+            {/* ─── Send Confirmation Modal ─── */}
+                                <AnimatePresence>
+                                    {gmailConfirmSend && gmailMailTo.trim() && (
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            className="fixed inset-0 z-[150] flex items-center justify-center p-4"
+                                            onClick={() => { setGmailConfirmSend(false); setGmailPolishedBody(""); }}
+                                        >
+                                            <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/60"} backdrop-blur-sm`} />
+                                            <motion.div
+                                                initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                                exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                                                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                className={`relative w-full max-w-lg rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/20"}`}
+                                            >
+                                                <div className="flex items-center gap-3 mb-4">
+                                                    <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
+                                                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                            <rect x="2" y="4" width="20" height="16" rx="2" fill="#EA4335"/>
+                                                            <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Send as Email</p>
+                                                        <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/80"}`}>
+                                                            To: <span className="font-bold">{gmailMailTo.includes(",") ? `${gmailMailTo.split(",").length} recipients` : gmailMailTo}</span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+    
+                                                {/* Polished email body */}
+                                                {gmailPolishing ? (
+                                                    <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-white/[0.05]">
+                                                        <div className="h-4 w-4 rounded-full border-2 border-t-transparent animate-spin border-[#4285F4]" />
+                                                        <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/70" : "text-black/80"}`}>AI is polishing your message...</span>
+                                                    </div>
+                                                ) : gmailPolishedBody ? (
+                                                    <>
+                                                        <textarea
+                                                            value={gmailPolishedBody}
+                                                            onChange={(e) => setGmailPolishedBody(e.target.value)}
+                                                            rows={6}
+                                                            className={`w-full mb-3 p-2.5 text-[10px] font-mono leading-relaxed rounded-lg border outline-none resize-none transition-all ${isDarkMode
+                                                                ? "bg-white/[0.05] border-white/20 text-white/90 focus:border-[#4285F4]/50"
+                                                                : "bg-black/[0.04] border-black/30 text-black/90 focus:border-[#4285F4]/70"
+                                                                }`}
+                                                        />
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
+                                                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                            <rect x="2" y="4" width="20" height="16" rx="2" fill="#EA4335"/>
+                                                            <path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Send as Email</p>
+                                                        <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/80"}`}>
+                                                            To: <span className="font-bold">{gmailMailTo.includes(",") ? `${gmailMailTo.split(",").length} recipients` : gmailMailTo}</span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                    </>
+                                                ) : null}
+    
+                                                <div className="flex items-center gap-2 justify-end">
+                                                    <button
+                                                        onClick={() => { setGmailConfirmSend(false); setGmailPolishedBody(""); }}
+                                                        className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/70 hover:bg-white/10" : "text-black/80 hover:bg-black/10"}`}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleMailSend(gmailPolishedBody || input.trim())}
+                                                        disabled={gmailSending || gmailPolishing}
+                                                        className={`px-4 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all disabled:opacity-50 ${isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90"}`}
+                                                    >
+                                                        {gmailSending ? "Sending..." : "Send"}
+                                                    </button>
+                                                </div>
+                                            </motion.div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+            {/* ─── Auto Context Modal ─── */}
+                                <AnimatePresence>
+                                    {gmailAutoShowModal && (
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            className="fixed inset-0 z-[150] flex items-center justify-center p-4"
+                                            onClick={() => setGmailAutoShowModal(false)}
+                                        >
+                                            <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/60"} backdrop-blur-sm`} />
+                                            <motion.div
+                                                initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                                exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                                                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                className={`relative w-full max-w-lg rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/20"}`}
+                                            >
+                                                <div className="flex items-center gap-3 mb-4">
+                                                    <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#00DDDD]/10" : "bg-[#00DDDD]/15"}`}>
+                                                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#ffffff" : "#000000"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                                                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Auto Email Context</p>
+                                                        <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Set tone, signature, and mode for auto-replies</p>
+                                                    </div>
+                                                </div>
+    
+                                                <div className="space-y-3 mb-4">
+                                                    <div>
+                                                        <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Tone</label>
+                                                        <select value={gmailAutoTone} onChange={(e) => setGmailAutoTone(e.target.value)}
+                                                            className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white" : "bg-black/[0.04] border-black/30 text-black"}`}
+                                                        >
+                                                            <option value="professional">Professional</option>
+                                                            <option value="casual">Casual</option>
+                                                            <option value="formal">Formal</option>
+                                                            <option value="direct">Direct</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Signature (optional)</label>
+                                                        <textarea value={gmailAutoSignature} onChange={(e) => setGmailAutoSignature(e.target.value)} rows={2}
+                                                            className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none resize-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white/80" : "bg-black/[0.04] border-black/30 text-black/80"}`}
+                                                            placeholder="Best regards,&#10;John Doe"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Instructions (optional)</label>
+                                                        <textarea value={gmailAutoInstructions} onChange={(e) => setGmailAutoInstructions(e.target.value)} rows={3}
+                                                            className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none resize-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white/80" : "bg-black/[0.04] border-black/30 text-black/80"}`}
+                                                            placeholder="Be concise, always include a call to action..."
+                                                        />
+                                                    </div>
+    
+                                                    <div className="flex items-center gap-2 pt-2">
+                                                        <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Mode:</label>
+                                                        <button
+                                                            onClick={() => setGmailAutoMode(gmailAutoMode === "all" ? null : "all")}
+                                                            className={`px-2.5 py-1 text-[8px] font-mono rounded border transition-all ${gmailAutoMode === "all"
+                                                                ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/15 border-[#00DDDD] text-[#00DDDD]")
+                                                                : (isDarkMode ? "border-white/25 text-white/70" : "border-black/30 text-black/70")
+                                                                }`}
+                                                        >
+                                                            Auto All
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setGmailAutoMode(gmailAutoMode === "to" ? null : "to")}
+                                                            className={`px-2.5 py-1 text-[8px] font-mono rounded border transition-all ${gmailAutoMode === "to"
+                                                                ? (isDarkMode ? "bg-[#00DDDD]/20 border-[#00DDDD] text-[#00DDDD]" : "bg-[#00DDDD]/15 border-[#00DDDD] text-[#00DDDD]")
+                                                                : (isDarkMode ? "border-white/25 text-white/70" : "border-black/30 text-black/70")
+                                                                }`}
+                                                        >
+                                                            Auto To
+                                                        </button>
+                                                    </div>
+                                                    {gmailAutoMode === "to" && (
+                                                        <div>
+                                                            <label className={`text-[8px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/60" : "text-black/70"}`}>Target Email</label>
+                                                            <input type="email" value={gmailAutoTargetEmail} onChange={(e) => setGmailAutoTargetEmail(e.target.value)}
+                                                                className={`w-full mt-1 px-2 py-1.5 text-[10px] font-mono rounded border outline-none ${isDarkMode ? "bg-white/[0.05] border-white/20 text-white" : "bg-black/[0.04] border-black/30 text-black"}`}
+                                                                placeholder="someone@example.com"
+                                                            />
+                                </div>
+                            )}
+                                                </div>
+    
+                                                <div className="flex items-center gap-2 justify-end">
+                                                    <button onClick={() => { setGmailAutoShowModal(false); setGmailAutoOn(false); setGmailAutoMode(null); }}
+                                                        className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/70 hover:bg-white/10" : "text-black/80 hover:bg-black/10"}`}
+                                                    >Cancel</button>
+                                                    <button onClick={async () => {
+                                                        setGmailAutoShowModal(false);
+                                                        if (!gmailAutoMode) return;
+                                                        try {
+                                                            const { setGoogleAgentContext } = await import("@/lib/chat-api");
+                                                            await setGoogleAgentContext({
+                                                                tone: gmailAutoTone,
+                                                                signature: gmailAutoSignature,
+                                                                instructions: gmailAutoInstructions,
+                                                                is_active: true,
+                                                                reply_strategy: gmailAutoMode
+                                                            });
+                                                        } catch { /* context save optional */ }
+                                                        setGmailAutoStatus(gmailAutoMode === "all" ? "Watching all emails..." : `Watching ${gmailAutoTargetEmail}...`);
+                                                    }} disabled={!gmailAutoMode || (gmailAutoMode === "to" && !gmailAutoTargetEmail.trim())}
+                                                        className={`px-4 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all disabled:opacity-50 ${isDarkMode ? "bg-[#00DDDD] text-black hover:bg-[#00DDDD]/90" : "bg-[#00DDDD] text-black hover:bg-[#00DDDD]/90"}`}
+                                                    >Apply</button>
+                                                </div>
+                                            </motion.div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
 
             {/* Onboarding Walkthrough */}
             <OnboardingWalkthrough
