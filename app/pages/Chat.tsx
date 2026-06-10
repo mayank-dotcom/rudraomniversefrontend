@@ -4028,6 +4028,8 @@ STRICT RULES:
                 userEmail={userEmail}
                 initialPanel={settingsPanel}
                 onAccentChange={setAccent}
+                subscription={subscription}
+                isSubscriptionLoading={isSubscriptionLoading}
             />
 
             {/* Personalization Modal */}

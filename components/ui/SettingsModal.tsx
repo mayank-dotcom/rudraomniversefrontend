@@ -57,7 +57,7 @@ const FAQ_ITEMS = [
 ];
 
 // ─── Panel IDs ────────────────────────────────────────────────────────────────
-type Panel = "general" | "persona" | "faq" | "bug" | "deactivate";
+type Panel = "general" | "persona" | "plan" | "faq" | "bug" | "deactivate";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface SettingsModalProps {
@@ -73,6 +73,8 @@ interface SettingsModalProps {
     userEmail: string;
     initialPanel?: Panel;
     onAccentChange?: (color: string) => void;
+    subscription?: any;
+    isSubscriptionLoading?: boolean;
 }
 
 // ─── Persona Panel ─────────────────────────────────────────────────────────
@@ -846,6 +848,8 @@ export default function SettingsModal({
     userEmail,
     initialPanel = "persona",
     onAccentChange,
+    subscription,
+    isSubscriptionLoading,
 }: SettingsModalProps) {
     const { t } = useTranslation();
     const [activePanel, setActivePanel] = useState<Panel>(initialPanel);
@@ -862,6 +866,7 @@ export default function SettingsModal({
     const navItems: { id: Panel; label: string; icon: any }[] = [
         { id: "general", label: t("general"), icon: Settings },
         { id: "persona", label: t("persona"), icon: Sparkles },
+        { id: "plan", label: t("plan_details"), icon: CreditCard },
         { id: "faq", label: t("faq"), icon: HelpCircle },
         { id: "bug", label: t("bug_report"), icon: Bug },
         { id: "deactivate", label: t("deactivate"), icon: Trash2 },
@@ -980,6 +985,9 @@ export default function SettingsModal({
                                         )}
                                         {activePanel === "persona" && (
                                             <PersonaPanel isDarkMode={isDarkMode} onPersonaSelect={onPersonaSelect} currentPersona={currentPersona} accent={accent} />
+                                        )}
+                                        {activePanel === "plan" && (
+                                            <PlanPanel isDarkMode={isDarkMode} subscription={subscription} isSubscriptionLoading={isSubscriptionLoading ?? false} accent={accent} />
                                         )}
                                         {activePanel === "faq" && (
                                             <FAQPanel isDarkMode={isDarkMode} />
