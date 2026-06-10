@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import AuthModal from "@/components/ui/AuthModal";
 
 const navLinks = [
   { label: "Features", href: "#features" },
@@ -13,6 +14,7 @@ const navLinks = [
 export default function Navbar({ visible }: { visible: boolean }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,7 +25,8 @@ export default function Navbar({ visible }: { visible: boolean }) {
   }, []);
 
   return (
-    <nav
+    <>
+      <nav
       className={`fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-500 w-[92%] md:w-[85%] max-w-5xl ${
         visible
           ? scrolled
@@ -56,10 +59,10 @@ export default function Navbar({ visible }: { visible: boolean }) {
 
         {/* Buttons */}
         <div className="hidden md:flex items-center gap-2">
-          <button className="font-serif italic text-[13px] lg:text-[14px] font-normal text-white/70 hover:text-white hover:bg-white/[0.05] px-4 py-2 rounded-full transition-all duration-300">
+          <button onClick={() => setAuthOpen(true)} className="font-serif italic text-[13px] lg:text-[14px] font-normal text-white/70 hover:text-white hover:bg-white/[0.05] px-4 py-2 rounded-full transition-all duration-300">
             Sign In
           </button>
-          <button className="font-serif italic text-[13px] lg:text-[14px] bg-white hover:bg-neutral-100 text-black px-5 py-2 rounded-full font-bold transition-all duration-300 hover:shadow-[0_0_20px_rgba(255,255,255,0.25)] active:scale-95">
+          <button onClick={() => setAuthOpen(true)} className="font-serif italic text-[13px] lg:text-[14px] bg-white hover:bg-neutral-100 text-black px-5 py-2 rounded-full font-bold transition-all duration-300 hover:shadow-[0_0_20px_rgba(255,255,255,0.25)] active:scale-95">
             Get Started
           </button>
         </div>
@@ -101,10 +104,10 @@ export default function Navbar({ visible }: { visible: boolean }) {
                 </a>
               ))}
               <div className="flex gap-3 pt-4 border-t border-white/[0.05]">
-                <button className="font-serif italic text-sm font-normal flex-1 text-white/70 hover:text-white hover:bg-white/[0.05] py-2 rounded-full transition-all duration-300">
+                <button onClick={() => { setAuthOpen(true); setMobileOpen(false); }} className="font-serif italic text-sm font-normal flex-1 text-white/70 hover:text-white hover:bg-white/[0.05] py-2 rounded-full transition-all duration-300">
                   Sign In
                 </button>
-                <button className="font-serif italic text-sm font-bold flex-1 bg-white text-black py-2 rounded-full hover:bg-white/90 transition-all shadow-[0_0_15px_rgba(255,255,255,0.15)]">
+                <button onClick={() => { setAuthOpen(true); setMobileOpen(false); }} className="font-serif italic text-sm font-bold flex-1 bg-white text-black py-2 rounded-full hover:bg-white/90 transition-all shadow-[0_0_15px_rgba(255,255,255,0.15)]">
                   Get Started
                 </button>
               </div>
@@ -113,5 +116,7 @@ export default function Navbar({ visible }: { visible: boolean }) {
         )}
       </AnimatePresence>
     </nav>
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+    </>
   );
 }

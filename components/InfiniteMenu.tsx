@@ -432,7 +432,7 @@ function makeVertexArray(
 }
 
 function resizeCanvasToDisplaySize(canvas: HTMLCanvasElement): boolean {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
   const displayWidth = Math.round(canvas.clientWidth * dpr);
   const displayHeight = Math.round(canvas.clientHeight * dpr);
   const needResize = canvas.width !== displayWidth || canvas.height !== displayHeight;
@@ -576,7 +576,7 @@ class ArcballControl {
         const autoRotationQuat = quat.create();
         const autoRotationAxis = vec3.fromValues(0.2, 1.0, 0.15);
         vec3.normalize(autoRotationAxis, autoRotationAxis);
-        const autoRotationSpeed = 0.0025 * timeScale;
+        const autoRotationSpeed = 0.0015 * timeScale;
         quat.setAxisAngle(autoRotationQuat, autoRotationAxis, autoRotationSpeed);
         quat.copy(snapRotation, autoRotationQuat);
       }
@@ -717,7 +717,7 @@ class InfiniteGridMenu {
   private hoverProgress = 0;
 
   private TARGET_FRAME_DURATION = 1000 / 60;
-  private SPHERE_RADIUS = 1.0;
+  private SPHERE_RADIUS = 1.8;
 
   public camera: Camera = {
     matrix: mat4.create(),
@@ -819,7 +819,7 @@ class InfiniteGridMenu {
     );
 
     this.icoGeo = new IcosahedronGeometry();
-    this.icoGeo.subdivide(2).spherize(this.SPHERE_RADIUS);
+    this.icoGeo.subdivide(3).spherize(this.SPHERE_RADIUS);
     this.instancePositions = this.icoGeo.vertices.map(v => v.position);
     this.DISC_INSTANCE_COUNT = this.icoGeo.vertices.length;
     this.initDiscInstances(this.DISC_INSTANCE_COUNT);

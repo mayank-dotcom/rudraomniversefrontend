@@ -157,84 +157,84 @@ const getCardLayout = (index: number) => {
     case 0: // PDF Analyze (Large 2x2) - Deep Matte Black
       return {
         span: "md:col-span-2 md:row-span-2",
-        bg: "bg-[#040306]/95 border border-white/[0.04] group-hover:bg-white group-hover:border-transparent",
+        bg: "bg-[#040306]/95 border border-white/[0.04] group-hover:bg-neutral-200 group-hover:border-transparent",
         glow: "hover:shadow-[0_20px_50px_rgba(255,255,255,0.08)] hover:-translate-y-2",
         type: "large"
       };
     case 1: // Live Interview (Standard 1x1) - Sleek Medium Grey
       return {
         span: "md:col-span-1 md:row-span-1",
-        bg: "bg-[#111014]/80 border border-white/[0.06] group-hover:bg-white group-hover:border-transparent",
+        bg: "bg-[#111014]/80 border border-white/[0.06] group-hover:bg-neutral-200 group-hover:border-transparent",
         glow: "hover:shadow-[0_20px_50px_rgba(255,255,255,0.08)] hover:-translate-y-2",
         type: "standard"
       };
     case 2: // Mock Paper (Tall 1x2) - Light Silver/Translucent White Glass
       return {
         span: "md:col-span-1 md:row-span-2",
-        bg: "bg-white/[0.03] border border-white/[0.06] group-hover:bg-white group-hover:border-transparent",
+        bg: "bg-white/[0.03] border border-white/[0.06] group-hover:bg-neutral-200 group-hover:border-transparent",
         glow: "hover:shadow-[0_20px_50px_rgba(255,255,255,0.08)] hover:-translate-y-2",
         type: "tall"
       };
     case 3: // Persona Mode (Standard 1x1) - Deep Matte Black
       return {
         span: "md:col-span-1 md:row-span-1",
-        bg: "bg-[#040306]/95 border border-white/[0.04] group-hover:bg-white group-hover:border-transparent",
+        bg: "bg-[#040306]/95 border border-white/[0.04] group-hover:bg-neutral-200 group-hover:border-transparent",
         glow: "hover:shadow-[0_20px_50px_rgba(255,255,255,0.08)] hover:-translate-y-2",
         type: "standard"
       };
     case 4: // Image Generation (Wide 2x1) - Sleek Medium Grey
       return {
         span: "md:col-span-2 md:row-span-1",
-        bg: "bg-[#111014]/80 border border-white/[0.06] group-hover:bg-white group-hover:border-transparent",
+        bg: "bg-[#111014]/80 border border-white/[0.06] group-hover:bg-neutral-200 group-hover:border-transparent",
         glow: "hover:shadow-[0_20px_50px_rgba(255,255,255,0.08)] hover:-translate-y-2",
         type: "wide"
       };
     case 5: // Image Library (Standard 1x1) - Light Silver/Translucent White Glass
       return {
         span: "md:col-span-1 md:row-span-1",
-        bg: "bg-white/[0.03] border border-white/[0.06] group-hover:bg-white group-hover:border-transparent",
+        bg: "bg-white/[0.03] border border-white/[0.06] group-hover:bg-neutral-200 group-hover:border-transparent",
         glow: "hover:shadow-[0_20px_50px_rgba(255,255,255,0.08)] hover:-translate-y-2",
         type: "standard"
       };
     case 6: // Battle Arena (Wide 2x1) - Deep Matte Black
       return {
         span: "md:col-span-2 md:row-span-1",
-        bg: "bg-[#040306]/95 border border-white/[0.04] group-hover:bg-white group-hover:border-transparent",
+        bg: "bg-[#040306]/95 border border-white/[0.04] group-hover:bg-neutral-200 group-hover:border-transparent",
         glow: "hover:shadow-[0_20px_50px_rgba(255,255,255,0.08)] hover:-translate-y-2",
         type: "wide"
       };
     case 7: // Gmail Manager (Tall 1x2) - Sleek Medium Grey
       return {
         span: "md:col-span-1 md:row-span-2",
-        bg: "bg-[#111014]/80 border border-white/[0.06] group-hover:bg-white group-hover:border-transparent",
+        bg: "bg-[#111014]/80 border border-white/[0.06] group-hover:bg-neutral-200 group-hover:border-transparent",
         glow: "hover:shadow-[0_20px_50px_rgba(255,255,255,0.08)] hover:-translate-y-2",
         type: "tall"
       };
     case 8: // Auto Reply & Bulk Email (Large 2x2) - Light Silver/Translucent White Glass
       return {
         span: "md:col-span-2 md:row-span-2",
-        bg: "bg-white/[0.03] border border-white/[0.06] group-hover:bg-white group-hover:border-transparent",
+        bg: "bg-white/[0.03] border border-white/[0.06] group-hover:bg-neutral-200 group-hover:border-transparent",
         glow: "hover:shadow-[0_20px_50px_rgba(255,255,255,0.08)] hover:-translate-y-2",
         type: "large"
       };
     case 9: // Enterprise Manager (Large 2x2) - Deep Matte Black
       return {
         span: "md:col-span-2 md:row-span-2",
-        bg: "bg-[#040306]/95 border border-white/[0.04] group-hover:bg-white group-hover:border-transparent",
+        bg: "bg-[#040306]/95 border border-white/[0.04] group-hover:bg-neutral-200 group-hover:border-transparent",
         glow: "hover:shadow-[0_20px_50px_rgba(255,255,255,0.08)] hover:-translate-y-2",
         type: "large"
       };
     case 10: // Admin Panel (Standard 1x1) - Sleek Medium Grey
       return {
         span: "md:col-span-1 md:row-span-1",
-        bg: "bg-[#111014]/80 border border-white/[0.06] group-hover:bg-white group-hover:border-transparent",
+        bg: "bg-[#111014]/80 border border-white/[0.06] group-hover:bg-neutral-200 group-hover:border-transparent",
         glow: "hover:shadow-[0_20px_50px_rgba(255,255,255,0.08)] hover:-translate-y-2",
         type: "standard"
       };
     default:
       return {
         span: "md:col-span-1 md:row-span-1",
-        bg: "bg-white/[0.02] border border-white/[0.05] group-hover:bg-white group-hover:border-transparent",
+        bg: "bg-white/[0.02] border border-white/[0.05] group-hover:bg-neutral-200 group-hover:border-transparent",
         glow: "hover:shadow-none hover:-translate-y-2",
         type: "standard"
       };
@@ -449,7 +449,7 @@ const createReviewCardImage = (review: { initials: string; name: string; role: s
   ctx.fill();
 
   // 3. Draw Quotation Mark watermark in background
-  ctx.fillStyle = "rgba(255, 255, 255, 0.02)";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
   ctx.font = "italic bold 180px Georgia, serif";
   ctx.textAlign = "right";
   ctx.textBaseline = "top";
@@ -1467,7 +1467,7 @@ const Index = () => {
 
                       {/* BACK FACE */}
                       <div
-                        className={`absolute inset-0 backface-hidden rotate-y-180 w-full h-full rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur-xl flex flex-col justify-between overflow-hidden shadow-[inset_0_0_30px_rgba(255,255,255,0.02)] transition-all duration-500 ease-out group-hover:bg-white group-hover:border-transparent ${layout.type === "large" ? "p-8" : "p-6"
+                        className={`absolute inset-0 backface-hidden rotate-y-180 w-full h-full rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur-xl flex flex-col justify-between overflow-hidden shadow-[inset_0_0_30px_rgba(255,255,255,0.02)] transition-all duration-500 ease-out group-hover:bg-neutral-200 group-hover:border-transparent ${layout.type === "large" ? "p-8" : "p-6"
                           }`}
                       >
                         {/* Dot Grid background for back face */}
@@ -1510,7 +1510,7 @@ const Index = () => {
         <section className="relative bg-white w-full">
           <div className="w-full relative">
             {menuItems.length > 0 && (
-              <div className="relative w-full h-[800px] md:h-[900px] overflow-hidden bg-transparent border border-black">
+              <div className="relative w-full h-[800px] md:h-[900px] overflow-hidden bg-transparent">
                 {/* Heading inside the globe section container */}
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
@@ -1799,12 +1799,12 @@ const Index = () => {
                   activeIndex={activeEnterpriseCard}
                   onActiveIndexChange={setActiveEnterpriseCard}
                   invertStacking={true}
-                  className="left-0 md:left-20 transform translate-x-[12%] md:translate-x-[16%] -translate-y-[5vh] origin-bottom-left max-[768px]:translate-x-[5%] max-[768px]:translate-y-[5%] max-[768px]:scale-[0.75] max-[480px]:translate-x-[2%] max-[480px]:translate-y-[5%] max-[480px]:scale-[0.6]"
+                  className="left-0 md:left-20 transform translate-x-[12%] md:translate-x-[16%] -translate-y-[12vh] origin-bottom-left max-[768px]:translate-x-[5%] max-[768px]:translate-y-[5%] max-[768px]:scale-[0.75] max-[480px]:translate-x-[2%] max-[480px]:translate-y-[5%] max-[480px]:scale-[0.6]"
                 >
                   {enterpriseTools.map((tool, idx) => {
                     const isActive = activeEnterpriseCard === idx;
                     return (
-                      <Card key={tool.name}>
+                      <Card key={tool.name} customClass="bg-neutral-700/95">
                         <div className="flex flex-col h-full justify-between select-none">
                           <div className="flex items-center justify-end gap-3 shrink-0 text-right w-full">
                             <div>
@@ -1817,8 +1817,8 @@ const Index = () => {
                           <div className="flex-grow overflow-hidden mt-3 mb-2">
                             {renderToolDemo(tool.name, isActive)}
                           </div>
-                          <div className="text-[8px] font-mono uppercase tracking-[0.2em] text-white/25 border-t border-white/5 pt-1.5 shrink-0 text-right w-full">
-                            ENTERPRISE COMPANION
+                          <div className="text-[8px] font-mono uppercase tracking-[0.2em] text-white/25 border-t border-white/5 pt-1.5 shrink-0">
+                            ENTERPRISE READY
                           </div>
                         </div>
                       </Card>
@@ -1831,7 +1831,7 @@ const Index = () => {
         </section>
 
         {/* CTA */}
-        <section id="pricing" className="py-20 px-6 border-t border-white/5 bg-[#050308]">
+        <section id="pricing" className="py-20 px-6 border-t border-white/5 bg-[#050308] rounded-b-[40px]">
           <div className="max-w-7xl mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -1872,7 +1872,7 @@ const Index = () => {
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-black/5 bg-white">
+        <footer className="border-t border-black/5 bg-white rounded-b-[40px]">
           <div className="max-w-7xl mx-auto px-6 py-10 md:py-12">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 mb-10">
               {/* Brand - 4 cols */}
@@ -1916,43 +1916,46 @@ const Index = () => {
                 </ul>
               </div>
 
-              {/* Contact & Social - 4 cols */}
-              <div className="lg:col-span-4 flex flex-col gap-6">
+              {/* Connect - 2 cols */}
+              <div className="lg:col-span-2 flex flex-col gap-6">
                 <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-black/60">Connect</h4>
                 <div className="flex flex-col gap-4">
-                  <a href="mailto:hello@rudranex.ai" className="flex items-center gap-3 text-sm text-black/50 hover:text-black/80 transition-colors group">
-                    <div className="w-9 h-9 rounded-lg border border-black/10 flex items-center justify-center group-hover:border-black/30 transition-colors">
+                  <a href="mailto:hello@rudranex.ai" className="flex items-center gap-3 text-sm text-black hover:text-black/80 transition-colors group">
+                    <div className="w-9 h-9 rounded-lg border border-black flex items-center justify-center group-hover:border-black group-hover:scale-110 group-hover:bg-black group-hover:text-white transition-all duration-300">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                     </div>
                     <span>hello@rudranex.ai</span>
                   </a>
-                  <div className="flex items-center gap-3 text-sm text-black/50">
-                    <div className="w-9 h-9 rounded-lg border border-black/10 flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-3 text-sm text-black">
+                    <div className="w-9 h-9 rounded-lg border border-black flex items-center justify-center shrink-0 transition-all duration-300 hover:scale-110 hover:bg-black hover:text-white">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     </div>
-                    <span className="text-black/50">Rudra Labs, AI Innovation Center, Hyderabad, India.</span>
+                    <span className="text-black">Rudra Labs, AI Innovation Center, Hyderabad, India.</span>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <a href="tel:+919712445459" className="flex items-center gap-3 text-sm text-black/50 hover:text-black/80 transition-colors group">
-                      <div className="w-9 h-9 rounded-lg border border-black/10 flex items-center justify-center group-hover:border-black/30 transition-colors">
+                    <a href="tel:+919712445459" className="flex items-center gap-3 text-sm text-black hover:text-black/80 transition-colors group">
+                      <div className="w-9 h-9 rounded-lg border border-black flex items-center justify-center group-hover:border-black group-hover:scale-110 group-hover:bg-black group-hover:text-white transition-all duration-300">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                       </div>
                       <span>+91 97124 45459</span>
                     </a>
-                    <a href="tel:+916359302924" className="flex items-center gap-3 text-sm text-black/50 hover:text-black/80 transition-colors group ml-12">
+                    <a href="tel:+916359302924" className="flex items-center gap-3 text-sm text-black hover:text-black/80 transition-colors group ml-12">
                       <span>+91 63593 02924</span>
                     </a>
                   </div>
                 </div>
+              </div>
 
-                {/* Social Links */}
-                <div className="flex items-center gap-3 mt-2">
+              {/* Social - 2 cols */}
+              <div className="lg:col-span-2 flex flex-col gap-6">
+                <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-black/60">Follow Us</h4>
+                <div className="flex items-center gap-3">
                   {[
-                    { href: "#", label: "Twitter", path: "M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" },
+                    { href: "#", label: "Twitter", path: "M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" },
                     { href: "#", label: "LinkedIn", path: "M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2zM4 6a2 2 0 100-4 2 2 0 000 4z" },
                     { href: "#", label: "GitHub", path: "M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" },
                   ].map((social) => (
-                    <a key={social.label} href={social.href} aria-label={social.label} className="w-9 h-9 rounded-lg border border-black/10 flex items-center justify-center text-black/30 hover:text-black hover:border-black/30 transition-all">
+                    <a key={social.label} href={social.href} aria-label={social.label} className="w-9 h-9 rounded-lg border border-black flex items-center justify-center text-black hover:bg-black hover:text-white hover:scale-110 transition-all duration-300">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                         <path d={social.path} />
                       </svg>
