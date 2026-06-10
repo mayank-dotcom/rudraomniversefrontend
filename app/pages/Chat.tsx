@@ -48,12 +48,11 @@ import MCQQuizView from "@/components/MCQQuizView";
 import type { MCQQuestion } from "@/components/MCQQuizView";
 import PersonaModal, { type Persona } from "@/components/PersonaModal";
 import BattleArenaModal from "@/components/BattleArenaModal";
-import { GraduationCap as MockIcon } from "lucide-react";
 import WelcomeBox from "@/components/ui/WelcomeBox";
 import WalletPanel from "@/components/ui/WalletPanel";
 import OnboardingWalkthrough from "@/components/OnboardingWalkthrough";
 import SettingsModal from "@/components/ui/SettingsModal";
-import PersonalizationModal from "@/components/ui/PersonalizationModal";
+import ReflectiveCard from "@/components/ReflectiveCard";
 import WalletModal from "@/components/ui/WalletModal";
 
 function getContrastColor(hex: string): string {
@@ -352,7 +351,7 @@ const Chat = () => {
     }, []);
 
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-    const [settingsPanel, setSettingsPanel] = useState<"persona" | "plan" | "faq" | "bug" | "deactivate">("persona");
+    const [settingsPanel, setSettingsPanel] = useState<"persona" | "faq" | "bug" | "deactivate">("persona");
     const [isPersonalizationModalOpen, setIsPersonalizationModalOpen] = useState(false);
     const [profilePic, setProfilePic] = useState<string | null>(null);
     useEffect(() => {
@@ -400,7 +399,7 @@ const Chat = () => {
         { name: "Assistant Mode", endpoint: "/chat", icon: Bot },
 
         { name: "Interview Prep", endpoint: "/tools/interview", icon: UserCog },
-        { name: "Mock Paper Generator", endpoint: "/chat", icon: MockIcon },
+        { name: "Mock Paper Generator", endpoint: "/chat", icon: FileIcon },
         { name: "Persona Mode", endpoint: "/chat", icon: Sparkles },
         { name: "AI Image Lab", endpoint: "/features/image/generate", icon: ImageIcon },
         { name: "Battle Arena", endpoint: "/battle-arena", icon: Swords },
@@ -408,6 +407,7 @@ const Chat = () => {
 
     const employeeRestrictedEngines = ["Explore Mode", "Interview Prep", "Mock Paper Generator", "Battle Arena"];
     const userRole = typeof window !== "undefined" ? getUserRole() : null;
+    const schoolName = typeof window !== "undefined" ? getSchoolName() : null;
     const isGlobalAdmin = userRole === "global_admin";
     const showEmployeeView = userRole === "employee" || userRole === "enterprise_admin" || userRole === "manager" || userRole === "school_admin" || userRole === "faculty" || (isGlobalAdmin && !isEnterpriseMode);
     const visibleEngines = showEmployeeView
@@ -2065,80 +2065,42 @@ STRICT RULES:
 
                         <div className={`h-4 w-px ${isDarkMode ? "bg-white/10" : "bg-black/10"} mx-1`} />
 
-                        {/* Minimal Quick Toggles */}
+                        {/* Quick Engine Mode Switcher */}
                         <div className="flex items-center gap-1">
-                            {/* Pro Toggle */}
-                            <button
-                                onClick={() => setProActive(!proActive)}
-                                className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${proActive
-                                        ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm")
-                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
-                                    }`}
-                                title={t("pro_mode")}
-                            >
-                                <Sparkles className="h-3.5 w-3.5" />
-                            </button>
-
-                            {/* Code Toggle */}
-                            <button
-                                onClick={() => setCodeActive(!codeActive)}
-                                className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${codeActive
-                                        ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm")
-                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
-                                    }`}
-                                title={t("code_agent")}
-                            >
-                                <Code className="h-3.5 w-3.5" />
-                            </button>
-
-                            {/* Web Toggle */}
-                            <button
-                                onClick={() => setWebActive(!webActive)}
-                                className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${webActive
-                                        ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm")
-                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
-                                    }`}
-                                title={t("web_search")}
-                            >
-                                <Globe className="h-3.5 w-3.5" />
-                            </button>
-
-                            {/* Style Toggle */}
-                            <button
-                                onClick={() => {
-                                    if (selectedEngine === "AI Image Lab") {
-                                        setSelectedEngine("Assistant Mode");
-                                    } else {
-                                        setSelectedEngine("AI Image Lab");
-                                    }
-                                }}
-                                className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${selectedEngine === "AI Image Lab"
-                                        ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm")
-                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
-                                    }`}
-                                title={t("image_style")}
-                            >
-                                <Palette className="h-3.5 w-3.5" />
-                            </button>
-
-                            {/* Mic Toggle */}
-                            <button
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    if (isRecording) {
-                                        stopRecording();
-                                    } else {
-                                        startRecording();
-                                    }
-                                }}
-                                className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${isRecording
-                                        ? "bg-red-500/20 text-red-400 animate-pulse"
-                                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
-                                    }`}
-                                title={isRecording ? t("stop_recording") : t("voice_input")}
-                            >
-                                <Mic className="h-3.5 w-3.5" />
-                            </button>
+                            {visibleEngines.map((engine) => {
+                                const featureId = getFeatureIdForEngine(engine.name);
+                                const isAvailable = planFeatures.length === 0 || planFeatures.includes(featureId);
+                                const Icon = engine.icon as any;
+                                return (
+                                    <button
+                                        key={engine.name}
+                                        onClick={() => {
+                                            if (!isAvailable) {
+                                                window.location.href = "/pricing";
+                                                return;
+                                            }
+                                            if (engine.name === "Interview Prep") {
+                                                setIsInterviewModalOpen(true);
+                                            } else if (engine.name === "Mock Paper Generator") {
+                                                setIsMockPaperModalOpen(true);
+                                            } else if (engine.name === "Persona Mode") {
+                                                setIsPersonaModalOpen(true);
+                                            } else if (engine.name === "Battle Arena") {
+                                                setIsBattleArenaModalOpen(true);
+                                            } else {
+                                                setSelectedEngine(engine.name);
+                                            }
+                                        }}
+                                        className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${selectedEngine === engine.name
+                                                ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm")
+                                                : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                                            }`}
+                                        title={engine.name}
+                                    >
+                                        <Icon className="h-3.5 w-3.5" />
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -2360,24 +2322,22 @@ STRICT RULES:
                                             className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
                                                 }`}
                                         >
-                                            <div className={`h-3.5 w-3.5 rounded-full flex items-center justify-center shrink-0 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
-                                                <User className="h-2.5 w-2.5 opacity-60" />
-                                            </div>
-                                            <span>{t("persona")}</span>
+                                            <User className="h-3.5 w-3.5 opacity-60" />
+                                            <span>Profile</span>
                                         </button>
 
                                         {/* Wallet Option */}
-                                        <button
-                                            onClick={() => {
-                                                setShowProfileDropup(false);
-                                                setIsWalletModalOpen(true);
-                                            }}
-                                            className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
-                                                }`}
-                                        >
-                                            <Wallet className="h-3.5 w-3.5 opacity-60" />
-                                            <span>{t("wallet")}</span>
-                                        </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowProfileDropup(false);
+                                            setIsWalletModalOpen(true);
+                                        }}
+                                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
+                                            }`}
+                                    >
+                                        <Wallet className="h-3.5 w-3.5 opacity-60" />
+                                        <span>{t("wallet")}</span>
+                                    </button>
 
                                         {/* Divider */}
                                         <div className={`my-1 h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
@@ -2620,13 +2580,11 @@ STRICT RULES:
                                         className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
                                             }`}
                                     >
-                                        <div className={`h-3.5 w-3.5 rounded-full flex items-center justify-center shrink-0 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
-                                            <User className="h-2.5 w-2.5 opacity-60" />
-                                        </div>
-                                        <span>{t("persona")}</span>
-                                    </button>
+                                        <User className="h-3.5 w-3.5 opacity-60" />
+                                        <span>Profile</span>
+                                        </button>
 
-                                    {/* Wallet Option */}
+                                        {/* Wallet Option */}
                                     <button
                                         onClick={() => {
                                             setShowProfileDropup(false);
@@ -2771,15 +2729,19 @@ STRICT RULES:
                                         : "border-black/10 text-black/90 bg-black/5 hover:bg-black/10 hover:border-black/20"
                                     }`}
                             >
-                                <Bot className="w-3.5 h-3.5 opacity-60" />
+                                {(() => {
+                                    const currentEngine = engines.find(e => e.name === selectedEngine);
+                                    const CurrentIcon = currentEngine?.icon || Bot;
+                                    return <CurrentIcon className="w-3.5 h-3.5 opacity-60" />;
+                                })()}
                                 <span>{selectedEngine}</span>
                                 <ChevronDown className={`w-3.5 h-3.5 opacity-40 transition-transform duration-200 ${showEngineDropdown ? "rotate-180" : ""}`} />
                             </button>
 
                             {showEngineDropdown && (
-                                <div className={`absolute left-0 mt-2 w-56 rounded-xl border p-1.5 shadow-xl z-50 backdrop-blur-xl ${isDarkMode
-                                        ? "bg-[#0d0d0c]/95 border-white/10 text-white"
-                                        : "bg-white/95 border-black/10 text-black"
+                                <div className={`absolute left-0 mt-2 w-56 z-[100] rounded-xl border p-1.5 shadow-2xl ${isDarkMode
+                                        ? "bg-white/5 border-white/10 text-white backdrop-blur-xl"
+                                        : "bg-black/5 border-black/10 text-black backdrop-blur-xl"
                                     }`}>
                                     {visibleEngines.map((engine) => {
                                         const featureId = getFeatureIdForEngine(engine.name);
@@ -2806,22 +2768,18 @@ STRICT RULES:
                                                     }
                                                 }}
                                                 className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg text-left transition-colors cursor-pointer ${selectedEngine === engine.name
-                                                        ? (isDarkMode ? "bg-white/5 text-accent" : "bg-black/5 text-accent font-semibold")
+                                                        ? (isDarkMode ? "bg-white/10 text-white font-semibold" : "bg-black/10 text-black font-semibold")
                                                         : (isDarkMode ? "text-white/70 hover:bg-white/5 hover:text-white" : "text-black/70 hover:bg-black/5 hover:text-black")
                                                     }`}
                                             >
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2.5">
                                                     {(() => {
                                                         const Icon = engine.icon as any;
                                                         return <Icon className="w-3.5 h-3.5 opacity-60" />;
                                                     })()}
                                                     <span>{engine.name}</span>
                                                 </div>
-                                                {isAvailable ? (
-                                                    <CheckCircle className="h-3 w-3 text-emerald-400 opacity-60" />
-                                                ) : (
-                                                    <XCircle className="h-3 w-3 text-red-400 opacity-60" />
-                                                )}
+                                                <Zap className={`h-3 w-3 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
                                             </button>
                                         );
                                     })}
@@ -4157,15 +4115,22 @@ STRICT RULES:
                 isSubscriptionLoading={isSubscriptionLoading}
             />
 
-            {/* Personalization Modal */}
-            <PersonalizationModal
-                isOpen={isPersonalizationModalOpen}
-                onClose={() => setIsPersonalizationModalOpen(false)}
-                isDarkMode={isDarkMode}
-                userName={userName}
-                userEmail={userEmail}
-                userRole={userRole}
-            />
+            {/* Reflective Card Modal */}
+            {isPersonalizationModalOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setIsPersonalizationModalOpen(false)}>
+                    <div onClick={e => e.stopPropagation()}>
+                        <ReflectiveCard
+                            userName={userName || "User"}
+                            userEmail={userEmail || ""}
+                            userRole={userRole}
+                            schoolName={schoolName || ""}
+                            subscription={subscription}
+                            isDarkMode={isDarkMode}
+                            onClose={() => setIsPersonalizationModalOpen(false)}
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Wallet Modal */}
             <WalletModal

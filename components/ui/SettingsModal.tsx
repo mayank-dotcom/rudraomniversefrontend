@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     X,
     Sparkles,
-    CreditCard,
     HelpCircle,
     Bug,
     Trash2,
@@ -17,7 +16,6 @@ import {
     Send,
     Loader2,
     Wallet,
-    Zap,
     Settings,
     Sun,
     Moon,
@@ -57,7 +55,7 @@ const FAQ_ITEMS = [
 ];
 
 // ─── Panel IDs ────────────────────────────────────────────────────────────────
-type Panel = "general" | "persona" | "plan" | "faq" | "bug" | "deactivate";
+type Panel = "general" | "persona" | "faq" | "bug" | "deactivate";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface SettingsModalProps {
@@ -221,111 +219,6 @@ export function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona, acce
                     </button>
                 </div>
             )}
-        </div>
-    );
-}
-
-// ─── Plan Panel ────────────────────────────────────────────────────────────
-export function PlanPanel({ isDarkMode, subscription, isSubscriptionLoading, accent }: {
-    isDarkMode: boolean;
-    subscription: any;
-    isSubscriptionLoading: boolean;
-    accent: string;
-}) {
-    const { t } = useTranslation();
-    const planName = subscription?.subscription?.plan_name || t("free_trial");
-    const tokensRemaining = subscription?.tokens_remaining ?? 0;
-    const monthlyTokens = subscription?.subscription?.details?.monthly_tokens || 1;
-    const usage = subscription?.usage;
-
-    const metrics = [
-        { label: t("chat_code"), used: (usage?.chat_tokens_used ?? 0) + (usage?.coding_tokens_used ?? 0), limit: monthlyTokens },
-        { label: t("daily_images_label"), used: usage?.daily_images ?? 0, limit: subscription?.subscription?.details?.daily_image_limit ?? 0 },
-        { label: t("tts_minutes"), used: usage?.tts_minutes_used ?? 0, limit: subscription?.subscription?.details?.tts_minutes_limit ?? 0 },
-        { label: t("stt_minutes"), used: usage?.stt_minutes_used ?? 0, limit: subscription?.subscription?.details?.stt_minutes_limit ?? 0 },
-    ];
-
-    return (
-        <div className="space-y-6">
-            <div>
-                <h3 className={`text-xl font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{t("plan_details")}</h3>
-                <p className={`text-[11px] font-sans mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("plan_details_subtitle")}</p>
-            </div>
-
-            {/* Plan Badge */}
-            <div className={`p-5 rounded-2xl border ${isDarkMode ? "border-white/10 bg-white/[0.03]" : "border-black/10 bg-black/[0.02]"}`}>
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}>
-                            <CreditCard className="h-5 w-5" />
-                        </div>
-                        <div>
-                            {isSubscriptionLoading ? (
-                                <div className={`h-4 w-24 rounded ${isDarkMode ? "bg-white/10" : "bg-black/10"} animate-pulse`} />
-                            ) : (
-                                <p className={`text-sm font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{planName}</p>
-                            )}
-                            <p className={`text-[9px] font-sans mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("active_plan")}</p>
-                        </div>
-                    </div>
-                    <div className="text-right">
-                        <p className={`text-xl font-sans font-black ${isDarkMode ? "text-white" : "text-black"}`}>
-                            {isSubscriptionLoading ? "—" : tokensRemaining.toLocaleString()}
-                        </p>
-                        <p className={`text-[8px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("tokens_left")}</p>
-                    </div>
-                </div>
-
-                {/* Token Progress */}
-                <div className="space-y-1.5">
-                    <div className="flex justify-between">
-                        <span className={`text-[9px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("tokens_remaining")}</span>
-                        <span className={`text-[9px] font-sans ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{tokensRemaining} / {monthlyTokens}</span>
-                    </div>
-                    <div className={`h-1.5 rounded-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
-                        <div
-                            className={`h-full rounded-full transition-all duration-700 ${isDarkMode ? "bg-white" : "bg-black"}`}
-                            style={{ width: `${Math.min(100, (tokensRemaining / monthlyTokens) * 100)}%` }}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Usage Metrics */}
-            <div className="space-y-3">
-                {metrics.map((m) => (
-                    <div key={m.label} className={`p-4 rounded-xl border ${isDarkMode ? "border-white/8 bg-white/[0.02]" : "border-black/8 bg-black/[0.01]"}`}>
-                        <div className="flex justify-between items-center mb-2">
-                            <span className={`text-[10px] font-sans ${isDarkMode ? "text-white/60" : "text-black/60"}`}>{m.label}</span>
-                            <span className={`text-[10px] font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{m.used} <span className={`font-normal opacity-40`}>/ {m.limit || "—"}</span></span>
-                        </div>
-                        {m.limit > 0 && (
-                            <div className={`h-1 rounded-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
-                                <div
-                                    className={`h-full rounded-full ${isDarkMode ? "bg-white/60" : "bg-black/60"}`}
-                                    style={{ width: `${Math.min(100, (m.used / m.limit) * 100)}%` }}
-                                />
-                            </div>
-                        )}
-                    </div>
-                ))}
-            </div>
-
-            <a
-                href="/pricing"
-                className={`flex items-center justify-center gap-2 w-full py-3.5 text-[10px] font-sans font-black uppercase tracking-[0.25em] rounded-xl transition-all ${
-                    accent
-                        ? "hover:opacity-90"
-                        : (isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")
-                }`}
-                style={{
-                    backgroundColor: accent || undefined,
-                    color: accent ? getContrastColor(accent) : undefined
-                }}
-            >
-                <Zap className="h-3.5 w-3.5 fill-current" />
-                {t("upgrade_plan")}
-            </a>
         </div>
     );
 }
@@ -866,7 +759,6 @@ export default function SettingsModal({
     const navItems: { id: Panel; label: string; icon: any }[] = [
         { id: "general", label: t("general"), icon: Settings },
         { id: "persona", label: t("persona"), icon: Sparkles },
-        { id: "plan", label: t("plan_details"), icon: CreditCard },
         { id: "faq", label: t("faq"), icon: HelpCircle },
         { id: "bug", label: t("bug_report"), icon: Bug },
         { id: "deactivate", label: t("deactivate"), icon: Trash2 },
@@ -985,9 +877,6 @@ export default function SettingsModal({
                                         )}
                                         {activePanel === "persona" && (
                                             <PersonaPanel isDarkMode={isDarkMode} onPersonaSelect={onPersonaSelect} currentPersona={currentPersona} accent={accent} />
-                                        )}
-                                        {activePanel === "plan" && (
-                                            <PlanPanel isDarkMode={isDarkMode} subscription={subscription} isSubscriptionLoading={isSubscriptionLoading ?? false} accent={accent} />
                                         )}
                                         {activePanel === "faq" && (
                                             <FAQPanel isDarkMode={isDarkMode} />
