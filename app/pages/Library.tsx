@@ -215,6 +215,11 @@ export default function LibraryPage() {
   const [generationStatus, setGenerationStatus] = useState<"idle" | "generating" | "completed">("idle")
   const notificationPanelRef = useRef<HTMLDivElement>(null)
 
+  const FEATURED_INITIAL_BATCH = 20
+  const FEATURED_BATCH_SIZE = 12
+  const [featuredLoadCount, setFeaturedLoadCount] = useState(FEATURED_INITIAL_BATCH)
+  const featuredSentinelRef = useRef<HTMLDivElement>(null)
+
   const IMAGE_PLACEHOLDER_TEXTS = useMemo(() => [
     "A serene mountain landscape at sunset...",
     "A futuristic cyberpunk city with neon lights...",
@@ -281,6 +286,30 @@ export default function LibraryPage() {
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [showNotificationPanel])
+
+  // Infinite scroll for featured/explore mode
+  useEffect(() => {
+    if (activeCategory !== "featured") return
+    const sentinel = featuredSentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setFeaturedLoadCount((prev) => prev + FEATURED_BATCH_SIZE)
+        }
+      },
+      { rootMargin: "300px" }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [activeCategory])
+
+  // Reset featured load count when switching away
+  useEffect(() => {
+    if (activeCategory !== "featured") {
+      setFeaturedLoadCount(FEATURED_INITIAL_BATCH)
+    }
+  }, [activeCategory])
 
   useEffect(() => {
     let charPos = 0
@@ -835,11 +864,20 @@ export default function LibraryPage() {
     switch (activeCategory) {
       case "featured": {
         const combined = [...publicAssets];
-        pool = combined.sort((a, b) => {
+        const sorted = combined.sort((a, b) => {
           const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
           const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
           return dateB - dateA;
         });
+        const result: LibraryAsset[] = [];
+        let cycle = 0;
+        while (result.length < featuredLoadCount && sorted.length > 0) {
+          const remaining = featuredLoadCount - result.length;
+          const shuffled = seededShuffle(sorted, cycle);
+          result.push(...shuffled.slice(0, Math.min(remaining, shuffled.length)));
+          cycle++;
+        }
+        pool = result;
         break;
       }
       case "recent": pool = assets.slice(0, 4); break
@@ -883,7 +921,7 @@ export default function LibraryPage() {
       pool = pool.filter((asset) => asset.prompt?.toLowerCase().includes(q))
     }
     return pool
-  }, [activeCategory, assets, publicAssets, uploadedAssets, savedIds, searchQuery, selectedGalleryId, publicGalleryAssets, sourceFilter, createdOnFilter])
+  }, [activeCategory, assets, publicAssets, uploadedAssets, savedIds, searchQuery, selectedGalleryId, publicGalleryAssets, sourceFilter, createdOnFilter, featuredLoadCount])
 
   const getCardAspectRatioClass = (index: number, idxInCol?: number, colIdx?: number) => {
     switch (aspectRatio) {
@@ -925,6 +963,17 @@ export default function LibraryPage() {
     if (pattern === 0) return "md:col-span-2 md:row-span-1";
     if (pattern === 3) return "md:col-span-1 md:row-span-2";
     return "md:col-span-1 md:row-span-1";
+  }
+
+  const seededShuffle = <T,>(array: T[], seed: number): T[] => {
+    const arr = [...array];
+    let s = seed;
+    for (let i = arr.length - 1; i > 0; i--) {
+      s = (s * 9301 + 49297) % 233280;
+      const j = Math.floor((s / 233280) * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
   }
 
   const renderCard = (asset: LibraryAsset, i: number, spanClass?: string) => {
@@ -2142,8 +2191,8 @@ export default function LibraryPage() {
                     )}
                   </motion.div>
                 ) : (
-                  
-                  /* ================= CORE PHOTO IMAGE GRID ================= */
+                  <>
+                  {/* ================= CORE PHOTO IMAGE GRID ================= */}
                   <BentoGrid className="w-full gap-1.5 md:gap-2 max-w-none md:auto-rows-[15rem]">
                     <AnimatePresence mode="popLayout">
                       {isGenerating && activeCategory === "all" && (
@@ -2188,6 +2237,15 @@ export default function LibraryPage() {
                       })}
                     </AnimatePresence>
                   </BentoGrid>
+                  {activeCategory === "featured" && (
+                    <div
+                      ref={featuredSentinelRef}
+                      className="w-full flex items-center justify-center py-8"
+                    >
+                      <Loader2 className={`h-6 w-6 animate-spin ${isDarkMode ? "text-white/30" : "text-black/30"}`} />
+                    </div>
+                  )}
+                  </>
                 )}
               </>
             )}
