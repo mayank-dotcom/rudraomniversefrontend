@@ -2913,4 +2913,82 @@ export async function unsaveAsset(assetId: string) {
   return data
 }
 
+// ── Asset Likes & Comments (Social) ──────────────────────────────────────
+
+export interface AssetComment {
+  id: number
+  content: string
+  created_at: string
+  user_name: string
+  user_avatar: string | null
+}
+
+export interface AssetSocialResponse {
+  success: boolean
+  likes_count: number
+  is_liked: boolean
+  owner: {
+    name: string
+    avatar: string | null
+  }
+  comments: AssetComment[]
+  error?: string
+}
+
+export async function likeAsset(id: string, assetType: string, assetUrl: string, prompt: string) {
+  const res = await fetch(`${API_BASE}/library/assets/${id}/like`, {
+    method: "POST",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ asset_type: assetType, asset_url: assetUrl, prompt }),
+  })
+  const data = await parseJson<{ success: boolean; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to like asset.")
+  }
+  return data
+}
+
+export async function unlikeAsset(id: string) {
+  const res = await fetch(`${API_BASE}/library/assets/${id}/unlike`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to unlike asset.")
+  }
+  return data
+}
+
+export async function getAssetSocial(id: string) {
+  const res = await fetch(`${API_BASE}/library/assets/${id}/social`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<AssetSocialResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch asset social details.")
+  }
+  return data
+}
+
+export async function addAssetComment(id: string, content: string) {
+  const res = await fetch(`${API_BASE}/library/assets/${id}/comment`, {
+    method: "POST",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ content }),
+  })
+  const data = await parseJson<{ success: boolean; comment: AssetComment; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to add comment.")
+  }
+  return data
+}
+
 

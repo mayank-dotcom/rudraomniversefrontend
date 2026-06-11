@@ -82,7 +82,9 @@ import {
   Mic,
   Zap,
   Car,
-  Bell
+  Bell,
+  MoreHorizontal,
+  Minus
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -167,6 +169,17 @@ export default function LibraryPage() {
   
   const [assets, setAssets] = useState<LibraryAsset[]>([])
   const [publicAssets, setPublicAssets] = useState<LibraryAsset[]>([])
+  
+  // Pinterest Detail & Lightbox States
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false)
+  const [zoomScale, setZoomScale] = useState(1)
+  const [comments, setComments] = useState<any[]>([])
+  const [likesCount, setLikesCount] = useState(0)
+  const [isLiked, setIsLiked] = useState(false)
+  const [newCommentText, setNewCommentText] = useState("")
+  const [socialLoading, setSocialLoading] = useState(false)
+  const [creatorInfo, setCreatorInfo] = useState<{ name: string; avatar: string | null }>({ name: "AWEDICT", avatar: null })
+
   const [isLoading, setIsLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
