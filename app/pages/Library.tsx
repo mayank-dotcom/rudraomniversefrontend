@@ -217,7 +217,12 @@ export default function LibraryPage() {
 
   const FEATURED_INITIAL_BATCH = 20
   const FEATURED_BATCH_SIZE = 12
+  const PUBLIC_PAGE_SIZE = 20
   const [featuredLoadCount, setFeaturedLoadCount] = useState(FEATURED_INITIAL_BATCH)
+  const [publicAssetsPage, setPublicAssetsPage] = useState(1)
+  const [hasMorePublic, setHasMorePublic] = useState(true)
+  const [isLoadingMorePublic, setIsLoadingMorePublic] = useState(false)
+  const publicAssetsCacheRef = useRef<LibraryAsset[]>([])
   const featuredSentinelRef = useRef<HTMLDivElement>(null)
 
   const IMAGE_PLACEHOLDER_TEXTS = useMemo(() => [
@@ -397,12 +402,20 @@ export default function LibraryPage() {
     try {
       const [data, pubData, galleriesData, pubGalleriesData] = await Promise.all([
         fetchWithRetry(() => getLibraryAssets()).catch((err: any) => { hasError = true; return null }),
-        fetchWithRetry(() => getPublicLibraryAssets()).catch((err: any) => { hasError = true; return null }),
+        fetchWithRetry(() => getPublicLibraryAssets(1, PUBLIC_PAGE_SIZE)).catch((err: any) => { hasError = true; return null }),
         fetchWithRetry(() => getLibraryGalleries()).catch((err: any) => { hasError = true; return null }),
         fetchWithRetry(() => getPublicLibraryGalleries()).catch((err: any) => { hasError = true; return null }),
       ])
       if (data) setAssets(data.assets)
-      if (pubData) setPublicAssets(pubData.assets)
+      if (pubData && pubData.assets) {
+        publicAssetsCacheRef.current = pubData.assets
+        const slice = pubData.assets.slice(0, PUBLIC_PAGE_SIZE)
+        setPublicAssets(slice)
+        const isPaginationSupported = pubData.hasMore === true || pubData.assets.length === PUBLIC_PAGE_SIZE
+        const hasMorePages = isPaginationSupported ? (pubData.hasMore ?? false) : false
+        setHasMorePublic(hasMorePages)
+        setPublicAssetsPage(1)
+      }
       if (galleriesData) setGalleries(galleriesData.galleries)
       if (pubGalleriesData) setPublicGalleries(pubGalleriesData.galleries)
       if (hasError) {
@@ -420,6 +433,44 @@ export default function LibraryPage() {
       setIsLoading(false)
     }
   }, [router])
+
+  // Load more public assets for infinite scroll
+  const loadMorePublicAssets = useCallback(async () => {
+    if (isLoadingMorePublic || !hasMorePublic) return
+    setIsLoadingMorePublic(true)
+    try {
+      const cached = publicAssetsCacheRef.current
+      if (cached.length > PUBLIC_PAGE_SIZE) {
+        // Backend doesn't support pagination — serve from cache
+        const nextCount = Math.min(cached.length, publicAssets.length + PUBLIC_PAGE_SIZE)
+        setPublicAssets(cached.slice(0, nextCount))
+        if (nextCount >= cached.length) setHasMorePublic(false)
+      } else {
+        // Backend supports pagination — fetch next page
+        const nextPage = publicAssetsPage + 1
+        const pubData = await getPublicLibraryAssets(nextPage, PUBLIC_PAGE_SIZE)
+        if (pubData && pubData.assets) {
+          publicAssetsCacheRef.current = [...publicAssetsCacheRef.current, ...pubData.assets]
+          setPublicAssets((prev) => [...prev, ...pubData.assets])
+          setPublicAssetsPage(nextPage)
+          setHasMorePublic(pubData.hasMore ?? false)
+        }
+      }
+    } catch {
+      // silently fail - user can scroll again to retry
+    } finally {
+      setIsLoadingMorePublic(false)
+    }
+  }, [isLoadingMorePublic, hasMorePublic, publicAssetsPage, publicAssets.length])
+
+  // Fetch more public assets when featured load count exceeds pool
+  useEffect(() => {
+    if (activeCategory !== "featured") return
+    if (!hasMorePublic || isLoadingMorePublic || publicAssets.length === 0) return
+    if (featuredLoadCount > publicAssets.length * 2) {
+      loadMorePublicAssets()
+    }
+  }, [featuredLoadCount, activeCategory, hasMorePublic, isLoadingMorePublic, publicAssets.length, loadMorePublicAssets])
 
   // Initialize Auth & fetch saved IDs from DB
   useEffect(() => {

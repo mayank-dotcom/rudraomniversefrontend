@@ -2685,6 +2685,8 @@ export interface LibraryAsset {
 export interface LibraryAssetsResponse {
   success: boolean
   assets: LibraryAsset[]
+  total?: number
+  hasMore?: boolean
   error?: string
 }
 
@@ -2715,8 +2717,12 @@ export async function getLibraryAssets() {
   return data
 }
 
-export async function getPublicLibraryAssets() {
-  const res = await fetch(`${API_BASE}/library/public-assets`, {
+export async function getPublicLibraryAssets(page?: number, limit?: number) {
+  const params = new URLSearchParams()
+  if (page !== undefined) params.set("page", String(page))
+  if (limit !== undefined) params.set("limit", String(limit))
+  const query = params.toString() ? `?${params.toString()}` : ""
+  const res = await fetch(`${API_BASE}/library/public-assets${query}`, {
     method: "GET",
     headers: getHeaders(),
   })
