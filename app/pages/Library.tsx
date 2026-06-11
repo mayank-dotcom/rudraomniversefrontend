@@ -211,6 +211,9 @@ export default function LibraryPage() {
   const [selectedPersona, setSelectedPersona] = useState<any>(null)
   const [showWalkthrough, setShowWalkthrough] = useState(false)
   const [hasNewGeneration, setHasNewGeneration] = useState(false)
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false)
+  const [generationStatus, setGenerationStatus] = useState<"idle" | "generating" | "completed">("idle")
+  const notificationPanelRef = useRef<HTMLDivElement>(null)
 
   const IMAGE_PLACEHOLDER_TEXTS = useMemo(() => [
     "A serene mountain landscape at sunset...",
@@ -264,6 +267,20 @@ export default function LibraryPage() {
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [showProfileDropup])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationPanelRef.current && !notificationPanelRef.current.contains(event.target as Node)) {
+        setShowNotificationPanel(false)
+      }
+    }
+    if (showNotificationPanel) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showNotificationPanel])
 
   useEffect(() => {
     let charPos = 0
@@ -466,6 +483,7 @@ export default function LibraryPage() {
     if (isGenerating) return
 
     setIsGenerating(true)
+    setGenerationStatus("generating")
     setActiveCategory("all")
     const toastId = toast.loading("Generating your image...")
 
@@ -483,6 +501,7 @@ export default function LibraryPage() {
       if (res && res.response) {
         toast.success("Image generated and saved to library!", { id: toastId })
         setGeneratePrompt("")
+        setGenerationStatus("completed")
         setHasNewGeneration(true)
         
         // Refresh local assets to show the new image
@@ -496,8 +515,10 @@ export default function LibraryPage() {
     } catch (err: any) {
       console.error("[Library] Generation error:", err)
       toast.error(err.message || "Failed to generate image.", { id: toastId })
+      setGenerationStatus("idle")
     } finally {
       setIsGenerating(false)
+      setTimeout(() => { setGenerationStatus("idle") }, 5000)
     }
   }
 
@@ -1596,21 +1617,84 @@ export default function LibraryPage() {
               </motion.button>
 
               {/* Notification Bell */}
-              <motion.button
-                onClick={() => { setHasNewGeneration(false); setActiveCategory("all"); }}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer relative ${isDarkMode
-                    ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
-                    : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
-                  }`}
-                title={hasNewGeneration ? "New image generated!" : "Notifications"}
-              >
-                <Bell className="h-4 w-4" />
-                {hasNewGeneration && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-[#0d0d0c]" />
+              <div className="relative" ref={notificationPanelRef}>
+                <motion.button
+                  onClick={() => setShowNotificationPanel(prev => !prev)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer relative ${isDarkMode
+                      ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                      : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                    }`}
+                  title="Notifications"
+                >
+                  <Bell className="h-4 w-4" />
+                  {(hasNewGeneration || generationStatus === "generating") && (
+                    <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0d0d0c] ${
+                      generationStatus === "generating" ? "bg-yellow-400" : "bg-green-500"
+                    }`} />
+                  )}
+                </motion.button>
+
+                {/* Notification Dropdown Panel */}
+                {showNotificationPanel && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className={`absolute right-0 top-full mt-2 w-72 rounded-xl border shadow-2xl overflow-hidden z-50 ${
+                      isDarkMode
+                        ? "bg-[#222120]/95 border-white/10 text-white"
+                        : "bg-[#f2f1f0]/95 border-black/10 text-black"
+                    }`}
+                  >
+                    <div className="p-3 space-y-2">
+                      <div className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                        Notifications
+                      </div>
+                      <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+                      {generationStatus === "generating" && (
+                        <button
+                          onClick={() => { setShowNotificationPanel(false); setActiveCategory("all"); }}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-xs ${
+                            isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
+                          }`}
+                        >
+                          <Loader2 className="h-4 w-4 animate-spin shrink-0 text-yellow-400" />
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">Generating image...</div>
+                            <div className={`text-[10px] mt-0.5 truncate ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                              Click to view progress
+                            </div>
+                          </div>
+                        </button>
+                      )}
+                      {generationStatus === "completed" && (
+                        <button
+                          onClick={() => { setShowNotificationPanel(false); setActiveCategory("all"); setHasNewGeneration(false); setGenerationStatus("idle"); }}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-xs ${
+                            isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
+                          }`}
+                        >
+                          <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">Image created!</div>
+                            <div className={`text-[10px] mt-0.5 truncate ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                              Click to view in My Gallery
+                            </div>
+                          </div>
+                        </button>
+                      )}
+                      {generationStatus === "idle" && !hasNewGeneration && (
+                        <div className={`px-3 py-6 text-center text-xs ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                          No notifications
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
                 )}
-              </motion.button>
+              </div>
 
               <button
                 onClick={toggleTheme}
@@ -2095,7 +2179,7 @@ export default function LibraryPage() {
 
         {/* ================= FIXED BOTTOM IMAGE GENERATOR BAR ================= */}
         <div
-          className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl rounded-full px-5 py-2 flex items-center gap-3 transition-all duration-300 ${
+          className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl rounded-2xl px-5 py-2.5 flex items-start gap-3 transition-all duration-300 max-h-[40vh] overflow-y-auto ${
             isDarkMode
               ? "bg-[#222120] border border-white/5 shadow-2xl"
               : "bg-[#f2f1f0] border border-black/5 shadow-2xl"
@@ -2124,8 +2208,8 @@ export default function LibraryPage() {
               rows={1}
               className={`flex-1 min-w-0 bg-transparent resize-none no-scrollbar font-sans ${
                 isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"
-              } py-2 text-base focus:outline-none`}
-              style={{ maxHeight: '20vh' }}
+              } py-1 text-base focus:outline-none`}
+              style={{ maxHeight: '30vh' }}
             />
 
             <div className="flex items-center gap-2 flex-shrink-0">
