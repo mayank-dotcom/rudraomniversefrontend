@@ -466,6 +466,7 @@ export default function LibraryPage() {
     if (isGenerating) return
 
     setIsGenerating(true)
+    setActiveCategory("all")
     const toastId = toast.loading("Generating your image...")
 
     try {
@@ -2000,23 +2001,7 @@ export default function LibraryPage() {
                       Loading folder assets...
                     </p>
                   </div>
-                ) : isGenerating ? (
-                  <div className="flex items-center justify-center py-16">
-                    <PixelCard
-                      variant={isDarkMode ? "blue" : "default"}
-                      autoPlay
-                      autoPlayInterval={2000}
-                      className={`!h-[280px] !w-[220px] shadow-xl ${isDarkMode ? "border-white/10 shadow-cyan-500/10" : "border-black/10 shadow-black/10"}`}
-                    >
-                      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-                        <Loader2 className={`h-8 w-8 animate-spin mb-3 ${isDarkMode ? "text-white" : "text-black"}`} />
-                        <p className={`text-xs font-mono font-semibold tracking-wider uppercase ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
-                          Generating...
-                        </p>
-                      </div>
-                    </PixelCard>
-                  </div>
-                ) : activeAssets.length === 0 ? (
+                ) : (activeAssets.length === 0 && !isGenerating) ? (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -2047,9 +2032,45 @@ export default function LibraryPage() {
                   /* ================= CORE PHOTO IMAGE GRID ================= */
                   <BentoGrid className="w-full gap-1.5 md:gap-2 max-w-none md:auto-rows-[15rem]">
                     <AnimatePresence mode="popLayout">
+                      {isGenerating && (
+                        <BentoGridItem
+                          key="generating-placeholder"
+                          className={cn(
+                            "p-0 overflow-hidden rounded-none bg-transparent border-none dark:bg-transparent shadow-none hover:shadow-none transition-none w-full h-[220px] md:h-full min-h-[14rem]",
+                            getBentoSpanClass(0)
+                          )}
+                          header={
+                            <motion.div
+                              layout
+                              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                              transition={{ duration: 0.35, ease: "easeOut" }}
+                              className={`relative overflow-hidden rounded-none border transition-all duration-300 w-full h-full flex items-center justify-center ${
+                                isDarkMode ? "bg-[#0d0d0c] border-white/5 text-white" : "bg-[#f4f3f2] border-black/5 text-black"
+                              }`}
+                            >
+                              <PixelCard
+                                variant={isDarkMode ? "blue" : "default"}
+                                autoPlay
+                                autoPlayInterval={2000}
+                                className="!h-full !w-full !rounded-none !border-none"
+                              >
+                                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+                                  <Loader2 className={`h-8 w-8 animate-spin mb-3 ${isDarkMode ? "text-white" : "text-black"}`} />
+                                  <p className={`text-xs font-mono font-semibold tracking-wider uppercase ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
+                                    Generating...
+                                  </p>
+                                </div>
+                              </PixelCard>
+                            </motion.div>
+                          }
+                        />
+                      )}
                       {activeAssets.map((asset, i) => {
-                        const spanClass = getBentoSpanClass(i);
-                        return renderCard(asset, i, spanClass);
+                        const index = isGenerating ? i + 1 : i;
+                        const spanClass = getBentoSpanClass(index);
+                        return renderCard(asset, index, spanClass);
                       })}
                     </AnimatePresence>
                   </BentoGrid>
