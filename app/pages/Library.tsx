@@ -1128,19 +1128,6 @@ export default function LibraryPage() {
     )
   }
 
-  if (isLoading) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center transition-colors duration-300 ${isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f4f3f2]"}`}>
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className={`h-10 w-10 animate-spin ${isDarkMode ? "text-[var(--color-cyan)]" : "text-cyan-600"}`} />
-          <p className={`text-xs font-mono tracking-widest uppercase ${isDarkMode ? "text-white/45" : "text-black/45"}`}>
-            Connecting Library...
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full flex overflow-hidden transition-colors duration-500 selection:bg-[var(--color-cyan)] selection:text-black ${
       isDarkMode ? "bg-[#0d0d0c] text-white" : "bg-[#f4f3f2] text-black"
@@ -2164,7 +2151,7 @@ export default function LibraryPage() {
                       Loading folder assets...
                     </p>
                   </div>
-                ) : (activeAssets.length === 0 && (!isGenerating || activeCategory !== "all")) ? (
+                ) : (activeAssets.length === 0 && !isLoading && (!isGenerating || activeCategory !== "all")) ? (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -2190,6 +2177,25 @@ export default function LibraryPage() {
                       </button>
                     )}
                   </motion.div>
+                ) : isLoading && activeAssets.length === 0 ? (
+                  <BentoGrid className="w-full gap-1.5 md:gap-2 max-w-none md:auto-rows-[15rem]">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <BentoGridItem
+                        key={`skeleton-${i}`}
+                        className={cn(
+                          "p-0 overflow-hidden rounded-none bg-transparent border-none dark:bg-transparent shadow-none hover:shadow-none transition-none w-full h-[220px] md:h-full min-h-[14rem]",
+                          getBentoSpanClass(i)
+                        )}
+                        header={
+                          <div className={`relative overflow-hidden rounded-none border w-full h-full animate-pulse ${
+                            isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                          }`}>
+                            <div className={`absolute inset-0 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+                          </div>
+                        }
+                      />
+                    ))}
+                  </BentoGrid>
                 ) : (
                   <>
                   {/* ================= CORE PHOTO IMAGE GRID ================= */}
