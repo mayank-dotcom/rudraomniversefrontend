@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Bot, GraduationCap, UserCog, ChevronLeft, ChevronRight
 } from "lucide-react";
-import ChatLoader from "@/components/ui/ChatLoader";
 
 interface FeatureCardData {
     icon: React.ComponentType<{ className?: string }>;
@@ -88,11 +87,7 @@ const WelcomeBox = ({ isDarkMode, onSelectEngine, onOpenMockPaper, onOpenIntervi
             <div className={`mt-10 mb-6 h-14 w-14 rounded-full flex items-center justify-center border-2 border-dotted border-emerald-500/60 ${isDarkMode
                 ? "bg-emerald-500/10"
                 : "bg-emerald-600/10"
-                } overflow-hidden`}>
-                <div className="scale-[0.4] flex items-center justify-center">
-                    <ChatLoader isDarkMode={isDarkMode} />
-                </div>
-            </div>
+                } overflow-hidden`} />
 
 
 

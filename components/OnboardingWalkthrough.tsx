@@ -21,6 +21,7 @@ interface OnboardingWalkthroughProps {
   setIsRightSidebarCollapsed: (v: boolean) => void;
   isDarkMode: boolean;
   accent?: string;
+  steps?: WalkthroughStep[];
 }
 
 function getContrastColor(hex: string): string {
@@ -42,13 +43,14 @@ export default function OnboardingWalkthrough({
   setIsRightSidebarCollapsed,
   isDarkMode,
   accent,
+  steps: customSteps,
 }: OnboardingWalkthroughProps) {
   const activeAccent = isDarkMode ? "#ffffff" : "#000000";
   const [currentStep, setCurrentStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [coords, setCoords] = useState<{ x: number; y: number; placement: string } | null>(null);
 
-  const steps = useMemo<WalkthroughStep[]>(() => {
+  const defaultSteps = useMemo<WalkthroughStep[]>(() => {
     return [
       {
         title: "Welcome to RUDRANEX AI",
@@ -66,17 +68,45 @@ export default function OnboardingWalkthrough({
       },
       {
         title: "Message Input & Tools",
-        description: "Type your query here. Attach PDFs or images for AI analysis, use the mic for voice typing, or change models directly.",
+        description: "Type your query here. Use the text area for discussions and study-pilot assistance.",
         targetSelector: "#walkthrough-input-area",
         placement: "top",
       },
       {
+        title: "Attach Documents",
+        description: "Upload PDFs, images, or text files for deep AI analysis and insights.",
+        targetSelector: "#walkthrough-add-files",
+        placement: "top",
+        offsetY: 10,
+      },
+      {
         title: "AI Mode Switcher",
-        description: "Quickly toggle between specialized AI modes directly from these buttons below the input area — choose Student Mode, Persona Mode, AI Image Lab, or other engines.",
+        description: "Quickly toggle between specialized AI modes directly from these buttons below the input area.",
         targetSelector: "#walkthrough-input-modes",
         placement: "top",
         offsetY: 10,
         icon: <Zap className="h-4 w-4" />,
+      },
+      {
+        title: "Explore Mode",
+        description: "Your default research and study assistant. Get explanations, summaries, and solve complex problems instantly.",
+        targetSelector: "#walkthrough-engine-explore-mode",
+        placement: "top",
+        offsetY: 10,
+      },
+      {
+        title: "AI Image Lab",
+        description: "Switch to Image Lab to generate stunning visuals from text prompts using advanced neural models.",
+        targetSelector: "#walkthrough-engine-ai-image-lab",
+        placement: "top",
+        offsetY: 10,
+      },
+      {
+        title: "Battle Arena",
+        description: "Enter the Battle Arena to challenge peers in real-time quiz battles and climb the leaderboard.",
+        targetSelector: "#walkthrough-engine-battle-arena",
+        placement: "top",
+        offsetY: 10,
       },
       {
         title: "Profile & Theme Selection",
@@ -93,39 +123,29 @@ export default function OnboardingWalkthrough({
     ];
   }, [isMobile]);
 
+  const steps = customSteps || defaultSteps;
+
   useEffect(() => {
     if (!isOpen) return;
-    switch (currentStep) {
-      case 0:
-        setIsSidebarCollapsed(true);
-        setIsRightSidebarCollapsed(true);
-        break;
-      case 1:
+    const step = steps[currentStep];
+    if (!step) return;
+    if (step.placement === "center" || (!step.targetSelector && !isMobile)) {
+      setIsSidebarCollapsed(true);
+      setIsRightSidebarCollapsed(true);
+    } else if (step.targetSelector) {
+      const target = document.querySelector(step.targetSelector);
+      const inSidebar = target?.closest("#walkthrough-sidebar");
+      if (inSidebar || step.targetSelector === "#walkthrough-profile-area") {
         if (!isMobile) {
           setIsSidebarCollapsed(false);
           setIsRightSidebarCollapsed(true);
         }
-        break;
-      case 2:
+      } else {
         setIsSidebarCollapsed(true);
         setIsRightSidebarCollapsed(true);
-        break;
-      case 3:
-        setIsSidebarCollapsed(true);
-        setIsRightSidebarCollapsed(true);
-        break;
-      case 4:
-        if (!isMobile) {
-          setIsSidebarCollapsed(false);
-          setIsRightSidebarCollapsed(true);
-        }
-        break;
-      case 5:
-        setIsSidebarCollapsed(true);
-        setIsRightSidebarCollapsed(true);
-        break;
+      }
     }
-  }, [currentStep, isOpen, isMobile, setIsSidebarCollapsed, setIsRightSidebarCollapsed]);
+  }, [currentStep, isOpen, isMobile, setIsSidebarCollapsed, setIsRightSidebarCollapsed, steps]);
 
   useEffect(() => {
     const stepConfig = steps[currentStep];

@@ -52,6 +52,7 @@ import {
   HelpCircle,
   Copy,
   Check,
+  CheckCircle,
   Sliders,
   Maximize2,
   Eye,
@@ -69,6 +70,7 @@ import {
   Move,
   Menu,
   MessageSquare,
+  Compass,
   Moon,
   Sun,
   PanelLeftOpen,
@@ -77,7 +79,10 @@ import {
   Settings,
   LogOut,
   Wallet,
-  Mic
+  Mic,
+  Zap,
+  Car,
+  Bell
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -87,6 +92,7 @@ import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid"
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google"
 import SettingsModal from "@/components/ui/SettingsModal"
 import WalletModal from "@/components/ui/WalletModal"
+import OnboardingWalkthrough from "@/components/OnboardingWalkthrough"
 import ReflectiveCard from "@/components/ReflectiveCard"
 import PixelCard from "@/components/PixelCard"
 
@@ -203,6 +209,23 @@ export default function LibraryPage() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [settingsPanel, setSettingsPanel] = useState<"general" | "persona" | "faq" | "bug" | "deactivate">("general")
   const [selectedPersona, setSelectedPersona] = useState<any>(null)
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
+  const [hasNewGeneration, setHasNewGeneration] = useState(false)
+
+  const IMAGE_PLACEHOLDER_TEXTS = useMemo(() => [
+    "A serene mountain landscape at sunset...",
+    "A futuristic cyberpunk city with neon lights...",
+    "An oil painting of a cozy cottage in the woods...",
+    "A minimalist logo design for a tech startup...",
+    "A realistic portrait of a wise old wizard...",
+    "A steampunk airship floating above the clouds...",
+    "A watercolor illustration of a botanical garden...",
+    "A 3D render of a crystal palace in space...",
+  ], [])
+  const placeholderTextsRef = useRef(IMAGE_PLACEHOLDER_TEXTS)
+  useEffect(() => { placeholderTextsRef.current = IMAGE_PLACEHOLDER_TEXTS }, [IMAGE_PLACEHOLDER_TEXTS])
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
+  const [typedPlaceholder, setTypedPlaceholder] = useState(IMAGE_PLACEHOLDER_TEXTS[0])
 
   const profileDropupRef = useRef<HTMLDivElement>(null)
 
@@ -241,6 +264,29 @@ export default function LibraryPage() {
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [showProfileDropup])
+
+  useEffect(() => {
+    let charPos = 0
+    let interval: ReturnType<typeof setInterval>
+    const startTyping = () => {
+      const text = placeholderTextsRef.current[placeholderIndex % placeholderTextsRef.current.length]
+      charPos = 0
+      interval = setInterval(() => {
+        charPos++
+        if (charPos <= text.length) {
+          setTypedPlaceholder(text.slice(0, charPos))
+        }
+        if (charPos >= text.length) {
+          clearInterval(interval)
+          setTimeout(() => {
+            setPlaceholderIndex(prev => (prev + 1) % IMAGE_PLACEHOLDER_TEXTS.length)
+          }, 2000)
+        }
+      }, 20)
+    }
+    startTyping()
+    return () => clearInterval(interval)
+  }, [placeholderIndex, IMAGE_PLACEHOLDER_TEXTS.length])
 
   const handleLogout = () => {
     removeApiKey()
@@ -436,6 +482,7 @@ export default function LibraryPage() {
       if (res && res.response) {
         toast.success("Image generated and saved to library!", { id: toastId })
         setGeneratePrompt("")
+        setHasNewGeneration(true)
         
         // Refresh local assets to show the new image
         await fetchAssets()
@@ -1027,8 +1074,8 @@ export default function LibraryPage() {
                 whileTap={{ scale: 0.9 }}
                 className={`p-2 rounded-xl transition-colors cursor-pointer ${
                   isDarkMode
-                    ? "text-white/40 hover:text-white hover:bg-white/5"
-                    : "text-black/40 hover:text-black hover:bg-black/5"
+                    ? "text-white hover:bg-white/5"
+                    : "text-black hover:bg-black/5"
                 }`}
                 title="Open Sidebar"
               >
@@ -1038,22 +1085,22 @@ export default function LibraryPage() {
               {/* Divider */}
               <div className={`w-8 border-t ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`} />
 
-              {/* Featured Feed */}
+              {/* Explore */}
               <motion.button
                 onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 className={`p-2 rounded-xl transition-colors cursor-pointer relative ${
                   activeCategory === "featured"
-                    ? (isDarkMode ? "bg-white/[0.06] text-cyan-400" : "bg-black/[0.06] text-cyan-600")
-                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/[0.03]" : "text-black/40 hover:text-black hover:bg-black/[0.03]")
+                    ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black")
+                    : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
                 }`}
-                title="Featured Feed"
+                title="Explore"
               >
                 {activeCategory === "featured" && (
-                  <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${isDarkMode ? "bg-cyan-400" : "bg-cyan-600"}`} />
+                  <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
                 )}
-                <Sparkles className="w-[22px] h-[22px]" />
+                <Compass className="w-[22px] h-[22px]" />
               </motion.button>
 
               {/* Recent Creations */}
@@ -1063,8 +1110,8 @@ export default function LibraryPage() {
                 whileTap={{ scale: 0.9 }}
                 className={`p-2 rounded-xl transition-colors cursor-pointer ${
                   activeCategory === "recent"
-                    ? (isDarkMode ? "bg-white/[0.06] text-cyan-400" : "bg-black/[0.06] text-cyan-600")
-                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/[0.03]" : "text-black/40 hover:text-black hover:bg-black/[0.03]")
+                    ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black")
+                    : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
                 }`}
                 title="Recent Creations"
               >
@@ -1078,14 +1125,14 @@ export default function LibraryPage() {
                 whileTap={{ scale: 0.9 }}
                 className={`p-2 rounded-xl transition-colors cursor-pointer relative ${
                   activeCategory === "saved"
-                    ? (isDarkMode ? "bg-white/[0.06] text-cyan-400" : "bg-black/[0.06] text-cyan-600")
-                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/[0.03]" : "text-black/40 hover:text-black hover:bg-black/[0.03]")
+                    ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black")
+                    : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
                 }`}
                 title={`Saved (${savedIds.length})`}
               >
                 <Bookmark className="w-[22px] h-[22px]" />
                 {savedIds.length > 0 && (
-                  <span className={`absolute -top-1 -right-1 text-[8px] font-mono font-bold h-4 w-4 rounded-full flex items-center justify-center ${activeCategory === "saved" ? (isDarkMode ? "bg-cyan-400/20 text-cyan-300" : "bg-cyan-600/20 text-cyan-700") : (isDarkMode ? "bg-white/10 text-white/60" : "bg-black/10 text-black/60")}`}>
+                  <span className={`absolute -top-1 -right-1 text-[8px] font-mono font-bold h-4 w-4 rounded-full flex items-center justify-center ${activeCategory === "saved" ? (isDarkMode ? "bg-white/20 text-white" : "bg-black/20 text-black") : (isDarkMode ? "bg-white/10 text-white" : "bg-black/10 text-black")}`}>
                     {savedIds.length > 9 ? "9+" : savedIds.length}
                   </span>
                 )}
@@ -1093,13 +1140,13 @@ export default function LibraryPage() {
 
               {/* My Gallery */}
               <motion.button
-                onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); }}
+                onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); setHasNewGeneration(false); }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 className={`p-2 rounded-xl transition-colors cursor-pointer ${
                   activeCategory === "all"
-                    ? (isDarkMode ? "bg-white/[0.06] text-cyan-400" : "bg-black/[0.06] text-cyan-600")
-                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/[0.03]" : "text-black/40 hover:text-black hover:bg-black/[0.03]")
+                    ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black")
+                    : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
                 }`}
                 title="My Gallery"
               >
@@ -1115,7 +1162,7 @@ export default function LibraryPage() {
                   whileTap={{ scale: 0.95 }}
                   className={`h-8 w-8 rounded-full overflow-hidden border-2 transition-all cursor-pointer relative shrink-0 flex items-center justify-center ${
                     showProfileDropup 
-                      ? (isDarkMode ? "border-cyan-400/50" : "border-cyan-600/50")
+                      ? (isDarkMode ? "border-white/50" : "border-black/50")
                       : (isDarkMode ? "border-white/[0.06] hover:border-white/20" : "border-black/[0.06] hover:border-black/20")
                   }`}
                   title="Profile Options"
@@ -1124,7 +1171,7 @@ export default function LibraryPage() {
                     <img src={profilePic} alt="Profile" className="h-full w-full object-cover" />
                   ) : (
                     <div className={`h-full w-full flex items-center justify-center ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
-                      <User className={`h-4 w-4 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
+                      <User className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
                     </div>
                   )}
                 </motion.button>
@@ -1143,10 +1190,10 @@ export default function LibraryPage() {
                         setShowProfileDropup(false);
                         setIsPersonalizationModalOpen(true);
                       }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
                         }`}
                     >
-                      <User className="h-3.5 w-3.5 opacity-60" />
+<User className="h-3.5 w-3.5" />
                       <span>Profile</span>
                     </button>
 
@@ -1155,10 +1202,10 @@ export default function LibraryPage() {
                         setShowProfileDropup(false);
                         setIsWalletModalOpen(true);
                       }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
                         }`}
                     >
-                      <Wallet className="h-3.5 w-3.5 opacity-60" />
+                      <Wallet className="h-3.5 w-3.5" />
                       <span>Wallet</span>
                     </button>
 
@@ -1198,7 +1245,7 @@ export default function LibraryPage() {
                 onClick={() => setIsSidebarCollapsed(true)}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5"}`}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? "text-white hover:bg-white/5" : "text-black hover:bg-black/5"}`}
                 title="Collapse Sidebar"
               >
                 <PanelLeftClose className="w-4 h-4" />
@@ -1206,32 +1253,29 @@ export default function LibraryPage() {
             </div>
             
             {/* Sidebar Menu Items */}
-            <div className={`flex-1 overflow-y-auto scrollbar-hide p-3 flex flex-col gap-5 ${isDarkMode ? "custom-scrollbar text-zinc-300" : "light-scrollbar text-zinc-700"}`}>
+            <div className={`flex-1 overflow-y-auto scrollbar-hide p-3 flex flex-col gap-5 ${isDarkMode ? "custom-scrollbar text-white" : "light-scrollbar text-black"}`}>
               {/* Explore Section */}
                 <div className="space-y-1">
-                  <div className={`px-3 pb-1 text-[10px] font-bold font-mono uppercase tracking-[0.22em] ${isDarkMode ? "text-white/25" : "text-black/25"}`}>
-                    Explore
-                  </div>
                   
                   <button
                     onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
                     className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
                       activeCategory === "featured"
                         ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
-                        : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/[0.03]" : "text-black/50 hover:text-black hover:bg-black/[0.03]")
+                        : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
                     }`}
                   >
                     {activeCategory === "featured" && (
-                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-cyan-400" : "bg-cyan-600"}`} />
+                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
                     )}
                     <div className="flex items-center gap-3 min-w-0">
-                      <Sparkles className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
-                        activeCategory === "featured" ? (isDarkMode ? "text-cyan-400" : "text-cyan-600") : "opacity-50 group-hover:opacity-80"
+                      <Compass className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
+                        activeCategory === "featured" ? (isDarkMode ? "text-white" : "text-black") : ""
                       }`} />
-                      <span className={`truncate ${activeCategory === "featured" ? "font-semibold" : "font-medium"}`}>Featured Feed</span>
+                      <span className={`truncate ${activeCategory === "featured" ? "font-semibold" : "font-medium"}`}>Explore</span>
                     </div>
                     {activeCategory === "featured" && (
-                      <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-md ${isDarkMode ? "bg-white/5 text-white/30" : "bg-black/5 text-black/30"}`}>New</span>
+                      <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-md ${isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black"}`}>New</span>
                     )}
                   </button>
 
@@ -1240,15 +1284,15 @@ export default function LibraryPage() {
                     className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
                       activeCategory === "recent"
                         ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
-                        : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/[0.03]" : "text-black/50 hover:text-black hover:bg-black/[0.03]")
+                        : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
                     }`}
                   >
                     {activeCategory === "recent" && (
-                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-cyan-400" : "bg-cyan-600"}`} />
+                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
                     )}
                     <div className="flex items-center gap-3 min-w-0">
                       <Clock className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
-                        activeCategory === "recent" ? (isDarkMode ? "text-cyan-400" : "text-cyan-600") : "opacity-50 group-hover:opacity-80"
+                        activeCategory === "recent" ? (isDarkMode ? "text-white" : "text-black") : ""
                       }`} />
                       <span className={`truncate ${activeCategory === "recent" ? "font-semibold" : "font-medium"}`}>Recent Creations</span>
                     </div>
@@ -1259,23 +1303,23 @@ export default function LibraryPage() {
                     className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
                       activeCategory === "saved"
                         ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
-                        : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/[0.03]" : "text-black/50 hover:text-black hover:bg-black/[0.03]")
+                        : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
                     }`}
                   >
                     {activeCategory === "saved" && (
-                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-cyan-400" : "bg-cyan-600"}`} />
+                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
                     )}
                     <div className="flex items-center gap-3 min-w-0">
                       <Bookmark className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
-                        activeCategory === "saved" ? (isDarkMode ? "text-cyan-400" : "text-cyan-600") : "opacity-50 group-hover:opacity-80"
+                        activeCategory === "saved" ? (isDarkMode ? "text-white" : "text-black") : ""
                       }`} />
                       <span className={`truncate ${activeCategory === "saved" ? "font-semibold" : "font-medium"}`}>Saved</span>
                     </div>
                     {savedIds.length > 0 && (
                       <span className={`text-[11px] font-mono font-bold px-1.5 min-w-[22px] h-[20px] flex items-center justify-center rounded-full flex-shrink-0 ${
                         activeCategory === "saved"
-                          ? (isDarkMode ? "bg-cyan-400/20 text-cyan-300" : "bg-cyan-600/20 text-cyan-700")
-                          : (isDarkMode ? "bg-white/5 text-white/40" : "bg-black/5 text-black/40")
+                          ? (isDarkMode ? "bg-white/20 text-white" : "bg-black/20 text-black")
+                          : (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
                       }`}>
                         {savedIds.length}
                       </span>
@@ -1286,10 +1330,10 @@ export default function LibraryPage() {
               {/* Library Section */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between px-3 pb-1">
-                  <span className={`text-[10px] font-bold font-mono uppercase tracking-[0.22em] ${isDarkMode ? "text-white/25" : "text-black/25"}`}>
+                  <span className={`text-[10px] font-bold font-mono uppercase tracking-[0.22em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                     Personal Workspace
                   </span>
-                  <button onClick={handleCreateGallery} className={`transition-all duration-200 p-0.5 ${isDarkMode ? "text-white/20 hover:text-white/60 hover:bg-white/5" : "text-black/20 hover:text-black/60 hover:bg-black/5"} rounded-lg`} title="Create Folder">
+                  <button onClick={handleCreateGallery} className={`transition-all duration-200 p-0.5 ${isDarkMode ? "text-white hover:bg-white/5" : "text-black hover:bg-black/5"} rounded-lg`} title="Create Folder">
                     <FolderPlus className="h-[18px] w-[18px]" />
                   </button>
                 </div>
@@ -1299,15 +1343,15 @@ export default function LibraryPage() {
                   className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
                     activeCategory === "all"
                       ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
-                      : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/[0.03]" : "text-black/50 hover:text-black hover:bg-black/[0.03]")
+                      : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
                   }`}
                 >
                   {activeCategory === "all" && (
-                    <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-cyan-400" : "bg-cyan-600"}`} />
+                    <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
                   )}
                   <div className="flex items-center gap-3 min-w-0">
                     <ImageIcon className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
-                      activeCategory === "all" ? (isDarkMode ? "text-cyan-400" : "text-cyan-600") : "opacity-50 group-hover:opacity-80"
+                      activeCategory === "all" ? (isDarkMode ? "text-white" : "text-black") : ""
                     }`} />
                     <span className={`truncate ${activeCategory === "all" ? "font-semibold" : "font-medium"}`}>My Gallery</span>
                   </div>
@@ -1316,11 +1360,11 @@ export default function LibraryPage() {
 
               {/* Custom Database Galleries list */}
               <div className="space-y-1">
-                <div className={`text-[10px] font-bold font-mono uppercase tracking-[0.22em] px-3 pb-1 ${isDarkMode ? "text-white/25" : "text-black/25"}`}>
+                <div className={`text-[10px] font-bold font-mono uppercase tracking-[0.22em] px-3 pb-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                   Custom Folders
                 </div>
                 {galleries.length === 0 ? (
-                  <span className={`text-[11px] italic px-3 py-1.5 block ${isDarkMode ? "text-white/20" : "text-black/20"}`}>
+                  <span className={`text-[11px] italic px-3 py-1.5 block ${isDarkMode ? "text-white" : "text-black"}`}>
                     No folders created yet.
                   </span>
                 ) : (
@@ -1338,27 +1382,31 @@ export default function LibraryPage() {
                         className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
                           isSelected
                             ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
-                            : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/[0.03]" : "text-black/50 hover:text-black hover:bg-black/[0.03]")
+                            : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
                         }`}
                       >
                         {isSelected && (
-                          <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-cyan-400" : "bg-cyan-600"}`} />
+                          <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
                         )}
                         <div className="flex items-center gap-3 min-w-0 truncate">
                           {isSelected ? (
                             <FolderOpen className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
-                              isSelected ? (isDarkMode ? "text-cyan-400" : "text-cyan-600") : "opacity-50"
+                              isSelected ? (isDarkMode ? "text-white" : "text-black") : ""
                             }`} />
                           ) : (
                             <Folder className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
-                              isSelected ? (isDarkMode ? "text-cyan-400" : "text-cyan-600") : "opacity-40 group-hover:opacity-70"
+                              isSelected ? (isDarkMode ? "text-white" : "text-black") : ""
                             }`} />
                           )}
                           <span className={`truncate ${isSelected ? "font-semibold" : "font-medium"}`}>{g.name}</span>
                         </div>
                         
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          <span className={`text-[12px] font-mono ${isSelected ? (isDarkMode ? "text-white/40" : "text-black/40") : (isDarkMode ? "text-white/20" : "text-black/20")}`}>{g.asset_count || 0}</span>
+                          <span className={`text-[11px] font-mono font-bold min-w-[22px] h-[20px] flex items-center justify-center rounded-full px-1.5 ${
+                            isSelected
+                              ? (isDarkMode ? "bg-white/20 text-white" : "bg-black/20 text-black")
+                              : (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
+                          }`}>{g.asset_count || 0}</span>
                         </div>
                       </button>
                     );
@@ -1384,10 +1432,10 @@ export default function LibraryPage() {
                       setShowProfileDropup(false);
                       setIsPersonalizationModalOpen(true);
                     }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
                       }`}
                   >
-                    <User className="h-3.5 w-3.5 opacity-60" />
+                    <User className="h-3.5 w-3.5" />
                     <span>Profile</span>
                   </button>
 
@@ -1397,10 +1445,10 @@ export default function LibraryPage() {
                       setShowProfileDropup(false);
                       setIsWalletModalOpen(true);
                     }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
                       }`}
                   >
-                    <Wallet className="h-3.5 w-3.5 opacity-60" />
+                    <Wallet className="h-3.5 w-3.5" />
                     <span>Wallet</span>
                   </button>
 
@@ -1419,7 +1467,7 @@ export default function LibraryPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
+              <div id="walkthrough-profile-area" className="flex items-center justify-between">
                 <motion.button
                   onClick={() => setShowProfileDropup(!showProfileDropup)}
                   whileHover={{ scale: 1.03 }}
@@ -1431,12 +1479,12 @@ export default function LibraryPage() {
                     {profilePic ? (
                       <img src={profilePic} alt="Profile" className="h-full w-full object-cover" />
                     ) : (
-                      <User className={`h-4 w-4 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
+                      <User className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
                     )}
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
-                    <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : (subscription?.subscription?.plan_name?.toLowerCase().includes("agency") || subscription?.subscription?.plan_name?.toLowerCase().includes("heavy duty") ? "Agency" : subscription?.subscription?.plan_name || "Free Trial")}</span>
+                    <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white" : "text-black"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : (subscription?.subscription?.plan_name?.toLowerCase().includes("agency") || subscription?.subscription?.plan_name?.toLowerCase().includes("heavy duty") ? "Agency" : subscription?.subscription?.plan_name || "Free Trial")}</span>
                   </div>
                 </motion.button>
                 <div className="flex items-center gap-1.5">
@@ -1449,24 +1497,23 @@ export default function LibraryPage() {
                     whileTap={{ scale: 0.9 }}
                     title="Settings"
                     className={`p-1.5 rounded-lg border transition-colors ${isDarkMode
-                        ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5"
-                        : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"
+                        ? "border-white/10 text-white hover:bg-white/5"
+                        : "border-black/10 text-black hover:bg-black/5"
                       }`}
                   >
                     <Settings className="h-3.5 w-3.5" />
                   </motion.button>
-                  <motion.button
-                    onClick={handleLogout}
-                    whileHover={{ scale: 1.1, x: 2 }}
-                    whileTap={{ scale: 0.9 }}
-                    title="Log Out"
-                    className={`p-1.5 rounded-lg border transition-colors ${isDarkMode
-                        ? "border-white/10 text-white/60 hover:text-red-400 hover:bg-white/5"
-                        : "border-black/10 text-black/60 hover:text-red-600 hover:bg-black/5"
-                      }`}
+                  <Link
+                    href="/pricing"
+                    className={`p-1.5 rounded-lg border transition-colors flex items-center gap-1 text-[10px] font-semibold cursor-pointer ${
+                      isDarkMode
+                        ? "border-white/10 text-white hover:bg-white/5"
+                        : "border-black/10 text-black hover:bg-black/5"
+                    }`}
                   >
-                    <LogOut className="h-3.5 w-3.5" />
-                  </motion.button>
+                    <Zap className="h-3.5 w-3.5" />
+                    <span>Upgrade</span>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -1513,6 +1560,45 @@ export default function LibraryPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {/* Quick Tour Button */}
+              <motion.button
+                onClick={() => setShowWalkthrough(true)}
+                className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer overflow-hidden relative ${isDarkMode
+                    ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                    : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                  }`}
+                title="Start Tour"
+              >
+                <motion.div
+                  whileHover={{
+                    scale: 1.1,
+                    y: [0, -1, 1, -1, 0],
+                    transition: { y: { repeat: Infinity, duration: 0.15, ease: "linear" } }
+                  }}
+                  whileTap={{ x: [0, -6, 35], transition: { duration: 0.4, ease: "easeInOut" } }}
+                  className="flex items-center justify-center"
+                >
+                  <Car className="h-4 w-4 opacity-70" />
+                </motion.div>
+              </motion.button>
+
+              {/* Notification Bell */}
+              <motion.button
+                onClick={() => { setHasNewGeneration(false); setActiveCategory("all"); }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer relative ${isDarkMode
+                    ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                    : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                  }`}
+                title={hasNewGeneration ? "New image generated!" : "Notifications"}
+              >
+                <Bell className="h-4 w-4" />
+                {hasNewGeneration && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-[#0d0d0c]" />
+                )}
+              </motion.button>
+
               <button
                 onClick={toggleTheme}
                 className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer ${isDarkMode ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-black/10 bg-black/5 text-black hover:bg-black/10"}`}
@@ -1756,16 +1842,16 @@ export default function LibraryPage() {
             <div className={`flex items-center border transition-all rounded-full px-3 py-1.5 w-full md:max-w-xs ${
               isDarkMode 
                 ? "bg-[#222120] border-white/5 focus-within:border-white/10" 
-                : "bg-[#f2f1f0] border-black/5 focus-within:border-black/10"
+                : "bg-white border-black/15 focus-within:border-black/30"
             }`}>
-              <Search className={`h-3.5 w-3.5 mr-2 shrink-0 ${isDarkMode ? "text-white/30" : "text-black/40"}`} />
+              <Search className={`h-3.5 w-3.5 mr-2 shrink-0 ${isDarkMode ? "text-white/30" : "text-black/60"}`} />
               <input
                 type="text"
                 placeholder="Search library prompts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={`w-full bg-transparent border-none text-xs focus:outline-none ${
-                  isDarkMode ? "text-white placeholder-white/20" : "text-black placeholder-black/35"
+                  isDarkMode ? "text-white placeholder-white/20" : "text-black placeholder-black/50"
                 }`}
               />
               {searchQuery && (
@@ -1885,7 +1971,7 @@ export default function LibraryPage() {
                     </div>
                     <div className="text-center font-sans">
                       <p className="text-sm font-semibold mb-1">Drag and drop images here</p>
-                      <p className={`text-xs ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                      <p className={`text-xs ${isDarkMode ? "text-white" : "text-black"}`}>
                         Drop PNG, JPG or WebP images to build your private visual prompt archive.
                       </p>
                     </div>
@@ -1913,6 +1999,22 @@ export default function LibraryPage() {
                     <p className={`text-xs font-mono tracking-wider uppercase ${isDarkMode ? "text-white/45" : "text-black/45"}`}>
                       Loading folder assets...
                     </p>
+                  </div>
+                ) : isGenerating ? (
+                  <div className="flex items-center justify-center py-16">
+                    <PixelCard
+                      variant={isDarkMode ? "blue" : "default"}
+                      autoPlay
+                      autoPlayInterval={2000}
+                      className={`!h-[280px] !w-[220px] shadow-xl ${isDarkMode ? "border-white/10 shadow-cyan-500/10" : "border-black/10 shadow-black/10"}`}
+                    >
+                      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+                        <Loader2 className={`h-8 w-8 animate-spin mb-3 ${isDarkMode ? "text-white" : "text-black"}`} />
+                        <p className={`text-xs font-mono font-semibold tracking-wider uppercase ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
+                          Generating...
+                        </p>
+                      </div>
+                    </PixelCard>
                   </div>
                 ) : activeAssets.length === 0 ? (
                   <motion.div
@@ -1952,33 +2054,6 @@ export default function LibraryPage() {
                     </AnimatePresence>
                   </BentoGrid>
                 )}
-
-                {/* Pixel animation overlay during image generation - visible everywhere */}
-                {isGenerating && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center"
-                    style={{ background: isDarkMode ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)' }}
-                  >
-                    <div className="relative">
-                      <PixelCard
-                        variant={isDarkMode ? "blue" : "default"}
-                        autoPlay
-                        autoPlayInterval={2000}
-                        className={`!h-[320px] !w-[260px] shadow-2xl ${isDarkMode ? "border-white/10 shadow-cyan-500/10" : "border-black/10 shadow-black/10"}`}
-                      >
-                        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-                          <Loader2 className={`h-8 w-8 animate-spin mb-3 ${isDarkMode ? "text-white" : "text-black"}`} />
-                          <p className={`text-xs font-mono font-semibold tracking-wider uppercase ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
-                            Generating...
-                          </p>
-                        </div>
-                      </PixelCard>
-                    </div>
-                  </motion.div>
-                )}
               </>
             )}
           </div>
@@ -1994,6 +2069,7 @@ export default function LibraryPage() {
           }`}
         >
             <textarea
+              id="walkthrough-input-area"
               value={generatePrompt}
               onChange={(e) => {
                 setGeneratePrompt(e.target.value);
@@ -2011,7 +2087,7 @@ export default function LibraryPage() {
                 e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
               }}
               disabled={isGenerating}
-              placeholder="Ask anything"
+              placeholder={typedPlaceholder}
               rows={1}
               className={`flex-1 min-w-0 bg-transparent resize-none no-scrollbar font-sans ${
                 isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"
@@ -2223,7 +2299,7 @@ export default function LibraryPage() {
                       {expandedAsset.id.startsWith("feat-") ? "Featured" : expandedAsset.id.startsWith("uploaded-") ? "Upload" : "Library"}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
                     <h3 className={`text-sm font-bold font-sans tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
                       {expandedAsset.id.startsWith("feat-") ? "Featured Creation" : "Library Asset"}
                     </h3>
@@ -2301,7 +2377,7 @@ export default function LibraryPage() {
                       <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
                         Saved
                       </span>
-                      <span className={`text-[11px] font-medium block mt-0.5 ${savedIds.includes(expandedAsset.id) ? (isDarkMode ? "text-white" : "text-black") : isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                      <span className={`text-[11px] font-medium block mt-0.5 ${savedIds.includes(expandedAsset.id) ? (isDarkMode ? "text-white" : "text-black") : isDarkMode ? "text-white" : "text-black"}`}>
                         {savedIds.includes(expandedAsset.id) ? "Yes" : "No"}
                       </span>
                     </div>
@@ -2320,7 +2396,7 @@ export default function LibraryPage() {
                       <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
                         Asset ID
                       </span>
-                      <span className={`text-[11px] font-mono block mt-0.5 break-all ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                      <span className={`text-[11px] font-mono block mt-0.5 break-all ${isDarkMode ? "text-white" : "text-black"}`}>
                         {expandedAsset.id}
                       </span>
                     </div>
@@ -2419,6 +2495,48 @@ export default function LibraryPage() {
         onClose={() => setIsWalletModalOpen(false)}
         isDarkMode={isDarkMode}
         isMobile={isMobile}
+      />
+
+      {/* Onboarding Walkthrough */}
+      <OnboardingWalkthrough
+        isOpen={showWalkthrough}
+        onClose={() => setShowWalkthrough(false)}
+        isMobile={isMobile}
+        setIsSidebarCollapsed={setIsSidebarCollapsed}
+        setIsRightSidebarCollapsed={() => {}}
+        isDarkMode={isDarkMode}
+        steps={[
+          {
+            title: "Welcome to Image Library",
+            description: "Your personal image gallery and generation hub. Browse, create, and manage all your AI-generated visuals in one place.",
+            placement: "center",
+            icon: <Sparkles className="h-4 w-4" />,
+          },
+          {
+            title: "Sidebar Navigation",
+            description: "Switch between Explore, Recent Creations, Saved items, and your custom folders from this sidebar.",
+            targetSelector: "#walkthrough-sidebar",
+            placement: "right",
+          },
+          {
+            title: "Image Prompt Input",
+            description: "Type a detailed description of the image you want to generate. The AI will transform your words into stunning visuals.",
+            targetSelector: "#walkthrough-input-area",
+            placement: "top",
+          },
+          {
+            title: "Your Profile & Settings",
+            description: "Access your profile, wallet, settings, and upgrade options from here.",
+            targetSelector: "#walkthrough-profile-area",
+            placement: "top",
+          },
+          {
+            title: "You're Ready to Create!",
+            description: "Start generating images by typing a prompt and hitting Generate. Explore community creations and build your personal gallery!",
+            placement: "center",
+            icon: <CheckCircle className="h-4 w-4" />,
+          },
+        ]}
       />
     </div>
   )
