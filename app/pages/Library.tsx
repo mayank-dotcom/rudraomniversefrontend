@@ -2001,7 +2001,7 @@ export default function LibraryPage() {
                       Loading folder assets...
                     </p>
                   </div>
-                ) : (activeAssets.length === 0 && !isGenerating) ? (
+                ) : (activeAssets.length === 0 && (!isGenerating || activeCategory !== "all")) ? (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -2032,7 +2032,7 @@ export default function LibraryPage() {
                   /* ================= CORE PHOTO IMAGE GRID ================= */
                   <BentoGrid className="w-full gap-1.5 md:gap-2 max-w-none md:auto-rows-[15rem]">
                     <AnimatePresence mode="popLayout">
-                      {isGenerating && (
+                      {isGenerating && activeCategory === "all" && (
                         <BentoGridItem
                           key="generating-placeholder"
                           className={cn(
@@ -2068,7 +2068,7 @@ export default function LibraryPage() {
                         />
                       )}
                       {activeAssets.map((asset, i) => {
-                        const index = isGenerating ? i + 1 : i;
+                        const index = (isGenerating && activeCategory === "all") ? i + 1 : i;
                         const spanClass = getBentoSpanClass(index);
                         return renderCard(asset, index, spanClass);
                       })}
