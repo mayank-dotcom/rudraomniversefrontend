@@ -1858,160 +1858,150 @@ export default function LibraryPage() {
             isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f4f3f2]"
           }`}>
           
-          {/* Header */}
-          <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 border-b pb-5 transition-colors duration-300 ${
-            isDarkMode ? "border-white/5" : "border-black/5"
-          }`}>
-            <div>
-              <div className={`flex items-center gap-2 text-[11px] font-mono tracking-widest uppercase mb-1 ${
-                isDarkMode ? "text-white/40" : "text-black/50"
-              }`}>
-                <span>Rudra Library</span>
-                <ChevronRight className="h-3 w-3" />
-                <span className="text-[var(--color-cyan)] font-sans font-semibold normal-case tracking-normal">
-                  {activeCategory === "public_showcase" && "Community Showcase"}
-                  {activeCategory === "featured" && "Featured"}
-                  {activeCategory === "recent" && "Recent"}
-                  {activeCategory === "saved" && "Saved"}
-                  {activeCategory === "all" && "My Gallery"}
-                  {activeCategory === "uploads" && "Uploads"}
-                  {activeCategory === "gallery" && "Folder"}
-                  {activeCategory === "public_gallery" && "Shared Folder"}
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                <h1 className="text-2xl font-display font-semibold tracking-tight flex items-center gap-3">
-                  {activeCategory === "featured" && "Featured Concept Showcase"}
-                  {activeCategory === "public_showcase" && "Community Shared Prompts"}
-                  {activeCategory === "recent" && "Your Recent Render Prompts"}
-                  {activeCategory === "saved" && `Saved (${savedIds.length})`}
-                  {activeCategory === "all" && "My Private Gallery"}
-                  {activeCategory === "uploads" && "Local Upload Repository"}
-                  {activeCategory === "gallery" && (
-                    <>
-                      <span>{galleries.find(g => g.id === selectedGalleryId)?.name || "Custom Folder"}</span>
-                      {(() => {
-                        const currentGallery = galleries.find(g => g.id === selectedGalleryId);
-                        if (!currentGallery) return null;
-                        return (
-                            <div className="flex items-center gap-1.5 ml-2">
-                              {/* Toggle visibility */}
-                              <button
-                                onClick={() => handleToggleGalleryVisibility(currentGallery.id, currentGallery.is_public)}
-                                className={`p-1.5 rounded border transition-colors ${
-                                  currentGallery.is_public
-                                    ? "bg-sky-500/10 border-sky-400/20 text-sky-400 hover:bg-sky-500/20"
-                                    : isDarkMode
+          {/* Header - Only for Folders/Shared Folders */}
+          {(activeCategory === "gallery" || activeCategory === "public_gallery") && (
+            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 border-b pb-5 transition-colors duration-300 ${
+              isDarkMode ? "border-white/5" : "border-black/5"
+            }`}>
+              <div>
+                <div className={`flex items-center gap-2 text-[11px] font-mono tracking-widest uppercase mb-1 ${
+                  isDarkMode ? "text-white/40" : "text-black/50"
+                }`}>
+                  <span>Rudra Library</span>
+                  <ChevronRight className="h-3 w-3" />
+                  <span className="text-[var(--color-cyan)] font-sans font-semibold normal-case tracking-normal">
+                    {activeCategory === "gallery" && "Folder"}
+                    {activeCategory === "public_gallery" && "Shared Folder"}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <h1 className="text-2xl font-display font-semibold tracking-tight flex items-center gap-3">
+                    {activeCategory === "gallery" && (
+                      <>
+                        <span>{galleries.find(g => g.id === selectedGalleryId)?.name || "Custom Folder"}</span>
+                        {(() => {
+                          const currentGallery = galleries.find(g => g.id === selectedGalleryId);
+                          if (!currentGallery) return null;
+                          return (
+                              <div className="flex items-center gap-1.5 ml-2">
+                                {/* Toggle visibility */}
+                                <button
+                                  onClick={() => handleToggleGalleryVisibility(currentGallery.id, currentGallery.is_public)}
+                                  className={`p-1.5 rounded border transition-colors ${
+                                    currentGallery.is_public
+                                      ? "bg-sky-500/10 border-sky-400/20 text-sky-400 hover:bg-sky-500/20"
+                                      : isDarkMode
+                                        ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                        : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
+                                  }`}
+                                  title={currentGallery.is_public ? "Set Gallery Private" : "Set Gallery Public"}
+                                >
+                                  {currentGallery.is_public ? (
+                                    <Globe className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <Lock className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+
+                                {/* Rename */}
+                                <button
+                                  onClick={() => handleRenameGallery(currentGallery.id, currentGallery.name)}
+                                  className={`p-1.5 rounded border transition-colors ${
+                                    isDarkMode
                                       ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
                                       : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
-                                }`}
-                                title={currentGallery.is_public ? "Set Gallery Private" : "Set Gallery Public"}
-                              >
-                                {currentGallery.is_public ? (
-                                  <Globe className="h-3.5 w-3.5" />
-                                ) : (
-                                  <Lock className="h-3.5 w-3.5" />
-                                )}
-                              </button>
+                                  }`}
+                                  title="Rename Gallery"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
 
-                              {/* Rename */}
-                              <button
-                                onClick={() => handleRenameGallery(currentGallery.id, currentGallery.name)}
-                                className={`p-1.5 rounded border transition-colors ${
-                                  isDarkMode
-                                    ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                                    : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
-                                }`}
-                                title="Rename Gallery"
-                              >
-                                <Edit2 className="h-3.5 w-3.5" />
-                              </button>
+                                {/* Share Gallery */}
+                                <button
+                                  onClick={() => handleShareImage(
+                                    `${window.location.origin}/library?gallery=${currentGallery.id}`,
+                                    currentGallery.name
+                                  )}
+                                  className={`p-1.5 rounded border transition-colors ${
+                                    isDarkMode
+                                      ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                      : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
+                                  }`}
+                                  title="Share Gallery"
+                                >
+                                  <Share2 className="h-3.5 w-3.5" />
+                                </button>
 
-                              {/* Share Gallery */}
-                              <button
-                                onClick={() => handleShareImage(
-                                  `${window.location.origin}/library?gallery=${currentGallery.id}`,
-                                  currentGallery.name
-                                )}
-                                className={`p-1.5 rounded border transition-colors ${
-                                  isDarkMode
-                                    ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                                    : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
-                                }`}
-                                title="Share Gallery"
-                              >
-                                <Share2 className="h-3.5 w-3.5" />
-                              </button>
+                                {/* Save Gallery */}
+                                <button
+                                  onClick={() => {
+                                    const galleryAssetIds = assets.filter(a => a.gallery_id === currentGallery.id);
+                                    galleryAssetIds.forEach(a => handleDownloadImage(getAssetImageUrl(a), a.id));
+                                    toast.success(`Saving ${galleryAssetIds.length} images...`);
+                                  }}
+                                  className={`p-1.5 rounded border transition-colors ${
+                                    isDarkMode
+                                      ? "bg-white/5 border-white/10 text-white/60 hover:bg-emerald-500/80 hover:text-white"
+                                      : "bg-black/5 border-black/10 text-black/60 hover:bg-emerald-500/80 hover:text-white"
+                                  }`}
+                                  title="Save All Images"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                </button>
 
-                              {/* Save Gallery */}
-                              <button
-                                onClick={() => {
-                                  const galleryAssetIds = assets.filter(a => a.gallery_id === currentGallery.id);
-                                  galleryAssetIds.forEach(a => handleDownloadImage(getAssetImageUrl(a), a.id));
-                                  toast.success(`Saving ${galleryAssetIds.length} images...`);
-                                }}
-                                className={`p-1.5 rounded border transition-colors ${
-                                  isDarkMode
-                                    ? "bg-white/5 border-white/10 text-white/60 hover:bg-emerald-500/80 hover:text-white"
-                                    : "bg-black/5 border-black/10 text-black/60 hover:bg-emerald-500/80 hover:text-white"
-                                }`}
-                                title="Save All Images"
-                              >
-                                <Download className="h-3.5 w-3.5" />
-                              </button>
+                                {/* Delete */}
+                                <button
+                                  onClick={() => handleDeleteGallery(currentGallery.id)}
+                                  className={`p-1.5 rounded border transition-colors ${
+                                    isDarkMode
+                                      ? "bg-white/5 border-white/10 text-white/60 hover:bg-red-500/80 hover:text-white"
+                                      : "bg-black/5 border-black/10 text-black/60 hover:bg-red-500/80 hover:text-white"
+                                  }`}
+                                  title="Delete Gallery"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                          );
+                        })()}
+                      </>
+                    )}
+                    {activeCategory === "public_gallery" && (
+                      <>
+                        <span>{publicGalleries.find(g => g.id === selectedPublicGalleryId)?.name || "Shared Folder"}</span>
+                        <span className="text-xs font-mono font-normal opacity-40 px-2 py-0.5 border border-white/10 bg-white/5 rounded-full ml-2">
+                          by {publicGalleries.find(g => g.id === selectedPublicGalleryId)?.owner_name || "Community User"}
+                        </span>
+                      </>
+                    )}
+                  </h1>
+                </div>
+              </div>
 
-                              {/* Delete */}
-                              <button
-                                onClick={() => handleDeleteGallery(currentGallery.id)}
-                                className={`p-1.5 rounded border transition-colors ${
-                                  isDarkMode
-                                    ? "bg-white/5 border-white/10 text-white/60 hover:bg-red-500/80 hover:text-white"
-                                    : "bg-black/5 border-black/10 text-black/60 hover:bg-red-500/80 hover:text-white"
-                                }`}
-                                title="Delete Gallery"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                        );
-                      })()}
-                    </>
-                  )}
-                  {activeCategory === "public_gallery" && (
-                    <>
-                      <span>{publicGalleries.find(g => g.id === selectedPublicGalleryId)?.name || "Shared Folder"}</span>
-                      <span className="text-xs font-mono font-normal opacity-40 px-2 py-0.5 border border-white/10 bg-white/5 rounded-full ml-2">
-                        by {publicGalleries.find(g => g.id === selectedPublicGalleryId)?.owner_name || "Community User"}
-                      </span>
-                    </>
-                  )}
-                </h1>
+              {/* Back to Chat Option */}
+              <div className="flex items-center gap-2 select-none">
+                {/* Back to Showcase Folder view */}
+                {activeCategory === "public_gallery" && (
+                  <button
+                    onClick={() => {
+                      setActiveCategory("public_showcase");
+                      setShowcaseTab("galleries");
+                      setSelectedPublicGalleryId(null);
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${
+                      isDarkMode
+                        ? "bg-white/5 border-white/10 text-white hover:bg-white/10"
+                        : "bg-white border-black/10 text-black hover:bg-black/[0.03] shadow-sm"
+                    }`}
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    <span>Back to Folders</span>
+                  </button>
+                )}
               </div>
             </div>
-
-            {/* Back to Chat Option */}
-            <div className="flex items-center gap-2 select-none">
-              {/* Back to Showcase Folder view */}
-              {activeCategory === "public_gallery" && (
-                <button
-                  onClick={() => {
-                    setActiveCategory("public_showcase");
-                    setShowcaseTab("galleries");
-                    setSelectedPublicGalleryId(null);
-                  }}
-                  className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${
-                    isDarkMode
-                      ? "bg-white/5 border-white/10 text-white hover:bg-white/10"
-                      : "bg-white border-black/10 text-black hover:bg-black/[0.03] shadow-sm"
-                  }`}
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  <span>Back to Folders</span>
-                </button>
-              )}
-            </div>
-          </div>
+          )}
 
           {/* Showcase Tabs */}
           {activeCategory === "public_showcase" && (
