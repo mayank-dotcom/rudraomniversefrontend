@@ -19,6 +19,7 @@ import {
   unsaveAsset,
   getSubscriptionStatus,
   sendAiRequest,
+  getAssetImageUrl,
   type LibraryAsset,
   type LibraryGallery
 } from "@/lib/chat-api"
@@ -87,6 +88,7 @@ import { Poppins, Roboto, Space_Grotesk } from "next/font/google"
 import SettingsModal from "@/components/ui/SettingsModal"
 import WalletModal from "@/components/ui/WalletModal"
 import ReflectiveCard from "@/components/ReflectiveCard"
+import PixelCard from "@/components/PixelCard"
 
 // Curated Premium Mock Assets for the "Featured" Feed
 const FEATURED_ASSETS: LibraryAsset[] = [
@@ -152,6 +154,7 @@ export default function LibraryPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [togglingVisibilityId, setTogglingVisibilityId] = useState<string | null>(null)
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set())
   
   // Custom Interactive States
   const [activeCategory, setActiveCategory] = useState<string>("featured")
@@ -417,7 +420,7 @@ export default function LibraryPage() {
     if (isGenerating) return
 
     setIsGenerating(true)
-    const toastId = toast.loading("Generating your AI image with Flux...")
+    const toastId = toast.loading("Generating your image...")
 
     try {
       console.log(`[Library] Requesting image generation for prompt: "${generatePrompt}"`)
@@ -517,7 +520,7 @@ export default function LibraryPage() {
         await saveAsset(id, asset.asset_type, asset.asset_url, asset.prompt || "")
         setSavedIds((prev) => [...prev, id])
         toast.success("Saved!")
-        if (asset.asset_url) handleDownloadImage(asset.asset_url, `saved-${id}`)
+        if (asset.asset_url) handleDownloadImage(getAssetImageUrl(asset), `saved-${id}`)
       } catch {
         toast.error("Failed to save.")
       }
@@ -850,13 +853,23 @@ export default function LibraryPage() {
             onMouseEnter={() => setHoveredId(asset.id)}
             onMouseLeave={() => setHoveredId(null)}
           >
-            <img
-              src={asset.asset_url}
-              alt={asset.prompt || "Concept visual"}
-              className="w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-110 cursor-pointer"
-              loading="lazy"
-              onClick={() => setExpandedAsset(asset)}
-            />
+            {brokenImages.has(asset.id) ? (
+              <div className="w-full h-full flex items-center justify-center cursor-pointer bg-black/10" onClick={() => setExpandedAsset(asset)}>
+                <div className="text-center p-4">
+                  <ImageIcon className={`h-8 w-8 mx-auto mb-2 ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
+                  <p className={`text-[10px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Image unavailable</p>
+                </div>
+              </div>
+            ) : (
+              <img
+                src={getAssetImageUrl(asset)}
+                alt={asset.prompt || "Concept visual"}
+                className="w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-110 cursor-pointer"
+                loading="lazy"
+                onClick={() => setExpandedAsset(asset)}
+                onError={() => setBrokenImages(prev => new Set(prev).add(asset.id))}
+              />
+            )}
 
             {/* Bottom Info Overlay - Premium Glassmorphism */}
             <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-20 pointer-events-none transition-all duration-300 group-hover/card:opacity-0 group-hover/card:translate-y-2">
@@ -887,7 +900,7 @@ export default function LibraryPage() {
               <div className="flex items-center justify-between pt-3 border-t border-white/10">
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={(e) => { e.preventDefault(); handleShareImage(asset.asset_url, asset.prompt || "Library Image"); }}
+                    onClick={(e) => { e.preventDefault(); handleShareImage(getAssetImageUrl(asset), asset.prompt || "Library Image"); }}
                     className="text-white/60 hover:text-cyan-400 transition-colors cursor-pointer"
                     title="Share"
                   >
@@ -901,7 +914,7 @@ export default function LibraryPage() {
                     {copiedId === asset.id ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </button>
                   <button
-                    onClick={(e) => { e.preventDefault(); handleDownloadImage(asset.asset_url, asset.id); }}
+                    onClick={(e) => { e.preventDefault(); handleDownloadImage(getAssetImageUrl(asset), asset.id); }}
                     className="text-white/60 hover:text-cyan-400 transition-colors cursor-pointer"
                     title="Download"
                   >
@@ -998,94 +1011,82 @@ export default function LibraryPage() {
         id="walkthrough-sidebar"
         style={{ width: isSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${sidebarWidth}px`) }}
         className={`h-full border-r ${
-          isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white/10" : "border-black/10"
-        } ${isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f4f3f2]"} flex flex-col ${
+          isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white/[0.07]" : "border-black/[0.07]"
+        } ${isDarkMode ? "bg-gradient-to-b from-[#0d0d0c] via-[#0d0d0c] to-[#0a0a09]" : "bg-gradient-to-b from-[#f4f3f2] via-[#f4f3f2] to-[#efeeed]"} flex flex-col ${
           isMobile ? "fixed left-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"
         } transition-[width] duration-300 ease-in-out`}
       >
         {isSidebarCollapsed && !isMobile ? (
           <div className="flex flex-col h-full items-center py-4 justify-between relative select-none">
             {/* Top Group */}
-            <div className="flex flex-col items-center gap-6 w-full">
+            <div className="flex flex-col items-center gap-5 w-full">
               {/* Toggle Button */}
               <motion.button
                 onClick={() => setIsSidebarCollapsed(false)}
-                whileHover={{ scale: 1.15, x: 2 }}
-                whileTap={{ scale: 0.85 }}
-                className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
                   isDarkMode
-                    ? "text-white/60 hover:text-white hover:bg-white/5"
-                    : "text-black/60 hover:text-black hover:bg-black/5"
+                    ? "text-white/40 hover:text-white hover:bg-white/5"
+                    : "text-black/40 hover:text-black hover:bg-black/5"
                 }`}
                 title="Open Sidebar"
               >
-                <PanelLeftOpen className="w-[26px] h-[26px]" />
+                <PanelLeftOpen className="w-[22px] h-[22px]" />
               </motion.button>
 
               {/* Divider */}
-              <div className={`w-full border-t ${isDarkMode ? "border-white/10" : "border-black/10"}`} />
+              <div className={`w-8 border-t ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`} />
 
               {/* Featured Feed */}
               <motion.button
                 onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); }}
-                whileHover={{ scale: 1.15 }}
-                whileTap={{ scale: 0.85 }}
-                className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 rounded-xl transition-colors cursor-pointer relative ${
                   activeCategory === "featured"
-                    ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
-                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                    ? (isDarkMode ? "bg-white/[0.06] text-cyan-400" : "bg-black/[0.06] text-cyan-600")
+                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/[0.03]" : "text-black/40 hover:text-black hover:bg-black/[0.03]")
                 }`}
                 title="Featured Feed"
               >
-                <Sparkles className="w-[26px] h-[26px] opacity-80" />
-              </motion.button>
-
-              {/* Community Showcase */}
-              <motion.button
-                onClick={() => { setActiveCategory("public_showcase"); setIsUploadDragging(false); }}
-                whileHover={{ scale: 1.15 }}
-                whileTap={{ scale: 0.85 }}
-                className={`p-2 rounded-lg transition-colors cursor-pointer ${
-                  activeCategory === "public_showcase"
-                    ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
-                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
-                }`}
-                title="Community Showcase"
-              >
-                <Globe className="w-[26px] h-[26px] opacity-80" />
+                {activeCategory === "featured" && (
+                  <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${isDarkMode ? "bg-cyan-400" : "bg-cyan-600"}`} />
+                )}
+                <Sparkles className="w-[22px] h-[22px]" />
               </motion.button>
 
               {/* Recent Creations */}
               <motion.button
                 onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); }}
-                whileHover={{ scale: 1.15 }}
-                whileTap={{ scale: 0.85 }}
-                className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
                   activeCategory === "recent"
-                    ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
-                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                    ? (isDarkMode ? "bg-white/[0.06] text-cyan-400" : "bg-black/[0.06] text-cyan-600")
+                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/[0.03]" : "text-black/40 hover:text-black hover:bg-black/[0.03]")
                 }`}
                 title="Recent Creations"
               >
-                <Clock className="w-[26px] h-[26px] opacity-80" />
+                <Clock className="w-[22px] h-[22px]" />
               </motion.button>
 
               {/* Saved */}
               <motion.button
                 onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); }}
-                whileHover={{ scale: 1.15 }}
-                whileTap={{ scale: 0.85 }}
-                className={`p-2 rounded-lg transition-colors cursor-pointer relative ${
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 rounded-xl transition-colors cursor-pointer relative ${
                   activeCategory === "saved"
-                    ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
-                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                    ? (isDarkMode ? "bg-white/[0.06] text-cyan-400" : "bg-black/[0.06] text-cyan-600")
+                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/[0.03]" : "text-black/40 hover:text-black hover:bg-black/[0.03]")
                 }`}
                 title={`Saved (${savedIds.length})`}
               >
-                <Bookmark className="w-[26px] h-[26px] opacity-80" />
+                <Bookmark className="w-[22px] h-[22px]" />
                 {savedIds.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-mono font-bold h-4 w-4 rounded-full flex items-center justify-center scale-90">
-                    {savedIds.length}
+                  <span className={`absolute -top-1 -right-1 text-[8px] font-mono font-bold h-4 w-4 rounded-full flex items-center justify-center ${activeCategory === "saved" ? (isDarkMode ? "bg-cyan-400/20 text-cyan-300" : "bg-cyan-600/20 text-cyan-700") : (isDarkMode ? "bg-white/10 text-white/60" : "bg-black/10 text-black/60")}`}>
+                    {savedIds.length > 9 ? "9+" : savedIds.length}
                   </span>
                 )}
               </motion.button>
@@ -1093,87 +1094,37 @@ export default function LibraryPage() {
               {/* My Gallery */}
               <motion.button
                 onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); }}
-                whileHover={{ scale: 1.15 }}
-                whileTap={{ scale: 0.85 }}
-                className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
                   activeCategory === "all"
-                    ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
-                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                    ? (isDarkMode ? "bg-white/[0.06] text-cyan-400" : "bg-black/[0.06] text-cyan-600")
+                    : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/[0.03]" : "text-black/40 hover:text-black hover:bg-black/[0.03]")
                 }`}
                 title="My Gallery"
               >
-                <ImageIcon className="w-[26px] h-[26px] opacity-80" />
+                <ImageIcon className="w-[22px] h-[22px]" />
               </motion.button>
             </div>
 
-            {/* Bottom Group */}
-            <div className="flex flex-col items-center w-full relative">
-              {/* Create Folder button */}
-              <motion.button
-                onClick={handleCreateGallery}
-                whileHover={{ scale: 1.15 }}
-                whileTap={{ scale: 0.85 }}
-                className={`p-2 rounded-lg transition-colors cursor-pointer mb-4 ${
-                  isDarkMode
-                    ? "text-white/60 hover:text-white hover:bg-white/5"
-                    : "text-black/60 hover:text-black hover:bg-black/5"
-                }`}
-                title="Create Folder"
-              >
-                <FolderPlus className="w-[26px] h-[26px] opacity-80" />
-              </motion.button>
-
-              {/* Divider */}
-              <div className={`w-full border-t ${isDarkMode ? "border-white/10" : "border-black/10"} mb-4`} />
-
-              {/* Folders List (Scrollable list of folder icons) */}
-              <div className="flex flex-col items-center gap-3 max-h-[200px] overflow-y-auto w-full scrollbar-hide py-1 mb-4">
-                {galleries.map((g) => {
-                  const isSelected = activeCategory === "gallery" && selectedGalleryId === g.id
-                  return (
-                    <motion.button
-                      key={g.id}
-                      onClick={() => {
-                        setSelectedGalleryId(g.id)
-                        setActiveCategory("gallery")
-                        setIsUploadDragging(false)
-                      }}
-                      whileHover={{ scale: 1.15 }}
-                      whileTap={{ scale: 0.85 }}
-                      className={`p-2 rounded-lg transition-colors cursor-pointer ${
-                        isSelected
-                          ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
-                          : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
-                      }`}
-                      title={`${g.name} (${g.asset_count || 0})`}
-                    >
-                      {isSelected ? (
-                        <FolderOpen className="w-[26px] h-[26px] opacity-80" />
-                      ) : (
-                        <Folder className="w-[26px] h-[26px] opacity-80" />
-                      )}
-                    </motion.button>
-                  )
-                })}
-              </div>
-
-              {/* Divider */}
-              <div className={`w-full border-t ${isDarkMode ? "border-white/10" : "border-black/10"} mb-4`} />
-
-              {/* Profile / Avatar Button */}
+            {/* Profile / Avatar Button */}
               <div className="mb-2 relative">
                 <motion.button
                   onClick={() => setShowProfileDropup(!showProfileDropup)}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="h-8 w-8 rounded-full overflow-hidden border border-transparent hover:border-accent transition-all cursor-pointer relative shrink-0 flex items-center justify-center"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`h-8 w-8 rounded-full overflow-hidden border-2 transition-all cursor-pointer relative shrink-0 flex items-center justify-center ${
+                    showProfileDropup 
+                      ? (isDarkMode ? "border-cyan-400/50" : "border-cyan-600/50")
+                      : (isDarkMode ? "border-white/[0.06] hover:border-white/20" : "border-black/[0.06] hover:border-black/20")
+                  }`}
                   title="Profile Options"
                 >
                   {profilePic ? (
                     <img src={profilePic} alt="Profile" className="h-full w-full object-cover" />
                   ) : (
-                    <div className={`h-full w-full flex items-center justify-center ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-full`}>
-                      <User className={`h-4 w-4 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
+                    <div className={`h-full w-full flex items-center justify-center ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                      <User className={`h-4 w-4 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
                     </div>
                   )}
                 </motion.button>
@@ -1181,12 +1132,12 @@ export default function LibraryPage() {
                 {showProfileDropup && (
                   <div
                     ref={profileDropupRef}
-                    className={`absolute bottom-0 left-[48px] w-56 z-[100] rounded-xl border p-1.5 shadow-2xl ${isDarkMode
-                        ? "bg-[#222120]/95 border-white/10 text-white"
-                        : "bg-[#f2f1f0]/95 border-black/10 text-black"
-                      }`}
+                    className={`absolute bottom-0 left-[52px] w-56 z-[100] rounded-xl border p-1.5 shadow-2xl backdrop-blur-xl ${
+                      isDarkMode
+                        ? "bg-[#222120]/95 border-white/[0.06] text-white"
+                        : "bg-[#f2f1f0]/95 border-black/[0.06] text-black"
+                    }`}
                   >
-                    {/* Personalization Option */}
                     <button
                       onClick={() => {
                         setShowProfileDropup(false);
@@ -1199,7 +1150,6 @@ export default function LibraryPage() {
                       <span>Profile</span>
                     </button>
 
-                    {/* Wallet Option */}
                     <button
                       onClick={() => {
                         setShowProfileDropup(false);
@@ -1212,10 +1162,8 @@ export default function LibraryPage() {
                       <span>Wallet</span>
                     </button>
 
-                    {/* Divider */}
                     <div className={`my-1 h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
 
-                    {/* Logout Option */}
                     <button
                       onClick={handleLogout}
                       className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left text-red-500 transition-colors ${isDarkMode ? "hover:bg-red-500/10" : "hover:bg-red-500/5"
@@ -1227,29 +1175,30 @@ export default function LibraryPage() {
                   </div>
                 )}
               </div>
-            </div>
           </div>
         ) : (
           <div className="flex flex-col h-full overflow-hidden">
             {/* Logo Header */}
-            <div className={`h-16 flex-shrink-0 flex items-center justify-between px-5 py-4 border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
-              <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.location.href = "/"}>
-                <img
-                  src={isDarkMode ? "/dark.png" : "/light.png"}
-                  alt="Logo"
-                  className="w-7 h-7 object-contain"
-                />
+            <div className={`h-16 flex-shrink-0 flex items-center justify-between px-5 py-4 border-b ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`}>
+              <div className="flex items-center gap-2.5 cursor-pointer select-none" onClick={() => window.location.href = "/"}>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                  <img
+                    src={isDarkMode ? "/dark.png" : "/light.png"}
+                    alt="Logo"
+                    className="w-5 h-5 object-contain"
+                  />
+                </div>
                 <img
                   src={isDarkMode ? "/dark_text.png" : "/light_text.png"}
                   alt="Rudra Nexus"
-                  className="h-4 object-contain"
+                  className="h-3.5 object-contain"
                 />
               </div>
               <motion.button
                 onClick={() => setIsSidebarCollapsed(true)}
-                whileHover={{ scale: 1.15, x: -2 }}
-                whileTap={{ scale: 0.85 }}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5"}`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5"}`}
                 title="Collapse Sidebar"
               >
                 <PanelLeftClose className="w-4 h-4" />
@@ -1259,110 +1208,119 @@ export default function LibraryPage() {
             {/* Sidebar Menu Items */}
             <div className={`flex-1 overflow-y-auto scrollbar-hide p-3 flex flex-col gap-5 ${isDarkMode ? "custom-scrollbar text-zinc-300" : "light-scrollbar text-zinc-700"}`}>
               {/* Explore Section */}
-              <div className="space-y-1.5">
-                <div className={`px-2 text-xs font-bold font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                  Explore
-                </div>
-                
-                <button
-                  onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
-                  className={`group flex items-center justify-between w-full rounded-lg px-2.5 py-2 transition-all text-[15px] ${
-                    activeCategory === "featured"
-                      ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
-                      : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
-                  }`}
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <Sparkles className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
-                    <span className="truncate font-medium">Featured Feed</span>
+                <div className="space-y-1">
+                  <div className={`px-3 pb-1 text-[10px] font-bold font-mono uppercase tracking-[0.22em] ${isDarkMode ? "text-white/25" : "text-black/25"}`}>
+                    Explore
                   </div>
-                </button>
+                  
+                  <button
+                    onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
+                    className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
+                      activeCategory === "featured"
+                        ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
+                        : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/[0.03]" : "text-black/50 hover:text-black hover:bg-black/[0.03]")
+                    }`}
+                  >
+                    {activeCategory === "featured" && (
+                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-cyan-400" : "bg-cyan-600"}`} />
+                    )}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Sparkles className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
+                        activeCategory === "featured" ? (isDarkMode ? "text-cyan-400" : "text-cyan-600") : "opacity-50 group-hover:opacity-80"
+                      }`} />
+                      <span className={`truncate ${activeCategory === "featured" ? "font-semibold" : "font-medium"}`}>Featured Feed</span>
+                    </div>
+                    {activeCategory === "featured" && (
+                      <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-md ${isDarkMode ? "bg-white/5 text-white/30" : "bg-black/5 text-black/30"}`}>New</span>
+                    )}
+                  </button>
 
-                <button
-                  onClick={() => { setActiveCategory("public_showcase"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
-                  className={`group flex items-center justify-between w-full rounded-lg px-2.5 py-2 transition-all text-[15px] ${
-                    activeCategory === "public_showcase"
-                      ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
-                      : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
-                  }`}
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <Globe className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
-                    <span className="truncate font-medium">Community Showcase</span>
-                  </div>
-                </button>
+                  <button
+                    onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
+                    className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
+                      activeCategory === "recent"
+                        ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
+                        : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/[0.03]" : "text-black/50 hover:text-black hover:bg-black/[0.03]")
+                    }`}
+                  >
+                    {activeCategory === "recent" && (
+                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-cyan-400" : "bg-cyan-600"}`} />
+                    )}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Clock className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
+                        activeCategory === "recent" ? (isDarkMode ? "text-cyan-400" : "text-cyan-600") : "opacity-50 group-hover:opacity-80"
+                      }`} />
+                      <span className={`truncate ${activeCategory === "recent" ? "font-semibold" : "font-medium"}`}>Recent Creations</span>
+                    </div>
+                  </button>
 
-                <button
-                  onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
-                  className={`group flex items-center justify-between w-full rounded-lg px-2.5 py-2 transition-all text-[15px] ${
-                    activeCategory === "recent"
-                      ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
-                      : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
-                  }`}
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <Clock className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
-                    <span className="truncate font-medium">Recent Creations</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
-                  className={`group flex items-center justify-between w-full rounded-lg px-2.5 py-2 transition-all text-[15px] ${
-                    activeCategory === "saved"
-                      ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
-                      : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
-                  }`}
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <Bookmark className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
-                    <span className="truncate font-medium">Saved</span>
-                  </div>
-                  {savedIds.length > 0 && (
-                    <span className={`text-sm font-mono px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                  <button
+                    onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
+                    className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
                       activeCategory === "saved"
-                        ? (isDarkMode ? "bg-white/10 text-white" : "bg-black/10 text-black")
-                        : (isDarkMode ? "text-white/40" : "text-black/40")
-                    }`}>
-                      {savedIds.length}
-                    </span>
-                  )}
-                </button>
-              </div>
+                        ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
+                        : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/[0.03]" : "text-black/50 hover:text-black hover:bg-black/[0.03]")
+                    }`}
+                  >
+                    {activeCategory === "saved" && (
+                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-cyan-400" : "bg-cyan-600"}`} />
+                    )}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Bookmark className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
+                        activeCategory === "saved" ? (isDarkMode ? "text-cyan-400" : "text-cyan-600") : "opacity-50 group-hover:opacity-80"
+                      }`} />
+                      <span className={`truncate ${activeCategory === "saved" ? "font-semibold" : "font-medium"}`}>Saved</span>
+                    </div>
+                    {savedIds.length > 0 && (
+                      <span className={`text-[11px] font-mono font-bold px-1.5 min-w-[22px] h-[20px] flex items-center justify-center rounded-full flex-shrink-0 ${
+                        activeCategory === "saved"
+                          ? (isDarkMode ? "bg-cyan-400/20 text-cyan-300" : "bg-cyan-600/20 text-cyan-700")
+                          : (isDarkMode ? "bg-white/5 text-white/40" : "bg-black/5 text-black/40")
+                      }`}>
+                        {savedIds.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
 
               {/* Library Section */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between px-2">
-                  <span className={`text-xs font-bold font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between px-3 pb-1">
+                  <span className={`text-[10px] font-bold font-mono uppercase tracking-[0.22em] ${isDarkMode ? "text-white/25" : "text-black/25"}`}>
                     Personal Workspace
                   </span>
-                  <button onClick={handleCreateGallery} className={`transition-colors ${isDarkMode ? "text-white/30 hover:text-white/60" : "text-black/30 hover:text-black/60"}`} title="Create Folder">
-                    <FolderPlus className="h-[22px] w-[22px]" />
+                  <button onClick={handleCreateGallery} className={`transition-all duration-200 p-0.5 ${isDarkMode ? "text-white/20 hover:text-white/60 hover:bg-white/5" : "text-black/20 hover:text-black/60 hover:bg-black/5"} rounded-lg`} title="Create Folder">
+                    <FolderPlus className="h-[18px] w-[18px]" />
                   </button>
                 </div>
 
                 <button
                   onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); if (isMobile) setIsSidebarCollapsed(true); }}
-                  className={`group flex items-center justify-between w-full rounded-lg px-2.5 py-2 transition-all text-[15px] ${
+                  className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
                     activeCategory === "all"
-                      ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
-                      : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                      ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
+                      : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/[0.03]" : "text-black/50 hover:text-black hover:bg-black/[0.03]")
                   }`}
                 >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <ImageIcon className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
-                    <span className="truncate font-medium">My Gallery</span>
+                  {activeCategory === "all" && (
+                    <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-cyan-400" : "bg-cyan-600"}`} />
+                  )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ImageIcon className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
+                      activeCategory === "all" ? (isDarkMode ? "text-cyan-400" : "text-cyan-600") : "opacity-50 group-hover:opacity-80"
+                    }`} />
+                    <span className={`truncate ${activeCategory === "all" ? "font-semibold" : "font-medium"}`}>My Gallery</span>
                   </div>
                 </button>
               </div>
 
               {/* Custom Database Galleries list */}
-              <div className="space-y-1.5">
-                <div className={`text-xs font-bold font-mono uppercase tracking-[0.2em] px-2 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+              <div className="space-y-1">
+                <div className={`text-[10px] font-bold font-mono uppercase tracking-[0.22em] px-3 pb-1 ${isDarkMode ? "text-white/25" : "text-black/25"}`}>
                   Custom Folders
                 </div>
                 {galleries.length === 0 ? (
-                  <span className={`text-xs italic px-2 py-1 block ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                  <span className={`text-[11px] italic px-3 py-1.5 block ${isDarkMode ? "text-white/20" : "text-black/20"}`}>
                     No folders created yet.
                   </span>
                 ) : (
@@ -1377,23 +1335,30 @@ export default function LibraryPage() {
                           setIsUploadDragging(false);
                           if (isMobile) setIsSidebarCollapsed(true);
                         }}
-                        className={`group flex items-center justify-between w-full rounded-lg px-2.5 py-2 transition-all text-[15px] ${
+                        className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
                           isSelected
-                            ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
-                            : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                            ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
+                            : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/[0.03]" : "text-black/50 hover:text-black hover:bg-black/[0.03]")
                         }`}
                       >
-                        <div className="flex items-center gap-3.5 min-w-0 truncate">
+                        {isSelected && (
+                          <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-cyan-400" : "bg-cyan-600"}`} />
+                        )}
+                        <div className="flex items-center gap-3 min-w-0 truncate">
                           {isSelected ? (
-                            <FolderOpen className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
+                            <FolderOpen className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
+                              isSelected ? (isDarkMode ? "text-cyan-400" : "text-cyan-600") : "opacity-50"
+                            }`} />
                           ) : (
-                            <Folder className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
+                            <Folder className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
+                              isSelected ? (isDarkMode ? "text-cyan-400" : "text-cyan-600") : "opacity-40 group-hover:opacity-70"
+                            }`} />
                           )}
-                          <span className="truncate font-medium">{g.name}</span>
+                          <span className={`truncate ${isSelected ? "font-semibold" : "font-medium"}`}>{g.name}</span>
                         </div>
                         
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          <span className={`text-sm font-mono ${isDarkMode ? "opacity-40" : "opacity-50"}`}>({g.asset_count || 0})</span>
+                          <span className={`text-[12px] font-mono ${isSelected ? (isDarkMode ? "text-white/40" : "text-black/40") : (isDarkMode ? "text-white/20" : "text-black/20")}`}>{g.asset_count || 0}</span>
                         </div>
                       </button>
                     );
@@ -1404,7 +1369,7 @@ export default function LibraryPage() {
             </div>
             
             {/* Footer & User Profile */}
-            <div className={`p-4 border-t ${isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.01]"} flex flex-col gap-3 relative shrink-0`}>
+            <div className={`p-4 border-t ${isDarkMode ? "border-white/[0.06] bg-gradient-to-t from-[#0d0d0c] to-transparent" : "border-black/[0.06] bg-gradient-to-t from-[#f4f3f2] to-transparent"} flex flex-col gap-3 relative shrink-0`}>
               {showProfileDropup && (
                 <div
                   ref={profileDropupRef}
@@ -1471,7 +1436,7 @@ export default function LibraryPage() {
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
-                    <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : subscription?.subscription?.plan_name || "Free Trial"}</span>
+                    <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : (subscription?.subscription?.plan_name?.toLowerCase().includes("agency") || subscription?.subscription?.plan_name?.toLowerCase().includes("heavy duty") ? "Agency" : subscription?.subscription?.plan_name || "Free Trial")}</span>
                   </div>
                 </motion.button>
                 <div className="flex items-center gap-1.5">
@@ -1652,7 +1617,7 @@ export default function LibraryPage() {
                               <button
                                 onClick={() => {
                                   const galleryAssetIds = assets.filter(a => a.gallery_id === currentGallery.id);
-                                  galleryAssetIds.forEach(a => handleDownloadImage(a.asset_url, a.id));
+                                  galleryAssetIds.forEach(a => handleDownloadImage(getAssetImageUrl(a), a.id));
                                   toast.success(`Saving ${galleryAssetIds.length} images...`);
                                 }}
                                 className={`p-1.5 rounded border transition-colors ${
@@ -1987,6 +1952,32 @@ export default function LibraryPage() {
                     </AnimatePresence>
                   </BentoGrid>
                 )}
+
+                {/* Pixel animation overlay during image generation */}
+                {isGenerating && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-40 flex items-center justify-center"
+                  >
+                    <div className="relative">
+                      <PixelCard
+                        variant="blue"
+                        autoPlay
+                        autoPlayInterval={2000}
+                        className="!h-[320px] !w-[260px] border-white/10 shadow-2xl shadow-cyan-500/10"
+                      >
+                        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+                          <Loader2 className={`h-8 w-8 animate-spin mb-3 ${isDarkMode ? "text-cyan-400" : "text-cyan-600"}`} />
+                          <p className={`text-xs font-mono font-semibold tracking-wider uppercase ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                            Generating...
+                          </p>
+                        </div>
+                      </PixelCard>
+                    </div>
+                  </motion.div>
+                )}
               </>
             )}
           </div>
@@ -2183,12 +2174,21 @@ export default function LibraryPage() {
             >
               {/* Image Container - 80% width on desktop */}
               <div id="expanded-image-wrap" className="flex-[4] flex items-center justify-center bg-black/60 p-3 md:p-6 relative min-h-[40vh] md:min-h-0">
-                <img
-                  src={expandedAsset.asset_url}
-                  alt={expandedAsset.prompt || "Concept visual"}
-                  className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg md:rounded-xl select-none shadow-lg"
-                  draggable={false}
-                />
+                {brokenImages.has(expandedAsset.id) ? (
+                  <div className="text-center p-4">
+                    <ImageIcon className="h-12 w-12 mx-auto mb-3 text-white/20" />
+                    <p className="text-sm font-mono text-white/30">Image unavailable</p>
+                    <p className="text-[11px] font-mono text-white/20 mt-1">The image data may be corrupted or the URL may have expired.</p>
+                  </div>
+                ) : (
+                  <img
+                    src={getAssetImageUrl(expandedAsset)}
+                    alt={expandedAsset.prompt || "Concept visual"}
+                    className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg md:rounded-xl select-none shadow-lg"
+                    draggable={false}
+                    onError={() => setBrokenImages(prev => new Set(prev).add(expandedAsset.id))}
+                  />
+                )}
                 {/* Mobile prompt overlay */}
                 <div className="absolute bottom-2 left-2 right-2 md:hidden">
                   <div className="backdrop-blur-xl bg-black/70 border border-white/[0.06] rounded-xl px-3.5 py-2.5">
@@ -2330,7 +2330,7 @@ export default function LibraryPage() {
                 <div className={`px-5 py-3 border-t space-y-2 shrink-0 ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`}>
                   <div className="grid grid-cols-2 gap-2">
 <a
-                      href={expandedAsset.asset_url}
+                      href={getAssetImageUrl(expandedAsset)}
                       download={`rudra-${expandedAsset.id}.png`}
                       target="_blank"
                       rel="noreferrer"
@@ -2349,7 +2349,7 @@ export default function LibraryPage() {
                         if (el?.requestFullscreen) {
                           el.requestFullscreen()
                         } else {
-                          window.open(expandedAsset.asset_url, "_blank")
+                          window.open(getAssetImageUrl(expandedAsset), "_blank")
                         }
                       }}
                       className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider border transition-all active:scale-[0.98] ${
@@ -2363,7 +2363,7 @@ export default function LibraryPage() {
                     </button>
                   </div>
                   <button
-                    onClick={() => { navigator.clipboard.writeText(expandedAsset.asset_url); toast.success("Image URL copied!"); }}
+                    onClick={() => { navigator.clipboard.writeText(getAssetImageUrl(expandedAsset)); toast.success("Image URL copied!"); }}
                     className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider border transition-all active:scale-[0.98] ${
                       isDarkMode
                         ? "border-white/[0.06] text-white/60 hover:border-white/20 hover:text-white"

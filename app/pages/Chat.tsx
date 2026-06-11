@@ -2640,7 +2640,7 @@ STRICT RULES:
                                     </div>
                                     <div className="flex flex-col min-w-0">
                                         <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || t("user_fallback")}</span>
-                                        <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? t("admin_role") : userRole === "faculty" ? t("faculty_role") : userRole === "enterprise_admin" ? t("admin_role") : userRole === "manager" ? t("manager_role") : userRole === "global_admin" ? t("admin_role") : subscription?.subscription?.plan_name || t("free_trial")}</span>
+                                        <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? t("admin_role") : userRole === "faculty" ? t("faculty_role") : userRole === "enterprise_admin" ? t("admin_role") : userRole === "manager" ? t("manager_role") : userRole === "global_admin" ? t("admin_role") : (subscription?.subscription?.plan_name?.toLowerCase().includes("agency") || subscription?.subscription?.plan_name?.toLowerCase().includes("heavy duty") ? "Agency" : subscription?.subscription?.plan_name || t("free_trial"))}</span>
                                     </div>
                                 </motion.button>
                                 <div className="flex items-center gap-1.5">
