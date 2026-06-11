@@ -8,6 +8,7 @@ import ChatLoader from "@/components/ui/ChatLoader";
 import PageLoader from "@/components/ui/PageLoader";
 import { createChat, saveChatMessage, sendAiRequest, generateTTSAudio, transcribeSpeech, transcribeSpeechFallback, stopSpeechRecognition } from "@/lib/chat-api";
 import { ThemeProvider } from "@/lib/theme-context";
+import { MultiStepLoader } from "@/components/ui/multi-step-loader";
 
 function InterviewRoomContent() {
     const router = useRouter();
@@ -35,6 +36,16 @@ function InterviewRoomContent() {
     const [chatId, setChatId] = useState<string | null>(null);
     const [interviewEnded, setInterviewEnded] = useState(false);
     const [feedback, setFeedback] = useState<string | null>(null);
+    const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+
+    const FEEDBACK_STEPS = [
+        { text: "Saving your verbal interview answers..." },
+        { text: "Analyzing candidates responses & technical accuracy..." },
+        { text: "Synthesizing progress points and scores..." },
+        { text: "Formatting the final performance analysis report..." },
+        { text: "Syncing analysis data with your chat feed..." },
+        { text: "Redirecting you to the chat room..." }
+    ];
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
@@ -171,8 +182,12 @@ function InterviewRoomContent() {
         }
 
         if (chatId) {
+            setIsGeneratingFeedback(true);
             await generateFeedback();
+            setIsGeneratingFeedback(false);
             router.push(`/chat?id=${chatId}`);
+        } else {
+            router.push("/chat");
         }
     };
 
@@ -595,6 +610,12 @@ function InterviewRoomContent() {
 
     return (
         <div className="h-screen w-full bg-black relative overflow-hidden">
+            <MultiStepLoader
+                loadingStates={FEEDBACK_STEPS}
+                loading={isGeneratingFeedback}
+                duration={1800}
+                loop={true}
+            />
             {/* User Video (Small - Bottom Left) */}
             <div className="absolute bottom-24 left-6 h-40 w-56 bg-[#1a1a1a] rounded-lg overflow-hidden border border-white/10 shadow-2xl z-10">
                 {isCameraOn ? (

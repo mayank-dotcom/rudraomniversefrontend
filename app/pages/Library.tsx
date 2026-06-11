@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import Navbar from "@/components/ui/Navbar"
 import {
   getLibraryAssets,
   deleteLibraryAsset,
@@ -18,15 +17,28 @@ import {
   getSavedAssetIds,
   saveAsset,
   unsaveAsset,
+  getSubscriptionStatus,
+  sendAiRequest,
   type LibraryAsset,
   type LibraryGallery
 } from "@/lib/chat-api"
-import { isAuthenticated } from "@/lib/auth"
+import {
+  isAuthenticated,
+  removeApiKey,
+  removeUserInfo,
+  removeUserRole,
+  removeSchoolName,
+  removeEnterpriseName,
+  getUserInfo,
+  getUserRole,
+  getProfilePicture
+} from "@/lib/auth"
 import { useTheme } from "@/lib/theme-context"
 import {
   Loader2,
   Trash2,
   BookOpen,
+  ArrowUp,
   ArrowLeft,
   Sparkles,
   Clock,
@@ -54,11 +66,27 @@ import {
   Download,
   Share2,
   Move,
-  Menu
+  Menu,
+  MessageSquare,
+  Moon,
+  Sun,
+  PanelLeftOpen,
+  PanelLeftClose,
+  User,
+  Settings,
+  LogOut,
+  Wallet,
+  Mic
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
+import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid"
+import { Poppins, Roboto, Space_Grotesk } from "next/font/google"
+import SettingsModal from "@/components/ui/SettingsModal"
+import WalletModal from "@/components/ui/WalletModal"
+import ReflectiveCard from "@/components/ReflectiveCard"
 
 // Curated Premium Mock Assets for the "Featured" Feed
 const FEATURED_ASSETS: LibraryAsset[] = [
@@ -96,9 +124,27 @@ const FEATURED_ASSETS: LibraryAsset[] = [
   }
 ]
 
+const chatHeadingFont = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-chat-heading",
+})
+
+const chatBodyFont = Roboto({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-chat-body",
+})
+
+const chatAccentFont = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-chat-accent",
+})
+
 export default function LibraryPage() {
   const router = useRouter()
-  const { isDarkMode } = useTheme()
+  const { isDarkMode, toggleTheme } = useTheme()
   
   const [assets, setAssets] = useState<LibraryAsset[]>([])
   const [publicAssets, setPublicAssets] = useState<LibraryAsset[]>([])
@@ -117,6 +163,11 @@ export default function LibraryPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [isUploadDragging, setIsUploadDragging] = useState(false)
   const [uploadedAssets, setUploadedAssets] = useState<LibraryAsset[]>([])
+  const [generatePrompt, setGeneratePrompt] = useState("")
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const [stream, setStream] = useState<MediaStream | null>(null)
   
   // Custom Real Database-backed Galleries States
   const [galleries, setGalleries] = useState<LibraryGallery[]>([])
@@ -129,7 +180,101 @@ export default function LibraryPage() {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false)
   const [moveAssetId, setMoveAssetId] = useState<string | null>(null)
   const [expandedAsset, setExpandedAsset] = useState<LibraryAsset | null>(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState(260)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    if (typeof window === "undefined") return true
+    return window.innerWidth < 768
+  })
+
+  const [userName, setUserName] = useState<string>("")
+  const [userEmail, setUserEmail] = useState<string>("")
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [schoolName, setSchoolName] = useState<string>("")
+  const [profilePic, setProfilePic] = useState<string | null>(null)
+  const [subscription, setSubscription] = useState<any>(null)
+  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false)
+  const [showProfileDropup, setShowProfileDropup] = useState(false)
+  const [isPersonalizationModalOpen, setIsPersonalizationModalOpen] = useState(false)
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+  const [settingsPanel, setSettingsPanel] = useState<"general" | "persona" | "faq" | "bug" | "deactivate">("general")
+  const [selectedPersona, setSelectedPersona] = useState<any>(null)
+
+  const profileDropupRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && isAuthenticated()) {
+      const info = getUserInfo()
+      if (info) {
+        setUserName(info.name || "")
+        setUserEmail(info.email || "")
+      }
+      setUserRole(getUserRole())
+      setProfilePic(getProfilePicture())
+    }
+  }, [isPersonalizationModalOpen])
+
+  useEffect(() => {
+    setIsSubscriptionLoading(true)
+    getSubscriptionStatus()
+      .then((res) => {
+        if (res.success) setSubscription(res)
+      })
+      .catch(() => {})
+      .finally(() => setIsSubscriptionLoading(false))
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropupRef.current && !profileDropupRef.current.contains(event.target as Node)) {
+        setShowProfileDropup(false)
+      }
+    }
+    if (showProfileDropup) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showProfileDropup])
+
+  const handleLogout = () => {
+    removeApiKey()
+    removeUserInfo()
+    removeUserRole()
+    removeSchoolName()
+    removeEnterpriseName()
+    window.location.href = "/"
+  }
+
+  const handlePersonaSelect = (persona: any) => {
+    setSelectedPersona(persona)
+  }
+
+  const handleDiscontinueAccount = async () => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to discontinue your account? All your chats, custom personas, and settings will be permanently deleted. This action cannot be undone."
+    )
+    if (!confirmDelete) return
+    try {
+      const { discontinueAccount } = await import("@/lib/chat-api")
+      await discontinueAccount()
+      toast.success("Account deleted successfully.")
+      handleLogout()
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete account. Please try again.")
+    }
+  }
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    handleResize()
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
   
   // Fetch assets and galleries from backend
   const fetchAssets = useCallback(async () => {
@@ -202,6 +347,108 @@ export default function LibraryPage() {
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [expandedAsset])
+
+  // Voice Input Speech-to-Text handlers
+  const startRecording = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setStream(mediaStream);
+      const mediaRecorder = new MediaRecorder(mediaStream);
+      mediaRecorderRef.current = mediaRecorder;
+      const chunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+
+        if (audioBlob.size < 1000) {
+          toast.error("Recording too short. Please try again.");
+          return;
+        }
+
+        try {
+          toast.promise(
+            (async () => {
+              const { transcribeSpeech } = await import("@/lib/chat-api");
+              const transcript = await transcribeSpeech(audioBlob);
+              if (transcript) {
+                setGeneratePrompt(prev => prev + (prev ? " " : "") + transcript);
+                return "Speech converted to text";
+              }
+              throw new Error("No transcript received");
+            })(),
+            {
+              loading: 'Transcribing speech...',
+              success: (data) => data,
+              error: (err) => `STT Error: ${err.message}`,
+            }
+          );
+        } catch (err: any) {
+          console.error("STT Process Error:", err);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Recording error:", err);
+      toast.error("Could not access microphone");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+      }
+    }
+  };
+
+  // Handle AI Image Generation
+  const handleGenerateImage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!generatePrompt.trim()) return
+    if (isGenerating) return
+
+    setIsGenerating(true)
+    const toastId = toast.loading("Generating your AI image with Flux...")
+
+    try {
+      console.log(`[Library] Requesting image generation for prompt: "${generatePrompt}"`)
+      
+      const payload = {
+        endpoint: "/features/image/generate",
+        messages: [{ role: "user" as const, content: generatePrompt }],
+        modality: "image_gen"
+      }
+      
+      const res: any = await sendAiRequest(payload)
+      
+      if (res && res.response) {
+        toast.success("Image generated and saved to library!", { id: toastId })
+        setGeneratePrompt("")
+        
+        // Refresh local assets to show the new image
+        await fetchAssets()
+        
+        // Switch to "all" (My Private Gallery) to show the new asset immediately
+        setActiveCategory("all")
+      } else {
+        throw new Error("No image was returned from the server.")
+      }
+    } catch (err: any) {
+      console.error("[Library] Generation error:", err)
+      toast.error(err.message || "Failed to generate image.", { id: toastId })
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   // Handle Deleting Asset
   const handleDelete = async (id: string) => {
@@ -540,21 +787,192 @@ export default function LibraryPage() {
     return pool
   }, [activeCategory, assets, publicAssets, uploadedAssets, savedIds, searchQuery, selectedGalleryId, publicGalleryAssets, sourceFilter, createdOnFilter])
 
-  // Aspect ratio wrapper class
-  const getCardAspectRatioClass = () => {
+  const getCardAspectRatioClass = (index: number, idxInCol?: number, colIdx?: number) => {
     switch (aspectRatio) {
       case "16:9": return "aspect-[16/9]"
       case "9:16": return "aspect-[9/16]"
-      default: return "aspect-square"
+      default: {
+        // Balanced Staggered Heights: Alternate 3:4 and 1:1 based on column and row
+        if (idxInCol !== undefined && colIdx !== undefined) {
+          return (idxInCol + colIdx) % 2 === 0 ? "aspect-[3/4]" : "aspect-[1/1]";
+        }
+        if (index % 3 === 0) return "aspect-[3/4]"
+        if (index % 3 === 1) return "aspect-[1/1]"
+        return "aspect-[2/3]"
+      }
     }
+  }
+
+  // Creator handle mock generator
+  const getCreatorHandle = (assetId: string) => {
+    if (assetId.startsWith("feat-1")) return "jiwoodanielhyun"
+    if (assetId.startsWith("feat-2")) return "papercraft_neons"
+    if (assetId.startsWith("feat-3")) return "macro_bug_lens"
+    if (assetId.startsWith("feat-4")) return "al.tr"
+    return "@my_space"
+  }
+
+  // Likes count mock generator
+  const getLikesCount = (assetId: string) => {
+    if (assetId.startsWith("feat-1")) return "261"
+    if (assetId.startsWith("feat-2")) return "184"
+    if (assetId.startsWith("feat-3")) return "92"
+    if (assetId.startsWith("feat-4")) return "395"
+    const charCodeSum = assetId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    return String((charCodeSum % 150) + 5)
+  }
+
+  const getBentoSpanClass = (index: number) => {
+    const pattern = index % 7;
+    if (pattern === 0) return "md:col-span-2 md:row-span-1";
+    if (pattern === 3) return "md:col-span-1 md:row-span-2";
+    return "md:col-span-1 md:row-span-1";
+  }
+
+  const renderCard = (asset: LibraryAsset, i: number, spanClass?: string) => {
+    return (
+      <BentoGridItem
+        key={asset.id}
+        className={cn(
+          "p-0 overflow-hidden rounded-none bg-transparent border-none dark:bg-transparent shadow-none hover:shadow-none transition-none w-full h-[220px] md:h-full min-h-[14rem]",
+          spanClass
+        )}
+        header={
+          <motion.div
+            layout
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+            transition={{ duration: 0.35, ease: "easeOut", delay: Math.min(i * 0.02, 0.2) }}
+            className={`relative overflow-hidden group/card rounded-none border transition-all duration-300 w-full h-full ${
+              isDarkMode ? "bg-[#0d0d0c] border-white/5 text-white" : "bg-[#f4f3f2] border-black/5 text-black"
+            }`}
+            onMouseEnter={() => setHoveredId(asset.id)}
+            onMouseLeave={() => setHoveredId(null)}
+          >
+            <img
+              src={asset.asset_url}
+              alt={asset.prompt || "Concept visual"}
+              className="w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-110 cursor-pointer"
+              loading="lazy"
+              onClick={() => setExpandedAsset(asset)}
+            />
+
+            {/* Bottom Info Overlay - Premium Glassmorphism */}
+            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-20 pointer-events-none transition-all duration-300 group-hover/card:opacity-0 group-hover/card:translate-y-2">
+              {/* Creator tag */}
+              <div className="px-2 py-1 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${i % 2 === 0 ? "bg-cyan-400" : "bg-purple-400"}`}></div>
+                <span className="text-[10px] font-medium text-white/90 select-none truncate max-w-[100px]">
+                  {getCreatorHandle(asset.id)}
+                </span>
+              </div>
+
+              {/* Likes */}
+              <div className="flex items-center gap-1 px-2 py-1 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 text-white/80 pointer-events-auto cursor-pointer" onClick={(e) => { e.preventDefault(); toggleSaved(asset); }}>
+                <Heart className={`h-3 w-3 ${savedIds.includes(asset.id) ? "fill-white text-white" : ""}`} />
+                <span className="text-[9px] font-bold select-none">
+                  {getLikesCount(asset.id)}
+                </span>
+              </div>
+            </div>
+
+            {/* Hover Content Overlay */}
+            <div className={`absolute inset-0 bg-black/40 backdrop-blur-xl opacity-0 group-hover/card:opacity-100 flex flex-col justify-end p-5 transition-all duration-500 ease-out translate-y-4 group-hover/card:translate-y-0 z-30`}>
+              <p className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest mb-1.5">Prompt Detail</p>
+              <p className="text-xs font-medium leading-relaxed text-white/90 line-clamp-3 mb-4">
+                {asset.prompt || "No prompt description available for this visual concept."}
+              </p>
+
+              <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={(e) => { e.preventDefault(); handleShareImage(asset.asset_url, asset.prompt || "Library Image"); }}
+                    className="text-white/60 hover:text-cyan-400 transition-colors cursor-pointer"
+                    title="Share"
+                  >
+                    <Globe className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); handleCopyPrompt(asset.prompt || "", asset.id); }}
+                    className={`transition-colors cursor-pointer ${copiedId === asset.id ? "text-emerald-400" : "text-white/60 hover:text-cyan-400"}`}
+                    title="Copy Prompt"
+                  >
+                    {copiedId === asset.id ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); handleDownloadImage(asset.asset_url, asset.id); }}
+                    className="text-white/60 hover:text-cyan-400 transition-colors cursor-pointer"
+                    title="Download"
+                  >
+                    <Download className="h-4 w-4" />
+                  </button>
+                  {!asset.id.startsWith("feat-") && (
+                    <button
+                      onClick={(e) => { e.preventDefault(); handleDelete(asset.id); }}
+                      className="text-white/60 hover:text-red-400 transition-colors cursor-pointer"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                
+                <button
+                  onClick={() => setExpandedAsset(asset)}
+                  className="p-1.5 rounded-full bg-white/10 hover:bg-cyan-400 hover:text-black transition-all cursor-pointer"
+                  title="Expand"
+                >
+                  <Maximize2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Visibility status & Move action - Top Right Overlay */}
+            <div
+              className={`absolute top-3 right-3 flex items-center gap-1.5 transition-all duration-300 z-40 ${
+                hoveredId === asset.id ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
+              }`}
+            >
+              <button
+                onClick={(e) => { e.preventDefault(); setMoveAssetId(asset.id); setIsMoveModalOpen(true); }}
+                className="p-1.5 rounded-lg bg-black/60 border border-white/10 text-white/70 hover:text-white hover:bg-black/80 transition-all cursor-pointer shadow-lg backdrop-blur-sm"
+                title="Move to Folder"
+              >
+                <Move className="h-3.5 w-3.5" />
+              </button>
+
+              {!asset.id.startsWith("feat-") && (
+                <button
+                  onClick={(e) => { e.preventDefault(); handleToggleVisibility(asset.id, asset.is_public); }}
+                  disabled={togglingVisibilityId === asset.id}
+                  className={`p-1.5 rounded-lg bg-black/60 border border-white/10 text-white/70 hover:text-white hover:bg-black/80 transition-all cursor-pointer shadow-lg backdrop-blur-sm ${
+                    asset.is_public ? "text-cyan-400" : ""
+                  }`}
+                  title={asset.is_public ? "Make Private" : "Make Public"}
+                >
+                  {togglingVisibilityId === asset.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : asset.is_public ? (
+                    <Globe className="h-3.5 w-3.5" />
+                  ) : (
+                    <Lock className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              )}
+            </div>
+          </motion.div>
+        }
+      />
+    )
   }
 
   if (isLoading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center transition-colors duration-300 ${isDarkMode ? "bg-[#070709]" : "bg-[#f8f9fa]"}`}>
+      <div className={`min-h-screen flex items-center justify-center transition-colors duration-300 ${isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f4f3f2]"}`}>
         <div className="flex flex-col items-center gap-4">
           <Loader2 className={`h-10 w-10 animate-spin ${isDarkMode ? "text-[var(--color-cyan)]" : "text-cyan-600"}`} />
-          <p className={`text-xs font-mono tracking-widest uppercase ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+          <p className={`text-xs font-mono tracking-widest uppercase ${isDarkMode ? "text-white/45" : "text-black/45"}`}>
             Connecting Library...
           </p>
         </div>
@@ -563,195 +981,586 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 selection:bg-[var(--color-cyan)] selection:text-black ${
-      isDarkMode ? "bg-[#060608] text-white" : "bg-[#f8f9fa] text-black"
+    <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full flex overflow-hidden transition-colors duration-500 selection:bg-[var(--color-cyan)] selection:text-black ${
+      isDarkMode ? "bg-[#0d0d0c] text-white" : "bg-[#f4f3f2] text-black"
     }`}>
-      {/* Navbar styled like Chat Navbar */}
-      <Navbar />
+      
+      {/* Mobile Sidebar Overlays */}
+      {isMobile && !isSidebarCollapsed && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 transition-opacity duration-300"
+          onClick={() => setIsSidebarCollapsed(true)}
+        />
+      )}
 
-      {/* Main Core Layout: Sidebar + Grid View */}
-      <div className="pt-20 flex min-h-[calc(100vh-80px)]">
-        
-        {/* Backdrop Overlay for Mobile Sidebar */}
-        {isSidebarOpen && (
-          <div
-            className="fixed inset-0 top-20 bg-black/50 backdrop-blur-sm z-25 md:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
+      {/* ================= LEFT SIDEBAR ================= */}
+      <aside
+        id="walkthrough-sidebar"
+        style={{ width: isSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${sidebarWidth}px`) }}
+        className={`h-full border-r ${
+          isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white/10" : "border-black/10"
+        } ${isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f4f3f2]"} flex flex-col ${
+          isMobile ? "fixed left-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"
+        } transition-[width] duration-300 ease-in-out`}
+      >
+        {isSidebarCollapsed && !isMobile ? (
+          <div className="flex flex-col h-full items-center py-4 justify-between relative select-none">
+            {/* Top Group */}
+            <div className="flex flex-col items-center gap-6 w-full">
+              {/* Toggle Button */}
+              <motion.button
+                onClick={() => setIsSidebarCollapsed(false)}
+                whileHover={{ scale: 1.15, x: 2 }}
+                whileTap={{ scale: 0.85 }}
+                className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                  isDarkMode
+                    ? "text-white/60 hover:text-white hover:bg-white/5"
+                    : "text-black/60 hover:text-black hover:bg-black/5"
+                }`}
+                title="Open Sidebar"
+              >
+                <PanelLeftOpen className="w-[26px] h-[26px]" />
+              </motion.button>
 
-        {/* ================= LEFT SIDEBAR ================= */}
-        <aside className={`fixed md:sticky top-20 left-0 z-30 md:z-auto h-[calc(100vh-80px)] w-64 border-r flex flex-col justify-between select-none shrink-0 overflow-y-auto scrollbar-hide transition-all duration-300 ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        } ${
-          isDarkMode ? "border-white/5 bg-[#08080a]" : "border-black/5 bg-[#f1f3f5]"
-        }`}>
-          
-          <div className="p-5 flex flex-col gap-7">
-            {/* Explore Section */}
-            <div className="flex flex-col gap-1.5">
-              <span className={`text-[11px] font-mono tracking-widest uppercase px-2.5 mb-1 block ${isDarkMode ? "text-white/20" : "text-black"}`}>
-                Explore
-              </span>
-              
-              <button
-                onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); setIsSidebarOpen(false); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
+              {/* Divider */}
+              <div className={`w-full border-t ${isDarkMode ? "border-white/10" : "border-black/10"}`} />
+
+              {/* Featured Feed */}
+              <motion.button
+                onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); }}
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.85 }}
+                className={`p-2 rounded-lg transition-colors cursor-pointer ${
                   activeCategory === "featured"
-                    ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
-                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
+                    ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
+                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
                 }`}
+                title="Featured Feed"
               >
-                <div className="flex items-center gap-2.5">
-                  <Sparkles className={`h-4.5 w-4.5 ${activeCategory === "featured" ? "text-black" : ""}`} />
-                  <span>Featured Feed</span>
-                </div>
-                {activeCategory === "featured" && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
-              </button>
+                <Sparkles className="w-[26px] h-[26px] opacity-80" />
+              </motion.button>
 
-              <button
-                onClick={() => { setActiveCategory("public_showcase"); setIsUploadDragging(false); setIsSidebarOpen(false); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
+              {/* Community Showcase */}
+              <motion.button
+                onClick={() => { setActiveCategory("public_showcase"); setIsUploadDragging(false); }}
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.85 }}
+                className={`p-2 rounded-lg transition-colors cursor-pointer ${
                   activeCategory === "public_showcase"
-                    ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
-                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
+                    ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
+                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
                 }`}
+                title="Community Showcase"
               >
-                <div className="flex items-center gap-2.5">
-                  <Globe className={`h-4.5 w-4.5 ${activeCategory === "public_showcase" ? "text-black" : (isDarkMode ? "text-sky-500/80" : "text-black")}`} />
-                  <span>Community Showcase</span>
-                </div>
-                {activeCategory === "public_showcase" && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
-              </button>
+                <Globe className="w-[26px] h-[26px] opacity-80" />
+              </motion.button>
 
-              <button
-                onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); setIsSidebarOpen(false); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
+              {/* Recent Creations */}
+              <motion.button
+                onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); }}
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.85 }}
+                className={`p-2 rounded-lg transition-colors cursor-pointer ${
                   activeCategory === "recent"
-                    ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
-                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
+                    ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
+                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
                 }`}
+                title="Recent Creations"
               >
-                <div className="flex items-center gap-2.5">
-                  <Clock className="h-4.5 w-4.5" />
-                  <span>Recent Creations</span>
-                </div>
-                {activeCategory === "recent" && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
-              </button>
+                <Clock className="w-[26px] h-[26px] opacity-80" />
+              </motion.button>
 
-              <button
-                onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); setIsSidebarOpen(false); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
+              {/* Saved */}
+              <motion.button
+                onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); }}
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.85 }}
+                className={`p-2 rounded-lg transition-colors cursor-pointer relative ${
                   activeCategory === "saved"
-                    ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
-                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
+                    ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
+                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
                 }`}
+                title={`Saved (${savedIds.length})`}
               >
-                <div className="flex items-center gap-2.5">
-                  <Bookmark className={`h-4.5 w-4.5 ${activeCategory === "saved" ? "text-black" : ""}`} />
-                  <span>Saved</span>
+                <Bookmark className="w-[26px] h-[26px] opacity-80" />
+                {savedIds.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-mono font-bold h-4 w-4 rounded-full flex items-center justify-center scale-90">
+                    {savedIds.length}
+                  </span>
+                )}
+              </motion.button>
+
+              {/* My Gallery */}
+              <motion.button
+                onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); }}
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.85 }}
+                className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                  activeCategory === "all"
+                    ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
+                    : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                }`}
+                title="My Gallery"
+              >
+                <ImageIcon className="w-[26px] h-[26px] opacity-80" />
+              </motion.button>
+            </div>
+
+            {/* Bottom Group */}
+            <div className="flex flex-col items-center w-full relative">
+              {/* Create Folder button */}
+              <motion.button
+                onClick={handleCreateGallery}
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.85 }}
+                className={`p-2 rounded-lg transition-colors cursor-pointer mb-4 ${
+                  isDarkMode
+                    ? "text-white/60 hover:text-white hover:bg-white/5"
+                    : "text-black/60 hover:text-black hover:bg-black/5"
+                }`}
+                title="Create Folder"
+              >
+                <FolderPlus className="w-[26px] h-[26px] opacity-80" />
+              </motion.button>
+
+              {/* Divider */}
+              <div className={`w-full border-t ${isDarkMode ? "border-white/10" : "border-black/10"} mb-4`} />
+
+              {/* Folders List (Scrollable list of folder icons) */}
+              <div className="flex flex-col items-center gap-3 max-h-[200px] overflow-y-auto w-full scrollbar-hide py-1 mb-4">
+                {galleries.map((g) => {
+                  const isSelected = activeCategory === "gallery" && selectedGalleryId === g.id
+                  return (
+                    <motion.button
+                      key={g.id}
+                      onClick={() => {
+                        setSelectedGalleryId(g.id)
+                        setActiveCategory("gallery")
+                        setIsUploadDragging(false)
+                      }}
+                      whileHover={{ scale: 1.15 }}
+                      whileTap={{ scale: 0.85 }}
+                      className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                        isSelected
+                          ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
+                          : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                      }`}
+                      title={`${g.name} (${g.asset_count || 0})`}
+                    >
+                      {isSelected ? (
+                        <FolderOpen className="w-[26px] h-[26px] opacity-80" />
+                      ) : (
+                        <Folder className="w-[26px] h-[26px] opacity-80" />
+                      )}
+                    </motion.button>
+                  )
+                })}
+              </div>
+
+              {/* Divider */}
+              <div className={`w-full border-t ${isDarkMode ? "border-white/10" : "border-black/10"} mb-4`} />
+
+              {/* Profile / Avatar Button */}
+              <div className="mb-2 relative">
+                <motion.button
+                  onClick={() => setShowProfileDropup(!showProfileDropup)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="h-8 w-8 rounded-full overflow-hidden border border-transparent hover:border-accent transition-all cursor-pointer relative shrink-0 flex items-center justify-center"
+                  title="Profile Options"
+                >
+                  {profilePic ? (
+                    <img src={profilePic} alt="Profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className={`h-full w-full flex items-center justify-center ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border rounded-full`}>
+                      <User className={`h-4 w-4 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
+                    </div>
+                  )}
+                </motion.button>
+
+                {showProfileDropup && (
+                  <div
+                    ref={profileDropupRef}
+                    className={`absolute bottom-0 left-[48px] w-56 z-[100] rounded-xl border p-1.5 shadow-2xl ${isDarkMode
+                        ? "bg-[#222120]/95 border-white/10 text-white"
+                        : "bg-[#f2f1f0]/95 border-black/10 text-black"
+                      }`}
+                  >
+                    {/* Personalization Option */}
+                    <button
+                      onClick={() => {
+                        setShowProfileDropup(false);
+                        setIsPersonalizationModalOpen(true);
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
+                        }`}
+                    >
+                      <User className="h-3.5 w-3.5 opacity-60" />
+                      <span>Profile</span>
+                    </button>
+
+                    {/* Wallet Option */}
+                    <button
+                      onClick={() => {
+                        setShowProfileDropup(false);
+                        setIsWalletModalOpen(true);
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
+                        }`}
+                    >
+                      <Wallet className="h-3.5 w-3.5 opacity-60" />
+                      <span>Wallet</span>
+                    </button>
+
+                    {/* Divider */}
+                    <div className={`my-1 h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                    {/* Logout Option */}
+                    <button
+                      onClick={handleLogout}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left text-red-500 transition-colors ${isDarkMode ? "hover:bg-red-500/10" : "hover:bg-red-500/5"
+                        }`}
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col h-full overflow-hidden">
+            {/* Logo Header */}
+            <div className={`h-16 flex-shrink-0 flex items-center justify-between px-5 py-4 border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+              <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.location.href = "/"}>
+                <img
+                  src={isDarkMode ? "/dark.png" : "/light.png"}
+                  alt="Logo"
+                  className="w-7 h-7 object-contain"
+                />
+                <img
+                  src={isDarkMode ? "/dark_text.png" : "/light_text.png"}
+                  alt="Rudra Nexus"
+                  className="h-4 object-contain"
+                />
+              </div>
+              <motion.button
+                onClick={() => setIsSidebarCollapsed(true)}
+                whileHover={{ scale: 1.15, x: -2 }}
+                whileTap={{ scale: 0.85 }}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5"}`}
+                title="Collapse Sidebar"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </motion.button>
+            </div>
+            
+            {/* Sidebar Menu Items */}
+            <div className={`flex-1 overflow-y-auto scrollbar-hide p-3 flex flex-col gap-5 ${isDarkMode ? "custom-scrollbar text-zinc-300" : "light-scrollbar text-zinc-700"}`}>
+              {/* Explore Section */}
+              <div className="space-y-1.5">
+                <div className={`px-2 text-xs font-bold font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                  Explore
                 </div>
-                <div className="flex items-center gap-1">
+                
+                <button
+                  onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
+                  className={`group flex items-center justify-between w-full rounded-lg px-2.5 py-2 transition-all text-[15px] ${
+                    activeCategory === "featured"
+                      ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
+                      : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <Sparkles className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
+                    <span className="truncate font-medium">Featured Feed</span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => { setActiveCategory("public_showcase"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
+                  className={`group flex items-center justify-between w-full rounded-lg px-2.5 py-2 transition-all text-[15px] ${
+                    activeCategory === "public_showcase"
+                      ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
+                      : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <Globe className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
+                    <span className="truncate font-medium">Community Showcase</span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
+                  className={`group flex items-center justify-between w-full rounded-lg px-2.5 py-2 transition-all text-[15px] ${
+                    activeCategory === "recent"
+                      ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
+                      : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <Clock className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
+                    <span className="truncate font-medium">Recent Creations</span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
+                  className={`group flex items-center justify-between w-full rounded-lg px-2.5 py-2 transition-all text-[15px] ${
+                    activeCategory === "saved"
+                      ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
+                      : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <Bookmark className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
+                    <span className="truncate font-medium">Saved</span>
+                  </div>
                   {savedIds.length > 0 && (
-                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
+                    <span className={`text-sm font-mono px-1.5 py-0.5 rounded-full flex-shrink-0 ${
                       activeCategory === "saved"
-                        ? "bg-black/20 text-black font-semibold"
-                        : (isDarkMode ? "bg-[var(--color-cyan)]/10 text-[var(--color-cyan)]" : "bg-black/10 text-black font-semibold")
+                        ? (isDarkMode ? "bg-white/10 text-white" : "bg-black/10 text-black")
+                        : (isDarkMode ? "text-white/40" : "text-black/40")
                     }`}>
                       {savedIds.length}
                     </span>
                   )}
-                  {activeCategory === "saved" && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
-                </div>
-              </button>
-            </div>
-
-            {/* Library Section */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between px-2.5 mb-1">
-                <span className={`text-[11px] font-mono tracking-widest uppercase block ${isDarkMode ? "text-white/20" : "text-black"}`}>
-                  Personal Workspace
-                </span>
-                <button onClick={handleCreateGallery} className={`transition-colors ${isDarkMode ? "text-white/30 hover:text-[var(--color-cyan)]" : "text-black hover:text-cyan-600"}`} title="Create Folder">
-                  <FolderPlus className="h-4.5 w-4.5" />
                 </button>
               </div>
 
-              <button
-                onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); setIsSidebarOpen(false); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
-                  activeCategory === "all"
-                    ? "bg-[#00DDDD] text-black border border-[#00DDDD]"
-                    : (isDarkMode ? "text-white/45 hover:text-white/90 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <ImageIcon className={`h-4.5 w-4.5 ${activeCategory === "all" ? "text-black" : ""}`} />
-                  <span>My Gallery</span>
+              {/* Library Section */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between px-2">
+                  <span className={`text-xs font-bold font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                    Personal Workspace
+                  </span>
+                  <button onClick={handleCreateGallery} className={`transition-colors ${isDarkMode ? "text-white/30 hover:text-white/60" : "text-black/30 hover:text-black/60"}`} title="Create Folder">
+                    <FolderPlus className="h-[22px] w-[22px]" />
+                  </button>
                 </div>
-                {activeCategory === "all" && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
-              </button>
+
+                <button
+                  onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); if (isMobile) setIsSidebarCollapsed(true); }}
+                  className={`group flex items-center justify-between w-full rounded-lg px-2.5 py-2 transition-all text-[15px] ${
+                    activeCategory === "all"
+                      ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
+                      : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <ImageIcon className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
+                    <span className="truncate font-medium">My Gallery</span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Custom Database Galleries list */}
+              <div className="space-y-1.5">
+                <div className={`text-xs font-bold font-mono uppercase tracking-[0.2em] px-2 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                  Custom Folders
+                </div>
+                {galleries.length === 0 ? (
+                  <span className={`text-xs italic px-2 py-1 block ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                    No folders created yet.
+                  </span>
+                ) : (
+                  galleries.map((g) => {
+                    const isSelected = activeCategory === "gallery" && selectedGalleryId === g.id;
+                    return (
+                      <button
+                        key={g.id}
+                        onClick={() => {
+                          setSelectedGalleryId(g.id);
+                          setActiveCategory("gallery");
+                          setIsUploadDragging(false);
+                          if (isMobile) setIsSidebarCollapsed(true);
+                        }}
+                        className={`group flex items-center justify-between w-full rounded-lg px-2.5 py-2 transition-all text-[15px] ${
+                          isSelected
+                            ? (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold")
+                            : (isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5")
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0 truncate">
+                          {isSelected ? (
+                            <FolderOpen className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
+                          ) : (
+                            <Folder className="h-[22px] w-[22px] opacity-55 flex-shrink-0" />
+                          )}
+                          <span className="truncate font-medium">{g.name}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <span className={`text-sm font-mono ${isDarkMode ? "opacity-40" : "opacity-50"}`}>({g.asset_count || 0})</span>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
 
             </div>
-
-            {/* Custom Database Galleries list */}
-            <div className="flex flex-col gap-1.5">
-              <span className={`text-[11px] font-mono tracking-widest uppercase px-2.5 mb-1 block ${isDarkMode ? "text-white/20" : "text-black"}`}>
-                Custom Folders
-              </span>
-              {galleries.length === 0 ? (
-                <span className={`text-xs italic px-3 py-1 font-sans ${isDarkMode ? "text-white/20" : "text-black"}`}>
-                  No folders created yet.
-                </span>
-              ) : (
-                galleries.map((g) => {
-                  const isSelected = activeCategory === "gallery" && selectedGalleryId === g.id;
-                  return (
-                    <button
-                      key={g.id}
-                      onClick={() => {
-                        setSelectedGalleryId(g.id);
-                        setActiveCategory("gallery");
-                        setIsUploadDragging(false);
-                        setIsSidebarOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-left transition-all font-sans ${
-                        isSelected
-                          ? "bg-[#00DDDD] text-black border border-[#00DDDD] font-semibold"
-                          : (isDarkMode ? "text-white/40 hover:text-white/85 hover:bg-white/[0.02]" : "text-black hover:bg-black/[0.02]")
+            
+            {/* Footer & User Profile */}
+            <div className={`p-4 border-t ${isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.01]"} flex flex-col gap-3 relative shrink-0`}>
+              {showProfileDropup && (
+                <div
+                  ref={profileDropupRef}
+                  className={`absolute bottom-[68px] left-4 right-4 z-[100] rounded-xl border p-1.5 shadow-2xl ${isDarkMode
+                      ? "bg-[#222120]/95 border-white/10 text-white"
+                      : "bg-[#f2f1f0]/95 border-black/10 text-black"
+                    }`}
+                >
+                  {/* Personalization Option */}
+                  <button
+                    onClick={() => {
+                      setShowProfileDropup(false);
+                      setIsPersonalizationModalOpen(true);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
                       }`}
-                    >
-                      <div className="flex items-center gap-2.5 truncate">
-                        {isSelected ? (
-                          <FolderOpen className="h-4.5 w-4.5 shrink-0 text-black" />
-                        ) : (
-                          <Folder className={`h-4.5 w-4.5 shrink-0 ${g.is_public ? (isDarkMode ? "text-sky-400/60" : "text-black") : (isDarkMode ? "text-amber-500/60" : "text-black")}`} />
-                        )}
-                        <span className="truncate">{g.name}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-1 shrink-0 select-none">
-                        {g.is_public ? (
-                          <Globe className={`h-3 w-3 ${isSelected ? "text-black" : (isDarkMode ? "text-sky-400/70" : "text-black")}`} />
-                        ) : (
-                          <Lock className={`h-3 w-3 ${isSelected ? "text-black" : (isDarkMode ? "text-white/20" : "text-black")}`} />
-                        )}
-                        <span className={`text-[10px] font-mono ${isSelected ? "text-black font-semibold" : (isDarkMode ? "opacity-40" : "text-black font-medium")}`}>({g.asset_count || 0})</span>
-                      </div>
-                    </button>
-                  );
-                })
+                  >
+                    <User className="h-3.5 w-3.5 opacity-60" />
+                    <span>Profile</span>
+                  </button>
+
+                  {/* Wallet Option */}
+                  <button
+                    onClick={() => {
+                      setShowProfileDropup(false);
+                      setIsWalletModalOpen(true);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white/90 hover:text-white" : "hover:bg-black/5 text-black/90 hover:text-black"
+                      }`}
+                  >
+                    <Wallet className="h-3.5 w-3.5 opacity-60" />
+                    <span>Wallet</span>
+                  </button>
+
+                  {/* Divider */}
+                  <div className={`my-1 h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                  {/* Logout Option */}
+                  <button
+                    onClick={handleLogout}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left text-red-500 transition-colors ${isDarkMode ? "hover:bg-red-500/10" : "hover:bg-red-500/5"
+                      }`}
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span>Logout</span>
+                  </button>
+                </div>
               )}
+
+              <div className="flex items-center justify-between">
+                <motion.button
+                  onClick={() => setShowProfileDropup(!showProfileDropup)}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex items-center gap-2 min-w-0 text-left cursor-pointer hover:opacity-80 transition-opacity"
+                  title="Profile Options"
+                >
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center relative shrink-0 ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border overflow-hidden`}>
+                    {profilePic ? (
+                      <img src={profilePic} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      <User className={`h-4 w-4 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
+                    )}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
+                    <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : subscription?.subscription?.plan_name || "Free Trial"}</span>
+                  </div>
+                </motion.button>
+                <div className="flex items-center gap-1.5">
+                  <motion.button
+                    onClick={() => {
+                      setSettingsPanel("general");
+                      setIsSettingsModalOpen(true);
+                    }}
+                    whileHover={{ scale: 1.1, rotate: 30 }}
+                    whileTap={{ scale: 0.9 }}
+                    title="Settings"
+                    className={`p-1.5 rounded-lg border transition-colors ${isDarkMode
+                        ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5"
+                        : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"
+                      }`}
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                  </motion.button>
+                  <motion.button
+                    onClick={handleLogout}
+                    whileHover={{ scale: 1.1, x: 2 }}
+                    whileTap={{ scale: 0.9 }}
+                    title="Log Out"
+                    className={`p-1.5 rounded-lg border transition-colors ${isDarkMode
+                        ? "border-white/10 text-white/60 hover:text-red-400 hover:bg-white/5"
+                        : "border-black/10 text-black/60 hover:text-red-600 hover:bg-black/5"
+                      }`}
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                  </motion.button>
+                </div>
+              </div>
             </div>
-
           </div>
-          
-        </aside>
+        )}
+      </aside>
 
-        {/* ================= RIGHT MAIN CONTENT GRID ================= */}
-        <main className={`flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 pb-32 relative transition-colors duration-300 ${
-          isDarkMode ? "bg-[#09090b] bg-mesh" : "bg-[#f8f9fa]"
-        }`}>
+        {/* Right Content Pane */}
+        <div className="flex-1 flex flex-col relative h-full overflow-hidden">
+          
+          {/* Navbar styled like Chat Navbar */}
+          <header className={`h-16 flex-shrink-0 flex items-center justify-between px-6 md:px-10 relative z-30 transition-colors duration-500 border-b ${isDarkMode ? "bg-[#0d0d0c] border-white/5" : "bg-[#f4f3f2] border-black/5"}`}>
+            <div className="flex items-center gap-3">
+              {/* Mobile Sidebar Toggle */}
+              {isMobile && (
+                <motion.button
+                  onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className={`p-2 border rounded-xl transition-all cursor-pointer ${
+                    isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"
+                  }`}
+                  title="Toggle Sidebar"
+                >
+                  <Menu className="h-4 w-4" />
+                </motion.button>
+              )}
+              
+              <div className={`flex items-center gap-1 p-0.5 rounded-xl border text-xs font-medium transition-all duration-200 ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                <button
+                  onClick={() => window.location.href = "/chat"}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${isDarkMode ? "text-white/50 hover:text-white" : "text-black/50 hover:text-black"}`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Query Mode</span>
+                </button>
+                <button
+                  onClick={() => window.location.href = "/library"}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${isDarkMode ? "bg-white/10 text-white shadow-sm" : "bg-black/10 text-black shadow-sm"}`}
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span>Image Mode</span>
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleTheme}
+                className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer ${isDarkMode ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-black/10 bg-black/5 text-black hover:bg-black/10"}`}
+              >
+                {isDarkMode ? <Sun className="h-4 w-4 opacity-70" /> : <Moon className="h-4 w-4 opacity-70" />}
+              </button>
+            </div>
+          </header>
+
+          {/* ================= RIGHT MAIN CONTENT GRID ================= */}
+          <main className={`flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 pb-32 relative transition-colors duration-300 ${
+            isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f4f3f2]"
+          }`}>
           
           {/* Header */}
           <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 border-b pb-5 transition-colors duration-300 ${
@@ -776,17 +1585,6 @@ export default function LibraryPage() {
               </div>
               
               <div className="flex items-center gap-4">
-                <button
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  className={`md:hidden p-2 rounded-lg border transition-colors ${
-                    isDarkMode
-                      ? "bg-white/5 border-white/10 text-white hover:bg-white/10"
-                      : "bg-white border-black/10 text-black hover:bg-black/[0.03]"
-                  }`}
-                  title="Toggle Sidebar"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
                 <h1 className="text-2xl font-display font-semibold tracking-tight flex items-center gap-3">
                   {activeCategory === "featured" && "Featured Concept Showcase"}
                   {activeCategory === "public_showcase" && "Community Shared Prompts"}
@@ -916,8 +1714,6 @@ export default function LibraryPage() {
                   <span>Back to Folders</span>
                 </button>
               )}
-
-
             </div>
           </div>
 
@@ -928,7 +1724,7 @@ export default function LibraryPage() {
                 onClick={() => setShowcaseTab("assets")}
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold font-sans tracking-wide transition-all ${
                   showcaseTab === "assets"
-                    ? (isDarkMode ? "bg-white/10 text-[#00DDDD] shadow-sm" : "bg-white text-[#00DDDD] shadow-sm")
+                    ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/10 text-black shadow-sm")
                     : (isDarkMode ? "text-white/45 hover:text-white/80" : "text-black/55 hover:text-black")
                 }`}
               >
@@ -938,7 +1734,7 @@ export default function LibraryPage() {
                 onClick={() => setShowcaseTab("galleries")}
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold font-sans tracking-wide transition-all flex items-center gap-1.5 ${
                   showcaseTab === "galleries"
-                    ? (isDarkMode ? "bg-white/10 text-[#00DDDD] shadow-sm" : "bg-white text-[#00DDDD] shadow-sm")
+                    ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/10 text-black shadow-sm")
                     : (isDarkMode ? "text-white/45 hover:text-white/80" : "text-black/55 hover:text-black")
                 }`}
               >
@@ -948,28 +1744,78 @@ export default function LibraryPage() {
             </div>
           )}
 
-          {/* 💡 Prompts Only Disclaimer notice */}
-          <div className={`mb-6 p-4 border rounded-xl flex items-start gap-3 text-xs leading-relaxed transition-colors duration-300 ${
+          {/* 💡 Prompts disclaimer */}
+          <div className={`mb-6 p-3 border rounded-xl flex items-start gap-2.5 text-xs leading-relaxed transition-colors duration-300 ${
             isDarkMode
-              ? "bg-[#101014]/60 border-white/5 text-white/70"
-              : "bg-white border-black/5 text-black/70 shadow-sm"
+              ? "bg-[#222120]/40 border-white/5 text-white/70"
+              : "bg-[#f2f1f0]/40 border-black/5 text-black/70 shadow-sm"
           }`}>
-            <Info className={`h-4.5 w-4.5 shrink-0 mt-0.5 ${isDarkMode ? "text-[var(--color-cyan)]" : "text-cyan-600"}`} />
-            <div>
-              <p className="font-semibold mb-0.5">Prompt Repository & Personal Library</p>
-              <p className={isDarkMode ? "text-white/40" : "text-black/55"}>
-                This page acts as a library database for prompt discovery and storage. Images are read-only. 
-                You can copy any prompt or use the bottom action panel to load them into your clipboard to generate in the Chat workspace.
-              </p>
+            <Info className={`h-4 w-4 shrink-0 mt-0.5 ${isDarkMode ? "text-[var(--color-cyan)]" : "text-cyan-600"}`} />
+            <p className={isDarkMode ? "text-white/40" : "text-black/55"}>
+              This is your prompt repository and visual library. You can generate new AI images directly using the prompt input fixed at the bottom of the page.
+            </p>
+          </div>
+
+          {/* ================= COMPACT FILTERS & SEARCH ROW ================= */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/5">
+            {/* Left side: Filter pills */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Created On filter */}
+              <button
+                onClick={handleCycleCreatedOn}
+                className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+                  isDarkMode
+                    ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                    : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                }`}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                <span>Created: {createdOnFilter === "all" ? "All Time" : createdOnFilter === "today" ? "Today" : createdOnFilter === "week" ? "Last 7 Days" : "Last 30 Days"}</span>
+              </button>
+
+              {/* Personal/Community filter */}
+              <button
+                onClick={handleCycleSource}
+                className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+                  isDarkMode
+                    ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                    : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                }`}
+              >
+                <Globe className="h-3.5 w-3.5" />
+                <span>Source: {sourceFilter === "all" ? "All" : sourceFilter === "personal" ? "Personal" : "Community"}</span>
+              </button>
+            </div>
+
+            {/* Right side: Search Input */}
+            <div className={`flex items-center border transition-all rounded-full px-3 py-1.5 w-full md:max-w-xs ${
+              isDarkMode 
+                ? "bg-[#222120] border-white/5 focus-within:border-white/10" 
+                : "bg-[#f2f1f0] border-black/5 focus-within:border-black/10"
+            }`}>
+              <Search className={`h-3.5 w-3.5 mr-2 shrink-0 ${isDarkMode ? "text-white/30" : "text-black/40"}`} />
+              <input
+                type="text"
+                placeholder="Search library prompts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`w-full bg-transparent border-none text-xs focus:outline-none ${
+                  isDarkMode ? "text-white placeholder-white/20" : "text-black placeholder-black/35"
+                }`}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className={`p-1 shrink-0 ${isDarkMode ? "text-white/40 hover:text-white/80" : "text-black/40 hover:text-black/80"}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Curated Preset Active Indicator Banner */}
-
-
-          {/* ================= CONTENT CONTAINER ================= */}
           <div className="relative">
-              {activeCategory === "public_showcase" && showcaseTab === "galleries" ? (
+            {activeCategory === "public_showcase" && showcaseTab === "galleries" ? (
               /* Community Shared Galleries Grid view */
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {publicGalleries.length === 0 ? (
@@ -1001,11 +1847,11 @@ export default function LibraryPage() {
                         className="cursor-pointer"
                       >
                         <div className="flex items-start justify-between mb-4">
-                          <div className="p-3 bg-gradient-to-tr from-sky-500/20 to-indigo-500/20 rounded-xl text-sky-400">
+                          <div className="p-3 bg-gradient-to-tr from-sky-500/20 to-sky-500/5 rounded-xl text-sky-400">
                             <FolderOpen className="h-6 w-6" />
                           </div>
-                          <span className="text-[10px] font-mono px-2 py-0.5 bg-black/25 rounded-full flex items-center gap-1 text-[var(--color-cyan)]">
-                            <Globe className="h-2.5 w-2.5 text-[var(--color-cyan)]" />
+                          <span className="text-[10px] font-mono px-2 py-0.5 bg-black/25 rounded-full flex items-center gap-1 text-sky-400">
+                            <Globe className="h-2.5 w-2.5 text-sky-400" />
                             <span>Shared</span>
                           </span>
                         </div>
@@ -1018,10 +1864,10 @@ export default function LibraryPage() {
                           Created by <strong>{g.owner_name || "Community User"}</strong>
                         </p>
                       </div>
-
+ 
                       <div className="flex items-center justify-between border-t border-white/5 pt-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-mono text-[var(--color-cyan)]">
+                          <span className="text-[10px] font-mono text-sky-400">
                             {g.asset_count || 0} image prompts
                           </span>
                           <button
@@ -1132,238 +1978,95 @@ export default function LibraryPage() {
                 ) : (
                   
                   /* ================= CORE PHOTO IMAGE GRID ================= */
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <BentoGrid className="w-full gap-1.5 md:gap-2 max-w-none md:auto-rows-[15rem]">
                     <AnimatePresence mode="popLayout">
                       {activeAssets.map((asset, i) => {
-                        return (
-                          <motion.div
-                            key={asset.id}
-                            layout
-                            initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                            transition={{ duration: 0.35, ease: "easeOut", delay: Math.min(i * 0.02, 0.2) }}
-                            className={`relative overflow-hidden group/card rounded-xl shadow-lg transition-shadow duration-300 hover:shadow-2xl ${
-                              getCardAspectRatioClass()
-                            } ${
-                              isDarkMode ? "bg-black border border-white/[0.08]" : "bg-white border border-black/[0.08]"
-                            }`}
-                            onMouseEnter={() => setHoveredId(asset.id)}
-                            onMouseLeave={() => setHoveredId(null)}
-                          >
-                            {/* CSS Preset Grading Filter applied here dynamically */}
-                            <img
-                              src={asset.asset_url}
-                              alt={asset.prompt || "Concept visual"}
-                              className="w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-105 cursor-pointer"
-                              loading="lazy"
-                              onClick={() => setExpandedAsset(asset)}
-                            />
-
-                            {/* Top Action Indicators (Heart and Visibility) */}
-                            <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none select-none z-20">
-                              {/* Visibility badge */}
-                              <div className="flex gap-1.5">
-                                <span className={`px-2 py-0.5 backdrop-blur-md border rounded-full text-[9px] font-mono uppercase tracking-wider ${
-                                  isDarkMode ? "bg-black/60 border-white/10 text-white/80" : "bg-white/80 border-black/10 text-black/80"
-                                }`}>
-                                  {asset.id.startsWith("feat-") ? "Featured" : asset.id.startsWith("uploaded-") ? "Upload" : "Library"}
-                                </span>
-                                
-                                {/* Personal visibility status */}
-                                {!asset.id.startsWith("feat-") && (
-                                  <span className={`px-2 py-0.5 backdrop-blur-md border rounded-full text-[9px] font-mono uppercase tracking-wider flex items-center gap-1 ${
-                                    isDarkMode ? "bg-black/60 border-white/10 text-white/80" : "bg-white/80 border-black/10 text-black/80"
-                                  }`}>
-                                    {asset.is_public ? (
-                                      <>
-                                        <Globe className="h-2.5 w-2.5 text-sky-400" />
-                                        <span className="text-sky-400">Public</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Lock className="h-2.5 w-2.5 text-amber-500/80" />
-                                        <span>Private</span>
-                                      </>
-                                    )}
-                                  </span>
-                                )}
-                              </div>
-                              
-                              <div className="flex items-center gap-1.5 pointer-events-auto">
-                                <button
-                                  onClick={(e) => { e.preventDefault(); toggleSaved(asset); }}
-                                  className={`p-1.5 rounded-full border backdrop-blur-md pointer-events-auto transition-all duration-200 active:scale-90 ${
-                                    savedIds.includes(asset.id)
-                                      ? "bg-[var(--color-cyan)] border-[var(--color-cyan)] text-black scale-110 shadow-lg shadow-cyan-500/30"
-                                      : isDarkMode
-                                        ? "bg-black/60 border-white/10 text-white/50 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
-                                        : "bg-white/80 border-black/10 text-black/50 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
-                                  }`}
-                                >
-                                  <Heart className={`h-3 w-3 ${savedIds.includes(asset.id) ? "fill-current" : ""}`} />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Center Move to Folder button on hover */}
-                            <div
-                              className={`absolute inset-0 flex items-center justify-center transition-all duration-300 z-10 ${
-                                hoveredId === asset.id ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none"
-                              }`}
-                            >
-                              <button
-                                onClick={(e) => { e.preventDefault(); setMoveAssetId(asset.id); setIsMoveModalOpen(true); }}
-                                className="p-3 rounded-full bg-black/50 border border-white/20 text-white/80 hover:bg-[var(--color-cyan)] hover:text-black hover:border-[var(--color-cyan)] transition-all duration-200 shadow-lg backdrop-blur-sm"
-                                title="Move to Folder"
-                              >
-                                <Move className="h-5 w-5" />
-                              </button>
-                            </div>
-
-                            {/* Hover action bar: visibility (own only), copy, share, download */}
-                            <div
-                              className={`absolute bottom-0 left-0 right-0 flex items-center justify-center gap-2 px-3 py-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent transition-all duration-300 z-10 ${
-                                hoveredId === asset.id ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
-                              }`}
-                            >
-                              {!asset.id.startsWith("feat-") && (
-                                <button
-                                  onClick={(e) => { e.preventDefault(); handleToggleVisibility(asset.id, asset.is_public); }}
-                                  disabled={togglingVisibilityId === asset.id}
-                                  className={`p-1.5 rounded border transition-colors ${
-                                    asset.is_public
-                                      ? "bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 border-sky-400/20"
-                                      : "bg-white/10 border-white/20 text-white/70 hover:bg-white/20"
-                                  }`}
-                                  title={asset.is_public ? "Make Private" : "Make Public"}
-                                >
-                                  {togglingVisibilityId === asset.id ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  ) : asset.is_public ? (
-                                    <Globe className="h-3.5 w-3.5" />
-                                  ) : (
-                                    <Lock className="h-3.5 w-3.5" />
-                                  )}
-                                </button>
-                              )}
-                              <button
-                                onClick={(e) => { e.preventDefault(); handleCopyPrompt(asset.prompt || "", asset.id); }}
-                                className={`p-1.5 rounded border transition-colors ${
-                                  copiedId === asset.id
-                                    ? "border-emerald-400/50 text-emerald-400 bg-emerald-500/10"
-                                    : "bg-white/10 border-white/20 text-white/70 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)]"
-                                }`}
-                                title="Copy Prompt"
-                              >
-                                {copiedId === asset.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                              </button>
-                              <button
-                                onClick={(e) => { e.preventDefault(); handleDownloadImage(asset.asset_url, asset.id); }}
-                                className="p-1.5 rounded border bg-white/10 border-white/20 text-white/70 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)] transition-colors"
-                                title="Download"
-                              >
-                                <Download className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                onClick={(e) => { e.preventDefault(); handleShareImage(asset.asset_url, asset.prompt || "Library Image"); }}
-                                className="p-1.5 rounded border bg-white/10 border-white/20 text-white/70 hover:text-[var(--color-cyan)] hover:border-[var(--color-cyan)] transition-colors"
-                                title="Share"
-                              >
-                                <Share2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </motion.div>
-                        )
+                        const spanClass = getBentoSpanClass(i);
+                        return renderCard(asset, i, spanClass);
                       })}
                     </AnimatePresence>
-                  </div>
+                  </BentoGrid>
                 )}
               </>
             )}
           </div>
 
-          {/* ================= FLOATING FILTER BAR ================= */}
-          <div className="fixed bottom-6 left-1/2 md:left-[calc(50%+128px)] -translate-x-1/2 flex flex-col items-center gap-3 z-40 max-w-[1000px] w-[95%] md:w-[80%] shrink-0">
-            
-            {/* Core Pill Bar */}
-            <div className={`w-full flex flex-wrap md:flex-nowrap items-center justify-between gap-2 p-2 border rounded-2xl md:rounded-full transition-all duration-300 ${
-              isDarkMode
-                ? "bg-[#101014]/90 border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-white/20"
-                : "bg-white border-black/10 shadow-[0_10px_30px_rgba(0,0,0,0.08)] hover:border-black/20"
-            }`}>
-              
-              {/* Middle Configurations Pills */}
-              <div className="flex items-center gap-1.5 select-none text-[10px] font-sans font-medium shrink-0 w-full sm:w-auto justify-between sm:justify-start">
-                
-                {/* Created On filter */}
-                <button
-                  onClick={handleCycleCreatedOn}
-                  className="px-4 py-2 rounded-full bg-[#00DDDD] text-black font-semibold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 border-none shadow-[0_0_15px_rgba(0,221,221,0.2)]"
-                >
-                  <Clock className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Created: {createdOnFilter === "all" ? "All Time" : createdOnFilter === "today" ? "Today" : createdOnFilter === "week" ? "Last 7 Days" : "Last 30 Days"}</span>
-                  <span className="sm:hidden">{createdOnFilter === "all" ? "All" : createdOnFilter === "today" ? "Today" : createdOnFilter === "week" ? "7 Days" : "30 Days"}</span>
-                </button>
-
-                {/* Personal/Community filter */}
-                <button
-                  onClick={handleCycleSource}
-                  className="px-4 py-2 rounded-full bg-[#00DDDD] text-black font-semibold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 border-none shadow-[0_0_15px_rgba(0,221,221,0.2)]"
-                >
-                  <Globe className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Source: {sourceFilter === "all" ? "All" : sourceFilter === "personal" ? "Personal" : "Community"}</span>
-                  <span className="sm:hidden">{sourceFilter === "all" ? "All" : sourceFilter === "personal" ? "Pers." : "Comm."}</span>
-                </button>
-
-              </div>
-
-              {/* Text search & prompt composer wrapper */}
-              <div className={`flex-1 flex items-center border transition-all rounded-full px-3 py-1 ml-1 max-w-[450px] ${
-                isDarkMode ? "bg-white/[0.03] border-white/5 focus-within:border-white/20" : "bg-black/[0.03] border-black/5 focus-within:border-black/20"
-              }`}>
-                <Search className={`h-3.5 w-3.5 mr-2 shrink-0 ${isDarkMode ? "text-white/30" : "text-black/40"}`} />
-                
-                <input
-                  type="text"
-                  placeholder="Search prompts / filter library..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`w-full bg-transparent border-none text-xs py-1 focus:outline-none ${
-                    isDarkMode ? "text-white placeholder-white/20" : "text-black placeholder-black/35"
-                  }`}
-                />
-
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className={`p-1 shrink-0 ${isDarkMode ? "text-white/40 hover:text-white/80" : "text-black/40 hover:text-black/80"}`}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-
-              {/* Load Prompt Composer Action Button */}
-              <button
-                onClick={handleLoadPromptToComposer}
-                disabled={!searchQuery.trim()}
-                className={`h-9 px-4 rounded-full font-sans text-xs font-semibold uppercase tracking-wider select-none transition-all flex items-center gap-1.5 ${
-                  searchQuery.trim()
-                    ? "bg-[var(--color-cyan)] text-black shadow-[0_0_12px_rgba(0,221,221,0.35)] hover:scale-105 active:scale-95 cursor-pointer"
-                    : (isDarkMode ? "bg-white/5 text-white/25 cursor-not-allowed" : "bg-black/5 text-black/30 cursor-not-allowed")
-                }`}
-                title="Copy typed prompt text"
-              >
-                <span>Use Prompt</span>
-                <Check className="h-3.5 w-3.5" />
-              </button>
-
-            </div>
-
-          </div>
-
         </main>
+
+        {/* ================= FIXED BOTTOM IMAGE GENERATOR BAR ================= */}
+        <div
+          className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl rounded-full px-5 py-2 flex items-center gap-3 transition-all duration-300 ${
+            isDarkMode
+              ? "bg-[#222120] border border-white/5 shadow-2xl"
+              : "bg-[#f2f1f0] border border-black/5 shadow-2xl"
+          }`}
+        >
+            <textarea
+              value={generatePrompt}
+              onChange={(e) => {
+                setGeneratePrompt(e.target.value);
+                e.currentTarget.style.height = 'auto';
+                e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !isGenerating) {
+                  e.preventDefault();
+                  void handleGenerateImage();
+                }
+              }}
+              onInput={(e) => {
+                e.currentTarget.style.height = 'auto';
+                e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+              }}
+              disabled={isGenerating}
+              placeholder="Ask anything"
+              rows={1}
+              className={`flex-1 min-w-0 bg-transparent resize-none no-scrollbar font-sans ${
+                isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"
+              } py-2 text-base focus:outline-none`}
+              style={{ maxHeight: '20vh' }}
+            />
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Voice Input (Microphone) */}
+              <motion.button
+                type="button"
+                onClick={isRecording ? stopRecording : startRecording}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 rounded-full transition-all duration-200 ${
+                  isRecording 
+                    ? "bg-red-500/20 text-red-500 animate-pulse" 
+                    : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5")
+                }`}
+                title={isRecording ? "Stop recording" : "Voice input"}
+              >
+                <Mic className="h-5 w-5" />
+              </motion.button>
+
+              {/* Generate Button */}
+              {isGenerating ? (
+                <div className="h-9 w-9 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center shadow-lg">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              ) : (
+                <motion.button
+                  onClick={() => void handleGenerateImage()}
+                  disabled={!generatePrompt.trim()}
+                  whileHover={generatePrompt.trim() ? { scale: 1.1 } : {}}
+                  whileTap={generatePrompt.trim() ? { scale: 0.9 } : {}}
+                  className={`h-9 w-9 rounded-full flex items-center justify-center transition-all duration-200 shadow-md ${
+                    generatePrompt.trim()
+                      ? (isDarkMode ? "bg-white text-black hover:bg-white/90 cursor-pointer" : "bg-black text-white hover:bg-black/90 cursor-pointer")
+                      : (isDarkMode ? "bg-white/10 text-white/30 cursor-not-allowed" : "bg-black/10 text-black/30 cursor-not-allowed")
+                  }`}
+                  title="Generate Image"
+                >
+                  <ArrowUp className="h-5 w-5 stroke-[2.5]" />
+                </motion.button>
+              )}
+            </div>
+          </div>
       </div>
 
       {/* Move to Folder Modal */}
@@ -1501,7 +2204,9 @@ export default function LibraryPage() {
                 {/* Header badges + title + heart */}
                 <div className={`px-5 py-4 border-b shrink-0 ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`}>
                   <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider bg-[#00DDDD]/15 text-[#00DDDD] border border-[#00DDDD]/15">
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider border ${
+                      isDarkMode ? "bg-white/10 text-white/95 border-white/10" : "bg-black/10 text-black/95 border-black/10"
+                    }`}>
                       {expandedAsset.asset_type || "image"}
                     </span>
                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider border ${
@@ -1526,13 +2231,13 @@ export default function LibraryPage() {
                         onClick={() => toggleSaved(expandedAsset)}
                         className={`p-1.5 rounded-full transition-all duration-200 active:scale-90 ${
                           savedIds.includes(expandedAsset.id)
-                            ? "text-[#00DDDD] bg-[#00DDDD]/10"
+                            ? (isDarkMode ? "text-white bg-white/10" : "text-black bg-black/10")
                             : isDarkMode
                               ? "text-white/30 hover:text-white/60 hover:bg-white/5"
                               : "text-black/30 hover:text-black/60 hover:bg-black/5"
                         }`}
                       >
-                        <Heart className={`h-3.5 w-3.5 ${savedIds.includes(expandedAsset.id) ? "fill-[#00DDDD]" : ""}`} />
+                        <Heart className={`h-3.5 w-3.5 ${savedIds.includes(expandedAsset.id) ? "fill-current" : ""}`} />
                       </button>
                     )}
                   </div>
@@ -1551,7 +2256,9 @@ export default function LibraryPage() {
                     {expandedAsset.prompt && (
                       <button
                         onClick={() => { navigator.clipboard.writeText(expandedAsset.prompt || ""); toast.success("Prompt copied to clipboard!"); }}
-                        className="flex items-center gap-1 text-[10px] font-semibold mt-1.5 text-[#00DDDD] hover:text-[#00b3b3] transition-colors"
+                        className={`flex items-center gap-1 text-[10px] font-semibold mt-1.5 transition-colors ${
+                          isDarkMode ? "text-white/80 hover:text-white" : "text-black/80 hover:text-black"
+                        }`}
                       >
                         <Copy className="h-3 w-3" />
                         Copy Prompt
@@ -1593,7 +2300,7 @@ export default function LibraryPage() {
                       <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
                         Saved
                       </span>
-                      <span className={`text-[11px] font-medium block mt-0.5 ${savedIds.includes(expandedAsset.id) ? "text-[#00DDDD]" : isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                      <span className={`text-[11px] font-medium block mt-0.5 ${savedIds.includes(expandedAsset.id) ? (isDarkMode ? "text-white" : "text-black") : isDarkMode ? "text-white/40" : "text-black/40"}`}>
                         {savedIds.includes(expandedAsset.id) ? "Yes" : "No"}
                       </span>
                     </div>
@@ -1603,7 +2310,7 @@ export default function LibraryPage() {
                           Folder
                         </span>
                         <span className={`text-[11px] font-medium block mt-0.5 flex items-center gap-1.5 ${isDarkMode ? "text-white/70" : "text-black/60"}`}>
-                          <Folder className="h-3 w-3 text-[#00DDDD]" />
+                          <Folder className="h-3 w-3 text-zinc-400" />
                           {(() => { const g = [...galleries, ...publicGalleries].find(g => g.id === expandedAsset.gallery_id); return g?.name || "Unknown Folder"; })()}
                         </span>
                       </div>
@@ -1622,12 +2329,16 @@ export default function LibraryPage() {
                 {/* Bottom actions */}
                 <div className={`px-5 py-3 border-t space-y-2 shrink-0 ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`}>
                   <div className="grid grid-cols-2 gap-2">
-                    <a
+<a
                       href={expandedAsset.asset_url}
                       download={`rudra-${expandedAsset.id}.png`}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider bg-[#00DDDD] text-black hover:bg-[#00c5c5] transition-all active:scale-[0.98] shadow-lg shadow-[#00dddd]/10"
+                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider transition-all active:scale-[0.98] shadow-lg ${
+                        isDarkMode
+                          ? "bg-white text-black hover:bg-white/90 shadow-white/5"
+                          : "bg-black text-white hover:bg-black/90 shadow-black/5"
+                      }`}
                     >
                       <Download className="h-3.5 w-3.5" />
                       Download
@@ -1668,6 +2379,46 @@ export default function LibraryPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        isDarkMode={isDarkMode}
+        isMobile={isMobile}
+        onPersonaSelect={handlePersonaSelect}
+        currentPersona={selectedPersona}
+        onDeactivate={handleDiscontinueAccount}
+        userRole={userRole}
+        userName={userName}
+        userEmail={userEmail}
+        initialPanel={settingsPanel}
+      />
+
+      {/* Reflective Card Modal */}
+      {isPersonalizationModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setIsPersonalizationModalOpen(false)}>
+          <div onClick={e => e.stopPropagation()}>
+            <ReflectiveCard
+              userName={userName || "User"}
+              userEmail={userEmail || ""}
+              userRole={userRole}
+              schoolName={schoolName || ""}
+              subscription={subscription}
+              isDarkMode={isDarkMode}
+              onClose={() => setIsPersonalizationModalOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Wallet Modal */}
+      <WalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
+        isDarkMode={isDarkMode}
+        isMobile={isMobile}
+      />
     </div>
   )
 }

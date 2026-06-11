@@ -32,7 +32,7 @@ import {
     enhanceViaChatApi,
     getSubscriptionStatus,
     getPlanFeatures,
-    getFeatureIdForEngine,
+
     discontinueAccount
 } from "@/lib/chat-api";
 import { processFile, ProcessedFile } from "@/lib/file-processor";
@@ -249,6 +249,8 @@ const Chat = () => {
     const [userName, setUserName] = useState<string>("");
     const [userEmail, setUserEmail] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>(getWelcomeMessages);
+    const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
+    const [editingMessageText, setEditingMessageText] = useState<string>("");
     const [input, setInput] = useState("");
     const [sidebarWidth, setSidebarWidth] = useState(260);
     const [rightSidebarWidth, setRightSidebarWidth] = useState(340);
@@ -262,19 +264,12 @@ const Chat = () => {
     const [webActive, setWebActive] = useState(false);
     const [isResizingLeft, setIsResizingLeft] = useState(false);
     const [isResizingRight, setIsResizingRight] = useState(false);
-    const [showEngineDropdown, setShowEngineDropdown] = useState(false);
     const [showPromo, setShowPromo] = useState(() => {
         if (typeof window === "undefined") return true;
         return window.localStorage.getItem("arena_show_promo") !== "false";
     });
     const { isDarkMode, toggleTheme } = useTheme();
-    const [showEngineSelect, setShowEngineSelect] = useState(false);
-    const [selectedEngine, setSelectedEngine] = useState(() => {
-        const role = typeof window !== "undefined" ? getUserRole() : null;
-        const isGlobal = role === "global_admin";
-        const isEmployee = role === "employee" || role === "enterprise_admin" || role === "manager" || role === "school_admin" || role === "faculty" || isGlobal;
-        return isEmployee ? "Assistant Mode" : "Explore Mode";
-    });
+    const [selectedEngine, setSelectedEngine] = useState("Query Mode");
     const [selectedImageStyle, setSelectedImageStyle] = useState("realistic");
     const [isLoading, setIsLoading] = useState(false);
     const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -348,7 +343,6 @@ const Chat = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bulkFileInputRef = useRef<HTMLInputElement>(null);
     const requestStartTime = useRef<number>(0);
-    const engineSelectRef = useRef<HTMLDivElement>(null);
     const stopGenerationRef = useRef(false);
     const abortControllerRef = useRef<AbortController | null>(null);
     const styleCardsScrollRef = useRef<HTMLDivElement>(null);
@@ -389,45 +383,19 @@ const Chat = () => {
         };
     }, [showProfileDropup]);
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (engineSelectRef.current && !engineSelectRef.current.contains(event.target as Node)) {
-                setShowEngineDropdown(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, []);
-
     const [subscription, setSubscription] = useState<any>(null);
     const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
     const [planFeatures, setPlanFeaturesState] = useState<string[]>([]);
 
     const engines = [
-        { name: "Explore Mode", endpoint: "/chat", icon: GraduationCap },
-        { name: "Assistant Mode", endpoint: "/chat", icon: Bot },
-
-        { name: "Interview Prep", endpoint: "/tools/interview", icon: UserCog },
-        { name: "Mock Paper Generator", endpoint: "/chat", icon: FileIcon },
-        { name: "Persona Mode", endpoint: "/chat", icon: Sparkles },
-        { name: "AI Image Lab", endpoint: "/features/image/generate", icon: ImageIcon },
-        { name: "Battle Arena", endpoint: "/battle-arena", icon: Swords },
+        { name: "Query Mode", endpoint: "/chat", icon: MessageSquare },
+        { name: "Image Mode", endpoint: "/library", icon: ImageIcon },
     ];
 
-    const employeeRestrictedEngines = ["Explore Mode", "Interview Prep", "Mock Paper Generator", "Battle Arena"];
     const userRole = typeof window !== "undefined" ? getUserRole() : null;
     const schoolName = typeof window !== "undefined" ? getSchoolName() : null;
     const isGlobalAdmin = userRole === "global_admin";
     const showEmployeeView = userRole === "employee" || userRole === "enterprise_admin" || userRole === "manager" || userRole === "school_admin" || userRole === "faculty" || (isGlobalAdmin && !isEnterpriseMode);
-    const visibleEngines = showEmployeeView
-        ? engines.filter(e => !employeeRestrictedEngines.includes(e.name) && e.name !== "Persona Mode")
-        : engines.filter(e => e.name !== "Assistant Mode" && e.name !== "Persona Mode");
-
-    useEffect(() => {
-        setSelectedEngine(showEmployeeView ? "Assistant Mode" : "Explore Mode");
-    }, [showEmployeeView]);
 
     const activeChat = chats.find((chat) => chat.id === activeChatId) || null;
     const filteredChats = useMemo(() => {
@@ -952,18 +920,6 @@ const Chat = () => {
     }, [placeholderIndex, isProcessingFile]);
 
 
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (engineSelectRef.current && !engineSelectRef.current.contains(e.target as Node)) {
-                setShowEngineSelect(false);
-            }
-        };
-        if (showEngineSelect) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [showEngineSelect]);
-
     const copyToClipboard = (text: string, index?: number) => {
         navigator.clipboard.writeText(text);
         if (index !== undefined) {
@@ -1069,6 +1025,14 @@ const Chat = () => {
         setChatError(null);
         setIsHistoryLoading(true);
 
+        if (typeof window !== "undefined") {
+            const currentUrl = new URL(window.location.href);
+            if (currentUrl.searchParams.get("id") !== chatId) {
+                currentUrl.searchParams.set("id", chatId);
+                window.history.pushState({}, "", currentUrl.toString());
+            }
+        }
+
         try {
             const data = await getChatHistory(chatId);
             if (data.messages && data.messages.length === 0) {
@@ -1130,6 +1094,15 @@ const Chat = () => {
 
     useEffect(() => {
         if (!authed) return;
+
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const queryChatId = params.get("id");
+            if (queryChatId) {
+                setStoredActiveChatId(queryChatId);
+                setActiveChatId(queryChatId);
+            }
+        }
 
         const userInfo = getUserInfo();
         if (userInfo) {
@@ -1279,10 +1252,33 @@ const Chat = () => {
         if (msg && msg.role === "assistant" && index > 0) {
             const prevUserMsg = messages[index - 1];
             if (prevUserMsg && prevUserMsg.role === "user") {
-                setInput(prevUserMsg.content);
+                const retryContent = prevUserMsg.content;
+                const priorHistory = messages.slice(0, index - 1);
                 setMessages((prev) => prev.slice(0, index));
+                void handleSend(retryContent, priorHistory);
             }
         }
+    };
+
+    const handleSaveEdit = async (index: number) => {
+        const trimmedText = editingMessageText.trim();
+        if (!trimmedText) {
+            toast.error("Message cannot be empty");
+            return;
+        }
+
+        const slicedHistory = messages.slice(0, index + 1).map((m, idx) => {
+            if (idx === index) {
+                return { ...m, content: trimmedText };
+            }
+            return m;
+        });
+
+        setMessages(slicedHistory);
+        setEditingMessageIndex(null);
+
+        const priorHistory = slicedHistory.slice(0, index);
+        void handleSend(trimmedText, priorHistory);
     };
 
     const handleStartInterview = (topic: string, duration: number) => {
@@ -1293,10 +1289,10 @@ const Chat = () => {
     const handlePersonaSelect = (persona: Persona) => {
         if (!persona.name) {
             setSelectedPersona(null);
-            setSelectedEngine(showEmployeeView ? "Assistant Mode" : "Explore Mode");
+            setSelectedEngine("Query Mode");
         } else {
             setSelectedPersona(persona);
-            setSelectedEngine("Persona Mode");
+            setSelectedEngine("Query Mode");
         }
     };
 
@@ -1525,8 +1521,8 @@ STRICT RULES:
         }
     };
 
-    const handleSend = async () => {
-        const trimmedInput = input.trim();
+    const handleSend = async (overrideInput?: string, overrideHistory?: Message[]) => {
+        const trimmedInput = typeof overrideInput === "string" ? overrideInput.trim() : input.trim();
         if ((!trimmedInput && !selectedFile) || isLoading || isProcessingFile) {
             toast.error("Please enter a message or attach a file");
             return;
@@ -1690,7 +1686,7 @@ STRICT RULES:
                     ...(selectedPersona && selectedEngine === "Persona Mode"
                         ? [{ role: "system" as const, content: selectedPersona.systemPrompt }]
                         : []),
-                    ...messages
+                    ...(overrideHistory || messages)
                         .filter((message) => !message.localOnly && message.content.trim())
                         .map((message) => ({
                             role: message.role as "user" | "assistant" | "system",
@@ -1707,7 +1703,7 @@ STRICT RULES:
 
             if (useStreaming) {
                 // --- SSE streaming path ---
-                setMessages((prev) => [...prev.filter((m) => !m.localOnly), userMessage]);
+                setMessages((prev) => [...(overrideHistory || prev).filter((m) => !m.localOnly), userMessage]);
                 setInput("");
                 setSelectedFile(null);
 
@@ -1801,11 +1797,29 @@ STRICT RULES:
                     }
                 }
 
+                // Auto-generate title from first message if still "New Chat"
+                if (currentChatId) {
+                    const chat = chats.find(c => c.id === currentChatId);
+                    if (chat && chat.title === "New Chat") {
+                        const newTitle = buildChatTitle(displayContent);
+                        if (newTitle !== "New Chat") {
+                            try {
+                                await updateChat(currentChatId, newTitle);
+                                setChats((prev) =>
+                                    prev.map((c) =>
+                                        c.id === currentChatId ? { ...c, title: newTitle } : c
+                                    )
+                                );
+                            } catch { /* best effort */ }
+                        }
+                    }
+                }
+
                 setResponseTime((Date.now() - requestStart) / 1000);
 
             } else {
                 // --- Non-streaming path (image gen, file uploads, OCR) ---
-                setMessages((prev) => [...prev.filter((message) => !message.localOnly), userMessage]);
+                setMessages((prev) => [...(overrideHistory || prev).filter((message) => !message.localOnly), userMessage]);
                 setInput("");
                 setSelectedFile(null);
 
@@ -1886,6 +1900,24 @@ STRICT RULES:
                         }
                     } catch {
                         // Best effort - feedback won't persist for this exchange
+                    }
+                }
+
+                // Auto-generate title from first message if still "New Chat"
+                if (currentChatId) {
+                    const chat = chats.find(c => c.id === currentChatId);
+                    if (chat && chat.title === "New Chat") {
+                        const newTitle = buildChatTitle(displayContent);
+                        if (newTitle !== "New Chat") {
+                            try {
+                                await updateChat(currentChatId, newTitle);
+                                setChats((prev) =>
+                                    prev.map((c) =>
+                                        c.id === currentChatId ? { ...c, title: newTitle } : c
+                                    )
+                                );
+                            } catch { /* best effort */ }
+                        }
                     }
                 }
 
@@ -2007,9 +2039,12 @@ STRICT RULES:
                     {/* Bottom Left: Add files button + minimal quick toggles */}
                     <div className="flex items-center gap-2">
                         {/* Add Files Button */}
-                        <button
+                        {/* Add Files Button */}
+                        <motion.button
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isLoading || isProcessingFile}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-sans font-medium transition-all duration-200 cursor-pointer ${isDarkMode
                                     ? "border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
                                     : "border-black/10 bg-black/5 text-black/80 hover:bg-black/10 hover:text-black"
@@ -2022,7 +2057,7 @@ STRICT RULES:
                                 <Paperclip className="h-3.5 w-3.5" />
                             )}
                             <span>{t("add_files")}</span>
-                        </button>
+                        </motion.button>
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -2031,53 +2066,17 @@ STRICT RULES:
                             accept="image/*,application/pdf,text/plain,.md"
                         />
 
-                        <div className={`h-4 w-px ${isDarkMode ? "bg-white/10" : "bg-black/10"} mx-1`} />
 
-                        {/* Quick Engine Mode Switcher */}
-                        <div className="flex items-center gap-1">
-                            {visibleEngines.map((engine) => {
-                                const featureId = getFeatureIdForEngine(engine.name);
-                                const isAvailable = planFeatures.length === 0 || planFeatures.includes(featureId);
-                                const Icon = engine.icon as any;
-                                return (
-                                    <button
-                                        key={engine.name}
-                                        onClick={() => {
-                                            if (!isAvailable) {
-                                                window.location.href = "/pricing";
-                                                return;
-                                            }
-                                            if (engine.name === "Interview Prep") {
-                                                setIsInterviewModalOpen(true);
-                                            } else if (engine.name === "Mock Paper Generator") {
-                                                setIsMockPaperModalOpen(true);
-                                            } else if (engine.name === "Persona Mode") {
-                                                setIsPersonaModalOpen(true);
-                                            } else if (engine.name === "Battle Arena") {
-                                                setIsBattleArenaModalOpen(true);
-                                            } else {
-                                                setSelectedEngine(engine.name);
-                                            }
-                                        }}
-                                        className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${selectedEngine === engine.name
-                                                ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/15 text-black shadow-sm")
-                                                : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
-                                            }`}
-                                        title={engine.name}
-                                    >
-                                        <Icon className="h-3.5 w-3.5" />
-                                    </button>
-                                );
-                            })}
-                        </div>
                     </div>
 
                     {/* Bottom Right: Maximize layout button + circular send button */}
                     <div className="flex items-center gap-2">
                         {/* Maximize Layout Button */}
                         {showEmployeeView && (
-                            <button
+                            <motion.button
                                 onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
+                                whileHover={{ scale: 1.15 }}
+                                whileTap={{ scale: 0.85 }}
                                 className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${!isRightSidebarCollapsed
                                         ? (isDarkMode ? "bg-white/10 text-white" : "bg-black/10 text-black")
                                         : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
@@ -2085,22 +2084,33 @@ STRICT RULES:
                                 title="Toggle Right Panel Layout"
                             >
                                 <Maximize2 className="h-3.5 w-3.5" />
-                            </button>
+                            </motion.button>
                         )}
 
                         {/* Send / Stop Generation Button */}
                         {isLoading ? (
-                            <button
+                            <motion.button
                                 onClick={handleStopGeneration}
+                                whileHover={{ scale: 1.1, rotate: 90 }}
+                                whileTap={{ scale: 0.9 }}
                                 className="h-8 w-8 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all duration-200 shadow-lg"
                                 title={t("stop_generation")}
                             >
                                 <Pause className="h-3 w-3 fill-white stroke-none" />
-                            </button>
+                            </motion.button>
                         ) : (
-                            <button
+                            <motion.button
                                 onClick={() => void handleSend()}
                                 disabled={isHistoryLoading || isProcessingFile || !input.trim()}
+                                whileHover={input.trim() ? { scale: 1.1, x: [0, -3, 6, 0] } : {}}
+                                whileTap={input.trim() ? { scale: 0.9, x: 12 } : {}}
+                                transition={{
+                                    x: {
+                                        times: [0, 0.2, 0.7, 1],
+                                        duration: 0.45,
+                                        ease: "easeInOut"
+                                    }
+                                }}
                                 className={`h-8 w-8 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${input.trim()
                                         ? (accent
                                             ? "hover:opacity-90"
@@ -2118,7 +2128,7 @@ STRICT RULES:
                                 title={t("send_message")}
                             >
                                 <ArrowUp className="h-4 w-4 stroke-[2.5]" />
-                            </button>
+                            </motion.button>
                         )}
                     </div>
                 </div>
@@ -2177,7 +2187,7 @@ STRICT RULES:
                     100% { background-position: 0% 50%; }
                 }
                 .rainbow-glow-border {
-                    background: linear-gradient(90deg, #4285f4, #9b51e0, #ea4335, #fbbc05, #34a853, #4285f4);
+                    background: linear-gradient(90deg, #4285f4, #ea4335, #fbbc05, #34a853, #4285f4);
                     background-size: 300% 300%;
                     animation: rainbow-glow 6s ease infinite;
                 }
@@ -2215,8 +2225,10 @@ STRICT RULES:
                         {/* Top Group */}
                         <div className="flex flex-col items-center gap-6 w-full">
                             {/* Toggle Button */}
-                            <button
+                            <motion.button
                                 onClick={() => setIsSidebarCollapsed(false)}
+                                whileHover={{ scale: 1.15, x: 2 }}
+                                whileTap={{ scale: 0.85 }}
                                 className={`p-2 rounded-lg transition-colors cursor-pointer ${isDarkMode
                                         ? "text-white/60 hover:text-white hover:bg-white/5"
                                         : "text-black/60 hover:text-black hover:bg-black/5"
@@ -2224,12 +2236,14 @@ STRICT RULES:
                                 title={t("open_sidebar")}
                             >
                                 <PanelLeftOpen className="w-5 h-5" />
-                            </button>
+                            </motion.button>
 
                             {/* New Chat Button */}
-                            <button
+                            <motion.button
                                 onClick={handleCreateChat}
                                 disabled={isCreatingChat}
+                                whileHover={{ scale: 1.15, rotate: 90 }}
+                                whileTap={{ scale: 0.85 }}
                                 className={`p-2 rounded-lg transition-colors cursor-pointer ${isDarkMode
                                         ? "text-white/60 hover:text-white hover:bg-white/5"
                                         : "text-black/60 hover:text-black hover:bg-black/5"
@@ -2237,19 +2251,24 @@ STRICT RULES:
                                 title={t("new_chat")}
                             >
                                 <MessageSquarePlus className="w-5 h-5" />
-                            </button>
+                            </motion.button>
 
                             {/* Leaderboard Link */}
-                            <Link
-                                href="/global-leaderboard"
-                                className={`p-2 rounded-lg transition-colors cursor-pointer ${isDarkMode
-                                        ? "text-white/60 hover:text-white hover:bg-white/5"
-                                        : "text-black/60 hover:text-black hover:bg-black/5"
-                                    }`}
-                                title={t("leaderboard")}
+                            <motion.div
+                                whileHover={{ scale: 1.15 }}
+                                whileTap={{ scale: 0.85 }}
                             >
-                                <ListOrdered className="w-5 h-5" />
-                            </Link>
+                                <Link
+                                    href="/global-leaderboard"
+                                    className={`p-2 rounded-lg transition-colors cursor-pointer ${isDarkMode
+                                            ? "text-white/60 hover:text-white hover:bg-white/5"
+                                            : "text-black/60 hover:text-black hover:bg-black/5"
+                                        }`}
+                                    title={t("leaderboard")}
+                                >
+                                    <ListOrdered className="w-5 h-5" />
+                                </Link>
+                            </motion.div>
                         </div>
 
                         {/* Bottom Group */}
@@ -2259,8 +2278,10 @@ STRICT RULES:
 
                             {/* Profile / Avatar Button */}
                             <div className="mb-4 relative">
-                                <button
+                                <motion.button
                                     onClick={() => setShowProfileDropup(!showProfileDropup)}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
                                     className="h-8 w-8 rounded-full overflow-hidden border border-transparent hover:border-accent transition-all cursor-pointer relative shrink-0 flex items-center justify-center animate-fade-in"
                                     title={t("profile_options")}
                                 >
@@ -2271,7 +2292,7 @@ STRICT RULES:
                                             <User className={`h-4 w-4 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
                                         </div>
                                     )}
-                                </button>
+                                </motion.button>
 
                                 {showProfileDropup && (
                                     <div
@@ -2370,21 +2391,25 @@ STRICT RULES:
                                     className="h-4 object-contain"
                                 />
                             </div>
-                            <button
+                            <motion.button
                                 onClick={() => setIsSidebarCollapsed(true)}
+                                whileHover={{ scale: 1.15, x: -2 }}
+                                whileTap={{ scale: 0.85 }}
                                 className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5"}`}
                                 title={t("collapse_sidebar")}
                             >
                                 <PanelLeftClose className="w-4 h-4" />
-                            </button>
+                            </motion.button>
                         </div>
 
                         {/* Search and Action area */}
                         <div className="px-4 pt-4 pb-2 space-y-2">
                             {/* New Chat Button */}
-                            <button
+                            <motion.button
                                 onClick={handleCreateChat}
                                 disabled={isCreatingChat}
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.97 }}
                                 className={`w-full flex items-center justify-center gap-2 py-2 px-3 text-xs border rounded-xl font-sans font-medium transition-all duration-200 ${isDarkMode
                                         ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
                                         : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
@@ -2392,19 +2417,24 @@ STRICT RULES:
                             >
                                 <Plus className="w-4 h-4" />
                                 <span>{t("new_chat")}</span>
-                            </button>
+                            </motion.button>
 
                             {/* Leaderboard Button */}
-                            <Link
-                                href="/global-leaderboard"
-                                className={`w-full flex items-center justify-center gap-2 py-2 px-3 text-xs border rounded-xl font-sans font-medium transition-all duration-200 ${isDarkMode
-                                        ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
-                                        : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
-                                    }`}
+                            <motion.div
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.97 }}
                             >
-                                <Swords className="w-4 h-4" />
-                                <span>{t("leaderboard")}</span>
-                            </Link>
+                                <Link
+                                    href="/global-leaderboard"
+                                    className={`w-full flex items-center justify-center gap-2 py-2 px-3 text-xs border rounded-xl font-sans font-medium transition-all duration-200 ${isDarkMode
+                                            ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                                            : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                                        }`}
+                                >
+                                    <Swords className="w-4 h-4" />
+                                    <span>{t("leaderboard")}</span>
+                                </Link>
+                            </motion.div>
 
                             {/* Clean Search Input */}
                             <div className="relative group">
@@ -2593,9 +2623,11 @@ STRICT RULES:
                             )}
 
                             <div className="flex items-center justify-between">
-                                <button
+                                <motion.button
                                     id="walkthrough-profile-area"
                                     onClick={() => setShowProfileDropup(!showProfileDropup)}
+                                    whileHover={{ scale: 1.03 }}
+                                    whileTap={{ scale: 0.97 }}
                                     className="flex items-center gap-2 min-w-0 text-left cursor-pointer hover:opacity-80 transition-opacity"
                                     title={t("profile_options")}
                                 >
@@ -2610,25 +2642,29 @@ STRICT RULES:
                                         <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || t("user_fallback")}</span>
                                         <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? t("admin_role") : userRole === "faculty" ? t("faculty_role") : userRole === "enterprise_admin" ? t("admin_role") : userRole === "manager" ? t("manager_role") : userRole === "global_admin" ? t("admin_role") : subscription?.subscription?.plan_name || t("free_trial")}</span>
                                     </div>
-                                </button>
+                                </motion.button>
                                 <div className="flex items-center gap-1.5">
                                     {isGlobalAdmin && (
-                                        <button
+                                        <motion.button
                                             onClick={() => {
                                                 setIsEnterpriseMode(!isEnterpriseMode);
                                                 setRightSidebarTab(isEnterpriseMode ? "gmail" : "wallet");
                                             }}
+                                            whileHover={{ scale: 1.1 }}
+                                            whileTap={{ scale: 0.9 }}
                                             className={`p-1.5 border rounded-lg transition-all text-[8px] font-mono ${isDarkMode ? "border-white/10 text-white/60 hover:text-white" : "border-black/10 text-black/60 hover:text-black"} ${isEnterpriseMode ? "text-accent" : ""}`}
                                             title={isEnterpriseMode ? t("switch_regular") : t("switch_enterprise")}
                                         >
                                             {isEnterpriseMode ? t("ent") : t("reg")}
-                                        </button>
+                                        </motion.button>
                                     )}
-                                    <button
+                                    <motion.button
                                         onClick={() => {
                                             setSettingsPanel("persona");
                                             setIsSettingsModalOpen(true);
                                         }}
+                                        whileHover={{ scale: 1.1, rotate: 30 }}
+                                        whileTap={{ scale: 0.9 }}
                                         title={t("settings")}
                                         className={`p-1.5 rounded-lg border transition-colors ${isDarkMode
                                                 ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5"
@@ -2636,8 +2672,8 @@ STRICT RULES:
                                             }`}
                                     >
                                         <Settings className="h-3.5 w-3.5" />
-                                    </button>
-                                    <button
+                                    </motion.button>
+                                    <motion.button
                                         onClick={() => {
                                             removeApiKey();
                                             removeUserInfo();
@@ -2650,6 +2686,8 @@ STRICT RULES:
                                             setUserEmail("");
                                             window.location.href = "/";
                                         }}
+                                        whileHover={{ scale: 1.1, x: 2 }}
+                                        whileTap={{ scale: 0.9 }}
                                         title={t("logout_title")}
                                         className={`p-1.5 rounded-lg border transition-colors ${isDarkMode
                                                 ? "border-white/10 text-white/60 hover:text-red-400 hover:bg-white/5"
@@ -2657,7 +2695,7 @@ STRICT RULES:
                                             }`}
                                     >
                                         <LogOut className="h-3.5 w-3.5" />
-                                    </button>
+                                    </motion.button>
                                 </div>
                             </div>
 
@@ -2674,85 +2712,43 @@ STRICT RULES:
                     <div className="flex items-center gap-3">
                         {/* Mobile left-sidebar toggle button */}
                         {isMobile && (
-                            <button
+                            <motion.button
                                 onClick={() => {
                                     setIsSidebarCollapsed(!isSidebarCollapsed);
                                     setIsRightSidebarCollapsed(true);
                                 }}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
                                 className={`p-2 border rounded-xl transition-all cursor-pointer ${isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"}`}
                             >
                                 <MessageSquare className="h-4 w-4" />
-                            </button>
+                            </motion.button>
                         )}
 
 
 
-                        {/* Engine Dropdown Selector */}
-                        <div className="relative" ref={engineSelectRef}>
+                        {/* Mode Toggle Buttons */}
+                        <div className={`flex items-center gap-1 p-0.5 rounded-xl border text-xs font-medium transition-all duration-200 cursor-pointer bg-inherit ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
                             <button
-                                id="walkthrough-engine-select"
-                                onClick={() => setShowEngineDropdown(!showEngineDropdown)}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-xl font-medium transition-all duration-200 cursor-pointer ${isDarkMode
-                                        ? "border-white/10 text-white/90 bg-white/5 hover:bg-white/10 hover:border-white/20"
-                                        : "border-black/10 text-black/90 bg-black/5 hover:bg-black/10 hover:border-black/20"
+                                onClick={() => setSelectedEngine("Query Mode")}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${selectedEngine === "Query Mode"
+                                        ? (isDarkMode ? "bg-white/10 text-white shadow-sm" : "bg-black/10 text-black shadow-sm")
+                                        : (isDarkMode ? "text-white/50 hover:text-white" : "text-black/50 hover:text-black")
                                     }`}
                             >
-                                {(() => {
-                                    const currentEngine = engines.find(e => e.name === selectedEngine);
-                                    const CurrentIcon = currentEngine?.icon || Bot;
-                                    return <CurrentIcon className="w-3.5 h-3.5 opacity-60" />;
-                                })()}
-                                <span>{selectedEngine}</span>
-                                <ChevronDown className={`w-3.5 h-3.5 opacity-40 transition-transform duration-200 ${showEngineDropdown ? "rotate-180" : ""}`} />
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                <span>Query Mode</span>
                             </button>
-
-                            {showEngineDropdown && (
-                                <div className={`absolute left-0 mt-2 w-56 z-[100] rounded-xl border p-1.5 shadow-2xl ${isDarkMode
-                                        ? "bg-white/5 border-white/10 text-white backdrop-blur-xl"
-                                        : "bg-black/5 border-black/10 text-black backdrop-blur-xl"
-                                    }`}>
-                                    {visibleEngines.map((engine) => {
-                                        const featureId = getFeatureIdForEngine(engine.name);
-                                        const isAvailable = planFeatures.length === 0 || planFeatures.includes(featureId);
-                                        return (
-                                            <button
-                                                key={engine.name}
-                                                onClick={() => {
-                                                    setShowEngineDropdown(false);
-                                                    if (!isAvailable) {
-                                                        window.location.href = "/pricing";
-                                                        return;
-                                                    }
-                                                    if (engine.name === "Interview Prep") {
-                                                        setIsInterviewModalOpen(true);
-                                                    } else if (engine.name === "Mock Paper Generator") {
-                                                        setIsMockPaperModalOpen(true);
-                                                    } else if (engine.name === "Persona Mode") {
-                                                        setIsPersonaModalOpen(true);
-                                                    } else if (engine.name === "Battle Arena") {
-                                                        setIsBattleArenaModalOpen(true);
-                                                    } else {
-                                                        setSelectedEngine(engine.name);
-                                                    }
-                                                }}
-                                                className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg text-left transition-colors cursor-pointer ${selectedEngine === engine.name
-                                                        ? (isDarkMode ? "bg-white/10 text-white font-semibold" : "bg-black/10 text-black font-semibold")
-                                                        : (isDarkMode ? "text-white/70 hover:bg-white/5 hover:text-white" : "text-black/70 hover:bg-black/5 hover:text-black")
-                                                    }`}
-                                            >
-                                                <div className="flex items-center gap-2.5">
-                                                    {(() => {
-                                                        const Icon = engine.icon as any;
-                                                        return <Icon className="w-3.5 h-3.5 opacity-60" />;
-                                                    })()}
-                                                    <span>{engine.name}</span>
-                                                </div>
-                                                <Zap className={`h-3 w-3 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                            <button
+                                onClick={() => window.location.href = "/library"}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${selectedEngine === "Image Mode"
+                                        ? (isDarkMode ? "bg-white/10 text-white shadow-sm" : "bg-black/10 text-black shadow-sm")
+                                        : (isDarkMode ? "text-white/50 hover:text-white" : "text-black/50 hover:text-black")
+                                    }`}
+                            >
+                                <ImageIcon className="w-3.5 h-3.5" />
+                                <span>Image Mode</span>
+                            </button>
                         </div>
                     </div>
 
@@ -2760,29 +2756,64 @@ STRICT RULES:
                     <div className="flex items-center gap-3">
                         {/* Quick Tour Button */}
                         {!showEmployeeView && !isMobile && (
-                            <button
+                            <motion.button
                                 onClick={() => setShowWalkthrough(true)}
-                                className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer ${isDarkMode
+                                className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer overflow-hidden relative ${isDarkMode
                                         ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
                                         : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
                                     }`}
                                 title={t("start_tour")}
                             >
-                                <Car className="h-4 w-4 opacity-70" />
-                            </button>
+                                <motion.div
+                                    whileHover={{
+                                        scale: 1.1,
+                                        y: [0, -1, 1, -1, 0],
+                                        transition: {
+                                            y: {
+                                                repeat: Infinity,
+                                                duration: 0.15,
+                                                ease: "linear"
+                                            }
+                                        }
+                                    }}
+                                    whileTap={{
+                                        x: [0, -6, 35],
+                                        transition: {
+                                            duration: 0.4,
+                                            ease: "easeInOut"
+                                        }
+                                    }}
+                                    className="flex items-center justify-center"
+                                >
+                                    <Car className="h-4 w-4 opacity-70" />
+                                </motion.div>
+                            </motion.button>
                         )}
 
                         {/* Theme Toggler */}
-                        <button
+                        <motion.button
                             onClick={toggleTheme}
-                            className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer ${isDarkMode
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer overflow-hidden relative ${isDarkMode
                                     ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
                                     : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
                                 }`}
                             title={isDarkMode ? t("switch_light") : t("switch_dark")}
                         >
-                            {isDarkMode ? <Sun className="h-4 w-4 opacity-70" /> : <Moon className="h-4 w-4 opacity-70" />}
-                        </button>
+                            <AnimatePresence mode="wait" initial={false}>
+                                <motion.div
+                                    key={isDarkMode ? "dark" : "light"}
+                                    initial={{ y: -20, opacity: 0, rotate: -90 }}
+                                    animate={{ y: 0, opacity: 1, rotate: 0 }}
+                                    exit={{ y: 20, opacity: 0, rotate: 90 }}
+                                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                                    className="flex items-center justify-center"
+                                >
+                                    {isDarkMode ? <Sun className="h-4 w-4 opacity-70" /> : <Moon className="h-4 w-4 opacity-70" />}
+                                </motion.div>
+                            </AnimatePresence>
+                        </motion.button>
 
                         {/* Right Sidebar Toggler */}
                         {showEmployeeView && (
@@ -2865,9 +2896,60 @@ STRICT RULES:
                                                     : "bg-transparent text-current"
                                                     } relative group`}>
                                                     {msg.role === "user" ? (
-                                                        <p className={`text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white" : "text-black"}`}>
-                                                            {msg.content}
-                                                        </p>
+                                                         editingMessageIndex === i ? (
+                                                             <div className="flex flex-col gap-2 min-w-[280px] sm:min-w-[400px] py-1">
+                                                                 <textarea
+                                                                     value={editingMessageText}
+                                                                     onChange={(e) => setEditingMessageText(e.target.value)}
+                                                                     onKeyDown={(e) => {
+                                                                         if (e.key === "Enter" && !e.shiftKey) {
+                                                                             e.preventDefault();
+                                                                             void handleSaveEdit(i);
+                                                                         }
+                                                                         if (e.key === "Escape") {
+                                                                             setEditingMessageIndex(null);
+                                                                         }
+                                                                     }}
+                                                                     className={`w-full p-2 text-base rounded-xl resize-none focus:outline-none border ${
+                                                                         isDarkMode
+                                                                             ? "bg-[#111] border-white/10 text-white placeholder:text-white/30"
+                                                                             : "bg-white border-black/10 text-black placeholder:text-black/30"
+                                                                     }`}
+                                                                     rows={3}
+                                                                     autoFocus
+                                                                 />
+                                                                 <div className="flex justify-end gap-2 text-[10px] font-mono uppercase tracking-wider">
+                                                                     <motion.button
+                                                                         onClick={() => setEditingMessageIndex(null)}
+                                                                         whileHover={{ scale: 1.05 }}
+                                                                         whileTap={{ scale: 0.95 }}
+                                                                         className={`px-3 py-1.5 rounded-lg border ${
+                                                                             isDarkMode
+                                                                                 ? "border-white/10 text-white/60 hover:text-white"
+                                                                                 : "border-black/10 text-black/60 hover:text-black"
+                                                                         }`}
+                                                                     >
+                                                                         Cancel
+                                                                     </motion.button>
+                                                                     <motion.button
+                                                                         onClick={() => void handleSaveEdit(i)}
+                                                                         whileHover={{ scale: 1.05 }}
+                                                                         whileTap={{ scale: 0.95 }}
+                                                                         className={`px-3 py-1.5 rounded-lg font-bold ${
+                                                                             isDarkMode
+                                                                                 ? "bg-white text-black hover:bg-white/90"
+                                                                                 : "bg-black text-white hover:bg-black/90"
+                                                                         }`}
+                                                                     >
+                                                                         Save & Submit
+                                                                     </motion.button>
+                                                                 </div>
+                                                             </div>
+                                                         ) : (
+                                                             <p className={`text-base md:text-lg leading-relaxed ${isDarkMode ? "text-white" : "text-black"}`}>
+                                                                 {msg.content}
+                                                             </p>
+                                                         )
                                                     ) : isImageContent(msg.content) ? (
                                                         <div className={`relative group/img-wrapper ${selectedEngine === "AI Image Lab"
                                                                 ? "max-w-[450px]"
@@ -2953,55 +3035,98 @@ STRICT RULES:
                                                 <div className={`flex items-center gap-2 mt-2 ${msg.role === "user" ? "justify-end" : "justify-start px-2"}`}>
                                                     {msg.role === "user" ? (
                                                         <>
-                                                            <button onClick={() => setInput(msg.content)} title="Edit & resend" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}>
+                                                            <motion.button 
+                                                                onClick={() => {
+                                                                    setEditingMessageIndex(i);
+                                                                    setEditingMessageText(msg.content);
+                                                                }} 
+                                                                whileHover={{ scale: 1.15 }}
+                                                                whileTap={{ scale: 0.85 }}
+                                                                title="Edit message" 
+                                                                className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}
+                                                            >
                                                                 <Edit3 className="h-5 w-5" />
-                                                            </button>
-                                                            <button onClick={() => copyToClipboard(msg.content, i)} title="Copy message" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}>
+                                                            </motion.button>
+                                                            <motion.button 
+                                                                onClick={() => copyToClipboard(msg.content, i)} 
+                                                                whileHover={{ scale: 1.15 }}
+                                                                whileTap={{ scale: 0.85 }}
+                                                                title="Copy message" 
+                                                                className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}
+                                                            >
                                                                 {copiedMsgIndex === i ? (
                                                                     <Check className="h-5 w-5 text-emerald-400" />
                                                                 ) : (
                                                                     <Copy className="h-5 w-5" />
                                                                 )}
-                                                            </button>
+                                                            </motion.button>
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <button
+                                                            <motion.button
                                                                 title="Like"
                                                                 onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, 1)}
+                                                                whileHover={{ scale: 1.15 }}
+                                                                whileTap={{ scale: 0.85 }}
                                                                 className={`p-1.5 transition-all rounded-lg ${msg.feedback === 1
                                                                     ? "text-emerald-400 bg-emerald-500/10"
                                                                     : (isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5")
                                                                     }`}
                                                             >
                                                                 <ThumbsUp className="h-5 w-5" />
-                                                            </button>
-                                                            <button
+                                                            </motion.button>
+                                                            <motion.button
                                                                 title="Dislike"
                                                                 onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, -1)}
+                                                                whileHover={{ scale: 1.15 }}
+                                                                whileTap={{ scale: 0.85 }}
                                                                 className={`p-1.5 transition-all rounded-lg ${msg.feedback === -1
                                                                     ? "text-red-400 bg-red-500/10"
                                                                     : (isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5")
                                                                     }`}
                                                             >
                                                                 <ThumbsDown className="h-5 w-5" />
-                                                            </button>
-                                                            <button onClick={() => copyToClipboard(msg.content, i)} title="Copy message" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}>
+                                                            </motion.button>
+                                                            <motion.button 
+                                                                onClick={() => copyToClipboard(msg.content, i)} 
+                                                                whileHover={{ scale: 1.15 }}
+                                                                whileTap={{ scale: 0.85 }}
+                                                                title="Copy message" 
+                                                                className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}
+                                                            >
                                                                 {copiedMsgIndex === i ? (
                                                                     <Check className="h-5 w-5 text-emerald-400" />
                                                                 ) : (
                                                                     <Copy className="h-5 w-5" />
                                                                 )}
-                                                            </button>
-                                                            <button onClick={() => retryMessage(i)} title="Regenerate" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}>
+                                                            </motion.button>
+                                                            <motion.button 
+                                                                onClick={() => retryMessage(i)} 
+                                                                whileHover={{ scale: 1.15 }}
+                                                                whileTap={{ scale: 0.85 }}
+                                                                title="Regenerate" 
+                                                                className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}
+                                                            >
                                                                 <RotateCcw className="h-5 w-5" />
-                                                            </button>
-                                                            <button onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} title="Download as PDF" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}>
+                                                            </motion.button>
+                                                            <motion.button 
+                                                                onClick={() => downloadAsPdf("Rudranex AI Response", msg.content)} 
+                                                                whileHover={{ scale: 1.15 }}
+                                                                whileTap={{ scale: 0.85 }}
+                                                                title="Download as PDF" 
+                                                                className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}
+                                                            >
                                                                 <FileDown className="h-5 w-5" />
-                                                            </button>
-                                                            <button onClick={() => { if (navigator.share) { navigator.share({ title: "Rudranex AI Response", text: msg.content }); } else { navigator.clipboard.writeText(msg.content); toast.success("Link copied to clipboard"); } }} title="Share" className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}>
+                                                            </motion.button>
+                                                            <motion.button 
+                                                                onClick={() => { if (navigator.share) { navigator.share({ title: "Rudranex AI Response", text: msg.content }); } else { navigator.clipboard.writeText(msg.content); toast.success("Link copied to clipboard"); } }} 
+                                                                whileHover={{ scale: 1.15 }}
+                                                                whileTap={{ scale: 0.85 }}
+                                                                title="Share" 
+                                                                className={`p-1.5 transition-all rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-white/5" : "text-black hover:text-black/80 hover:bg-black/5"}`}
+                                                            >
                                                                 <Share className="h-5 w-5" />
-                                                            </button>
+                                                            </motion.button>
                                                         </>
                                                     )}
                                                 </div>
@@ -3810,7 +3935,7 @@ STRICT RULES:
                     )}
 
                     {/* Right Toggle Button */}
-                    <button
+                    <motion.button
                         id="walkthrough-right-sidebar-toggle"
                         onClick={() => {
                             const newCollapsed = !isRightSidebarCollapsed;
@@ -3819,11 +3944,13 @@ STRICT RULES:
                                 setIsSidebarCollapsed(true);
                             }
                         }}
-                        className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border border-white text-white/40 hover:text-white hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-right ${isMobile ? "hidden" : ""}`}
+                        whileHover={{ scale: 1.15 }}
+                        whileTap={{ scale: 0.85 }}
+                        className={`absolute top-1/2 -translate-y-1/2 z-50 p-2 bg-[#0a0a0a] border border-white text-white/40 hover:text-white hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all rounded-full shadow-xl shadow-black/20 toggle-btn-right ${isMobile ? "hidden" : ""}`}
                         style={isMobile && isRightSidebarCollapsed ? { right: "0.8rem" } : { left: isRightSidebarCollapsed ? "-2.2rem" : "-0.95rem" }}
                     >
                         {isRightSidebarCollapsed ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-                    </button>
+                    </motion.button>
                 </aside>
             )}
 
