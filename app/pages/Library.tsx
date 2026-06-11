@@ -795,7 +795,7 @@ export default function LibraryPage() {
     let pool: LibraryAsset[] = []
     switch (activeCategory) {
       case "featured": {
-        const combined = [...FEATURED_ASSETS, ...publicAssets];
+        const combined = [...publicAssets];
         pool = combined.sort((a, b) => {
           const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
           const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -989,7 +989,11 @@ export default function LibraryPage() {
                 
                 <button
                   onClick={() => setExpandedAsset(asset)}
-                  className="p-1.5 rounded-full bg-white/10 hover:bg-cyan-400 hover:text-black transition-all cursor-pointer"
+                  className={`p-1.5 rounded-full transition-all cursor-pointer ${
+                    isDarkMode
+                      ? "bg-white/10 text-white hover:bg-white/20"
+                      : "bg-black/10 text-black hover:bg-black/20"
+                  }`}
                   title="Expand"
                 >
                   <Maximize2 className="h-3.5 w-3.5" />
@@ -1237,7 +1241,7 @@ export default function LibraryPage() {
             {/* Logo Header */}
             <div className={`h-16 flex-shrink-0 flex items-center justify-between px-5 py-4 border-b ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`}>
               <div className="flex items-center gap-2.5 cursor-pointer select-none" onClick={() => window.location.href = "/"}>
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
                   <img
                     src={isDarkMode ? "/dark.png" : "/light.png"}
                     alt="Logo"
@@ -2259,13 +2263,19 @@ export default function LibraryPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[100] flex bg-black/99"
+            className={`fixed inset-0 z-[100] flex transition-colors duration-300 ${
+              isDarkMode ? "bg-[#0d0d0c]/98 text-white" : "bg-[#f4f3f2]/98 text-black"
+            }`}
             onClick={() => setExpandedAsset(null)}
           >
             {/* Close button */}
             <button
               onClick={() => setExpandedAsset(null)}
-              className="absolute top-4 right-4 md:top-5 md:right-5 z-50 p-2 md:p-2.5 rounded-full bg-white/[0.04] text-white/50 hover:bg-white/10 hover:text-white transition-colors border border-white/[0.06] backdrop-blur-md"
+              className={`absolute top-4 right-4 md:top-5 md:right-5 z-50 p-2 md:p-2.5 rounded-full transition-all duration-200 border backdrop-blur-md ${
+                isDarkMode
+                  ? "bg-white/[0.04] text-white/50 hover:bg-white/10 hover:text-white border-white/[0.06]"
+                  : "bg-black/[0.04] text-black/50 hover:bg-black/10 hover:text-black border-black/[0.06]"
+              }`}
             >
               <X className="h-4 w-4 md:h-5 md:w-5" />
             </button>
@@ -2279,12 +2289,14 @@ export default function LibraryPage() {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Image Container - 80% width on desktop */}
-              <div id="expanded-image-wrap" className="flex-[4] flex items-center justify-center bg-black/60 p-3 md:p-6 relative min-h-[40vh] md:min-h-0">
+              <div id="expanded-image-wrap" className={`flex-[4] flex items-center justify-center p-3 md:p-6 relative min-h-[40vh] md:min-h-0 transition-colors duration-300 ${
+                isDarkMode ? "bg-black/40" : "bg-black/5"
+              }`}>
                 {brokenImages.has(expandedAsset.id) ? (
                   <div className="text-center p-4">
-                    <ImageIcon className="h-12 w-12 mx-auto mb-3 text-white/20" />
-                    <p className="text-sm font-mono text-white/30">Image unavailable</p>
-                    <p className="text-[11px] font-mono text-white/20 mt-1">The image data may be corrupted or the URL may have expired.</p>
+                    <ImageIcon className={`h-12 w-12 mx-auto mb-3 ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
+                    <p className={`text-sm font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Image unavailable</p>
+                    <p className={`text-[11px] font-mono mt-1 ${isDarkMode ? "text-white/20" : "text-black/20"}`}>The image data may be corrupted or the URL may have expired.</p>
                   </div>
                 ) : (
                   <img
@@ -2297,15 +2309,17 @@ export default function LibraryPage() {
                 )}
                 {/* Mobile prompt overlay */}
                 <div className="absolute bottom-2 left-2 right-2 md:hidden">
-                  <div className="backdrop-blur-xl bg-black/70 border border-white/[0.06] rounded-xl px-3.5 py-2.5">
-                    <p className="text-xs text-white/90 line-clamp-2">{expandedAsset.prompt || "No prompt"}</p>
+                  <div className={`backdrop-blur-xl border rounded-xl px-3.5 py-2.5 transition-colors duration-300 ${
+                    isDarkMode ? "bg-black/70 border-white/[0.06] text-white/90" : "bg-white/80 border-black/[0.06] text-black/90"
+                  }`}>
+                    <p className="text-xs line-clamp-2">{expandedAsset.prompt || "No prompt"}</p>
                   </div>
                 </div>
               </div>
 
               {/* Details Panel - 360px on desktop */}
               <div className={`w-full md:w-[360px] shrink-0 flex flex-col overflow-y-auto border-t md:border-t-0 md:border-l transition-colors duration-300 ${
-                isDarkMode ? "bg-zinc-950 border-white/[0.06]" : "bg-white border-black/[0.06]"
+                isDarkMode ? "bg-[#0d0d0c] border-white/[0.06]" : "bg-[#f4f3f2] border-black/[0.06]"
               }`}>
                 {/* Header badges + title + heart */}
                 <div className={`px-5 py-4 border-b shrink-0 ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`}>
