@@ -484,6 +484,10 @@ export default function LibraryPage() {
 
     setIsGenerating(true)
     setGenerationStatus("generating")
+    if (typeof window !== "undefined") {
+      localStorage.setItem("image_gen_status", "generating")
+      localStorage.setItem("image_gen_timestamp", String(Date.now()))
+    }
     setActiveCategory("all")
     const toastId = toast.loading("Generating your image...")
 
@@ -503,6 +507,10 @@ export default function LibraryPage() {
         setGeneratePrompt("")
         setGenerationStatus("completed")
         setHasNewGeneration(true)
+        if (typeof window !== "undefined") {
+          localStorage.setItem("image_gen_status", "completed")
+          localStorage.setItem("image_gen_timestamp", String(Date.now()))
+        }
         
         // Refresh local assets to show the new image
         await fetchAssets()
@@ -516,9 +524,19 @@ export default function LibraryPage() {
       console.error("[Library] Generation error:", err)
       toast.error(err.message || "Failed to generate image.", { id: toastId })
       setGenerationStatus("idle")
+      if (typeof window !== "undefined") {
+        localStorage.setItem("image_gen_status", "idle")
+        localStorage.setItem("image_gen_timestamp", String(Date.now()))
+      }
     } finally {
       setIsGenerating(false)
-      setTimeout(() => { setGenerationStatus("idle") }, 5000)
+      setTimeout(() => {
+        setGenerationStatus("idle")
+        if (typeof window !== "undefined") {
+          localStorage.setItem("image_gen_status", "idle")
+          localStorage.setItem("image_gen_timestamp", String(Date.now()))
+        }
+      }, 5000)
     }
   }
 
@@ -1672,7 +1690,7 @@ export default function LibraryPage() {
                       )}
                       {generationStatus === "completed" && (
                         <button
-                          onClick={() => { setShowNotificationPanel(false); setActiveCategory("all"); setHasNewGeneration(false); setGenerationStatus("idle"); }}
+                          onClick={() => { setShowNotificationPanel(false); setActiveCategory("all"); setHasNewGeneration(false); setGenerationStatus("idle"); if (typeof window !== "undefined") { localStorage.setItem("image_gen_status", "idle"); localStorage.setItem("image_gen_timestamp", String(Date.now())); } }}
                           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-xs ${
                             isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
                           }`}

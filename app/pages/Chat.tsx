@@ -246,6 +246,9 @@ const Chat = () => {
 
     const [authed, setAuthed] = useState<boolean | null>(null);
     const [showWalkthrough, setShowWalkthrough] = useState(false);
+    const [imageGenStatus, setImageGenStatus] = useState<"idle" | "generating" | "completed">("idle");
+    const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+    const notificationPanelRef = useRef<HTMLDivElement>(null);
     const [userName, setUserName] = useState<string>("");
     const [userEmail, setUserEmail] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>(getWelcomeMessages);
@@ -935,6 +938,39 @@ const Chat = () => {
         startTyping();
         return () => clearInterval(interval);
     }, [placeholderIndex, isProcessingFile]);
+
+    // Poll for image generation status from Library
+    useEffect(() => {
+        const checkStatus = () => {
+            if (typeof window === "undefined") return;
+            const status = localStorage.getItem("image_gen_status");
+            const timestamp = localStorage.getItem("image_gen_timestamp");
+            if (status && timestamp) {
+                const age = Date.now() - Number(timestamp);
+                if (age < 30000) {
+                    setImageGenStatus(status as "idle" | "generating" | "completed");
+                } else {
+                    setImageGenStatus("idle");
+                }
+            }
+        };
+        checkStatus();
+        const interval = setInterval(checkStatus, 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Click outside to close notification panel
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (notificationPanelRef.current && !notificationPanelRef.current.contains(event.target as Node)) {
+                setShowNotificationPanel(false);
+            }
+        };
+        if (showNotificationPanel) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [showNotificationPanel]);
 
 
     const copyToClipboard = (text: string, index?: number) => {
@@ -2850,6 +2886,73 @@ STRICT RULES:
                                     <Car className="h-4 w-4 opacity-70" />
                                 </motion.div>
                             </motion.button>
+                        )}
+
+                        {/* Notification Bell for Image Generation */}
+                        {imageGenStatus !== "idle" && (
+                            <div className="relative" ref={notificationPanelRef}>
+                                <motion.button
+                                    onClick={() => setShowNotificationPanel(prev => !prev)}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer relative ${isDarkMode
+                                            ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                                            : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                                        }`}
+                                    title="Image Generation Status"
+                                >
+                                    <Bell className="h-4 w-4" />
+                                    <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0d0d0c] ${
+                                        imageGenStatus === "generating" ? "bg-yellow-400" : "bg-green-500"
+                                    }`} />
+                                </motion.button>
+
+                                {showNotificationPanel && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                                        transition={{ duration: 0.15 }}
+                                        className={`absolute right-0 top-full mt-2 w-72 rounded-xl border shadow-2xl overflow-hidden z-50 ${
+                                            isDarkMode
+                                                ? "bg-[#222120]/95 border-white/10 text-white"
+                                                : "bg-[#f2f1f0]/95 border-black/10 text-black"
+                                        }`}
+                                    >
+                                        <div className="p-3 space-y-2">
+                                            <div className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                Image Generation
+                                            </div>
+                                            <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+                                            {imageGenStatus === "generating" && (
+                                                <div className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs">
+                                                    <Loader2 className="h-4 w-4 animate-spin shrink-0 text-yellow-400" />
+                                                    <div className="min-w-0">
+                                                        <div className="font-medium truncate">Generating image...</div>
+                                                        <div className={`text-[10px] mt-0.5 truncate ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                            <a href="/library" className="underline">Go to Image Library</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {imageGenStatus === "completed" && (
+                                                <a
+                                                    href="/library"
+                                                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                                                >
+                                                    <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />
+                                                    <div className="min-w-0">
+                                                        <div className="font-medium truncate">Image created!</div>
+                                                        <div className={`text-[10px] mt-0.5 truncate ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                            Click to view
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </div>
                         )}
 
                         {/* Theme Toggler */}
