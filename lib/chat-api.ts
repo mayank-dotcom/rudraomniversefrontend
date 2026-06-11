@@ -2665,17 +2665,11 @@ export async function getEnterpriseEmailStats() {
 // ── Library / User Assets ──────────────────────────────────────────────
 
 export function getAssetImageUrl(asset: LibraryAsset): string {
-  if (asset.asset_url?.startsWith("data:")) {
-    return `${API_BASE}/library/assets/${asset.id}/image`
-  }
-  return asset.asset_url
+  return asset.asset_url || ''
 }
 
 export function getAssetImageUrlById(id: string, asset_url: string): string {
-  if (asset_url?.startsWith("data:")) {
-    return `${API_BASE}/library/assets/${id}/image`
-  }
-  return asset_url
+  return asset_url || ''
 }
 
 export interface LibraryAsset {

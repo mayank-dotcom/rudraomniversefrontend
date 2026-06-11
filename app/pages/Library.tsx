@@ -1953,24 +1953,25 @@ export default function LibraryPage() {
                   </BentoGrid>
                 )}
 
-                {/* Pixel animation overlay during image generation */}
+                {/* Pixel animation overlay during image generation - visible everywhere */}
                 {isGenerating && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="absolute inset-0 z-40 flex items-center justify-center"
+                    className="fixed inset-0 z-50 flex items-center justify-center"
+                    style={{ background: isDarkMode ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)' }}
                   >
                     <div className="relative">
                       <PixelCard
-                        variant="blue"
+                        variant={isDarkMode ? "blue" : "default"}
                         autoPlay
                         autoPlayInterval={2000}
-                        className="!h-[320px] !w-[260px] border-white/10 shadow-2xl shadow-cyan-500/10"
+                        className={`!h-[320px] !w-[260px] shadow-2xl ${isDarkMode ? "border-white/10 shadow-cyan-500/10" : "border-black/10 shadow-black/10"}`}
                       >
                         <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-                          <Loader2 className={`h-8 w-8 animate-spin mb-3 ${isDarkMode ? "text-cyan-400" : "text-cyan-600"}`} />
-                          <p className={`text-xs font-mono font-semibold tracking-wider uppercase ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                          <Loader2 className={`h-8 w-8 animate-spin mb-3 ${isDarkMode ? "text-white" : "text-black"}`} />
+                          <p className={`text-xs font-mono font-semibold tracking-wider uppercase ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
                             Generating...
                           </p>
                         </div>
