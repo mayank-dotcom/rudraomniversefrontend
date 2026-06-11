@@ -203,10 +203,7 @@ export default function LibraryPage() {
   const [expandedAsset, setExpandedAsset] = useState<LibraryAsset | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(260)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    if (typeof window === "undefined") return true
-    return window.innerWidth < 768
-  })
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
 
   const [userName, setUserName] = useState<string>("")
   const [userEmail, setUserEmail] = useState<string>("")
@@ -362,6 +359,7 @@ export default function LibraryPage() {
       setIsMobile(window.innerWidth < 768)
     }
     handleResize()
+    setIsSidebarCollapsed(window.innerWidth < 768)
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [])
@@ -970,25 +968,35 @@ export default function LibraryPage() {
     return pool
   }, [activeCategory, assets, publicAssets, uploadedAssets, savedIds, searchQuery, selectedGalleryId, publicGalleryAssets, sourceFilter, createdOnFilter, visibleCount])
 
+  // Check if all currently visible images in activeAssets have loaded (either success or broken)
+  const visibleAssets = useMemo(() => {
+    return activeAssets.slice(0, visibleCount)
+  }, [activeAssets, visibleCount])
+
+  const allVisibleLoaded = useMemo(() => {
+    if (visibleAssets.length === 0) return true
+    return visibleAssets.every(asset => loadedImages.has(asset.id) || brokenImages.has(asset.id))
+  }, [visibleAssets, loadedImages, brokenImages])
+
   const targetInitialCount = Math.min(6, activeAssets.length)
   const loadedInitialCount = activeAssets.slice(0, targetInitialCount).filter(asset => loadedImages.has(asset.id) || brokenImages.has(asset.id)).length
   const isInitialBatchLoading = activeAssets.length > 0 && loadedInitialCount < targetInitialCount
 
-  // Generic infinite scroll for all categories
+  // Generic infinite scroll for all categories: only appends next batch if the current visible images are fully loaded
   useEffect(() => {
     const sentinel = sentinelRef.current
     if (!sentinel) return
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
+        if (entries[0].isIntersecting && allVisibleLoaded) {
           setVisibleCount((prev) => prev + FEATURED_BATCH_SIZE)
         }
       },
-      { rootMargin: "400px" }
+      { rootMargin: "150px" }
     )
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [activeCategory, activeAssets.length])
+  }, [activeCategory, activeAssets.length, allVisibleLoaded])
 
   // Reset visible count and loaded images set when filter, category, or gallery folder changes
   useEffect(() => {
@@ -1069,26 +1077,36 @@ export default function LibraryPage() {
                 </div>
               </div>
             ) : (
-              <img
-                src={getAssetImageUrl(asset)}
-                alt={asset.prompt || "Concept visual"}
-                className="w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-110 cursor-pointer"
-                loading="lazy"
-                onClick={() => setExpandedAsset(asset)}
-                onLoad={() => setLoadedImages(prev => {
-                  const next = new Set(prev);
-                  next.add(asset.id);
-                  return next;
-                })}
-                onError={() => {
-                  setBrokenImages(prev => new Set(prev).add(asset.id));
-                  setLoadedImages(prev => {
+              <>
+                {!loadedImages.has(asset.id) && !brokenImages.has(asset.id) && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/5 dark:bg-white/5 animate-pulse">
+                    <Loader2 className={`h-6 w-6 animate-spin ${isDarkMode ? "text-white/25" : "text-black/25"}`} />
+                  </div>
+                )}
+                <img
+                  src={getAssetImageUrl(asset)}
+                  alt={asset.prompt || "Concept visual"}
+                  className={cn(
+                    "w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-110 cursor-pointer",
+                    loadedImages.has(asset.id) ? "opacity-100 scale-100" : "opacity-0 scale-95"
+                  )}
+                  loading="lazy"
+                  onClick={() => setExpandedAsset(asset)}
+                  onLoad={() => setLoadedImages(prev => {
                     const next = new Set(prev);
                     next.add(asset.id);
                     return next;
-                  });
-                }}
-              />
+                  })}
+                  onError={() => {
+                    setBrokenImages(prev => new Set(prev).add(asset.id));
+                    setLoadedImages(prev => {
+                      const next = new Set(prev);
+                      next.add(asset.id);
+                      return next;
+                    });
+                  }}
+                />
+              </>
             )}
 
             {/* Bottom Info Overlay - Premium Glassmorphism */}
