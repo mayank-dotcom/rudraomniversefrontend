@@ -794,7 +794,15 @@ export default function LibraryPage() {
   const activeAssets = useMemo(() => {
     let pool: LibraryAsset[] = []
     switch (activeCategory) {
-      case "featured": pool = [...FEATURED_ASSETS, ...publicAssets]; break
+      case "featured": {
+        const combined = [...FEATURED_ASSETS, ...publicAssets];
+        pool = combined.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateB - dateA;
+        });
+        break;
+      }
       case "recent": pool = assets.slice(0, 4); break
       case "public_showcase": pool = publicAssets.filter((asset) => asset.gallery_id === null); break
       case "uploads": pool = uploadedAssets; break
