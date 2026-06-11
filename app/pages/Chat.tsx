@@ -1683,7 +1683,7 @@ STRICT RULES:
             const conversationHistory = isImageGenMode
                 ? [{ role: "user" as const, content: userContent }]
                 : [
-                    ...(selectedPersona && selectedEngine === "Persona Mode"
+                    ...(selectedPersona
                         ? [{ role: "system" as const, content: selectedPersona.systemPrompt }]
                         : []),
                     ...(overrideHistory || messages)
