@@ -2040,17 +2040,7 @@ export default function LibraryPage() {
             </div>
           )}
 
-          {/* 💡 Prompts disclaimer */}
-          <div className={`mb-6 p-3 border rounded-xl flex items-start gap-2.5 text-xs leading-relaxed transition-colors duration-300 ${
-            isDarkMode
-              ? "bg-[#222120]/40 border-white/5 text-white/70"
-              : "bg-[#f2f1f0]/40 border-black/5 text-black/70 shadow-sm"
-          }`}>
-            <Info className={`h-4 w-4 shrink-0 mt-0.5 ${isDarkMode ? "text-[var(--color-cyan)]" : "text-cyan-600"}`} />
-            <p className={isDarkMode ? "text-white/40" : "text-black/55"}>
-              This is your prompt repository and visual library. You can generate new AI images directly using the prompt input fixed at the bottom of the page.
-            </p>
-          </div>
+
 
           {/* ================= COMPACT FILTERS & SEARCH ROW ================= */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/5">
