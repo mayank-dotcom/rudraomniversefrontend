@@ -2184,7 +2184,7 @@ STRICT RULES:
                     {/* Bottom Right: Maximize layout button + circular send button */}
                     <div className="flex items-center gap-2">
                         {/* Maximize Layout Button */}
-                        {showEmployeeView && (
+                        {showEmployeeView && !isEnterpriseMode && !isGlobalAdmin && (
                             <motion.button
                                 onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
                                 id="walkthrough-maximize-layout"
@@ -2499,7 +2499,7 @@ STRICT RULES:
                                     }`}
                                 title={t("settings")}
                             >
-                                <Settings className="w-5 h-5" />
+                                <Settings className="w-6 h-6" />
                             </button>
                         </div>
                     </div>
@@ -2507,18 +2507,18 @@ STRICT RULES:
                     <div className="flex flex-col h-full overflow-hidden">
                         {/* Header: Logo, Arena, Toggle */}
                         <div className={`flex items-center justify-between px-5 py-4 border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
-                            <div className="flex items-center gap-2 cursor-pointer select-none">
+                            <Link href="/" className="flex items-center gap-2 cursor-pointer select-none">
                                 <img
                                     src={isDarkMode ? "/dark.png" : "/light.png"}
                                     alt="Logo"
-                                    className="w-7 h-7 object-contain"
+                                    className={`${isDarkMode ? "w-6 h-6" : "w-[19px] h-[19px]"} object-contain`}
                                 />
                                 <img
                                     src={isDarkMode ? "/dark_text.png" : "/light_text.png"}
                                     alt="Rudra Nexus"
                                     className="h-4 object-contain"
                                 />
-                            </div>
+                            </Link>
                             <motion.button
                                 onClick={() => setIsSidebarCollapsed(true)}
                                 whileHover={{ scale: 1.15, x: -2 }}
@@ -2566,7 +2566,7 @@ STRICT RULES:
 
                             {/* Clean Search Input */}
                             <div className="relative group">
-                                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`} />
+                                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${isDarkMode ? "text-white/30" : "text-black/70"}`} />
                                 <input
                                     type="text"
                                     placeholder={t("search_chats")}
@@ -2574,7 +2574,7 @@ STRICT RULES:
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className={`w-full bg-transparent border rounded-xl py-1.5 pl-9 pr-3 text-xs font-sans focus:outline-none transition-all ${isDarkMode
                                             ? "border-white/10 text-white placeholder:text-white/30 focus:border-white/25 focus:bg-white/5"
-                                            : "border-black/10 text-black placeholder:text-black/30 focus:border-black/25 focus:bg-black/5"
+                                            : "border-black/20 text-black placeholder:text-black/60 focus:border-black/40 focus:bg-black/5"
                                         }`}
                                 />
                             </div>
@@ -2767,7 +2767,7 @@ STRICT RULES:
                                         )}
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || t("user_fallback")}</span>
+                                        <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userRole === "global_admin" ? "CEO" : (userName || userEmail || t("user_fallback"))}</span>
                                         <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? t("admin_role") : userRole === "faculty" ? t("faculty_role") : userRole === "enterprise_admin" ? t("admin_role") : userRole === "manager" ? t("manager_role") : userRole === "global_admin" ? t("admin_role") : (subscription?.subscription?.plan_name?.toLowerCase().includes("agency") || subscription?.subscription?.plan_name?.toLowerCase().includes("heavy duty") ? "Agency" : subscription?.subscription?.plan_name || t("free_trial"))}</span>
                                     </div>
                                 </motion.button>
@@ -2780,7 +2780,7 @@ STRICT RULES:
                                             }}
                                             whileHover={{ scale: 1.1 }}
                                             whileTap={{ scale: 0.9 }}
-                                            className={`p-1.5 border rounded-lg transition-all text-[8px] font-mono ${isDarkMode ? "border-white/10 text-white/60 hover:text-white" : "border-black/10 text-black/60 hover:text-black"} ${isEnterpriseMode ? (selectedEngine === "AI Image Lab" ? "text-black" : "text-accent") : ""}`}
+                                            className={`p-2 border rounded-lg transition-all text-[9px] font-mono ${isDarkMode ? "border-white/10 text-white/60 hover:text-white" : "border-black/10 text-black/60 hover:text-black"} ${isEnterpriseMode ? (selectedEngine === "AI Image Lab" ? "text-black" : "text-accent") : ""}`}
                                             title={isEnterpriseMode ? t("switch_regular") : t("switch_enterprise")}
                                         >
                                             {isEnterpriseMode ? t("ent") : t("reg")}
@@ -2799,21 +2799,23 @@ STRICT RULES:
                                                 : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"
                                             }`}
                                     >
-                                        <Settings className="h-3.5 w-3.5" />
+                                        <Settings className="h-4 w-4" />
                                     </motion.button>
-                                    <motion.button
-                                        onClick={() => window.location.href = "/pricing"}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        title={t("upgrade")}
-                                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-sans font-semibold transition-colors ${isDarkMode
-                                                ? "border-white/10 text-white/80 hover:text-white hover:bg-white/5"
-                                                : "border-black/10 text-black/80 hover:text-black hover:bg-black/5"
-                                            }`}
-                                    >
-                                        <Zap className="h-3.5 w-3.5" />
-                                        <span>{t("upgrade")}</span>
-                                    </motion.button>
+                                    {(!userRole || (userRole as any) === "student") && (
+                                        <motion.button
+                                            onClick={() => window.location.href = "/pricing"}
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            title={t("upgrade")}
+                                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-sans font-semibold transition-colors ${isDarkMode
+                                                    ? "border-white/10 text-white/80 hover:text-white hover:bg-white/5"
+                                                    : "border-black/10 text-black/80 hover:text-black hover:bg-black/5"
+                                                }`}
+                                        >
+                                            <Zap className="h-3.5 w-3.5" />
+                                            <span>{t("upgrade")}</span>
+                                        </motion.button>
+                                    )}
                                 </div>
                             </div>
 

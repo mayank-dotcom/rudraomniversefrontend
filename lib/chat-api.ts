@@ -2665,37 +2665,22 @@ export async function getEnterpriseEmailStats() {
 // ── Library / User Assets ──────────────────────────────────────────────
 
 export function getAssetImageUrl(asset: LibraryAsset): string {
-  if (!asset.asset_url) return ''
-  if (asset.asset_url.startsWith('http://') || asset.asset_url.startsWith('https://') || asset.asset_url.startsWith('data:')) {
-    return asset.asset_url
+  const url = asset.asset_url || ''
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url
   }
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ''
-  if (baseUrl) {
-    const host = baseUrl.replace('/api/v1', '')
-    if (asset.asset_url.startsWith('/')) {
-      return `${host}${asset.asset_url}`
-    } else {
-      return `${host}/${asset.asset_url}`
-    }
+  if (url.startsWith('/api/v1')) {
+    const apiRoot = API_BASE.endsWith('/api/v1') ? API_BASE.slice(0, -7) : API_BASE
+    return `${apiRoot}${url}`
   }
-  return asset.asset_url
+  if (url.startsWith('/')) {
+    return `${API_BASE}${url}`
+  }
+  return url
 }
 
 export function getAssetImageUrlById(id: string, asset_url: string): string {
-  if (!asset_url) return ''
-  if (asset_url.startsWith('http://') || asset_url.startsWith('https://') || asset_url.startsWith('data:')) {
-    return asset_url
-  }
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ''
-  if (baseUrl) {
-    const host = baseUrl.replace('/api/v1', '')
-    if (asset_url.startsWith('/')) {
-      return `${host}${asset_url}`
-    } else {
-      return `${host}/${asset_url}`
-    }
-  }
-  return asset_url
+  return asset_url || ''
 }
 
 export interface LibraryAsset {

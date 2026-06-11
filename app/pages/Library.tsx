@@ -150,6 +150,17 @@ const chatAccentFont = Space_Grotesk({
   variable: "--font-chat-accent",
 })
 
+const seededShuffle = <T,>(array: T[], seed: number): T[] => {
+  const arr = [...array];
+  let s = seed;
+  for (let i = arr.length - 1; i > 0; i--) {
+    s = (s * 9301 + 49297) % 233280;
+    const j = Math.floor((s / 233280) * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 export default function LibraryPage() {
   const router = useRouter()
   const { isDarkMode, toggleTheme } = useTheme()
@@ -161,6 +172,7 @@ export default function LibraryPage() {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [togglingVisibilityId, setTogglingVisibilityId] = useState<string | null>(null)
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set())
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set())
   
   // Custom Interactive States
   const [activeCategory, setActiveCategory] = useState<string>("featured")
@@ -215,8 +227,8 @@ export default function LibraryPage() {
   const [generationStatus, setGenerationStatus] = useState<"idle" | "generating" | "completed">("idle")
   const notificationPanelRef = useRef<HTMLDivElement>(null)
 
-  const FEATURED_INITIAL_BATCH = 20
-  const FEATURED_BATCH_SIZE = 12
+  const FEATURED_INITIAL_BATCH = 6
+  const FEATURED_BATCH_SIZE = 6
   const PUBLIC_PAGE_SIZE = 20
   const [visibleCount, setVisibleCount] = useState(FEATURED_INITIAL_BATCH)
   const [publicAssetsPage, setPublicAssetsPage] = useState(1)
@@ -892,21 +904,27 @@ export default function LibraryPage() {
     let pool: LibraryAsset[] = []
     switch (activeCategory) {
       case "featured": {
-        const combined = [...publicAssets];
+        const combined = [...FEATURED_ASSETS, ...publicAssets];
         const sorted = combined.sort((a, b) => {
           const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
           const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
           return dateB - dateA;
         });
-        const result: LibraryAsset[] = [];
-        let cycle = 0;
-        while (result.length < visibleCount && sorted.length > 0) {
-          const remaining = visibleCount - result.length;
-          const shuffled = seededShuffle(sorted, cycle);
-          result.push(...shuffled.slice(0, Math.min(remaining, shuffled.length)));
-          cycle++;
+        if (sorted.length === 0) {
+          pool = [];
+        } else if (sorted.length < FEATURED_INITIAL_BATCH) {
+          const result: LibraryAsset[] = [];
+          let cycle = 0;
+          while (result.length < FEATURED_INITIAL_BATCH) {
+            const remaining = FEATURED_INITIAL_BATCH - result.length;
+            const shuffled = seededShuffle(sorted, cycle);
+            result.push(...shuffled.slice(0, Math.min(remaining, shuffled.length)));
+            cycle++;
+          }
+          pool = result;
+        } else {
+          pool = sorted;
         }
-        pool = result;
         break;
       }
       case "recent": pool = assets.slice(0, 4); break
@@ -952,6 +970,10 @@ export default function LibraryPage() {
     return pool
   }, [activeCategory, assets, publicAssets, uploadedAssets, savedIds, searchQuery, selectedGalleryId, publicGalleryAssets, sourceFilter, createdOnFilter, visibleCount])
 
+  const targetInitialCount = Math.min(6, activeAssets.length)
+  const loadedInitialCount = activeAssets.slice(0, targetInitialCount).filter(asset => loadedImages.has(asset.id) || brokenImages.has(asset.id)).length
+  const isInitialBatchLoading = activeAssets.length > 0 && loadedInitialCount < targetInitialCount
+
   // Generic infinite scroll for all categories
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -968,10 +990,11 @@ export default function LibraryPage() {
     return () => observer.disconnect()
   }, [activeCategory, activeAssets.length])
 
-  // Reset visible count when filter or category changes
+  // Reset visible count and loaded images set when filter, category, or gallery folder changes
   useEffect(() => {
     setVisibleCount(FEATURED_INITIAL_BATCH)
-  }, [activeCategory, searchQuery, createdOnFilter, sourceFilter])
+    setLoadedImages(new Set())
+  }, [activeCategory, searchQuery, createdOnFilter, sourceFilter, selectedGalleryId, selectedPublicGalleryId])
 
   const getCardAspectRatioClass = (index: number, idxInCol?: number, colIdx?: number) => {
     switch (aspectRatio) {
@@ -1015,21 +1038,12 @@ export default function LibraryPage() {
     return "md:col-span-1 md:row-span-1";
   }
 
-  const seededShuffle = <T,>(array: T[], seed: number): T[] => {
-    const arr = [...array];
-    let s = seed;
-    for (let i = arr.length - 1; i > 0; i--) {
-      s = (s * 9301 + 49297) % 233280;
-      const j = Math.floor((s / 233280) * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-  }
+
 
   const renderCard = (asset: LibraryAsset, i: number, spanClass?: string) => {
     return (
       <BentoGridItem
-        key={asset.id}
+        key={`${asset.id}-${i}`}
         className={cn(
           "p-0 overflow-hidden rounded-none bg-transparent border-none dark:bg-transparent shadow-none hover:shadow-none transition-none w-full h-[220px] md:h-full min-h-[14rem]",
           spanClass
@@ -1061,7 +1075,19 @@ export default function LibraryPage() {
                 className="w-full h-full object-cover transition-all duration-700 ease-out group-hover/card:scale-110 cursor-pointer"
                 loading="lazy"
                 onClick={() => setExpandedAsset(asset)}
-                onError={() => setBrokenImages(prev => new Set(prev).add(asset.id))}
+                onLoad={() => setLoadedImages(prev => {
+                  const next = new Set(prev);
+                  next.add(asset.id);
+                  return next;
+                })}
+                onError={() => {
+                  setBrokenImages(prev => new Set(prev).add(asset.id));
+                  setLoadedImages(prev => {
+                    const next = new Set(prev);
+                    next.add(asset.id);
+                    return next;
+                  });
+                }}
               />
             )}
 
@@ -1810,7 +1836,7 @@ export default function LibraryPage() {
           </header>
 
           {/* ================= RIGHT MAIN CONTENT GRID ================= */}
-          <main className={`flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 pb-32 relative transition-colors duration-300 ${
+          <main className={`flex-1 ${isInitialBatchLoading ? "overflow-hidden" : "overflow-y-auto"} px-4 md:px-8 py-6 md:py-8 pb-32 relative transition-colors duration-300 ${
             isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f4f3f2]"
           }`}>
           
