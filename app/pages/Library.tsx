@@ -2725,7 +2725,7 @@ export default function LibraryPage() {
                 {/* Back Button */}
                 <button
                   onClick={() => setExpandedAsset(null)}
-                  className="absolute top-4 left-4 p-2.5 rounded-full bg-white text-black hover:bg-zinc-100 shadow-md transition-all active:scale-95 z-10"
+                  className="absolute top-4 left-4 p-2.5 rounded-full bg-white text-black hover:bg-zinc-100 hover:scale-105 active:scale-95 shadow-md transition-all z-10"
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </button>
@@ -2739,8 +2739,12 @@ export default function LibraryPage() {
                   <img
                     src={getAssetImageUrl(expandedAsset)}
                     alt={expandedAsset.prompt || "Concept visual"}
-                    className="w-full h-full object-contain max-h-[50vh] md:max-h-[80vh] select-none"
+                    className="w-full h-full object-contain max-h-[50vh] md:max-h-[80vh] select-none cursor-zoom-in hover:opacity-95 transition-all duration-300"
                     draggable={false}
+                    onClick={() => {
+                      setZoomScale(1)
+                      setIsLightboxOpen(true)
+                    }}
                     onError={() => setBrokenImages(prev => new Set(prev).add(expandedAsset.id))}
                   />
                 )}
@@ -2773,7 +2777,7 @@ export default function LibraryPage() {
                     {/* Heart Like Button */}
                     <button
                       onClick={handleToggleLike}
-                      className="flex items-center gap-1.5 text-zinc-650 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
+                      className="flex items-center gap-1.5 text-zinc-650 hover:text-black dark:text-zinc-400 dark:hover:text-white hover:scale-110 active:scale-95 transition-all duration-200"
                       title="Like"
                     >
                       <Heart className={`h-6 w-6 transition-all ${isLiked ? "fill-red-500 text-red-500 scale-110" : ""}`} />
@@ -2786,7 +2790,7 @@ export default function LibraryPage() {
                         const commentInput = document.getElementById("comment-input-field")
                         if (commentInput) commentInput.focus()
                       }}
-                      className="text-zinc-655 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
+                      className="text-zinc-655 hover:text-black dark:text-zinc-400 dark:hover:text-white hover:scale-110 active:scale-95 transition-all duration-200"
                       title="Comment"
                     >
                       <MessageSquare className="h-6 w-6" />
@@ -2798,18 +2802,10 @@ export default function LibraryPage() {
                         navigator.clipboard.writeText(getAssetImageUrl(expandedAsset))
                         toast.success("Image link copied!")
                       }}
-                      className="text-zinc-655 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
+                      className="text-zinc-655 hover:text-black dark:text-zinc-400 dark:hover:text-white hover:scale-110 active:scale-95 transition-all duration-200"
                       title="Copy Link"
                     >
                       <Upload className="h-6 w-6" />
-                    </button>
-
-                    {/* Options Button */}
-                    <button
-                      className="text-zinc-655 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
-                      title="More options"
-                    >
-                      <MoreHorizontal className="h-6 w-6" />
                     </button>
                   </div>
                 </div>
@@ -2833,12 +2829,6 @@ export default function LibraryPage() {
 
                   {/* Caption / Prompt Description */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-1.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-4.5 w-4.5 text-[#00DDDD] select-none">
-                        <path d="M12 2v20 M5 4v6c0 3 3 6 7 6s7-3 7-6V4" />
-                      </svg>
-                      <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-bold">Prompt Idea</span>
-                    </div>
                     <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800/40">
                       {expandedAsset.prompt || "No prompt text provided."}
                     </p>
@@ -2848,7 +2838,7 @@ export default function LibraryPage() {
                           navigator.clipboard.writeText(expandedAsset.prompt || "")
                           toast.success("Prompt copied to clipboard!")
                         }}
-                        className="flex items-center gap-1 text-[11px] font-semibold text-zinc-500 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
+                        className="flex items-center gap-1 text-[11px] font-semibold text-zinc-500 hover:text-black dark:text-zinc-400 dark:hover:text-white hover:scale-[1.03] active:scale-95 transition-all duration-200"
                       >
                         <Copy className="h-3 w-3" />
                         Copy Prompt
@@ -2864,7 +2854,7 @@ export default function LibraryPage() {
                       <h4 className="font-bold text-base font-sans">
                         {comments.length} {comments.length === 1 ? "comment" : "comments"}
                       </h4>
-                      <button className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors">
+                      <button className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full hover:scale-110 active:scale-95 transition-all duration-200">
                         <ChevronRight className="h-4 w-4 rotate-90 text-zinc-500" />
                       </button>
                     </div>
@@ -2880,7 +2870,11 @@ export default function LibraryPage() {
                       ) : (
                         comments.map((comment) => (
                           <div key={comment.id} className="flex gap-2.5 items-start text-sm">
-                            <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-700 dark:text-zinc-300 shrink-0">
+                            <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors duration-300 ${
+                              isDarkMode 
+                                ? "bg-[#f4f3f2] text-black" 
+                                : "bg-[#0d0d0c] text-white"
+                            }`}>
                               {comment.user_avatar ? (
                                 <img src={comment.user_avatar} className="h-full w-full object-cover rounded-full" alt={comment.user_name} />
                               ) : (
@@ -2911,7 +2905,11 @@ export default function LibraryPage() {
                 {/* Bottom - Add Comment Input */}
                 <div className="p-6 border-t border-zinc-100 dark:border-zinc-800/50 bg-[#0d0d0c]/5 dark:bg-[#0d0d0c]/30 backdrop-blur-md shrink-0">
                   <form onSubmit={handleAddComment} className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold shrink-0">
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors duration-300 ${
+                      isDarkMode 
+                        ? "bg-[#f4f3f2] text-black" 
+                        : "bg-[#0d0d0c] text-white"
+                    }`}>
                       {profilePic ? (
                         <img src={profilePic} className="h-full w-full object-cover rounded-full" alt={userName} />
                       ) : (
@@ -2928,13 +2926,13 @@ export default function LibraryPage() {
                         className="flex-1 bg-transparent border-none outline-none text-sm placeholder-zinc-400 pr-2"
                       />
                       <div className="flex items-center gap-2 text-zinc-400 shrink-0 select-none">
-                        <button type="button" className="hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
+                        <button type="button" className="hover:text-zinc-650 dark:hover:text-zinc-250 hover:scale-115 active:scale-95 transition-all duration-200">
                           <Smile className="h-5 w-5" />
                         </button>
-                        <button type="button" className="hover:text-zinc-650 dark:hover:text-zinc-200 transition-colors text-[10px] font-bold leading-none font-mono tracking-tight bg-zinc-100 dark:bg-zinc-700 px-1 py-0.5 rounded">
+                        <button type="button" className="hover:text-zinc-650 dark:hover:text-zinc-250 hover:scale-115 active:scale-95 transition-all duration-200 text-[10px] font-bold leading-none font-mono tracking-tight bg-zinc-100 dark:bg-zinc-700 px-1 py-0.5 rounded">
                           GIF
                         </button>
-                        <button type="button" className="hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
+                        <button type="button" className="hover:text-zinc-650 dark:hover:text-zinc-250 hover:scale-115 active:scale-95 transition-all duration-200">
                           <ImageIcon className="h-4 w-4" />
                         </button>
                       </div>
