@@ -15,6 +15,7 @@ function InterviewRoomContent() {
     const searchParams = useSearchParams();
     const topic = searchParams.get("topic") || "General Interview";
     const duration = parseInt(searchParams.get("duration") || "45") * 60;
+    const difficulty = searchParams.get("difficulty") || "medium";
 
     const getLanguage = () => {
         const t = topic.toLowerCase();
@@ -203,6 +204,7 @@ function InterviewRoomContent() {
             let messages: Array<{ role: "user" | "assistant" | "system", content: string }> = [];
 
             const systemPrompt = `You are an expert technical interviewer for: ${topic}. 
+            The target difficulty level for this interview is: ${difficulty.toUpperCase()}. Please adjust the depth, complexity, and technical expectation of your questions accordingly (e.g. basic overview for EASY, standard developer interview for MEDIUM, and deep system architecture / complex scenarios for HARD).
             RULES:
             1. THIS IS A VERBAL AUDIO INTERVIEW. ABSOLUTELY DO NOT ask the user to write, type, or dictate code.
             2. DO NOT ask machine coding questions. Keep questions focused on verbal explanations of concepts, architecture, and problem-solving.

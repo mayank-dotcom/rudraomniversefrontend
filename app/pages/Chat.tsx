@@ -1347,9 +1347,9 @@ const Chat = () => {
         void handleSend(trimmedText, priorHistory);
     };
 
-    const handleStartInterview = (topic: string, duration: number) => {
+    const handleStartInterview = (topic: string, duration: number, difficulty: string) => {
         setIsInterviewModalOpen(false);
-        window.location.href = `/interview?topic=${encodeURIComponent(topic)}&duration=${duration}`;
+        window.location.href = `/interview?topic=${encodeURIComponent(topic)}&duration=${duration}&difficulty=${difficulty}`;
     };
 
     const handlePersonaSelect = (persona: Persona) => {

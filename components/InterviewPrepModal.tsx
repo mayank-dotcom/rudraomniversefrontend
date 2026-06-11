@@ -7,13 +7,14 @@ import { X, Clock } from "lucide-react";
 interface InterviewPrepModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onStart: (topic: string, duration: number) => void;
+    onStart: (topic: string, duration: number, difficulty: string) => void;
     isDarkMode: boolean;
 }
 
 export default function InterviewPrepModal({ isOpen, onClose, onStart, isDarkMode }: InterviewPrepModalProps) {
     const [topic, setTopic] = useState("");
     const [duration, setDuration] = useState(45);
+    const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
     const [accent, setAccent] = useState<string>("");
     const [topicFocused, setTopicFocused] = useState(false);
     const [durationFocused, setDurationFocused] = useState(false);
@@ -26,7 +27,7 @@ export default function InterviewPrepModal({ isOpen, onClose, onStart, isDarkMod
 
     const handleStart = () => {
         if (!topic.trim()) return;
-        onStart(topic.trim(), duration);
+        onStart(topic.trim(), duration, difficulty);
     };
 
     return (
@@ -94,6 +95,36 @@ export default function InterviewPrepModal({ isOpen, onClose, onStart, isDarkMod
                                             : undefined
                                     }
                                 />
+                            </div>
+
+                            <div>
+                                <label className={`block text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"} mb-3`}>
+                                    Difficulty
+                                </label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {(["easy", "medium", "hard"] as const).map((level) => {
+                                        const isSelected = difficulty === level;
+                                        return (
+                                            <button
+                                                key={level}
+                                                type="button"
+                                                onClick={() => setDifficulty(level)}
+                                                className={`py-3 text-xs font-mono uppercase tracking-widest border rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-center font-bold ${
+                                                    isSelected
+                                                        ? (accent ? "border-transparent text-white" : (isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"))
+                                                        : (isDarkMode ? "bg-white/5 border-white/10 text-white/60 hover:border-white/30" : "bg-black/5 border-black/10 text-black/60 hover:border-black/30")
+                                                }`}
+                                                style={
+                                                    isSelected && accent
+                                                        ? { backgroundColor: accent, color: isDarkMode ? "#000" : "#fff", borderColor: accent }
+                                                        : undefined
+                                                }
+                                            >
+                                                {level}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             <div>
