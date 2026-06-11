@@ -344,6 +344,8 @@ const Chat = () => {
     const [editingTitle, setEditingTitle] = useState("");
     const editingInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+    const mainScrollRef = useRef<HTMLElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bulkFileInputRef = useRef<HTMLInputElement>(null);
     const requestStartTime = useRef<number>(0);
@@ -490,6 +492,17 @@ const Chat = () => {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
     }, [messages]);
+
+    const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
+        const target = e.currentTarget;
+        const threshold = 300;
+        const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < threshold;
+        setShowScrollToBottom(!isNearBottom);
+    };
+
+    const handleScrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
 
     useEffect(() => {
         if (selectedEngine === "AI Image Lab") {
@@ -3017,7 +3030,11 @@ STRICT RULES:
                     </div>
                 </header>
 
-                <main className={`flex-1 ${isChatEmpty ? "overflow-y-hidden flex flex-col justify-center pt-20 md:pt-32 pb-16" : "overflow-y-auto block pt-10 pb-36"} px-4 md:px-20 relative z-10 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}>
+                <main
+                    ref={mainScrollRef}
+                    onScroll={handleMainScroll}
+                    className={`flex-1 ${isChatEmpty ? "overflow-y-hidden flex flex-col justify-center pt-20 md:pt-32 pb-16" : "overflow-y-auto block pt-10 pb-36"} px-4 md:px-20 relative z-10 ${isDarkMode ? "custom-scrollbar" : "light-scrollbar"}`}
+                >
                     <div className={`${isChatEmpty ? "w-full" : "max-w-3xl w-full"} mx-auto`}>
                         {/* Error Display */}
                         {chatError && (
@@ -3381,6 +3398,24 @@ STRICT RULES:
                     >
                         <div className={`w-full max-w-4xl relative mb-4 md:mb-0`}>
                             <div className="relative">
+                                <AnimatePresence>
+                                    {showScrollToBottom && (
+                                        <motion.button
+                                            initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.8 }}
+                                            onClick={handleScrollToBottom}
+                                            className={`absolute left-1/2 -translate-x-1/2 -top-14 z-50 p-2.5 rounded-full border shadow-xl transition-all duration-200 cursor-pointer flex items-center justify-center ${
+                                                isDarkMode
+                                                    ? "bg-[#222120] border-white/10 text-white/70 hover:text-white hover:bg-[#323130] hover:scale-110"
+                                                    : "bg-[#f2f1f0] border-black/10 text-black/70 hover:text-black hover:bg-[#e2e1e0] hover:scale-110"
+                                            }`}
+                                            title="Scroll to Bottom"
+                                        >
+                                            <ChevronDown className="h-4 w-4" />
+                                        </motion.button>
+                                    )}
+                                </AnimatePresence>
 
 
                                 {selectedEngine === "AI Image Lab" && (
