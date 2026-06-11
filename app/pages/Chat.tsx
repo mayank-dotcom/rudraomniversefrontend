@@ -2054,18 +2054,13 @@ STRICT RULES:
                 {/* File Preview inside the container */}
                 {selectedFile && (
                     <div className={`mb-3 p-2 rounded-xl flex items-center gap-3 w-fit ${isDarkMode ? "bg-white/5 text-white/90" : "bg-black/5 text-black/90"}`}>
-                        <div className="h-8 w-8 flex items-center justify-center bg-white/10 rounded-lg">
+                        <div className="h-8 w-8 flex-shrink-0 flex items-center justify-center bg-white/10 rounded-lg overflow-hidden">
                             {selectedFile.previewUrl ? (
                                 <img src={selectedFile.previewUrl} alt="Preview" className="h-full w-full object-cover rounded-lg" />
                             ) : (
                                 <FileIcon className="h-4 w-4 opacity-70" />
-                                            )}
-                                            {imageGenStatus === "idle" && (
-                                                <div className="px-3 py-4 text-center text-xs text-white/30 dark:text-black/30">
-                                                    No active image generation
-                                                </div>
-                                            )}
-                                        </div>
+                            )}
+                        </div>
                         <div className="flex flex-col text-left">
                             <span className="text-[10px] font-sans font-semibold truncate max-w-[150px]">{selectedFile.name}</span>
                             <span className="text-[8px] font-mono opacity-50 uppercase">{(selectedFile.size / 1024).toFixed(1)} KB</span>
