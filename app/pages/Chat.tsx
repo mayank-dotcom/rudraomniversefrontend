@@ -2042,6 +2042,7 @@ STRICT RULES:
     const isChatEmpty = messages.length === 0 || messages.every((msg) => msg.localOnly);
 
     const renderInputContainer = (isCenteredEmptyState: boolean) => {
+        const inputId = isCenteredEmptyState ? "chat-file-input-empty" : "chat-file-input-active";
         return (
             <div
                 id="walkthrough-input-area"
@@ -2108,17 +2109,15 @@ STRICT RULES:
                     {/* Bottom Left: Add files button + minimal quick toggles */}
                     <div className="flex items-center gap-2">
                         {/* Add Files Button */}
-                        {/* Add Files Button */}
-                        <motion.button
-                            onClick={() => fileInputRef.current?.click()}
+                        <motion.label
+                            htmlFor={inputId}
                             id="walkthrough-add-files"
-                            disabled={isLoading || isProcessingFile}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                            whileHover={isLoading || isProcessingFile ? undefined : { scale: 1.05 }}
+                            whileTap={isLoading || isProcessingFile ? undefined : { scale: 0.95 }}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-sans font-medium transition-all duration-200 cursor-pointer ${isDarkMode
                                     ? "border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
                                     : "border-black/10 bg-black/5 text-black/80 hover:bg-black/10 hover:text-black"
-                                }`}
+                                } ${isLoading || isProcessingFile ? "opacity-50 pointer-events-none" : ""}`}
                             title={t("add_files")}
                         >
                             {isProcessingFile ? (
@@ -2127,13 +2126,15 @@ STRICT RULES:
                                 <Paperclip className="h-3.5 w-3.5" />
                             )}
                             <span>{t("add_files")}</span>
-                        </motion.button>
+                        </motion.label>
                         <input
                             type="file"
+                            id={inputId}
                             ref={fileInputRef}
                             onChange={handleFileChange}
                             className="hidden"
                             accept="image/*,application/pdf,text/plain,.md"
+                            disabled={isLoading || isProcessingFile}
                         />
                         <div className={`h-4 w-px ${isDarkMode ? "bg-white/10" : "bg-black/10"} mx-1`} />
 
