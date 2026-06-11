@@ -1876,6 +1876,12 @@ STRICT RULES:
                 setInput("");
                 setSelectedFile(null);
 
+                if (isImageGenMode) {
+                    setImageGenStatus("generating");
+                    localStorage.setItem("image_gen_status", "generating");
+                    localStorage.setItem("image_gen_timestamp", String(Date.now()));
+                }
+
                 const data = await sendAiRequest({
                     endpoint: requestEndpoint,
                     messages: conversationHistory,
@@ -1924,6 +1930,9 @@ STRICT RULES:
 
                 if (isImageGenMode) {
                     saveImageToHistory(userMessage, { role: "assistant", content: aiContent, timestamp: formatTimestamp() });
+                    setImageGenStatus("completed");
+                    localStorage.setItem("image_gen_status", "completed");
+                    localStorage.setItem("image_gen_timestamp", String(Date.now()));
                 }
                 if (currentChatId) {
                     try {
@@ -1981,6 +1990,12 @@ STRICT RULES:
             const message = error instanceof Error ? error.message : "Unable to process your request.";
             setChatError(message);
             toast.error(message);
+
+            if (isImageGenMode) {
+                setImageGenStatus("idle");
+                localStorage.setItem("image_gen_status", "idle");
+                localStorage.setItem("image_gen_timestamp", String(Date.now()));
+            }
 
             if (currentChatId) {
                 try {
@@ -2043,8 +2058,13 @@ STRICT RULES:
                                 <img src={selectedFile.previewUrl} alt="Preview" className="h-full w-full object-cover rounded-lg" />
                             ) : (
                                 <FileIcon className="h-4 w-4 opacity-70" />
-                            )}
-                        </div>
+                                            )}
+                                            {imageGenStatus === "idle" && (
+                                                <div className="px-3 py-4 text-center text-xs text-white/30 dark:text-black/30">
+                                                    No active image generation
+                                                </div>
+                                            )}
+                                        </div>
                         <div className="flex flex-col text-left">
                             <span className="text-[10px] font-sans font-semibold truncate max-w-[150px]">{selectedFile.name}</span>
                             <span className="text-[8px] font-mono opacity-50 uppercase">{(selectedFile.size / 1024).toFixed(1)} KB</span>
@@ -2889,8 +2909,7 @@ STRICT RULES:
                         )}
 
                         {/* Notification Bell for Image Generation */}
-                        {imageGenStatus !== "idle" && (
-                            <div className="relative" ref={notificationPanelRef}>
+                        <div className="relative" ref={notificationPanelRef}>
                                 <motion.button
                                     onClick={() => setShowNotificationPanel(prev => !prev)}
                                     whileHover={{ scale: 1.1 }}
@@ -2901,10 +2920,12 @@ STRICT RULES:
                                         }`}
                                     title="Image Generation Status"
                                 >
-                                    <Bell className="h-4 w-4" />
-                                    <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0d0d0c] ${
-                                        imageGenStatus === "generating" ? "bg-yellow-400" : "bg-green-500"
-                                    }`} />
+                                    <Bell className={`h-4 w-4 ${imageGenStatus === "idle" ? "opacity-50" : ""}`} />
+                                    {imageGenStatus !== "idle" && (
+                                        <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0d0d0c] ${
+                                            imageGenStatus === "generating" ? "bg-yellow-400" : "bg-green-500"
+                                        }`} />
+                                    )}
                                 </motion.button>
 
                                 {showNotificationPanel && (
@@ -2953,7 +2974,6 @@ STRICT RULES:
                                     </motion.div>
                                 )}
                             </div>
-                        )}
 
                         {/* Theme Toggler */}
                         <motion.button
