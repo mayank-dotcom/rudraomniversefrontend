@@ -218,12 +218,12 @@ export default function LibraryPage() {
   const FEATURED_INITIAL_BATCH = 20
   const FEATURED_BATCH_SIZE = 12
   const PUBLIC_PAGE_SIZE = 20
-  const [featuredLoadCount, setFeaturedLoadCount] = useState(FEATURED_INITIAL_BATCH)
+  const [visibleCount, setVisibleCount] = useState(FEATURED_INITIAL_BATCH)
   const [publicAssetsPage, setPublicAssetsPage] = useState(1)
   const [hasMorePublic, setHasMorePublic] = useState(true)
   const [isLoadingMorePublic, setIsLoadingMorePublic] = useState(false)
   const publicAssetsCacheRef = useRef<LibraryAsset[]>([])
-  const featuredSentinelRef = useRef<HTMLDivElement>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   const IMAGE_PLACEHOLDER_TEXTS = useMemo(() => [
     "A serene mountain landscape at sunset...",
@@ -292,29 +292,7 @@ export default function LibraryPage() {
     }
   }, [showNotificationPanel])
 
-  // Infinite scroll for featured/explore mode
-  useEffect(() => {
-    if (activeCategory !== "featured") return
-    const sentinel = featuredSentinelRef.current
-    if (!sentinel) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setFeaturedLoadCount((prev) => prev + FEATURED_BATCH_SIZE)
-        }
-      },
-      { rootMargin: "300px" }
-    )
-    observer.observe(sentinel)
-    return () => observer.disconnect()
-  }, [activeCategory])
-
-  // Reset featured load count when switching away
-  useEffect(() => {
-    if (activeCategory !== "featured") {
-      setFeaturedLoadCount(FEATURED_INITIAL_BATCH)
-    }
-  }, [activeCategory])
+  // Generic infinite scroll logic is moved below activeAssets definition.
 
   useEffect(() => {
     let charPos = 0
@@ -463,14 +441,14 @@ export default function LibraryPage() {
     }
   }, [isLoadingMorePublic, hasMorePublic, publicAssetsPage, publicAssets.length])
 
-  // Fetch more public assets when featured load count exceeds pool
+  // Fetch more public assets when visible count exceeds pool
   useEffect(() => {
     if (activeCategory !== "featured") return
     if (!hasMorePublic || isLoadingMorePublic || publicAssets.length === 0) return
-    if (featuredLoadCount > publicAssets.length * 2) {
+    if (visibleCount > publicAssets.length * 2) {
       loadMorePublicAssets()
     }
-  }, [featuredLoadCount, activeCategory, hasMorePublic, isLoadingMorePublic, publicAssets.length, loadMorePublicAssets])
+  }, [visibleCount, activeCategory, hasMorePublic, isLoadingMorePublic, publicAssets.length, loadMorePublicAssets])
 
   // Initialize Auth & fetch saved IDs from DB
   useEffect(() => {
@@ -922,8 +900,8 @@ export default function LibraryPage() {
         });
         const result: LibraryAsset[] = [];
         let cycle = 0;
-        while (result.length < featuredLoadCount && sorted.length > 0) {
-          const remaining = featuredLoadCount - result.length;
+        while (result.length < visibleCount && sorted.length > 0) {
+          const remaining = visibleCount - result.length;
           const shuffled = seededShuffle(sorted, cycle);
           result.push(...shuffled.slice(0, Math.min(remaining, shuffled.length)));
           cycle++;
@@ -972,7 +950,28 @@ export default function LibraryPage() {
       pool = pool.filter((asset) => asset.prompt?.toLowerCase().includes(q))
     }
     return pool
-  }, [activeCategory, assets, publicAssets, uploadedAssets, savedIds, searchQuery, selectedGalleryId, publicGalleryAssets, sourceFilter, createdOnFilter, featuredLoadCount])
+  }, [activeCategory, assets, publicAssets, uploadedAssets, savedIds, searchQuery, selectedGalleryId, publicGalleryAssets, sourceFilter, createdOnFilter, visibleCount])
+
+  // Generic infinite scroll for all categories
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + FEATURED_BATCH_SIZE)
+        }
+      },
+      { rootMargin: "400px" }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [activeCategory, activeAssets.length])
+
+  // Reset visible count when filter or category changes
+  useEffect(() => {
+    setVisibleCount(FEATURED_INITIAL_BATCH)
+  }, [activeCategory, searchQuery, createdOnFilter, sourceFilter])
 
   const getCardAspectRatioClass = (index: number, idxInCol?: number, colIdx?: number) => {
     switch (aspectRatio) {
@@ -2287,16 +2286,16 @@ export default function LibraryPage() {
                           }
                         />
                       )}
-                      {activeAssets.map((asset, i) => {
+                      {activeAssets.slice(0, visibleCount).map((asset, i) => {
                         const index = (isGenerating && activeCategory === "all") ? i + 1 : i;
                         const spanClass = getBentoSpanClass(index);
                         return renderCard(asset, index, spanClass);
                       })}
                     </AnimatePresence>
                   </BentoGrid>
-                  {activeCategory === "featured" && (
+                  {activeAssets.length > visibleCount && (
                     <div
-                      ref={featuredSentinelRef}
+                      ref={sentinelRef}
                       className="w-full flex items-center justify-center py-8"
                     >
                       <Loader2 className={`h-6 w-6 animate-spin ${isDarkMode ? "text-white/30" : "text-black/30"}`} />
