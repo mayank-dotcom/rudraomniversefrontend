@@ -47,7 +47,7 @@ export default function InterviewPrepModal({ isOpen, onClose, onStart, isDarkMod
                         className={`relative w-full max-w-md mx-4 rounded-3xl border p-8 shadow-2xl transition-all duration-300 ${
                             isDarkMode
                                 ? "bg-[#222120] border-white/5 text-white"
-                                : "bg-[#f2f1f0] border-black/5 text-black"
+                                : "bg-[#faf6ee] border-black/5 text-black"
                         }`}
                         onClick={(e) => e.stopPropagation()}
                     >
