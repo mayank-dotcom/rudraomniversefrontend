@@ -20,6 +20,10 @@ import {
   getSubscriptionStatus,
   sendAiRequest,
   getAssetImageUrl,
+  likeAsset,
+  unlikeAsset,
+  getAssetSocial,
+  addAssetComment,
   type LibraryAsset,
   type LibraryGallery
 } from "@/lib/chat-api"
@@ -84,7 +88,8 @@ import {
   Car,
   Bell,
   MoreHorizontal,
-  Minus
+  Minus,
+  Smile
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -485,15 +490,109 @@ export default function LibraryPage() {
     getSavedAssetIds().then(setSavedIds).catch(() => {})
   }, [fetchAssets, router])
 
-  // Close expanded modal on Escape key
+  // Close expanded modal or lightbox on Escape key
   useEffect(() => {
-    if (!expandedAsset) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setExpandedAsset(null)
+      if (e.key === "Escape") {
+        if (isLightboxOpen) {
+          setIsLightboxOpen(false)
+        } else if (expandedAsset) {
+          setExpandedAsset(null)
+        }
+      }
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [expandedAsset, isLightboxOpen])
+
+  // Fetch social metadata when modal opens
+  useEffect(() => {
+    if (!expandedAsset) {
+      setComments([])
+      setLikesCount(0)
+      setIsLiked(false)
+      setCreatorInfo({ name: "AWEDICT", avatar: null })
+      return
+    }
+
+    let isSubscribed = true
+    setSocialLoading(true)
+
+    getAssetSocial(expandedAsset.id)
+      .then((res) => {
+        if (!isSubscribed) return
+        if (res.success) {
+          setLikesCount(res.likes_count)
+          setIsLiked(res.is_liked)
+          setComments(res.comments || [])
+          setCreatorInfo(res.owner || { name: "AWEDICT", avatar: null })
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load asset social data:", err)
+      })
+      .finally(() => {
+        if (isSubscribed) setSocialLoading(false)
+      })
+
+    return () => {
+      isSubscribed = false
+    }
   }, [expandedAsset])
+
+  const handleToggleLike = async () => {
+    if (!expandedAsset) return
+    const prevLiked = isLiked
+    const prevCount = likesCount
+
+    // Optimistically update UI
+    setIsLiked(!prevLiked)
+    setLikesCount(prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1)
+
+    try {
+      if (prevLiked) {
+        await unlikeAsset(expandedAsset.id)
+        toast.success("Removed from Saved")
+        // Also update local saved ids
+        setSavedIds((prev) => prev.filter((id) => id !== expandedAsset.id))
+      } else {
+        await likeAsset(
+          expandedAsset.id,
+          expandedAsset.asset_type || "image",
+          expandedAsset.asset_url || "",
+          expandedAsset.prompt || ""
+        )
+        toast.success("Saved to Library for 5 days")
+        // Also update local saved ids
+        if (!savedIds.includes(expandedAsset.id)) {
+          setSavedIds((prev) => [...prev, expandedAsset.id])
+        }
+      }
+    } catch (err: any) {
+      // Revert optimistic updates on error
+      setIsLiked(prevLiked)
+      setLikesCount(prevCount)
+      toast.error(err.message || "Failed to update like status")
+    }
+  }
+
+  const handleAddComment = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!expandedAsset || !newCommentText.trim()) return
+
+    const commentContent = newCommentText.trim()
+    setNewCommentText("")
+
+    try {
+      const res = await addAssetComment(expandedAsset.id, commentContent)
+      if (res.success && res.comment) {
+        setComments((prev) => [...prev, res.comment])
+        toast.success("Comment added!")
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to post comment")
+    }
+  }
 
   // Voice Input Speech-to-Text handlers
   const startRecording = async () => {
@@ -2509,7 +2608,6 @@ export default function LibraryPage() {
       )}
 
       {/* Expanded Image Modal */}
-      {/* Expanded Image Modal - Fullscreen Lightbox */}
       <AnimatePresence>
         {expandedAsset && (
           <motion.div
@@ -2517,122 +2615,173 @@ export default function LibraryPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className={`fixed inset-0 z-[100] flex transition-colors duration-300 ${
-              isDarkMode ? "bg-[#0d0d0c]/98 text-white" : "bg-[#f4f3f2]/98 text-black"
-            }`}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto"
             onClick={() => setExpandedAsset(null)}
           >
-            {/* Close button */}
-            <button
-              onClick={() => setExpandedAsset(null)}
-              className={`absolute top-4 right-4 md:top-5 md:right-5 z-50 p-2 md:p-2.5 rounded-full transition-all duration-200 border backdrop-blur-md ${
-                isDarkMode
-                  ? "bg-white/[0.04] text-white/50 hover:bg-white/10 hover:text-white border-white/[0.06]"
-                  : "bg-black/[0.04] text-black/50 hover:bg-black/10 hover:text-black border-black/[0.06]"
-              }`}
-            >
-              <X className="h-4 w-4 md:h-5 md:w-5" />
-            </button>
-
             <motion.div
               initial={{ scale: 0.96, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.96, opacity: 0 }}
               transition={{ type: "spring", damping: 26, stiffness: 160 }}
-              className="w-full h-full flex flex-col md:flex-row"
+              className={`w-full max-w-5xl h-auto md:h-[80vh] flex flex-col md:flex-row rounded-3xl overflow-hidden border shadow-2xl transition-colors duration-300 ${
+                isDarkMode ? "bg-[#0d0d0c] border-white/[0.06] text-white" : "bg-[#f4f3f2] border-black/[0.06] text-black"
+              }`}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Image Container - 80% width on desktop */}
-              <div id="expanded-image-wrap" className={`flex-[4] flex items-center justify-center p-3 md:p-6 relative min-h-[40vh] md:min-h-0 transition-colors duration-300 ${
-                isDarkMode ? "bg-black/40" : "bg-black/5"
-              }`}>
+              {/* Left Column - Image Container */}
+              <div className="flex-1 md:w-1/2 flex items-center justify-center bg-black/10 dark:bg-black/40 relative min-h-[40vh] md:min-h-0">
+                {/* Back Button */}
+                <button
+                  onClick={() => setExpandedAsset(null)}
+                  className="absolute top-4 left-4 p-2.5 rounded-full bg-white text-black hover:bg-zinc-100 shadow-md transition-all active:scale-95 z-10"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+
                 {brokenImages.has(expandedAsset.id) ? (
                   <div className="text-center p-4">
                     <ImageIcon className={`h-12 w-12 mx-auto mb-3 ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
                     <p className={`text-sm font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Image unavailable</p>
-                    <p className={`text-[11px] font-mono mt-1 ${isDarkMode ? "text-white/20" : "text-black/20"}`}>The image data may be corrupted or the URL may have expired.</p>
                   </div>
                 ) : (
                   <img
                     src={getAssetImageUrl(expandedAsset)}
                     alt={expandedAsset.prompt || "Concept visual"}
-                    className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg md:rounded-xl select-none shadow-lg"
+                    className="w-full h-full object-contain max-h-[50vh] md:max-h-[80vh] select-none"
                     draggable={false}
                     onError={() => setBrokenImages(prev => new Set(prev).add(expandedAsset.id))}
                   />
                 )}
-                {/* Mobile prompt overlay */}
-                <div className="absolute bottom-2 left-2 right-2 md:hidden">
-                  <div className={`backdrop-blur-xl border rounded-xl px-3.5 py-2.5 transition-colors duration-300 ${
-                    isDarkMode ? "bg-black/70 border-white/[0.06] text-white/90" : "bg-white/80 border-black/[0.06] text-black/90"
-                  }`}>
-                    <p className="text-xs line-clamp-2">{expandedAsset.prompt || "No prompt"}</p>
-                  </div>
+
+                {/* AI generated Pill Badge */}
+                <div className="absolute bottom-4 left-4 px-3.5 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-semibold z-10 border border-white/10 select-none">
+                  AI generated
+                </div>
+
+                {/* Interactive Controls (Expand and Search) */}
+                <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
+                  <button
+                    onClick={() => {
+                      setZoomScale(1)
+                      setIsLightboxOpen(true)
+                    }}
+                    className="p-3 rounded-full bg-white/80 hover:bg-white text-black backdrop-blur-md shadow-md transition-all hover:scale-110 active:scale-95"
+                    title="Expand Image"
+                  >
+                    <Maximize2 className="h-5 w-5" />
+                  </button>
+                  <button
+                    className="p-3 rounded-full bg-white/80 hover:bg-white text-black backdrop-blur-md shadow-md transition-all hover:scale-110 active:scale-95"
+                    title="Visual Search"
+                  >
+                    <Search className="h-5 w-5" />
+                  </button>
                 </div>
               </div>
 
-              {/* Details Panel - 360px on desktop */}
-              <div className={`w-full md:w-[360px] shrink-0 flex flex-col overflow-y-auto border-t md:border-t-0 md:border-l transition-colors duration-300 ${
-                isDarkMode ? "bg-[#0d0d0c] border-white/[0.06]" : "bg-[#f4f3f2] border-black/[0.06]"
-              }`}>
-                {/* Header badges + title + heart */}
-                <div className={`px-5 py-4 border-b shrink-0 ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`}>
-                  <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider border ${
-                      isDarkMode ? "bg-white/10 text-white/95 border-white/10" : "bg-black/10 text-black/95 border-black/10"
-                    }`}>
-                      {expandedAsset.asset_type || "image"}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider border ${
-                      expandedAsset.is_public
-                        ? "bg-sky-500/10 text-sky-400 border-sky-400/20"
-                        : "bg-amber-500/10 text-amber-400 border-amber-400/20"
-                    }`}>
-                      {expandedAsset.is_public ? "Public" : "Private"}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider border ${
-                      isDarkMode ? "bg-white/[0.03] text-white/40 border-white/[0.06]" : "bg-black/[0.03] text-black/40 border-black/[0.06]"
-                    }`}>
-                      {expandedAsset.id.startsWith("feat-") ? "Featured" : expandedAsset.id.startsWith("uploaded-") ? "Upload" : "Library"}
-                    </span>
+              {/* Right Column - Details Pane */}
+              <div className="flex-1 md:w-1/2 flex flex-col h-full overflow-hidden border-t md:border-t-0 md:border-l border-zinc-100 dark:border-zinc-800/50">
+                {/* Top Actions Row */}
+                <div className="flex items-center justify-between p-6 pb-4 shrink-0">
+                  <div className="flex items-center gap-4">
+                    {/* Heart Like Button */}
+                    <button
+                      onClick={handleToggleLike}
+                      className="flex items-center gap-1.5 text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
+                      title="Like"
+                    >
+                      <Heart className={`h-6 w-6 transition-all ${isLiked ? "fill-red-500 text-red-500 scale-110" : ""}`} />
+                      <span className="text-sm font-semibold">{likesCount}</span>
+                    </button>
+                    
+                    {/* Comment Icon (focuses comment box) */}
+                    <button
+                      onClick={() => {
+                        const commentInput = document.getElementById("comment-input-field")
+                        if (commentInput) commentInput.focus()
+                      }}
+                      className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
+                      title="Comment"
+                    >
+                      <MessageSquare className="h-6 w-6" />
+                    </button>
+
+                    {/* Copy Link Button */}
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(getAssetImageUrl(expandedAsset))
+                        toast.success("Image link copied!")
+                      }}
+                      className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
+                      title="Copy Link"
+                    >
+                      <Upload className="h-6 w-6" />
+                    </button>
+
+                    {/* Options Button */}
+                    <button
+                      className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
+                      title="More options"
+                    >
+                      <MoreHorizontal className="h-6 w-6" />
+                    </button>
                   </div>
-              <div className="flex items-center justify-between">
-                    <h3 className={`text-sm font-bold font-sans tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
-                      {expandedAsset.id.startsWith("feat-") ? "Featured Creation" : "Library Asset"}
-                    </h3>
-                    {!expandedAsset.id.startsWith("feat-") && (
-                      <button
-                        onClick={() => toggleSaved(expandedAsset)}
-                        className={`p-1.5 rounded-full transition-all duration-200 active:scale-90 ${
-                          savedIds.includes(expandedAsset.id)
-                            ? (isDarkMode ? "text-white bg-white/10" : "text-black bg-black/10")
-                            : isDarkMode
-                              ? "text-white/30 hover:text-white/60 hover:bg-white/5"
-                              : "text-black/30 hover:text-black/60 hover:bg-black/5"
-                        }`}
-                      >
-                        <Heart className={`h-3.5 w-3.5 ${savedIds.includes(expandedAsset.id) ? "fill-current" : ""}`} />
-                      </button>
-                    )}
+
+                  <div className="flex items-center gap-2">
+                    {/* Profile Dropdown */}
+                    <button className="flex items-center gap-0.5 text-sm font-semibold px-3 py-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                      Profile
+                      <ChevronRight className="h-4 w-4 rotate-90 text-zinc-500" />
+                    </button>
+
+                    {/* Red Save Button (syncs with likes) */}
+                    <button
+                      onClick={handleToggleLike}
+                      className={cn(
+                        "px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition-all active:scale-95",
+                        isLiked
+                          ? "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+                          : "bg-red-600 hover:bg-red-700 text-white"
+                      )}
+                    >
+                      {isLiked ? "Saved" : "Save"}
+                    </button>
                   </div>
                 </div>
 
-                {/* Scrollable details content */}
-                <div className={`flex-1 px-5 py-4 space-y-4 overflow-y-auto ${isDarkMode ? "text-white" : "text-black"}`}>
-                  {/* Prompt */}
-                  <div>
-                    <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
-                      Prompt Idea
-                    </span>
-                    <p className={`text-xs mt-1 leading-relaxed font-sans ${isDarkMode ? "text-white/80" : "text-black/70"}`}>
+                {/* Middle Content Section - Scrollable */}
+                <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6">
+                  {/* Creator Info */}
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full overflow-hidden bg-gradient-to-tr from-[#ec4899] via-[#ef4444] to-[#eab308] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
+                      {creatorInfo.avatar ? (
+                        <img src={creatorInfo.avatar} className="h-full w-full object-cover" alt={creatorInfo.name} />
+                      ) : (
+                        creatorInfo.name.slice(0, 2).toUpperCase()
+                      )}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-sm leading-tight hover:underline cursor-pointer">{creatorInfo.name}</span>
+                      <span className="text-[11px] text-zinc-500 font-mono mt-0.5">Creator</span>
+                    </div>
+                  </div>
+
+                  {/* Caption / Prompt Description */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1">
+                      <span className="text-xl leading-none text-amber-500 font-bold select-none">ψ</span>
+                      <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Prompt Idea</span>
+                    </div>
+                    <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800/40">
                       {expandedAsset.prompt || "No prompt text provided."}
                     </p>
                     {expandedAsset.prompt && (
                       <button
-                        onClick={() => { navigator.clipboard.writeText(expandedAsset.prompt || ""); toast.success("Prompt copied to clipboard!"); }}
-                        className={`flex items-center gap-1 text-[10px] font-semibold mt-1.5 transition-colors ${
-                          isDarkMode ? "text-white/80 hover:text-white" : "text-black/80 hover:text-black"
-                        }`}
+                        onClick={() => {
+                          navigator.clipboard.writeText(expandedAsset.prompt || "")
+                          toast.success("Prompt copied to clipboard!")
+                        }}
+                        className="flex items-center gap-1 text-[11px] font-semibold text-zinc-500 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
                       >
                         <Copy className="h-3 w-3" />
                         Copy Prompt
@@ -2640,116 +2789,196 @@ export default function LibraryPage() {
                     )}
                   </div>
 
-                  <div className={`h-px ${isDarkMode ? "bg-white/[0.04]" : "bg-black/[0.04]"}`} />
+                  <hr className="border-zinc-100 dark:border-zinc-800/50" />
 
-                  {/* Metadata Grid */}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                    <div>
-                      <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
-                        Created
-                      </span>
-                      <span className={`text-[11px] font-medium block mt-0.5 ${isDarkMode ? "text-white/70" : "text-black/60"}`}>
-                        {expandedAsset.created_at
-                          ? new Date(expandedAsset.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-                          : "Unknown"}
-                      </span>
+                  {/* Comments list & trigger */}
+                  <div className="space-y-4 pb-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-base font-sans">
+                        {comments.length} {comments.length === 1 ? "comment" : "comments"}
+                      </h4>
+                      <button className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors">
+                        <ChevronRight className="h-4 w-4 rotate-90 text-zinc-500" />
+                      </button>
                     </div>
-                    <div>
-                      <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
-                        Type
-                      </span>
-                      <span className={`text-[11px] font-medium capitalize block mt-0.5 ${isDarkMode ? "text-white/70" : "text-black/60"}`}>
-                        {expandedAsset.asset_type || "Image"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
-                        Visibility
-                      </span>
-                      <span className={`text-[11px] font-semibold block mt-0.5 uppercase ${expandedAsset.is_public ? "text-sky-400" : "text-amber-400"}`}>
-                        {expandedAsset.is_public ? "Public" : "Private"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
-                        Saved
-                      </span>
-                      <span className={`text-[11px] font-medium block mt-0.5 ${savedIds.includes(expandedAsset.id) ? (isDarkMode ? "text-white" : "text-black") : isDarkMode ? "text-white" : "text-black"}`}>
-                        {savedIds.includes(expandedAsset.id) ? "Yes" : "No"}
-                      </span>
-                    </div>
-                    {expandedAsset.gallery_id && (
-                      <div className="col-span-2">
-                        <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
-                          Folder
-                        </span>
-                        <span className={`text-[11px] font-medium block mt-0.5 flex items-center gap-1.5 ${isDarkMode ? "text-white/70" : "text-black/60"}`}>
-                          <Folder className="h-3 w-3 text-zinc-400" />
-                          {(() => { const g = [...galleries, ...publicGalleries].find(g => g.id === expandedAsset.gallery_id); return g?.name || "Unknown Folder"; })()}
-                        </span>
-                      </div>
-                    )}
-                    <div className="col-span-2">
-                      <span className={`text-[9px] font-mono uppercase tracking-widest block ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
-                        Asset ID
-                      </span>
-                      <span className={`text-[11px] font-mono block mt-0.5 break-all ${isDarkMode ? "text-white" : "text-black"}`}>
-                        {expandedAsset.id}
-                      </span>
+
+                    <div className="space-y-4 max-h-[200px] overflow-y-auto pr-1">
+                      {socialLoading ? (
+                        <div className="flex items-center gap-2 text-xs text-zinc-400 py-2">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Loading comments...
+                        </div>
+                      ) : comments.length === 0 ? (
+                        <p className="text-xs text-zinc-400 italic py-2">No comments yet. Share your thoughts!</p>
+                      ) : (
+                        comments.map((comment) => (
+                          <div key={comment.id} className="flex gap-2.5 items-start text-sm">
+                            <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-700 dark:text-zinc-300 shrink-0">
+                              {comment.user_avatar ? (
+                                <img src={comment.user_avatar} className="h-full w-full object-cover rounded-full" alt={comment.user_name} />
+                              ) : (
+                                comment.user_name.slice(0, 2).toUpperCase()
+                              )}
+                            </div>
+                            <div className="flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-900/30 p-2.5 rounded-2xl border border-zinc-100/50 dark:border-zinc-800/30">
+                              <p className="leading-normal">
+                                <span className="font-bold mr-1.5 text-zinc-800 dark:text-zinc-200">{comment.user_name}</span>
+                                <span className="text-zinc-600 dark:text-zinc-300">{comment.content}</span>
+                              </p>
+                              <span className="text-[9px] text-zinc-400 mt-1 select-none">
+                                {new Date(comment.created_at).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "numeric",
+                                  minute: "2-digit"
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Bottom actions */}
-                <div className={`px-5 py-3 border-t space-y-2 shrink-0 ${isDarkMode ? "border-white/[0.06]" : "border-black/[0.06]"}`}>
-                  <div className="grid grid-cols-2 gap-2">
-<a
-                      href={getAssetImageUrl(expandedAsset)}
-                      download={`rudra-${expandedAsset.id}.png`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider transition-all active:scale-[0.98] shadow-lg ${
-                        isDarkMode
-                          ? "bg-white text-black hover:bg-white/90 shadow-white/5"
-                          : "bg-black text-white hover:bg-black/90 shadow-black/5"
-                      }`}
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      Download
-                    </a>
-                    <button
-                      onClick={() => {
-                        const el = document.getElementById("expanded-image-wrap")
-                        if (el?.requestFullscreen) {
-                          el.requestFullscreen()
-                        } else {
-                          window.open(getAssetImageUrl(expandedAsset), "_blank")
-                        }
-                      }}
-                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider border transition-all active:scale-[0.98] ${
-                        isDarkMode
-                          ? "border-white/[0.06] text-white/60 hover:border-white/20 hover:text-white"
-                          : "border-black/[0.06] text-black/60 hover:border-black/20 hover:text-black"
-                      }`}
-                    >
-                      <Maximize2 className="h-3.5 w-3.5" />
-                      Fullscreen
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(getAssetImageUrl(expandedAsset)); toast.success("Image URL copied!"); }}
-                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold font-mono uppercase tracking-wider border transition-all active:scale-[0.98] ${
-                      isDarkMode
-                        ? "border-white/[0.06] text-white/60 hover:border-white/20 hover:text-white"
-                        : "border-black/[0.06] text-black/60 hover:border-black/20 hover:text-black"
-                    }`}
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    Copy Link
-                  </button>
+                {/* Bottom - Add Comment Input */}
+                <div className="p-6 border-t border-zinc-100 dark:border-zinc-800/50 bg-[#0d0d0c]/5 dark:bg-[#0d0d0c]/30 backdrop-blur-md shrink-0">
+                  <form onSubmit={handleAddComment} className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold shrink-0">
+                      {profilePic ? (
+                        <img src={profilePic} className="h-full w-full object-cover rounded-full" alt={userName} />
+                      ) : (
+                        (userName || "U").slice(0, 1).toUpperCase()
+                      )}
+                    </div>
+                    <div className="flex-1 flex items-center border border-zinc-200 dark:border-zinc-700 rounded-full px-3.5 py-2.5 bg-white dark:bg-zinc-800 transition-all focus-within:ring-2 focus-within:ring-zinc-400 dark:focus-within:ring-zinc-500">
+                      <input
+                        id="comment-input-field"
+                        type="text"
+                        placeholder="Add a comment"
+                        value={newCommentText}
+                        onChange={(e) => setNewCommentText(e.target.value)}
+                        className="flex-1 bg-transparent border-none outline-none text-sm placeholder-zinc-400 pr-2"
+                      />
+                      <div className="flex items-center gap-2 text-zinc-400 shrink-0 select-none">
+                        <button type="button" className="hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
+                          <Smile className="h-5 w-5" />
+                        </button>
+                        <button type="button" className="hover:text-zinc-650 dark:hover:text-zinc-200 transition-colors text-[10px] font-bold leading-none font-mono tracking-tight bg-zinc-100 dark:bg-zinc-700 px-1 py-0.5 rounded">
+                          GIF
+                        </button>
+                        <button type="button" className="hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
+                          <ImageIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </form>
                 </div>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Fullscreen Zoomable Lightbox Modal */}
+      <AnimatePresence>
+        {isLightboxOpen && expandedAsset && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] bg-black/95 flex flex-col justify-between"
+            onClick={() => setIsLightboxOpen(false)}
+          >
+            {/* Top Bar */}
+            <div className="w-full flex items-center justify-between p-4 z-10" onClick={(e) => e.stopPropagation()}>
+              {/* Close Button top-left */}
+              <button
+                onClick={() => setIsLightboxOpen(false)}
+                className="p-2.5 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-white transition-all active:scale-95"
+              >
+                <X className="h-6 w-6" />
+              </button>
+
+              {/* Actions top-right */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(getAssetImageUrl(expandedAsset))
+                    toast.success("Image link copied!")
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-white font-bold text-xs font-mono tracking-wider transition-all"
+                >
+                  <Upload className="h-4 w-4" />
+                  SHARE
+                </button>
+                <button className="flex items-center gap-0.5 px-4 py-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-white font-bold text-xs font-mono tracking-wider transition-all">
+                  Profile
+                  <ChevronRight className="h-3.5 w-3.5 rotate-90 text-zinc-400" />
+                </button>
+                <button
+                  onClick={handleToggleLike}
+                  className={cn(
+                    "px-6 py-2.5 rounded-xl text-xs font-bold font-mono tracking-wider transition-all active:scale-95 shadow-md",
+                    isLiked ? "bg-zinc-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
+                  )}
+                >
+                  {isLiked ? "SAVED" : "SAVE"}
+                </button>
+              </div>
+            </div>
+
+            {/* Center Image Zoomable Area */}
+            <div className="flex-1 flex items-center justify-center p-4 overflow-hidden relative">
+              <div
+                className="relative cursor-zoom-out select-none transition-transform duration-200 ease-out"
+                style={{ transform: `scale(${zoomScale})` }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  // Toggle zoom scale between 1 and 2 on image click
+                  setZoomScale(prev => prev === 1 ? 2 : 1)
+                }}
+              >
+                <img
+                  src={getAssetImageUrl(expandedAsset)}
+                  alt={expandedAsset.prompt || "Lightbox visual"}
+                  className="max-w-full max-h-[80vh] w-auto h-auto object-contain rounded-2xl shadow-2xl pointer-events-none"
+                  draggable={false}
+                />
+                
+                {/* Search Image Pill centered at bottom of image */}
+                <div
+                  className="absolute bottom-4 left-1/2 -translate-x-1/2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-white/95 text-black hover:bg-white font-semibold text-xs shadow-xl transition-all hover:scale-105 active:scale-95">
+                    <Search className="h-4 w-4" />
+                    Search image
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Stacked Zoom Controls bottom-right */}
+            <div
+              className="absolute bottom-6 right-6 flex flex-col gap-2 z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setZoomScale(prev => Math.min(3, prev + 0.25))}
+                className="p-3 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-white shadow-xl transition-all active:scale-90"
+                title="Zoom In"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setZoomScale(prev => Math.max(0.5, prev - 0.25))}
+                className="p-3 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-white shadow-xl transition-all active:scale-90"
+                title="Zoom Out"
+              >
+                <Minus className="h-5 w-5" />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
