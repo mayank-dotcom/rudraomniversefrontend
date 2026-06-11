@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { motion } from "framer-motion";
-import { Swords, Users, Clock, Trophy, Copy, Check, Play, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, AlertTriangle, Eye, Moon, Sun } from "lucide-react";
+import { Swords, Users, Clock, Trophy, Copy, Check, Play, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, AlertTriangle, Eye, Moon, Sun, ChevronLeft, Flag, Percent, Award, TrendingUp } from "lucide-react";
 import { getApiKey } from "@/lib/auth";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart as ReLineChart, Line } from "recharts";
 import { ThemeProvider, useTheme } from "@/lib/theme-context";
@@ -58,6 +58,10 @@ function ArenaContent() {
     const audioCtxRef = useRef<AudioContext | null>(null);
     const audioBufferRef = useRef<AudioBuffer | null>(null);
 
+    const [accent, setAccent] = useState<string>("#00DDDD");
+    const [flaggedQuestions, setFlaggedQuestions] = useState<boolean[]>([]);
+    const gameStartTimeRef = useRef<number>(0);
+
     // ── Server-sync timer refs (shared across closure boundaries) ──
     const questionStartTimeRef = useRef<number>(0);
     const questionDurationRef = useRef<number>(30);
@@ -70,6 +74,21 @@ function ArenaContent() {
     const lobbyCodeRef = useRef<string>(searchParams.get("code") || "");
 
     const { isDarkMode, toggleTheme } = useTheme();
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const savedAccent = localStorage.getItem("rudranex_accent");
+            if (savedAccent) {
+                setAccent(savedAccent);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (questions.length > 0 && flaggedQuestions.length === 0) {
+            setFlaggedQuestions(new Array(questions.length).fill(false));
+        }
+    }, [questions, flaggedQuestions.length]);
 
     useEffect(() => {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -197,6 +216,8 @@ function ArenaContent() {
             questionStartTimeRef.current = 0; // will be set by question_timer_start
             // Update state
             setQuestions(data.questions);
+            setFlaggedQuestions(new Array(data.questions.length).fill(false));
+            gameStartTimeRef.current = Date.now();
             setPhase("active");
             setCurrentQuestionIndex(0);
             setSelectedAnswer(null);
@@ -210,21 +231,22 @@ function ArenaContent() {
         // ── Server-authoritative per-question timer sync ──────────────────
         socket.on("question_timer_start", (data: { questionIndex: number; serverTime: number; duration: number }) => {
             const { questionIndex, serverTime, duration } = data;
-            // Sync server timestamp refs
-            questionStartTimeRef.current = serverTime;
-            questionDurationRef.current = duration;
-            hasTimerEmittedRef.current = false;
-            // Calculate time already elapsed since server fired
-            const elapsed = Math.floor((Date.now() - serverTime) / 1000);
-            const remaining = Math.max(0, duration - elapsed);
-            // Update UI state
-            setCurrentQuestionIndex(questionIndex);
-            currentQuestionIndexRef.current = questionIndex;
-            setSelectedAnswer(null);
-            selectedAnswerRef.current = null;
-            setHasSubmitted(false);
-            setTimeLeft(remaining);
-            setTimePerQuestion(duration);
+            // Only sync initially (e.g. at start or if reconnecting), or if it's the very first question index.
+            // If the client is already active and playing, we ignore server-driven question timer syncs to prevent yanking.
+            if (currentQuestionIndexRef.current === 0 && answersRef.current.every(a => a === -1)) {
+                questionStartTimeRef.current = serverTime;
+                questionDurationRef.current = duration;
+                hasTimerEmittedRef.current = false;
+                const elapsed = Math.floor((Date.now() - serverTime) / 1000);
+                const remaining = Math.max(0, duration - elapsed);
+                setCurrentQuestionIndex(questionIndex);
+                currentQuestionIndexRef.current = questionIndex;
+                setSelectedAnswer(null);
+                selectedAnswerRef.current = null;
+                setHasSubmitted(false);
+                setTimeLeft(remaining);
+                setTimePerQuestion(duration);
+            }
         });
 
         socket.on("participant_progress", (updatedParticipants) => {
@@ -262,54 +284,83 @@ function ArenaContent() {
         };
     }, []);
 
-    // ── Display timer: re-calculate from server timestamp every 500ms ──
+    const moveToNextQuestion = useCallback((updatedCorrectCount: number) => {
+        const nextIdx = currentQuestionIndex + 1;
+        if (nextIdx < questions.length) {
+            setCurrentQuestionIndex(nextIdx);
+            currentQuestionIndexRef.current = nextIdx;
+            setSelectedAnswer(null);
+            selectedAnswerRef.current = null;
+            setTimeLeft(timePerQuestion);
+        } else {
+            // End of quiz: calculate time taken
+            const timeTaken = Math.max(1, Math.floor((Date.now() - gameStartTimeRef.current) / 1000));
+            // Emit final results
+            socketRef.current?.emit("submit_answer", {
+                lobbyCode: lobbyCodeRef.current,
+                score: updatedCorrectCount,
+                timeTaken,
+            });
+            setHasSubmitted(true);
+        }
+    }, [currentQuestionIndex, questions.length, timePerQuestion]);
+
+    // Client-side count-down timer
     useEffect(() => {
-        if (phase !== "active") return;
+        if (phase !== "active" || hasSubmitted || questions.length === 0) return;
+
         const interval = setInterval(() => {
-            if (questionStartTimeRef.current <= 0) return;
-            const elapsed = Math.floor((Date.now() - questionStartTimeRef.current) / 1000);
-            const remaining = Math.max(0, questionDurationRef.current - elapsed);
-            setTimeLeft(remaining);
-
-            // When timer hits 0: finalize this question's answer and emit score
-            if (remaining === 0 && !hasTimerEmittedRef.current) {
-                hasTimerEmittedRef.current = true;
-                const curIndex = currentQuestionIndexRef.current;
-                const curAnswer = selectedAnswerRef.current;
-
-                // Record answer
-                const newAnswers = [...answersRef.current];
-                newAnswers[curIndex] = curAnswer ?? -1;
-                answersRef.current = newAnswers;
-                setAnswers([...newAnswers]);
-
-                // Update correct count
-                if (curAnswer !== null && curAnswer === questionsRef.current[curIndex]?.correctOptionIndex) {
-                    correctCountRef.current += 1;
-                    setCorrectCount(correctCountRef.current);
+            setTimeLeft((prev) => {
+                if (prev > 0) {
+                    return prev - 1;
                 }
+                return 0;
+            });
+        }, 1000);
 
-                // Emit running score to server so leaderboard is accurate
-                socketRef.current?.emit("update_score", {
-                    lobbyCode: lobbyCodeRef.current,
-                    score: correctCountRef.current,
-                });
-
-                // If this was the last question, show waiting state
-                if (curIndex >= questionsRef.current.length - 1) {
-                    setHasSubmitted(true);
-                }
-            }
-        }, 500);
         return () => clearInterval(interval);
-    }, [phase]);
+    }, [phase, hasSubmitted, questions.length]);
+
+    // Handle when time runs out on the current question
+    useEffect(() => {
+        if (phase === "active" && !hasSubmitted && timeLeft === 0 && questions.length > 0) {
+            const newAnswers = [...answers];
+            newAnswers[currentQuestionIndex] = -1;
+            answersRef.current = newAnswers;
+            setAnswers(newAnswers);
+
+            socketRef.current?.emit("update_score", {
+                lobbyCode: lobbyCodeRef.current,
+                score: correctCount,
+            });
+
+            moveToNextQuestion(correctCount);
+        }
+    }, [timeLeft, phase, hasSubmitted, questions.length, answers, correctCount, moveToNextQuestion]);
 
     const handleSelectAnswer = (optionIndex: number) => {
         if (selectedAnswer !== null) return;
         setSelectedAnswer(optionIndex);
         selectedAnswerRef.current = optionIndex;
-        // Optimistically emit score if this is a correct answer
-        // (final authoritative emit happens when timer hits 0 via interval)
+
+        const newAnswers = [...answers];
+        newAnswers[currentQuestionIndex] = optionIndex;
+        setAnswers(newAnswers);
+        answersRef.current = newAnswers;
+
+        let nextCorrectCount = correctCount;
+        if (optionIndex === questions[currentQuestionIndex]?.correctOptionIndex) {
+            nextCorrectCount = correctCount + 1;
+            setCorrectCount(nextCorrectCount);
+            correctCountRef.current = nextCorrectCount;
+        }
+
+        socketRef.current?.emit("update_score", {
+            lobbyCode: lobbyCodeRef.current,
+            score: nextCorrectCount,
+        });
+
+        moveToNextQuestion(nextCorrectCount);
     };
 
     const handleStart = () => {
@@ -350,7 +401,7 @@ function ArenaContent() {
     });
 
     return (
-        <div className={`min-h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} selection:bg-white selection:text-black font-sans overflow-hidden`}>
+        <div className={`min-h-screen w-full ${isDarkMode ? "bg-[#222120] text-white" : "bg-[#faf6ee] text-black"} selection:bg-white selection:text-black font-sans overflow-hidden transition-all duration-300`}>
             <div className="absolute inset-0 noise opacity-[0.02] pointer-events-none" />
             <div className={`fixed inset-0 z-0 pointer-events-none overflow-hidden ${isDarkMode ? "opacity-10" : "opacity-5"}`}>
                 <div className="absolute inset-0" style={{
@@ -360,75 +411,102 @@ function ArenaContent() {
             </div>
 
             <div className="relative z-10 h-screen flex flex-col">
-                <header className={`h-16 flex-shrink-0 border-b-2 ${isDarkMode ? "border-white bg-[#0a0a0a]/80" : "border-black bg-white/80"} backdrop-blur-xl flex items-center justify-between px-6 relative z-30`}>
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={toggleTheme}
-                            className={`p-2 border transition-all duration-300 group ${isDarkMode ? "border-white/20 text-white/60 hover:text-white hover:border-white/40 hover:scale-110" : "border-[#00DDDD] text-[#00DDDD]/60 hover:text-[#00DDDD] hover:border-[#00DDDD] hover:scale-110"}`}
-                            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                        >
-                            <div className="group-hover:rotate-180 transition-transform duration-500">
-                                {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                            </div>
-                        </button>
+                <header className={`h-20 flex-shrink-0 border-b ${
+                    isDarkMode ? "border-white/10 bg-[#2c2a29]" : "border-black/10 bg-[#f5f0e6]"
+                } backdrop-blur-xl flex items-center justify-between px-6 relative z-30 transition-all duration-300`}>
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={() => setShowQuitConfirm(true)}
-                            className={`p-2 border transition-all text-[10px] font-mono uppercase tracking-wider font-bold ${isDarkMode ? "border-white/20 text-white/60 hover:bg-red-500 hover:text-white hover:border-red-500" : "border-[#00DDDD] text-[#00DDDD]/60 hover:bg-red-500 hover:text-white hover:border-red-500"}`}
+                            className={`p-2.5 border transition-all rounded-xl flex items-center justify-center ${
+                                isDarkMode 
+                                    ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5" 
+                                    : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"
+                            }`}
                         >
-                            Exit
+                            <ChevronLeft className="h-4.5 w-4.5" />
                         </button>
-                        <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 bg-white text-black flex items-center justify-center">
-                                <Swords className="h-4 w-4" />
+                        
+                        <div className="flex flex-col text-left">
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-base sm:text-lg font-black tracking-tight uppercase">
+                                    {phase === "active" ? (topic || "Battle Arena") : "Battle Arena"}
+                                </h1>
+                                {phase === "active" && difficulty && (
+                                    <span className={`text-[9px] font-mono px-2 py-0.5 rounded-md uppercase tracking-wider font-semibold border ${
+                                        isDarkMode ? "bg-white/5 border-white/10 text-white/70" : "bg-black/5 border-black/10 text-black/70"
+                                    }`}>
+                                        {difficulty}
+                                    </span>
+                                )}
                             </div>
-                            <span className="text-sm font-bold uppercase tracking-wider">Battle Arena</span>
-                            {gameMode && (
-                                <span className={`text-[8px] font-mono px-2 py-0.5 border rounded-full uppercase tracking-widest font-black ${
-                                    gameMode === "hardcore" ? "bg-red-500/20 text-red-400 border-red-500/30" :
-                                    gameMode === "ranked" ? "bg-amber-500/20 text-amber-400 border-amber-500/30" :
-                                    "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                                }`}>
-                                    {gameMode}
-                                </span>
-                            )}
+                            <span className={`text-[8px] font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                {phase === "active" ? `${gameMode || "casual"} mode` : "real-time multiplayer quiz"}
+                            </span>
                         </div>
                     </div>
+
                     {phase === "lobby" && lobbyCode && (
                         <div className="flex items-center gap-3">
                             <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Lobby</span>
                             <span className="text-lg font-black tracking-[0.3em]">{lobbyCode}</span>
                             <button
                                 onClick={handleCopyCode}
-                                className={`p-2 border transition-all ${isDarkMode ? "border-white/20 hover:border-white/50 text-white/60 hover:text-white" : "border-[#00DDDD]/20 hover:border-[#00DDDD]/50 text-[#00DDDD]/60 hover:text-[#00DDDD]"}`}
+                                className={`p-2 border transition-all rounded-lg ${isDarkMode ? "border-white/20 hover:border-white/50 text-white/60 hover:text-white" : "border-black/20 hover:border-black/50 text-black/60 hover:text-black"}`}
                             >
                                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             </button>
                         </div>
                     )}
+
                     {phase === "active" && (
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                                <Zap className="h-3.5 w-3.5 text-emerald-400" />
-                                <span className="text-sm font-black text-emerald-400">{correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0)}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <Clock className={`h-3.5 w-3.5 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
-                                <span className={`text-sm font-black font-mono ${timeLeft <= 5 ? "text-red-400 animate-pulse" : `${isDarkMode ? "text-white" : "text-black"}`}`}>
-                                    {timeLeft}s
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <Target className={`h-3.5 w-3.5 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
-                                <span className="text-sm font-mono">{currentQuestionIndex + 1}/{questions.length}</span>
-                            </div>
+                            {/* Time Left Badge */}
+                            {(() => {
+                                const mins = Math.floor(timeLeft / 60);
+                                const secs = timeLeft % 60;
+                                const formattedTime = `00:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                                return (
+                                    <div className="flex items-center gap-2 px-4 py-2 bg-black/10 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl">
+                                        <Clock className="h-4 w-4 animate-pulse" style={{ color: accent }} />
+                                        <div className="flex flex-col text-left">
+                                            <span className={`text-[8px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                Time Left
+                                            </span>
+                                            <span className="text-sm font-black font-mono leading-none">
+                                                {formattedTime}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            <button
+                                onClick={() => setShowQuitConfirm(true)}
+                                className={`px-4 py-2 bg-red-500/10 border border-red-500/20 hover:bg-red-500 hover:text-white text-red-400 font-mono text-[10px] font-black uppercase tracking-wider rounded-xl transition-all`}
+                            >
+                                End Quiz
+                            </button>
                         </div>
                     )}
+
                     {phase === "finished" && (
                         <div className="flex items-center gap-3">
                             <Trophy className="h-4 w-4 text-amber-400" />
                             <span className={`text-sm font-mono ${isDarkMode ? "text-white/80" : "text-black/80"}`}>Battle Complete</span>
                         </div>
                     )}
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={toggleTheme}
+                            className={`p-2 border transition-all duration-300 rounded-xl group ${isDarkMode ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5" : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"}`}
+                            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                        >
+                            <div className="group-hover:rotate-180 transition-transform duration-500">
+                                {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                            </div>
+                        </button>
+                    </div>
                 </header>
 
                 <main className="flex-1 overflow-y-auto scrollbar-hide p-6">
@@ -574,58 +652,111 @@ function ArenaContent() {
                     )}
 
                     {!error && phase === "active" && questions.length > 0 && !hasSubmitted && (
-                        <div className="max-w-6xl mx-auto mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <div className="lg:col-span-2 space-y-4">
+                        <div className="max-w-7xl mx-auto mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start px-4 sm:px-6">
+                            {/* LEFT/CENTER: Quiz question card + statistics */}
+                            <div className="lg:col-span-8 space-y-6">
+                                {/* Quiz Question Card */}
                                 <motion.div
                                     key={currentQuestionIndex}
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className={`p-6 sm:p-8 rounded-[2.5rem] ${isDarkMode ? "border border-white/10 bg-[#0d0d0d]" : "border border-black bg-white"}`}
+                                    initial={{ opacity: 0, y: 15 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className={`p-6 sm:p-8 rounded-[2.5rem] border shadow-xl transition-all duration-300 relative overflow-hidden ${
+                                        isDarkMode
+                                            ? "bg-[#2c2a29]/80 border-white/5 text-white"
+                                            : "bg-[#f5f0e6]/80 border-black/5 text-black"
+                                    }`}
                                 >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                                Q{currentQuestionIndex + 1}/{questions.length}
+                                    {/* Top glow effects */}
+                                    <div className={`absolute top-0 right-0 w-48 h-48 blur-[80px] rounded-full pointer-events-none ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                                    {/* Header info in Card */}
+                                    <div className="flex items-center justify-between mb-4 relative z-10">
+                                        <div className="flex items-center gap-3">
+                                            <span className={`text-[10px] font-mono font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
+                                                isDarkMode ? "bg-white/10 text-white/70" : "bg-black/10 text-black/70"
+                                            }`}>
+                                                Single Choice
                                             </span>
-                                            <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full ${isDarkMode ? "bg-white/10 text-white/60" : "bg-black/10 text-black/60"}`}>
+                                            <span className={`text-[10px] font-mono px-3 py-1 rounded-full uppercase tracking-wider`}
+                                                  style={{ backgroundColor: `${accent}20`, color: accent }}
+                                            >
                                                 {topic}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                                            <Zap className="h-3 w-3 text-emerald-400" />
-                                            <span className="text-xs font-black text-emerald-400">{correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0)}</span>
-                                            <span className="text-[8px] font-mono text-emerald-400/60">pts</span>
+                                        {/* Floating JS-box style decoration */}
+                                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center border transition-all ${
+                                            isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"
+                                        }`}
+                                             style={{ boxShadow: `0 0 15px ${accent}20` }}
+                                        >
+                                            <Swords className="h-5 w-5" style={{ color: accent }} />
                                         </div>
                                     </div>
 
-                                    <div className={`h-1 w-full rounded-full mb-6 overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
-                                        <div
-                                            className={`h-full transition-all duration-500 ${isDarkMode ? "bg-white" : "bg-black"}`}
-                                            style={{ width: `${progressPercent}%` }}
-                                        />
+                                    {/* Segmented Progress Bar */}
+                                    <div className="mb-6 relative z-10">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                Question {currentQuestionIndex + 1} of {questions.length}
+                                            </span>
+                                            <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                {Math.round(((currentQuestionIndex + (selectedAnswer !== null ? 1 : 0)) / questions.length) * 100)}% Completed
+                                            </span>
+                                        </div>
+                                        <div className="flex gap-1.5">
+                                            {questions.map((_, idx) => {
+                                                const isCompleted = idx < currentQuestionIndex;
+                                                const isActive = idx === currentQuestionIndex;
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        className={`h-2 flex-1 rounded-full transition-all duration-300 ${
+                                                            isCompleted 
+                                                                ? "bg-current" 
+                                                                : isActive 
+                                                                    ? "bg-current animate-pulse shadow-sm" 
+                                                                    : isDarkMode ? "bg-white/10" : "bg-black/10"
+                                                        }`}
+                                                        style={{
+                                                            color: isCompleted || isActive ? accent : undefined
+                                                        }}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
                                     </div>
 
-                                    <h3 className="text-lg sm:text-xl font-bold mb-6 leading-relaxed">
+                                    {/* Question Text */}
+                                    <h3 className="text-xl sm:text-2xl font-sans font-black tracking-tight mb-8 leading-snug relative z-10">
                                         {questions[currentQuestionIndex]?.question}
                                     </h3>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {/* Options List */}
+                                    <div className="space-y-3 relative z-10 mb-8">
                                         {questions[currentQuestionIndex]?.options.map((opt, i) => {
                                             const isSelected = selectedAnswer === i;
                                             const isCorrect = questions[currentQuestionIndex]?.correctOptionIndex === i;
                                             const showResult = selectedAnswer !== null;
-                                            let optionClass = isDarkMode ? "bg-white/5 border-white/10 hover:border-white/30 hover:bg-white/10" : "bg-[#00DDDD]/5 border-[#00DDDD]/10 hover:border-[#00DDDD]/30 hover:bg-[#00DDDD]/10";
+                                            
+                                            let optionClass = isDarkMode 
+                                                ? "bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10" 
+                                                : "bg-black/5 border-black/10 hover:border-black/15 hover:bg-black/10";
+
+                                            let styleObj = {};
 
                                             if (showResult) {
                                                 if (isCorrect) {
-                                                    optionClass = "bg-emerald-500/20 border-emerald-500 text-emerald-400";
+                                                    optionClass = "bg-emerald-500/15 border-emerald-500 text-emerald-400";
                                                 } else if (isSelected && !isCorrect) {
-                                                    optionClass = "bg-red-500/20 border-red-500 text-red-400";
+                                                    optionClass = "bg-red-500/15 border-red-500 text-red-400";
                                                 } else {
-                                                    optionClass = isDarkMode ? "bg-white/5 border-white/10 text-white/40" : "bg-[#00DDDD]/5 border-[#00DDDD]/10 text-[#00DDDD]/40";
+                                                    optionClass = isDarkMode 
+                                                        ? "bg-white/5 border-white/5 text-white/30" 
+                                                        : "bg-black/5 border-black/5 text-black/30";
                                                 }
                                             } else if (isSelected) {
-                                                optionClass = `${isDarkMode ? "bg-white/10 border-white" : "bg-[#00DDDD]/10 border-[#00DDDD]"}`;
+                                                optionClass = "bg-current/10";
+                                                styleObj = { borderColor: accent, color: accent };
                                             }
 
                                             const optionLabels = ["A", "B", "C", "D", "E", "F"];
@@ -635,154 +766,420 @@ function ArenaContent() {
                                                     key={i}
                                                     onClick={() => handleSelectAnswer(i)}
                                                     disabled={selectedAnswer !== null}
-                                                    className={`w-full text-left p-4 border rounded-2xl text-sm transition-all flex items-center gap-3 ${optionClass}`}
+                                                    className={`w-full text-left p-5 border rounded-2xl text-base font-semibold transition-all duration-200 flex items-center gap-4 ${optionClass}`}
+                                                    style={styleObj}
                                                 >
-                                                    <span className={`h-7 w-7 flex items-center justify-center rounded-full text-xs font-mono border flex-shrink-0 ${isSelected
-                                                        ? `${isDarkMode ? "border-white bg-white text-black" : "border-[#00DDDD] bg-[#00DDDD] text-white"}`
-                                                        : `${isDarkMode ? "border-white/20" : "border-[#00DDDD]/20"}`
-                                                        }`}>
+                                                    <span className={`h-8 w-8 flex items-center justify-center rounded-full text-sm font-mono border flex-shrink-0 transition-all ${
+                                                        isSelected
+                                                            ? "bg-current text-white font-bold"
+                                                            : isDarkMode ? "border-white/20 bg-white/5" : "border-black/20 bg-black/5"
+                                                    }`}
+                                                          style={isSelected ? { backgroundColor: accent, color: isDarkMode ? "#000" : "#fff", borderColor: accent } : undefined}
+                                                    >
                                                         {optionLabels[i]}
                                                     </span>
-                                                    <span className="flex-1 leading-tight">{opt}</span>
-                                                    {showResult && isCorrect && <Check className="h-4 w-4 text-emerald-400 flex-shrink-0" />}
-                                                    {showResult && isSelected && !isCorrect && <X className="h-4 w-4 text-red-400 flex-shrink-0" />}
+                                                    <span className="flex-1 leading-normal">{opt}</span>
+                                                    {showResult && isCorrect && <Check className="h-5 w-5 text-emerald-400 flex-shrink-0" />}
+                                                    {showResult && isSelected && !isCorrect && <X className="h-5 w-5 text-red-400 flex-shrink-0" />}
                                                 </button>
                                             );
                                         })}
                                     </div>
 
+                                    {/* Explanation Card */}
                                     {selectedAnswer !== null && questions[currentQuestionIndex]?.explanation && (
                                         <motion.div
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className={`mt-5 p-4 border rounded-2xl ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}
+                                            className={`mt-6 p-5 border rounded-2xl relative overflow-hidden ${
+                                                isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"
+                                            }`}
                                         >
-                                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] block mb-2 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Explanation</span>
-                                            <p className={`text-sm ${isDarkMode ? "text-white/80" : "text-black/80"}`}>{questions[currentQuestionIndex]?.explanation}</p>
+                                            <span className={`text-[10px] font-mono uppercase tracking-[0.2em] block mb-2 ${
+                                                isDarkMode ? "text-white/40" : "text-black/40"
+                                            }`}>
+                                                Explanation
+                                            </span>
+                                            <p className={`text-sm leading-relaxed ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
+                                                {questions[currentQuestionIndex]?.explanation}
+                                            </p>
                                         </motion.div>
                                     )}
+
+                                    {/* Bottom Control Buttons (Previous, Flag, Next) */}
+                                    <div className="flex items-center justify-between border-t mt-8 pt-6 relative z-10"
+                                         style={{ borderColor: isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}
+                                    >
+                                        <button
+                                            disabled
+                                            className={`px-6 py-3 border rounded-xl text-xs font-mono uppercase tracking-wider transition-all duration-300 opacity-40 cursor-not-allowed flex items-center gap-2 ${
+                                                isDarkMode ? "border-white/10 text-white/50" : "border-black/10 text-black/50"
+                                            }`}
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                            Previous
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                const newFlags = [...flaggedQuestions];
+                                                newFlags[currentQuestionIndex] = !newFlags[currentQuestionIndex];
+                                                setFlaggedQuestions(newFlags);
+                                            }}
+                                            className={`px-6 py-3 border rounded-xl text-xs font-mono uppercase tracking-wider transition-all duration-300 flex items-center gap-2 ${
+                                                flaggedQuestions[currentQuestionIndex]
+                                                    ? "bg-red-500/20 border-red-500/50 text-red-400"
+                                                    : isDarkMode 
+                                                        ? "border-white/10 text-white/60 hover:bg-white/5 hover:text-white" 
+                                                        : "border-black/10 text-black/60 hover:bg-black/5 hover:text-black"
+                                            }`}
+                                        >
+                                            <Flag className={`h-4 w-4 ${flaggedQuestions[currentQuestionIndex] ? "fill-current" : ""}`} />
+                                            {flaggedQuestions[currentQuestionIndex] ? "Flagged" : "Flag Question"}
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                if (selectedAnswer === null) {
+                                                    const curIndex = currentQuestionIndexRef.current;
+                                                    const newAnswers = [...answersRef.current];
+                                                    newAnswers[curIndex] = -1;
+                                                    answersRef.current = newAnswers;
+                                                    setSelectedAnswer(-1); // show timeout feedback
+                                                    selectedAnswerRef.current = -1;
+                                                    moveToNextQuestion(correctCount);
+                                                } else {
+                                                    moveToNextQuestion(correctCount);
+                                                }
+                                            }}
+                                            className={`px-6 py-3 text-xs font-mono font-black uppercase tracking-[0.2em] rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 text-white`}
+                                            style={{ backgroundColor: accent }}
+                                        >
+                                            {selectedAnswer === null ? "Skip" : "Next"}
+                                        </button>
+                                    </div>
                                 </motion.div>
 
-                                {(() => {
-                                    const answered = answers.filter(a => a !== -1).length + (selectedAnswer !== null ? 1 : 0);
-                                    const correct = correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
-                                    const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
-                                    return (
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className={`border p-3 sm:p-4 rounded-2xl ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
-                                                <span className={`text-[8px] font-mono uppercase tracking-[0.2em] block mb-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Accuracy</span>
-                                                <span className="text-base sm:text-lg font-black">{accuracy}%</span>
+                                {/* Bottom Statistics (Live Stats) */}
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-3 gap-4">
+                                        {/* Score Card */}
+                                        <div className={`p-5 border rounded-3xl transition-all duration-300 relative overflow-hidden ${
+                                            isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
+                                        }`}>
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Award className="h-4 w-4" style={{ color: accent }} />
+                                                <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                    Score
+                                                </span>
                                             </div>
-                                            <div className={`border p-3 sm:p-4 rounded-2xl ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
-                                                <span className={`text-[8px] font-mono uppercase tracking-[0.2em] block mb-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Correct</span>
-                                                <span className="text-base sm:text-lg font-black">{correct}/{answered}</span>
+                                            <div className="text-2xl font-black">
+                                                {correctCount * 100}
+                                                <span className={`text-xs font-normal font-mono ml-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                    / {questions.length * 100}
+                                                </span>
                                             </div>
                                         </div>
-                                    );
-                                })()}
+
+                                        {/* Accuracy Card */}
+                                        {(() => {
+                                            const answered = answers.filter(a => a !== -1).length + (selectedAnswer !== null ? 1 : 0);
+                                            const correct = correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
+                                            const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+                                            return (
+                                                <div className={`p-5 border rounded-3xl transition-all duration-300 relative overflow-hidden ${
+                                                    isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
+                                                }`}>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <Percent className="h-4 w-4 animate-pulse" style={{ color: accent }} />
+                                                        <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                            Accuracy
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-2xl font-black">{accuracy}%</div>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {/* Rank Card */}
+                                        {(() => {
+                                            const sorted = [...participants].sort((a, b) => b.score - a.score);
+                                            const myName = isHost ? adminName : participantName;
+                                            const rankIdx = sorted.findIndex(p => p.name === myName);
+                                            const rank = rankIdx !== -1 ? rankIdx + 1 : 1;
+                                            return (
+                                                <div className={`p-5 border rounded-3xl transition-all duration-300 relative overflow-hidden ${
+                                                    isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
+                                                }`}>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <TrendingUp className="h-4 w-4" style={{ color: accent }} />
+                                                        <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                            Rank
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-2xl font-black">
+                                                        #{rank}
+                                                        <span className={`text-xs font-normal font-mono ml-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                            / {participants.length}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+
+                                    {/* Progress Area Chart */}
+                                    {(() => {
+                                        const progressChartData = questions.map((_, i) => {
+                                            let cumulativeCorrectCount = 0;
+                                            for (let j = 0; j <= i; j++) {
+                                                const ans = answers[j];
+                                                if (ans !== undefined && ans !== -1 && ans === questions[j]?.correctOptionIndex) {
+                                                    cumulativeCorrectCount++;
+                                                }
+                                            }
+                                            const isAnswered = i < currentQuestionIndex || (i === currentQuestionIndex && selectedAnswer !== null);
+                                            return {
+                                                name: `Q${i + 1}`,
+                                                Score: isAnswered ? cumulativeCorrectCount * 100 : null,
+                                            };
+                                        });
+
+                                        return (
+                                            <div className={`p-6 border rounded-[2.5rem] relative overflow-hidden ${
+                                                isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
+                                            }`}>
+                                                <div className="flex items-center gap-2 mb-4 text-left">
+                                                    <BarChart3 className="h-4 w-4" style={{ color: accent }} />
+                                                    <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                        Score Progression
+                                                    </span>
+                                                </div>
+                                                <div className="h-56">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <ReLineChart data={progressChartData}>
+                                                            <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
+                                                            <XAxis dataKey="name" tick={{ fill: isDarkMode ? "#ffffff40" : "#00000040", fontSize: 10 }} />
+                                                            <YAxis tick={{ fill: isDarkMode ? "#ffffff40" : "#00000040", fontSize: 10 }} domain={[0, questions.length * 100]} />
+                                                            <Tooltip
+                                                                contentStyle={{
+                                                                    backgroundColor: isDarkMode ? "#222120" : "#faf6ee",
+                                                                    border: isDarkMode ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)",
+                                                                    borderRadius: "12px",
+                                                                    color: isDarkMode ? "#fff" : "#000",
+                                                                }}
+                                                            />
+                                                            <Line
+                                                                type="monotone"
+                                                                dataKey="Score"
+                                                                stroke={accent}
+                                                                strokeWidth={3}
+                                                                dot={{ r: 5, stroke: accent, strokeWidth: 2, fill: isDarkMode ? "#222120" : "#faf6ee" }}
+                                                                activeDot={{ r: 8 }}
+                                                            />
+                                                        </ReLineChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
                             </div>
 
-                            <div className="lg:col-span-1 space-y-4">
-                                <div className={`border p-5 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <Users className={`h-4 w-4 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
-                                        <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Players</span>
+                            {/* RIGHT SIDEBAR: Question Navigator + Quiz Summary + Live Opponents */}
+                            <div className="lg:col-span-4 space-y-6">
+                                {/* Question Navigator */}
+                                <div className={`p-6 border rounded-[2.5rem] relative overflow-hidden ${
+                                    isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
+                                }`}>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                            Question Navigator
+                                        </span>
                                     </div>
-                                    <div className="space-y-3">
-                                        {participants.map((p) => {
-                                            const isMe = (isHost && p.name === adminName) || (!isHost && p.name === participantName);
-                                            const myCurrentScore = correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
+
+                                    {/* Legend */}
+                                    <div className="grid grid-cols-2 gap-2 mb-6 text-[9px] font-mono text-left">
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: accent }} />
+                                            <span>Answered</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="h-2.5 w-2.5 rounded-full border border-current" style={{ color: accent }} />
+                                            <span>Current</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <div className={`h-2.5 w-2.5 rounded-full border ${isDarkMode ? "border-white/20" : "border-black/20"}`} />
+                                            <span>Not Answered</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                                            <span>Marked/Flagged</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Grid of buttons */}
+                                    <div className="grid grid-cols-5 gap-2.5">
+                                        {questions.map((_, idx) => {
+                                            const isCurrent = idx === currentQuestionIndex;
+                                            const isAnswered = answers[idx] !== undefined && answers[idx] !== -1;
+                                            const isFlagged = flaggedQuestions[idx];
+
+                                            let btnClass = isDarkMode ? "border-white/10 hover:border-white/30 text-white/50" : "border-black/10 hover:border-black/20 text-black/50";
+                                            let style = {};
+
+                                            if (isFlagged) {
+                                                btnClass = "bg-red-500/25 border-red-500 text-red-400";
+                                            } else if (isCurrent) {
+                                                btnClass = "border-2 bg-transparent";
+                                                style = { borderColor: accent, color: accent };
+                                            } else if (isAnswered) {
+                                                btnClass = "text-white border-transparent";
+                                                style = { backgroundColor: accent, color: isDarkMode ? "#000" : "#fff" };
+                                            }
+
                                             return (
                                                 <div
-                                                    key={p.id}
-                                                    className={`p-3 rounded-2xl border ${isMe
-                                                        ? `${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/10 border-black/30"}`
-                                                        : `${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`
-                                                        }`}
+                                                    key={idx}
+                                                    className={`h-11 rounded-xl border flex items-center justify-center text-sm font-bold font-mono transition-all duration-200 relative ${btnClass}`}
+                                                    style={style}
                                                 >
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <div className="flex items-center gap-2 text-xs">
-                                                            <div className={`h-2 w-2 rounded-full ${p.finished ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
-                                                            <span className={isMe ? "font-bold" : ""}>{p.name}</span>
-                                                        </div>
-                                                        <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{isMe ? myCurrentScore : p.score} pts</span>
-                                                    </div>
-                                                    <div className={`h-1 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
-                                                        <div
-                                                            className={`h-full transition-all duration-500 ${p.finished ? "bg-emerald-500" : `${isDarkMode ? "bg-white" : "bg-black"}`}`}
-                                                            style={{ width: `${p.finished ? 100 : Math.min(((currentQuestionIndex + (selectedAnswer !== null ? 1 : 0)) / questions.length) * 100, 100)}%` }}
-                                                        />
-                                                    </div>
-                                                    <div className={`mt-1 text-[8px] font-mono text-right ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                                        {p.finished ? "All done!" : isMe ? `Q${Math.min(currentQuestionIndex + 1, questions.length)}/${questions.length}` : "Playing..."}
-                                                    </div>
+                                                    {idx + 1}
+                                                    {isFlagged && <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />}
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 </div>
 
-                                {(() => {
-                                    const answered = answers.filter(a => a !== -1).length + (selectedAnswer !== null ? 1 : 0);
-                                    const correct = correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
-                                    const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
-                                    return (
-                                        <div className={`border p-5 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <Zap className="h-4 w-4 text-emerald-400" />
-                                                <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Your Stats</span>
-                                            </div>
-                                            <div className="space-y-2.5">
-                                                <div className="flex justify-between items-center">
-                                                    <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Score</span>
-                                                    <span className="text-sm font-black text-emerald-400">{correct}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center">
-                                                    <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Accuracy</span>
-                                                    <span className="text-sm font-black">{accuracy}%</span>
-                                                </div>
-                                                <div className="flex justify-between items-center">
-                                                    <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Remaining</span>
-                                                    <span className="text-sm font-black">{questions.length - currentQuestionIndex - (selectedAnswer !== null ? 1 : 0)}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-
-                                {participants.filter(p => {
-                                    const isMe = (isHost && p.name === adminName) || (!isHost && p.name === participantName);
-                                    return !isMe;
-                                }).map(opponent => (
-                                    <div key={opponent.id} className={`border p-5 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <Eye className="h-4 w-4 text-blue-400" />
-                                            <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Opponent</span>
-                                        </div>
-                                        <div className="text-center py-2">
-                                            <div className="h-10 w-10 bg-blue-500/20 border border-blue-500/30 rounded-full flex items-center justify-center mx-auto mb-2">
-                                                <User className="h-5 w-5 text-blue-400" />
-                                            </div>
-                                            <p className="text-sm font-bold">{opponent.name}</p>
-                                            <div className="flex items-center justify-center gap-1.5 mt-2">
-                                                <div className={`h-2 w-2 rounded-full ${opponent.finished ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
-                                                <span className={`text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                    {opponent.finished ? "Finished all questions" : "Answering..."}
-                                                </span>
-                                            </div>
-                                            {opponent.finished && (
-                                                <div className="mt-3 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                                                    <span className="text-[10px] font-mono text-emerald-400">Score: {opponent.score} pts</span>
-                                                </div>
-                                            )}
-                                            {!opponent.finished && (
-                                                <div className={`mt-3 text-[9px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                                    Waiting for opponent to finish...
-                                                </div>
-                                            )}
-                                        </div>
+                                {/* Quiz Summary Card */}
+                                <div className={`p-6 border rounded-[2.5rem] relative overflow-hidden ${
+                                    isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
+                                }`}>
+                                    <div className="flex items-center gap-2 mb-4 text-left">
+                                        <BarChart3 className="h-4 w-4" style={{ color: accent }} />
+                                        <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                            Quiz Summary
+                                        </span>
                                     </div>
-                                ))}
+
+                                    {(() => {
+                                        const total = questions.length;
+                                        const answered = answers.filter(a => a !== -1 && a !== undefined).length;
+                                        const percentage = Math.round((answered / total) * 100);
+                                        const notAnswered = total - answered;
+                                        const marked = flaggedQuestions.filter(Boolean).length;
+                                        
+                                        const radius = 36;
+                                        const circumference = 2 * Math.PI * radius;
+                                        const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+                                        return (
+                                            <div className="flex items-center gap-6">
+                                                {/* Radial ring chart */}
+                                                <div className="relative h-24 w-24 flex items-center justify-center">
+                                                    <svg className="w-full h-full -rotate-90">
+                                                        <circle
+                                                            cx="48"
+                                                            cy="48"
+                                                            r={radius}
+                                                            fill="transparent"
+                                                            stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
+                                                            strokeWidth="8"
+                                                        />
+                                                        <circle
+                                                            cx="48"
+                                                            cy="48"
+                                                            r={radius}
+                                                            fill="transparent"
+                                                            stroke={accent}
+                                                            strokeWidth="8"
+                                                            strokeDasharray={circumference}
+                                                            strokeDashoffset={strokeDashoffset}
+                                                            strokeLinecap="round"
+                                                            className="transition-all duration-500"
+                                                        />
+                                                    </svg>
+                                                    <div className="absolute flex flex-col items-center justify-center">
+                                                        <span className="text-lg font-black">{percentage}%</span>
+                                                        <span className={`text-[8px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                            Score
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Details list */}
+                                                <div className="flex-1 space-y-2 text-xs font-medium">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className={isDarkMode ? "text-white/40" : "text-black/40"}>Total Questions</span>
+                                                        <span className="font-black">{total}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className={isDarkMode ? "text-white/40" : "text-black/40"}>Answered</span>
+                                                        <span className="font-black">{answered}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className={isDarkMode ? "text-white/40" : "text-black/40"}>Not Answered</span>
+                                                        <span className="font-black">{notAnswered}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className={isDarkMode ? "text-white/40" : "text-black/40"}>Marked</span>
+                                                        <span className="font-black text-red-400">{marked}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
+                                {/* Achievements style card: Players Leaderboard */}
+                                <div className={`p-6 border rounded-[2.5rem] relative overflow-hidden ${
+                                    isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
+                                }`}>
+                                    <div className="flex items-center gap-2 mb-4 text-left">
+                                        <Users className="h-4 w-4" style={{ color: accent }} />
+                                        <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                            Players Leaderboard
+                                        </span>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {participants.map((p, index) => {
+                                            const isMe = (isHost && p.name === adminName) || (!isHost && p.name === participantName);
+                                            const myCurrentScore = correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
+                                            const scoreToDisplay = isMe ? myCurrentScore * 100 : p.score * 100;
+                                            
+                                            return (
+                                                <div key={p.id} className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`h-9 w-9 rounded-xl flex items-center justify-center transition-all ${
+                                                            isMe 
+                                                                ? "text-white" 
+                                                                : (isDarkMode ? "bg-white/5 border border-white/10 text-white/60" : "bg-black/5 border border-black/10 text-black/60")
+                                                        }`}
+                                                             style={isMe ? { backgroundColor: accent, color: isDarkMode ? "#000" : "#fff" } : undefined}
+                                                        >
+                                                            {index === 0 ? <Trophy className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                                                        </div>
+                                                        <div className="text-left">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-xs font-bold leading-none">{p.name}</span>
+                                                                {isMe && <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>(You)</span>}
+                                                            </div>
+                                                            <span className={`text-[8px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                                {p.finished ? "Completed" : "Answering..."}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-xs font-black" style={{ color: accent }}>
+                                                            +{scoreToDisplay} XP
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
