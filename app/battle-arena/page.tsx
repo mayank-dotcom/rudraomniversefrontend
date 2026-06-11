@@ -39,6 +39,7 @@ function ArenaContent() {
     const [difficulty, setDifficulty] = useState(searchParams.get("difficulty") || "medium");
     const [questionCount, setQuestionCount] = useState(parseInt(searchParams.get("count") || "5"));
     const [timePerQuestion, setTimePerQuestion] = useState(parseInt(searchParams.get("time") || "30"));
+    const [gameMode, setGameMode] = useState(searchParams.get("mode") || "casual");
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -135,6 +136,7 @@ function ArenaContent() {
                     difficulty: searchParams.get("difficulty") || "medium",
                     adminName: searchParams.get("name") || "",
                     timePerQuestion: parseInt(searchParams.get("time") || "30"),
+                    gameMode: searchParams.get("mode") || "casual",
                 });
             } else if (searchParams.get("code")) {
                 socket.emit("join_arena", {
@@ -152,6 +154,9 @@ function ArenaContent() {
                 setTimePerQuestion(arena.timePerQuestion);
                 questionDurationRef.current = arena.timePerQuestion;
             }
+            if (arena.gameMode) {
+                setGameMode(arena.gameMode);
+            }
         });
 
         socket.on("arena_joined", (arena) => {
@@ -161,6 +166,9 @@ function ArenaContent() {
             if (arena.timePerQuestion) {
                 setTimePerQuestion(arena.timePerQuestion);
                 questionDurationRef.current = arena.timePerQuestion;
+            }
+            if (arena.gameMode) {
+                setGameMode(arena.gameMode);
             }
         });
 
@@ -374,6 +382,15 @@ function ArenaContent() {
                                 <Swords className="h-4 w-4" />
                             </div>
                             <span className="text-sm font-bold uppercase tracking-wider">Battle Arena</span>
+                            {gameMode && (
+                                <span className={`text-[8px] font-mono px-2 py-0.5 border rounded-full uppercase tracking-widest font-black ${
+                                    gameMode === "hardcore" ? "bg-red-500/20 text-red-400 border-red-500/30" :
+                                    gameMode === "ranked" ? "bg-amber-500/20 text-amber-400 border-amber-500/30" :
+                                    "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                                }`}>
+                                    {gameMode}
+                                </span>
+                            )}
                         </div>
                     </div>
                     {phase === "lobby" && lobbyCode && (

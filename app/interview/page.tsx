@@ -16,6 +16,8 @@ function InterviewRoomContent() {
     const topic = searchParams.get("topic") || "General Interview";
     const duration = parseInt(searchParams.get("duration") || "45") * 60;
     const difficulty = searchParams.get("difficulty") || "medium";
+    const vibe = searchParams.get("vibe") || "standard";
+    const focus = searchParams.get("focus") || "coding";
 
     const getLanguage = () => {
         const t = topic.toLowerCase();
@@ -203,8 +205,31 @@ function InterviewRoomContent() {
 
             let messages: Array<{ role: "user" | "assistant" | "system", content: string }> = [];
 
+            let vibeInstruction = "";
+            if (vibe === "friendly") {
+                vibeInstruction = "Your personality is exceptionally encouraging, warm, and supportive. Help the candidate feel relaxed, and if they struggle, gently guide them while keeping their morale high.";
+            } else if (vibe === "savage") {
+                vibeInstruction = "Your personality is that of a brutal, hyper-critical, and savage interviewer. Act like a highly demanding tech lead. Poke holes in their logic, point out flaws directly, and ask aggressive follow-up questions to test their limits under pressure.";
+            } else {
+                vibeInstruction = "Maintain a neutral, balanced, and professional technical interviewer stance.";
+            }
+
+            let focusInstruction = "";
+            if (focus === "conceptual") {
+                focusInstruction = "Focus primarily on core theory, theoretical principles, fundamental concepts, and underlying design paradigms.";
+            } else if (focus === "coding") {
+                focusInstruction = "Focus on algorithmic reasoning, data structures, implementation approaches, logic problem verbalization, and complexity analysis.";
+            } else {
+                focusInstruction = "Focus on high-level system design, scalability, distributed systems architecture, API constraints, and microservices patterns.";
+            }
+
             const systemPrompt = `You are an expert technical interviewer for: ${topic}. 
             The target difficulty level for this interview is: ${difficulty.toUpperCase()}. Please adjust the depth, complexity, and technical expectation of your questions accordingly (e.g. basic overview for EASY, standard developer interview for MEDIUM, and deep system architecture / complex scenarios for HARD).
+            
+            Interview Focus Area: ${focus.toUpperCase()} - ${focusInstruction}
+            
+            Interviewer Personality Style: ${vibeInstruction}
+            
             RULES:
             1. THIS IS A VERBAL AUDIO INTERVIEW. ABSOLUTELY DO NOT ask the user to write, type, or dictate code.
             2. DO NOT ask machine coding questions. Keep questions focused on verbal explanations of concepts, architecture, and problem-solving.

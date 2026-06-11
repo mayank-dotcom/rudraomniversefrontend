@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Download, X } from 'lucide-react';
 import MarkdownRenderer from './ui/MarkdownRenderer';
@@ -12,6 +12,14 @@ interface MockPaperViewProps {
 }
 
 const MockPaperView: React.FC<MockPaperViewProps> = ({ paper, examType, duration, onClose, isDarkMode }) => {
+    const [accent, setAccent] = useState<string>("");
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            setAccent(localStorage.getItem("rudranex_accent") || "");
+        }
+    }, []);
+
     const handlePrint = () => {
         window.print();
     };
@@ -78,6 +86,7 @@ const MockPaperView: React.FC<MockPaperViewProps> = ({ paper, examType, duration
                         break-inside: avoid !important;
                         color: black !important;
                         display: block !important;
+                        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
                     }
                 }
             `}} />
@@ -87,7 +96,12 @@ const MockPaperView: React.FC<MockPaperViewProps> = ({ paper, examType, duration
             <div className="w-full max-w-5xl flex justify-between items-center mb-8 no-print">
                 <div className="flex flex-col">
                     <h2 className="text-xl font-display font-black text-white uppercase tracking-tighter">Generated Neural Paper</h2>
-                    <p className="text-[10px] font-mono text-emerald-500 uppercase tracking-[0.3em]">{examType} • {duration} SESSION</p>
+                    <p 
+                        className={`text-[10px] font-mono uppercase tracking-[0.3em] ${accent ? "" : "text-white/40"}`}
+                        style={accent ? { color: accent } : undefined}
+                    >
+                        {examType} • {duration} SESSION
+                    </p>
                 </div>
                 <div className="flex gap-4">
                     <button 
@@ -111,7 +125,7 @@ const MockPaperView: React.FC<MockPaperViewProps> = ({ paper, examType, duration
                 className="w-full max-w-4xl flex-1 bg-white rounded-t-[2rem] p-10 md:p-20 overflow-y-auto shadow-2xl custom-scrollbar light-scrollbar"
                 id="printable-paper"
             >
-                <div className="text-black font-serif">
+                <div className="text-black font-sans">
                     {/* Header Block */}
                     <div className="text-center border-b-2 border-black pb-8 mb-10">
                         <h1 className="text-3xl font-bold uppercase tracking-tight mb-2">{examType}</h1>

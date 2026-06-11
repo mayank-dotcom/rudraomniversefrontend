@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Clock } from "lucide-react";
+import { X, Clock, Monitor, Smile, MessageSquare, Flame, Briefcase, Sliders, BookOpen, Terminal, Cpu } from "lucide-react";
 
 interface InterviewPrepModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onStart: (topic: string, duration: number, difficulty: string) => void;
+    onStart: (topic: string, duration: number, difficulty: string, vibe: string, focus: string) => void;
     isDarkMode: boolean;
 }
 
@@ -15,6 +15,8 @@ export default function InterviewPrepModal({ isOpen, onClose, onStart, isDarkMod
     const [topic, setTopic] = useState("");
     const [duration, setDuration] = useState(45);
     const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
+    const [vibe, setVibe] = useState<"friendly" | "standard" | "savage">("standard");
+    const [focus, setFocus] = useState<"conceptual" | "coding" | "architecture">("coding");
     const [accent, setAccent] = useState<string>("");
     const [topicFocused, setTopicFocused] = useState(false);
     const [durationFocused, setDurationFocused] = useState(false);
@@ -27,7 +29,7 @@ export default function InterviewPrepModal({ isOpen, onClose, onStart, isDarkMod
 
     const handleStart = () => {
         if (!topic.trim()) return;
-        onStart(topic.trim(), duration, difficulty);
+        onStart(topic.trim(), duration, difficulty, vibe, focus);
     };
 
     return (
@@ -45,7 +47,7 @@ export default function InterviewPrepModal({ isOpen, onClose, onStart, isDarkMod
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                        className={`relative w-full max-w-md mx-4 rounded-3xl border p-8 shadow-2xl transition-all duration-300 ${
+                        className={`relative w-full max-w-md mx-4 rounded-3xl border p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-hide transition-all duration-300 ${
                             isDarkMode
                                 ? "bg-[#222120] border-white/5 text-white"
                                 : "bg-[#faf6ee] border-black/5 text-black"
@@ -63,20 +65,35 @@ export default function InterviewPrepModal({ isOpen, onClose, onStart, isDarkMod
                             <X className="h-4 w-4" />
                         </button>
 
-                        <div className="mb-8">
-                            <h2 className={`text-xl font-sans font-bold tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
-                                Interview Preparation
-                            </h2>
-                            <p className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"} mt-2`}>
-                                Configure your interview session
-                            </p>
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-all ${
+                                accent
+                                    ? "text-white"
+                                    : (isDarkMode ? "bg-white text-black" : "bg-black text-white")
+                            }`}
+                            style={accent ? { backgroundColor: accent, color: isDarkMode ? "#000" : "#fff" } : undefined}
+                            >
+                                <Monitor className="h-6 w-6 animate-pulse" />
+                            </div>
+                            <div className="flex flex-col text-left">
+                                <h2 className={`text-2xl font-sans font-bold tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}>
+                                    Interview Prep
+                                </h2>
+                                <p className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"} mt-1`}>
+                                    Configure your interactive AI session
+                                </p>
+                            </div>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-5">
+                            {/* Topic / Role */}
                             <div>
-                                <label className={`block text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"} mb-3`}>
-                                    Topic / Role
-                                </label>
+                                <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"} mb-3 text-left`}>
+                                    <Briefcase className="h-3 w-3" />
+                                    <label className="text-[9px] font-mono uppercase tracking-[0.2em]">
+                                        Topic / Role
+                                    </label>
+                                </div>
                                 <input
                                     type="text"
                                     value={topic}
@@ -97,10 +114,14 @@ export default function InterviewPrepModal({ isOpen, onClose, onStart, isDarkMod
                                 />
                             </div>
 
+                            {/* Difficulty */}
                             <div>
-                                <label className={`block text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"} mb-3`}>
-                                    Difficulty
-                                </label>
+                                <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"} mb-3 text-left`}>
+                                    <Sliders className="h-3 w-3" />
+                                    <label className="text-[9px] font-mono uppercase tracking-[0.2em]">
+                                        Difficulty
+                                    </label>
+                                </div>
                                 <div className="grid grid-cols-3 gap-2">
                                     {(["easy", "medium", "hard"] as const).map((level) => {
                                         const isSelected = difficulty === level;
@@ -127,12 +148,87 @@ export default function InterviewPrepModal({ isOpen, onClose, onStart, isDarkMod
                                 </div>
                             </div>
 
+                            {/* Session Focus */}
                             <div>
-                                <label className={`block text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/40"} mb-3`}>
-                                    Duration (minutes)
-                                </label>
+                                <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"} mb-3 text-left`}>
+                                    <BookOpen className="h-3 w-3" />
+                                    <label className="text-[9px] font-mono uppercase tracking-[0.2em]">
+                                        Session Focus
+                                    </label>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {(["conceptual", "coding", "architecture"] as const).map((focusOption) => {
+                                        const isSelected = focus === focusOption;
+                                        const FocusIcon = focusOption === "conceptual" ? BookOpen : focusOption === "coding" ? Terminal : Cpu;
+                                        return (
+                                            <button
+                                                key={focusOption}
+                                                type="button"
+                                                onClick={() => setFocus(focusOption)}
+                                                className={`py-3 text-[10px] font-mono uppercase tracking-wider border rounded-xl transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-1.5 font-bold ${
+                                                    isSelected
+                                                        ? (accent ? "border-transparent text-white shadow-md" : (isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"))
+                                                        : (isDarkMode ? "bg-white/5 border-white/10 text-white/60 hover:border-white/30" : "bg-black/5 border-black/10 text-black/60 hover:border-black/30")
+                                                }`}
+                                                style={
+                                                    isSelected && accent
+                                                        ? { backgroundColor: accent, color: isDarkMode ? "#000" : "#fff", borderColor: accent }
+                                                        : undefined
+                                                }
+                                            >
+                                                <FocusIcon className="h-3.5 w-3.5" />
+                                                <span>{focusOption === "architecture" ? "Arch" : focusOption}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Interviewer Vibe */}
+                            <div>
+                                <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"} mb-3 text-left`}>
+                                    <Smile className="h-3 w-3" />
+                                    <label className="text-[9px] font-mono uppercase tracking-[0.2em]">
+                                        Interviewer Vibe
+                                    </label>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {(["friendly", "standard", "savage"] as const).map((vibeOption) => {
+                                        const isSelected = vibe === vibeOption;
+                                        const VibeIcon = vibeOption === "friendly" ? Smile : vibeOption === "savage" ? Flame : MessageSquare;
+                                        return (
+                                            <button
+                                                key={vibeOption}
+                                                type="button"
+                                                onClick={() => setVibe(vibeOption)}
+                                                className={`py-3 text-[10px] font-mono uppercase tracking-wider border rounded-xl transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-1.5 font-bold ${
+                                                    isSelected
+                                                        ? (accent ? "border-transparent text-white shadow-md" : (isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black"))
+                                                        : (isDarkMode ? "bg-white/5 border-white/10 text-white/60 hover:border-white/30" : "bg-black/5 border-black/10 text-black/60 hover:border-black/30")
+                                                }`}
+                                                style={
+                                                    isSelected && accent
+                                                        ? { backgroundColor: accent, color: isDarkMode ? "#000" : "#fff", borderColor: accent }
+                                                        : undefined
+                                                }
+                                            >
+                                                <VibeIcon className="h-3.5 w-3.5" />
+                                                <span>{vibeOption}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Duration */}
+                            <div>
+                                <div className={`flex items-center gap-3 ${isDarkMode ? "text-white/40" : "text-black/40"} mb-3 text-left`}>
+                                    <Clock className="h-3 w-3" />
+                                    <label className="text-[9px] font-mono uppercase tracking-[0.2em]">
+                                        Duration (minutes)
+                                    </label>
+                                </div>
                                 <div className="flex items-center gap-3">
-                                    <Clock className={`h-4 w-4 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
                                     <input
                                         type="number"
                                         value={duration}
@@ -164,7 +260,7 @@ export default function InterviewPrepModal({ isOpen, onClose, onStart, isDarkMod
                             disabled={!topic.trim()}
                             whileHover={topic.trim() ? { scale: 1.02 } : {}}
                             whileTap={topic.trim() ? { scale: 0.98 } : {}}
-                            className={`w-full mt-8 py-3.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] font-bold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${
+                            className={`w-full mt-6 py-3.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] font-bold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${
                                 accent
                                     ? "hover:opacity-90 shadow-md"
                                     : (isDarkMode ? "bg-white text-black hover:bg-white/95 shadow-md" : "bg-black text-white hover:bg-black/95 shadow-md")

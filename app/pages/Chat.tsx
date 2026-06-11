@@ -1347,9 +1347,9 @@ const Chat = () => {
         void handleSend(trimmedText, priorHistory);
     };
 
-    const handleStartInterview = (topic: string, duration: number, difficulty: string) => {
+    const handleStartInterview = (topic: string, duration: number, difficulty: string, vibe: string, focus: string) => {
         setIsInterviewModalOpen(false);
-        window.location.href = `/interview?topic=${encodeURIComponent(topic)}&duration=${duration}&difficulty=${difficulty}`;
+        window.location.href = `/interview?topic=${encodeURIComponent(topic)}&duration=${duration}&difficulty=${difficulty}&vibe=${vibe}&focus=${focus}`;
     };
 
     const handlePersonaSelect = (persona: Persona) => {
@@ -1427,9 +1427,9 @@ const Chat = () => {
         };
     }, [selectedEngine]);
 
-    const handleBattleArenaHost = (config: { adminName: string; topic: string; difficulty: string; questionCount: number; timePerQuestion: number }) => {
+    const handleBattleArenaHost = (config: { adminName: string; topic: string; difficulty: string; questionCount: number; timePerQuestion: number; gameMode: string }) => {
         setIsBattleArenaModalOpen(false);
-        window.location.href = `/battle-arena?host=true&name=${encodeURIComponent(config.adminName)}&topic=${encodeURIComponent(config.topic)}&difficulty=${config.difficulty}&count=${config.questionCount}&time=${config.timePerQuestion}`;
+        window.location.href = `/battle-arena?host=true&name=${encodeURIComponent(config.adminName)}&topic=${encodeURIComponent(config.topic)}&difficulty=${config.difficulty}&count=${config.questionCount}&time=${config.timePerQuestion}&mode=${config.gameMode}`;
     };
 
     const handleBattleArenaJoin = (config: { lobbyCode: string; participantName: string }) => {
@@ -1443,9 +1443,26 @@ const Chat = () => {
         setPaperConfig(config);
 
         const examName = (config.examType === 'Other' ? config.customExamType : config.examType) || "General";
+        const focusInstruction = config.cognitiveFocus
+            ? `\nFocus Area: Customize the style of questions to focus primarily on ${config.cognitiveFocus.toUpperCase()} content (${
+                config.cognitiveFocus === "conceptual" ? "theory, definitions, and core conceptual principles" :
+                config.cognitiveFocus === "practical" ? "applied labs, code reviews, case studies, and hands-on scenario solving" :
+                "analytical logic, out-of-the-box thinking, and complex reasoning challenges"
+              }).`
+            : "";
+        const rigorInstruction = config.evaluationRigor
+            ? `\nDifficulty / Rigor: The questions should be written with a ${config.evaluationRigor.toUpperCase()} standard (${
+                config.evaluationRigor === "lax" ? "easier questions, encouraging tone, straightforward concepts" :
+                config.evaluationRigor === "rigorous" ? "harder questions, trickier distractors, advanced edge cases, and high evaluation standards" :
+                "balanced standard difficulty, testing average to above-average concepts"
+              }).`
+            : "";
+        const notesInstruction = config.customNotes
+            ? `\nStudy Material / Custom Notes: Generate the questions strictly and directly from the following content:\n"${config.customNotes}"`
+            : "";
 
         if (config.mode === "mcq") {
-            const prompt = `You are an expert quiz generator. Generate exactly ${config.numQuestions} multiple choice questions for "${examName}".
+            const prompt = `You are an expert quiz generator. Generate exactly ${config.numQuestions} multiple choice questions for "${examName}".${focusInstruction}${rigorInstruction}${notesInstruction}
 
 Return ONLY valid JSON array (no markdown, no code fences) in this exact structure:
 [
@@ -1498,7 +1515,11 @@ Rules:
         }
 
         // Paper mode
-        const prompt = `Act as an expert examiner. Generate a professional question paper for ${examName}.
+        const answerKeyInstruction = config.includeAnswerKey
+            ? `\n6. Include an "ANSWER KEY / SOLUTIONS" section at the very end of the paper containing precise solutions and detailed explanations for all questions in Sections A, B, and C.`
+            : "";
+
+        const prompt = `Act as an expert examiner. Generate a professional question paper for ${examName}.${focusInstruction}${rigorInstruction}${notesInstruction}
 Duration: ${config.duration}.
 Total Questions: ${config.numQuestions}.
 
@@ -1512,7 +1533,7 @@ STRICT RULES:
 2. No intro/outro or conversational text.
 3. Be concise but maintain high academic standards.
 4. Focus on core ${examName} syllabus.
-5. Generate NOW.`;
+5. Generate NOW.${answerKeyInstruction}`;
 
         try {
             const data = await sendAiRequest({
