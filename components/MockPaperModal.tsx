@@ -49,7 +49,7 @@ const MockPaperModal: React.FC<MockPaperModalProps> = ({ isOpen, onClose, onGene
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={onClose}
-                    className={`absolute inset-0 backdrop-blur-sm ${isDarkMode ? "bg-black/80" : "bg-[#faf6ee]/80"}`}
+                    className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                 />
                 
                 <motion.div
