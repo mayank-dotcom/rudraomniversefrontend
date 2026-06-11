@@ -2315,6 +2315,7 @@ export default function LibraryPage() {
                             >
                               <PixelCard
                                 variant={isDarkMode ? "blue" : "default"}
+                                colors={isDarkMode ? undefined : "#000000,#18181b,#27272a,#3f3f46,#52525b"}
                                 autoPlay
                                 autoPlayInterval={2000}
                                 className="!h-full !w-full !rounded-none !border-none"
