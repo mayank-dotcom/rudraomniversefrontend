@@ -2991,4 +2991,51 @@ export async function addAssetComment(id: string, content: string) {
   return data
 }
 
+export interface SocialNotification {
+  id: string
+  asset_id: string
+  type: string
+  content: string
+  is_read: boolean
+  created_at: string
+  sender_name: string
+  sender_avatar: string | null
+}
+
+export async function getNotifications() {
+  const res = await fetch(`${API_BASE}/library/notifications`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; notifications: SocialNotification[]; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch notifications.")
+  }
+  return data
+}
+
+export async function markNotificationAsRead(id: string) {
+  const res = await fetch(`${API_BASE}/library/notifications/${id}/read`, {
+    method: "POST",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to mark notification as read.")
+  }
+  return data
+}
+
+export async function getSingleAsset(id: string) {
+  const res = await fetch(`${API_BASE}/library/assets/${id}`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; asset: LibraryAsset; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch asset details.")
+  }
+  return data
+}
+
 

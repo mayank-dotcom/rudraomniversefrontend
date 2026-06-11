@@ -24,8 +24,12 @@ import {
   unlikeAsset,
   getAssetSocial,
   addAssetComment,
+  getNotifications,
+  markNotificationAsRead,
+  getSingleAsset,
   type LibraryAsset,
-  type LibraryGallery
+  type LibraryGallery,
+  type SocialNotification
 } from "@/lib/chat-api"
 import {
   isAuthenticated,
@@ -184,6 +188,7 @@ export default function LibraryPage() {
   const [newCommentText, setNewCommentText] = useState("")
   const [socialLoading, setSocialLoading] = useState(false)
   const [creatorInfo, setCreatorInfo] = useState<{ name: string; avatar: string | null }>({ name: "AWEDICT", avatar: null })
+  const [notifications, setNotifications] = useState<SocialNotification[]>([])
 
   const [isLoading, setIsLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -591,6 +596,52 @@ export default function LibraryPage() {
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to post comment")
+    }
+  }
+
+  // Load and poll notifications
+  useEffect(() => {
+    if (!isAuthenticated()) return
+
+    const fetchNotifs = () => {
+      getNotifications()
+        .then((res) => {
+          if (res.success && res.notifications) {
+            setNotifications(res.notifications)
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch notifications:", err)
+        })
+    }
+
+    fetchNotifs()
+    const interval = setInterval(fetchNotifs, 15000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleNotificationClick = async (notif: SocialNotification) => {
+    try {
+      setShowNotificationPanel(false)
+      
+      // Mark as read in DB
+      if (!notif.is_read) {
+        await markNotificationAsRead(notif.id)
+        setNotifications(prev =>
+          prev.map(n => (n.id === notif.id ? { ...n, is_read: true } : n))
+        )
+      }
+
+      // Fetch target asset and open detailed modal
+      const res = await getSingleAsset(notif.asset_id)
+      if (res.success && res.asset) {
+        setExpandedAsset(res.asset)
+      } else {
+        toast.error("Failed to load asset details")
+      }
+    } catch (err: any) {
+      console.error("Failed to open notification asset:", err)
+      toast.error("Asset not found or access denied")
     }
   }
 
@@ -1889,9 +1940,9 @@ export default function LibraryPage() {
                   title="Notifications"
                 >
                   <Bell className="h-4 w-4" />
-                  {(hasNewGeneration || generationStatus === "generating") && (
+                  {(hasNewGeneration || generationStatus === "generating" || notifications.some(n => !n.is_read)) && (
                     <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0d0d0c] ${
-                      generationStatus === "generating" ? "bg-yellow-400" : "bg-green-500"
+                      generationStatus === "generating" ? "bg-yellow-400" : "bg-red-500"
                     }`} />
                   )}
                 </motion.button>
@@ -1914,6 +1965,47 @@ export default function LibraryPage() {
                         Notifications
                       </div>
                       <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                      {/* Social Notifications */}
+                      {notifications.length > 0 && (
+                        <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+                          {notifications.map((notif) => (
+                            <button
+                              key={notif.id}
+                              onClick={() => handleNotificationClick(notif)}
+                              className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors text-xs relative ${
+                                notif.is_read
+                                  ? (isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5")
+                                  : (isDarkMode ? "bg-white/[0.03] hover:bg-white/5 font-medium" : "bg-black/[0.03] hover:bg-black/5 font-medium")
+                              }`}
+                            >
+                              <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px] text-zinc-650 dark:text-zinc-350">
+                                {notif.sender_avatar ? (
+                                  <img src={notif.sender_avatar} className="h-full w-full object-cover" alt="" />
+                                ) : (
+                                  notif.sender_name.slice(0, 2).toUpperCase()
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0 pr-2">
+                                <p className="leading-tight text-zinc-900 dark:text-zinc-100">
+                                  <span className="font-bold mr-1">{notif.sender_name}</span>
+                                  commented on your image.
+                                </p>
+                                <p className={`text-[10px] truncate mt-1 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                                  "{notif.content}"
+                                </p>
+                                <span className={`text-[9px] block mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                  {new Date(notif.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                              {!notif.is_read && (
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#00DDDD]" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
                       {generationStatus === "generating" && (
                         <button
                           onClick={() => { setShowNotificationPanel(false); setActiveCategory("all"); }}
@@ -1946,7 +2038,7 @@ export default function LibraryPage() {
                           </div>
                         </button>
                       )}
-                      {generationStatus === "idle" && !hasNewGeneration && (
+                      {generationStatus === "idle" && !hasNewGeneration && notifications.length === 0 && (
                         <div className={`px-3 py-6 text-center text-xs ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
                           No notifications
                         </div>
@@ -2658,8 +2750,8 @@ export default function LibraryPage() {
                   AI generated
                 </div>
 
-                {/* Interactive Controls (Expand and Search) */}
-                <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
+                {/* Interactive Controls (Expand) */}
+                <div className="absolute bottom-4 right-4 z-10">
                   <button
                     onClick={() => {
                       setZoomScale(1)
@@ -2669,12 +2761,6 @@ export default function LibraryPage() {
                     title="Expand Image"
                   >
                     <Maximize2 className="h-5 w-5" />
-                  </button>
-                  <button
-                    className="p-3 rounded-full bg-white/80 hover:bg-white text-black backdrop-blur-md shadow-md transition-all hover:scale-110 active:scale-95"
-                    title="Visual Search"
-                  >
-                    <Search className="h-5 w-5" />
                   </button>
                 </div>
               </div>
@@ -2687,7 +2773,7 @@ export default function LibraryPage() {
                     {/* Heart Like Button */}
                     <button
                       onClick={handleToggleLike}
-                      className="flex items-center gap-1.5 text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
+                      className="flex items-center gap-1.5 text-zinc-650 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
                       title="Like"
                     >
                       <Heart className={`h-6 w-6 transition-all ${isLiked ? "fill-red-500 text-red-500 scale-110" : ""}`} />
@@ -2700,7 +2786,7 @@ export default function LibraryPage() {
                         const commentInput = document.getElementById("comment-input-field")
                         if (commentInput) commentInput.focus()
                       }}
-                      className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
+                      className="text-zinc-655 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
                       title="Comment"
                     >
                       <MessageSquare className="h-6 w-6" />
@@ -2712,7 +2798,7 @@ export default function LibraryPage() {
                         navigator.clipboard.writeText(getAssetImageUrl(expandedAsset))
                         toast.success("Image link copied!")
                       }}
-                      className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
+                      className="text-zinc-655 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
                       title="Copy Link"
                     >
                       <Upload className="h-6 w-6" />
@@ -2720,31 +2806,10 @@ export default function LibraryPage() {
 
                     {/* Options Button */}
                     <button
-                      className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
+                      className="text-zinc-655 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-colors"
                       title="More options"
                     >
                       <MoreHorizontal className="h-6 w-6" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {/* Profile Dropdown */}
-                    <button className="flex items-center gap-0.5 text-sm font-semibold px-3 py-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                      Profile
-                      <ChevronRight className="h-4 w-4 rotate-90 text-zinc-500" />
-                    </button>
-
-                    {/* Red Save Button (syncs with likes) */}
-                    <button
-                      onClick={handleToggleLike}
-                      className={cn(
-                        "px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition-all active:scale-95",
-                        isLiked
-                          ? "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
-                          : "bg-red-600 hover:bg-red-700 text-white"
-                      )}
-                    >
-                      {isLiked ? "Saved" : "Save"}
                     </button>
                   </div>
                 </div>
@@ -2753,7 +2818,7 @@ export default function LibraryPage() {
                 <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6">
                   {/* Creator Info */}
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full overflow-hidden bg-gradient-to-tr from-[#ec4899] via-[#ef4444] to-[#eab308] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
+                    <div className="h-10 w-10 rounded-full overflow-hidden bg-gradient-to-tr from-[#A855F7] to-[#00DDDD] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
                       {creatorInfo.avatar ? (
                         <img src={creatorInfo.avatar} className="h-full w-full object-cover" alt={creatorInfo.name} />
                       ) : (
@@ -2761,16 +2826,18 @@ export default function LibraryPage() {
                       )}
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm leading-tight hover:underline cursor-pointer">{creatorInfo.name}</span>
-                      <span className="text-[11px] text-zinc-500 font-mono mt-0.5">Creator</span>
+                      <span className="font-bold text-sm leading-tight text-zinc-950 dark:text-zinc-50 hover:underline cursor-pointer">{creatorInfo.name}</span>
+                      <span className="text-[9px] uppercase font-mono tracking-widest text-[#00DDDD] dark:text-[#00DDDD] font-semibold mt-0.5">Creator</span>
                     </div>
                   </div>
 
                   {/* Caption / Prompt Description */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-1">
-                      <span className="text-xl leading-none text-amber-500 font-bold select-none">ψ</span>
-                      <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Prompt Idea</span>
+                    <div className="flex items-center gap-1.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-4.5 w-4.5 text-[#00DDDD] select-none">
+                        <path d="M12 2v20 M5 4v6c0 3 3 6 7 6s7-3 7-6V4" />
+                      </svg>
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-bold">Prompt Idea</span>
                     </div>
                     <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800/40">
                       {expandedAsset.prompt || "No prompt text provided."}
@@ -2912,19 +2979,6 @@ export default function LibraryPage() {
                   <Upload className="h-4 w-4" />
                   SHARE
                 </button>
-                <button className="flex items-center gap-0.5 px-4 py-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-white font-bold text-xs font-mono tracking-wider transition-all">
-                  Profile
-                  <ChevronRight className="h-3.5 w-3.5 rotate-90 text-zinc-400" />
-                </button>
-                <button
-                  onClick={handleToggleLike}
-                  className={cn(
-                    "px-6 py-2.5 rounded-xl text-xs font-bold font-mono tracking-wider transition-all active:scale-95 shadow-md",
-                    isLiked ? "bg-zinc-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
-                  )}
-                >
-                  {isLiked ? "SAVED" : "SAVE"}
-                </button>
               </div>
             </div>
 
@@ -2945,17 +2999,6 @@ export default function LibraryPage() {
                   className="max-w-full max-h-[80vh] w-auto h-auto object-contain rounded-2xl shadow-2xl pointer-events-none"
                   draggable={false}
                 />
-                
-                {/* Search Image Pill centered at bottom of image */}
-                <div
-                  className="absolute bottom-4 left-1/2 -translate-x-1/2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-white/95 text-black hover:bg-white font-semibold text-xs shadow-xl transition-all hover:scale-105 active:scale-95">
-                    <Search className="h-4 w-4" />
-                    Search image
-                  </button>
-                </div>
               </div>
             </div>
 
