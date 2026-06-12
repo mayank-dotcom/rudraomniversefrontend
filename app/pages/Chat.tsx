@@ -408,9 +408,9 @@ const Chat = () => {
     const userRole = typeof window !== "undefined" ? getUserRole() : null;
     const schoolName = typeof window !== "undefined" ? getSchoolName() : null;
     const isGlobalAdmin = userRole === "global_admin";
-    const showEmployeeView = userRole === "employee" || userRole === "enterprise_admin" || userRole === "manager" || userRole === "school_admin" || userRole === "faculty" || (isGlobalAdmin && !isEnterpriseMode);
+    const showEmployeeView = userRole === "employee" || userRole === "enterprise_admin" || userRole === "manager" || userRole === "school_admin" || userRole === "faculty" || (isGlobalAdmin && isEnterpriseMode);
     const isEnterpriseUser = userRole === "employee" || userRole === "enterprise_admin" || userRole === "manager";
-    const isEnterpriseModeActive = isEnterpriseUser || (isGlobalAdmin && !isEnterpriseMode);
+    const isEnterpriseModeActive = isEnterpriseUser || (isGlobalAdmin && isEnterpriseMode);
 
     const employeeRestrictedEngines = ["Explore Mode", "Interview Prep", "Mock Paper Generator", "Battle Arena"];
     const visibleEngines = showEmployeeView
@@ -2953,8 +2953,9 @@ STRICT RULES:
                                     {isGlobalAdmin && (
                                         <motion.button
                                             onClick={() => {
-                                                setIsEnterpriseMode(!isEnterpriseMode);
-                                                setRightSidebarTab(isEnterpriseMode ? "gmail" : "wallet");
+                                                const nextMode = !isEnterpriseMode;
+                                                setIsEnterpriseMode(nextMode);
+                                                setRightSidebarTab(nextMode ? "gmail" : "wallet");
                                             }}
                                             whileHover={{ scale: 1.1 }}
                                             whileTap={{ scale: 0.9 }}
