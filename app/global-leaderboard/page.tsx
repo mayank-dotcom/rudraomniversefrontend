@@ -155,7 +155,7 @@ function PageContent() {
             {/* Main Content */}
             <div className="flex-1 h-full overflow-y-auto custom-scrollbar">
                 <div className="max-w-5xl mx-auto px-6 py-10">
-                    <div className="flex items-center gap-4 mb-10">
+                    <div className="flex items-center gap-4 mb-4">
                         <div className="h-12 w-12 bg-amber-500 text-black rounded-2xl flex items-center justify-center">
                             <Crown className="h-6 w-6" />
                         </div>
@@ -194,17 +194,14 @@ function PageContent() {
                         <>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                                 {[
-                                    { icon: Users, label: "Total Players", value: totalPlayers, color: "#3b82f6" },
-                                    { icon: Trophy, label: "Top Score", value: topScore, color: "#f59e0b" },
-                                    { icon: TrendingUp, label: "Avg Score", value: avgScore, color: "#10b981" },
-                                    { icon: Zap, label: "Arena Wins", value: totalArenaWins, color: "#8b5cf6" },
+                                    { icon: Users, value: totalPlayers, color: "#3b82f6" },
+                                    { icon: Trophy, value: topScore, color: "#f59e0b" },
+                                    { icon: TrendingUp, value: avgScore, color: "#10b981" },
+                                    { icon: Zap, value: totalArenaWins, color: "#8b5cf6" },
                                 ].map((card, i) => (
                                     <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className={`border ${border} ${cardBg} p-5 rounded-[2rem]`}>
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <card.icon className="h-4 w-4" style={{ color: card.color }} />
-                                            <span className={`text-[8px] font-mono ${text} uppercase tracking-[0.2em]`}>{card.label}</span>
-                                        </div>
-                                        <span className="text-3xl font-black">{typeof card.value === "number" && isFinite(card.value) ? (String(card.value).includes("e") ? "—" : card.label === "Avg Score" ? Number(card.value).toFixed(2) : card.value) : "—"}</span>
+                                        <card.icon className="h-5 w-5 mb-3" style={{ color: card.color }} />
+                                        <span className="text-3xl font-black block">{typeof card.value === "number" && isFinite(card.value) ? (String(card.value).includes("e") ? "—" : Number(card.value).toFixed(card.value % 1 === 0 ? 0 : 2)) : "—"}</span>
                                         <div className={`mt-2 h-1 w-full ${isDarkMode ? "bg-white/15" : "bg-black/15"} rounded-full overflow-hidden`}>
                                             <motion.div initial={{ width: 0 }} animate={{ width: "100%" }} className="h-full rounded-full" style={{ backgroundColor: card.color }} />
                                         </div>

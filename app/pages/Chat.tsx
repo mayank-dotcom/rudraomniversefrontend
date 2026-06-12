@@ -307,6 +307,7 @@ const Chat = () => {
     const [sidebarTab, setSidebarTab] = useState<"history" | "modes">("history");
     const [rightSidebarTab, setRightSidebarTab] = useState<"usage" | "gmail" | "wallet">("usage");
     const [isEnterpriseMode, setIsEnterpriseMode] = useState(false);
+    const [sidebarView, setSidebarView] = useState<"chat" | "mail">("chat");
     const [gmailConnected, setGmailConnected] = useState(false);
     const [gmailEmail, setGmailEmail] = useState("");
     const [gmailEmails, setGmailEmails] = useState<any[]>([]);
@@ -408,6 +409,8 @@ const Chat = () => {
     const schoolName = typeof window !== "undefined" ? getSchoolName() : null;
     const isGlobalAdmin = userRole === "global_admin";
     const showEmployeeView = userRole === "employee" || userRole === "enterprise_admin" || userRole === "manager" || userRole === "school_admin" || userRole === "faculty" || (isGlobalAdmin && !isEnterpriseMode);
+    const isEnterpriseUser = userRole === "employee" || userRole === "enterprise_admin" || userRole === "manager";
+    const isEnterpriseModeActive = isEnterpriseUser || (isGlobalAdmin && !isEnterpriseMode);
 
     const employeeRestrictedEngines = ["Explore Mode", "Interview Prep", "Mock Paper Generator", "Battle Arena"];
     const visibleEngines = showEmployeeView
@@ -2214,7 +2217,7 @@ STRICT RULES:
                     {/* Bottom Right: Maximize layout button + circular send button */}
                     <div className="flex items-center gap-2">
                         {/* Maximize Layout Button */}
-                        {showEmployeeView && !isEnterpriseMode && !isGlobalAdmin && (
+                        {false && (
                             <motion.button
                                 onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
                                 id="walkthrough-maximize-layout"
@@ -2366,7 +2369,7 @@ STRICT RULES:
                     onClick={() => setIsSidebarCollapsed(true)}
                 />
             )}
-            {showEmployeeView && isMobile && !isRightSidebarCollapsed && (
+            {false && isMobile && !isRightSidebarCollapsed && (
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 transition-opacity duration-300"
                     onClick={() => setIsRightSidebarCollapsed(true)}
@@ -2411,22 +2414,23 @@ STRICT RULES:
                                 <MessageSquarePlus className="w-5 h-5" />
                             </motion.button>
 
-                            {/* Leaderboard Link */}
-                            <motion.div
-                                whileHover={{ scale: 1.15 }}
-                                whileTap={{ scale: 0.85 }}
-                            >
-                                <Link
-                                    href="/battle-arena"
-                                    className={`p-2 rounded-lg transition-colors cursor-pointer ${isDarkMode
-                                            ? "text-white/60 hover:text-white hover:bg-white/5"
-                                            : "text-black/60 hover:text-black hover:bg-black/5"
-                                        }`}
-                                    title={t("leaderboard")}
+                            {!isEnterpriseModeActive && (
+                                <motion.div
+                                    whileHover={{ scale: 1.15 }}
+                                    whileTap={{ scale: 0.85 }}
                                 >
-                                    <ListOrdered className="w-5 h-5" />
-                                </Link>
-                            </motion.div>
+                                    <Link
+                                        href="/battle-arena"
+                                        className={`p-2 rounded-lg transition-colors cursor-pointer ${isDarkMode
+                                                ? "text-white/60 hover:text-white hover:bg-white/5"
+                                                : "text-black/60 hover:text-black hover:bg-black/5"
+                                            }`}
+                                        title={t("leaderboard")}
+                                    >
+                                        <ListOrdered className="w-5 h-5" />
+                                    </Link>
+                                </motion.div>
+                            )}
                         </div>
 
                         {/* Bottom Group */}
@@ -2560,7 +2564,38 @@ STRICT RULES:
                             </motion.button>
                         </div>
 
-                        {/* Search and Action area */}
+                        {/* Enterprise Mail/Chat Toggle */}
+                        {isEnterpriseModeActive && (
+                            <div className={`px-4 pt-3 pb-1 flex items-center gap-1 border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                <button
+                                    onClick={() => setSidebarView("chat")}
+                                    className={`flex-1 py-2 text-[10px] font-mono uppercase tracking-[0.15em] rounded-lg transition-all ${sidebarView === "chat"
+                                        ? (isDarkMode ? "bg-white/10 text-white font-bold" : "bg-black/10 text-black font-bold")
+                                        : (isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black")
+                                    }`}
+                                >
+                                    <MessageSquare className="h-3.5 w-3.5 inline mr-1.5" />
+                                    Chat
+                                </button>
+                                <button
+                                    onClick={() => setSidebarView("mail")}
+                                    className={`flex-1 py-2 text-[10px] font-mono uppercase tracking-[0.15em] rounded-lg transition-all ${sidebarView === "mail"
+                                        ? (isDarkMode ? "bg-white/10 text-white font-bold" : "bg-black/10 text-black font-bold")
+                                        : (isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black")
+                                    }`}
+                                >
+                                    <svg className="h-3.5 w-3.5 inline mr-1.5" viewBox="0 0 24 24" fill="none">
+                                        <rect x="2" y="4" width="20" height="16" rx="2" fill="currentColor" />
+                                        <path d="M22 6l-10 7L2 6" fill="none" stroke={isDarkMode ? "#0d0d0c" : "#f4f3f2"} strokeWidth="2" strokeLinecap="round" />
+                                    </svg>
+                                    Mail
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Chat View */}
+                        {sidebarView !== "mail" && (
+                        <>
                         <div className="px-4 pt-4 pb-2 space-y-2">
                             {/* New Chat Button */}
                             <motion.button
@@ -2577,22 +2612,23 @@ STRICT RULES:
                                 <span>{t("new_chat")}</span>
                             </motion.button>
 
-                            {/* Leaderboard Button */}
-                            <motion.div
-                                whileHover={{ scale: 1.03 }}
-                                whileTap={{ scale: 0.97 }}
-                            >
-                                <Link
-                                    href="/battle-arena"
-                                    className={`w-full flex items-center justify-center gap-2 py-2 px-3 text-xs border rounded-xl font-sans font-medium transition-all duration-200 ${isDarkMode
-                                            ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
-                                            : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
-                                        }`}
+                            {!isEnterpriseModeActive && (
+                                <motion.div
+                                    whileHover={{ scale: 1.03 }}
+                                    whileTap={{ scale: 0.97 }}
                                 >
-                                    <Swords className="w-4 h-4" />
-                                    <span>{t("leaderboard")}</span>
-                                </Link>
-                            </motion.div>
+                                    <Link
+                                        href="/battle-arena"
+                                        className={`w-full flex items-center justify-center gap-2 py-2 px-3 text-xs border rounded-xl font-sans font-medium transition-all duration-200 ${isDarkMode
+                                                ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                                                : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                                            }`}
+                                    >
+                                        <Swords className="h-4 w-4" />
+                                        <span>{t("leaderboard")}</span>
+                                    </Link>
+                                </motion.div>
+                            )}
 
                             {/* Clean Search Input */}
                             <div className="relative group">
@@ -2713,6 +2749,118 @@ STRICT RULES:
                                 </div>
                                 <div className="absolute right-[-10px] bottom-[-10px] w-16 h-16 opacity-10 pointer-events-none">
                                     <Swords className="w-full h-full text-white" />
+                                </div>
+                            </div>
+                        )}
+                        </>)}
+
+                        {/* Mail View */}
+                        {sidebarView === "mail" && isEnterpriseModeActive && (
+                            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                                <div className="px-4 pt-4 pb-2 space-y-3 flex-1 flex flex-col min-h-0">
+                                    {gmailConnected && (
+                                        <>
+                                            <div className="relative group shrink-0">
+                                                <div className="relative flex items-center">
+                                                    <Search className={`absolute left-3 h-3.5 w-3.5 ${isDarkMode ? "text-white/30" : "text-black/50"}`} />
+                                                    <input
+                                                        type="text"
+                                                        value={gmailSearchQuery}
+                                                        onChange={(e) => setGmailSearchQuery(e.target.value)}
+                                                        onKeyDown={(e) => { if (e.key === "Enter") fetchGmailEmails(gmailSearchQuery || undefined) }}
+                                                        placeholder="Search emails..."
+                                                        className={`w-full pl-10 pr-4 py-2 text-[10px] font-mono rounded-xl border outline-none transition-all ${isDarkMode
+                                                            ? "bg-white/[0.03] border-white/10 text-white placeholder-white/20 focus:border-[#4285F4]/50"
+                                                            : "bg-white border-black/30 text-black placeholder-black/50 focus:border-[#4285F4]/70"
+                                                        }`}
+                                                    />
+                                                    {gmailSearchQuery && (
+                                                        <button onClick={() => { setGmailSearchQuery(""); fetchGmailEmails() }} className={`absolute right-2 p-1 rounded-lg ${isDarkMode ? "hover:bg-white/10 text-white/30" : "hover:bg-black/10 text-black/50"}`}>
+                                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-2 px-1 flex-wrap">
+                                                    {["in:inbox", "is:unread", "is:important", "has:attachment"].map((filter) => (
+                                                        <button key={filter} onClick={() => { setGmailSearchQuery(filter); fetchGmailEmails(filter) }}
+                                                            className={`text-[7px] font-mono uppercase tracking-[0.15em] px-2 py-1 rounded-md border transition-all ${gmailSearchQuery === filter
+                                                                ? (isDarkMode ? "bg-[#4285F4]/20 border-[#4285F4]/40 text-[#4285F4]" : "bg-[#4285F4]/10 border-[#4285F4]/30 text-[#4285F4]")
+                                                                : (isDarkMode ? "border-white/10 text-white/30 hover:border-white/20" : "border-black/30 text-black/60 hover:border-black/60")
+                                                            }`}
+                                                        >{filter.replace(":", " ")}</button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {gmailError && (
+                                                <div className={`shrink-0 p-3 rounded-lg flex items-start gap-2.5 ${isDarkMode ? "bg-red-500/10 border border-red-500/20" : "bg-red-500/5 border border-red-500/20"}`}>
+                                                    <p className="text-[10px] font-mono text-red-400">{gmailError}</p>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                    <div className="flex-1 min-h-0 overflow-y-auto space-y-2 custom-scrollbar">
+                                        {!gmailConnected ? (
+                                            <div className="flex flex-col items-center justify-center py-10 px-4">
+                                                <div className={`h-16 w-16 mx-auto rounded-2xl flex items-center justify-center bg-gradient-to-br ${isDarkMode ? "from-[#EA4335]/20 via-[#FBBC05]/10 to-[#4285F4]/20" : "from-[#EA4335]/10 via-[#FBBC05]/5 to-[#4285F4]/10"}`}>
+                                                    <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" fill="#EA4335" /><path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" /></svg>
+                                                </div>
+                                                <p className={`text-[11px] font-mono text-center mt-4 mb-4 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>Connect your Gmail account</p>
+                                                <button onClick={handleConnectGmail} disabled={gmailConnecting}
+                                                    className={`px-5 py-2.5 text-[10px] font-mono uppercase tracking-[0.2em] font-bold rounded-xl transition-all ${gmailConnecting ? "opacity-50" : ""} ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}>
+                                                    {gmailConnecting ? "Connecting..." : "+ Connect Gmail"}
+                                                </button>
+                                            </div>
+                                        ) : gmailLoading ? (
+                                            <div className="flex flex-col items-center justify-center py-16 gap-3">
+                                                <div className={`h-8 w-8 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? "border-white/20" : "border-black/20"}`} />
+                                                <p className={`text-[9px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Loading emails...</p>
+                                            </div>
+                                        ) : gmailEmails.length === 0 ? (
+                                            <div className="flex flex-col items-center py-12 gap-4">
+                                                <Inbox className={`h-6 w-6 ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
+                                                <p className={`text-[10px] font-mono ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                    {gmailSearchQuery ? `No results for "${gmailSearchQuery}"` : "No emails found."}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            gmailEmails.map((email: any, idx: number) => (
+                                                <button key={email.id} onClick={() => handleSelectEmail(email.id)}
+                                                    className={`group w-full text-left rounded-xl border transition-all p-3 ${email.unread
+                                                        ? (isDarkMode ? "border-[#EA4335]/20 bg-[#EA4335]/[0.02]" : "border-[#EA4335]/20 bg-[#EA4335]/[0.02]")
+                                                        : (isDarkMode ? "border-white/5 hover:border-white/15" : "border-black/5 hover:border-black/15")
+                                                    }`}>
+                                                    <p className={`text-[11px] font-bold truncate ${email.unread ? (isDarkMode ? "text-white" : "text-black") : (isDarkMode ? "text-white/70" : "text-black/70")}`}>{email.subject || "(No Subject)"}</p>
+                                                    <p className={`text-[9px] font-mono truncate mt-1 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{email.from}</p>
+                                                    <p className={`text-[9px] font-mono line-clamp-1 ${isDarkMode ? "text-white/25" : "text-black/25"}`}>{email.snippet || ""}</p>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    {gmailConnected && (
+                                        <div className={`shrink-0 pt-3 border-t ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#EA4335]/10" : "bg-[#EA4335]/15"}`}>
+                                                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" fill="#EA4335" /><path d="M22 6l-10 7L2 6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" /></svg>
+                                                    </div>
+                                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/35" : "text-black/60"}`}>{gmailEmail || "Gmail"}</p>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button onClick={() => fetchGmailEmails(gmailSearchQuery || undefined)} disabled={gmailLoading}
+                                                        className={`p-1.5 rounded-lg ${isDarkMode ? "hover:bg-white/10 text-white/40" : "hover:bg-black/10 text-black/60"}`}>
+                                                        <svg className={`h-3 w-3 ${gmailLoading ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
+                                                    </button>
+                                                    <button onClick={handleDisconnectGmail}
+                                                        className={`p-1.5 rounded-lg ${isDarkMode ? "hover:bg-white/10 text-white/30 hover:text-[#EA4335]" : "hover:bg-black/10 text-black/60 hover:text-[#EA4335]"}`}>
+                                                        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -3584,7 +3732,7 @@ STRICT RULES:
             </div>
 
             {/* Right Sidebar */}
-            {showEmployeeView && (
+            {false && (
                 <aside
                     style={{ width: isRightSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${rightSidebarWidth}px`) }}
                     className={`h-full border-l-2 ${isRightSidebarCollapsed && isMobile ? "border-l-0" : isDarkMode ? "border-white/10" : "border-black/10"} ${isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f9f9f8]"} flex flex-col ${isMobile ? "fixed right-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"} transition-[width] duration-300 ease-in-out ${isResizingRight ? "transition-none" : ""}`}

@@ -109,6 +109,13 @@ function ArenaContent() {
     const answersRef = useRef<number[]>([]);
     const hasTimerEmittedRef = useRef<boolean>(false);
     const lobbyCodeRef = useRef<string>(searchParams.get("code") || "");
+    const hostRef = useRef<string>(searchParams.get("host") || "");
+    const urlNameRef = useRef<string>(searchParams.get("name") || "");
+    const urlTopicRef = useRef<string>(searchParams.get("topic") || "");
+    const urlDifficultyRef = useRef<string>(searchParams.get("difficulty") || "");
+    const urlCountRef = useRef<string>(searchParams.get("count") || "5");
+    const urlTimeRef = useRef<string>(searchParams.get("time") || "30");
+    const urlModeRef = useRef<string>(searchParams.get("mode") || "");
 
     const { isDarkMode, toggleTheme } = useTheme();
 
@@ -301,19 +308,19 @@ function ArenaContent() {
                 return;
             }
 
-            if (searchParams.get("host") === "true") {
+            if (hostRef.current === "true") {
                 socket.emit("create_arena", {
-                    topic: searchParams.get("topic") || "",
-                    questionCount: parseInt(searchParams.get("count") || "5"),
-                    difficulty: searchParams.get("difficulty") || "medium",
-                    adminName: searchParams.get("name") || "",
-                    timePerQuestion: parseInt(searchParams.get("time") || "30"),
-                    gameMode: searchParams.get("mode") || "casual",
+                    topic: urlTopicRef.current || "",
+                    questionCount: parseInt(urlCountRef.current || "5"),
+                    difficulty: urlDifficultyRef.current || "medium",
+                    adminName: urlNameRef.current || "",
+                    timePerQuestion: parseInt(urlTimeRef.current || "30"),
+                    gameMode: urlModeRef.current || "casual",
                 });
-            } else if (searchParams.get("code")) {
+            } else if (lobbyCodeRef.current) {
                 socket.emit("join_arena", {
-                    lobbyCode: searchParams.get("code"),
-                    participantName: searchParams.get("name") || "",
+                    lobbyCode: lobbyCodeRef.current,
+                    participantName: urlNameRef.current || "",
                 });
             }
         });
@@ -322,6 +329,7 @@ function ArenaContent() {
             setLobbyCode(arena.code);
             lobbyCodeRef.current = arena.code;
             setParticipants(arena.participants);
+            setIsHost(true);
             if (arena.timePerQuestion) {
                 setTimePerQuestion(arena.timePerQuestion);
                 questionDurationRef.current = arena.timePerQuestion;
@@ -405,7 +413,7 @@ function ArenaContent() {
         socket.on("reconnect", () => setError(null));
 
         return () => { socket.disconnect(); };
-    }, [searchParams]);
+    }, []);
 
     useEffect(() => {
         if (phase !== "finished") return;
@@ -510,6 +518,31 @@ function ArenaContent() {
         socketRef.current?.emit("update_score", { lobbyCode: lobbyCodeRef.current, score: nextCorrectCount });
         moveToNextQuestion(nextCorrectCount);
     };
+
+    const handleCreateArena = useCallback(() => {
+        const socket = socketRef.current;
+        if (socket) {
+            socket.emit("create_arena", {
+                topic: arenaTopic,
+                questionCount: arenaCount,
+                difficulty: arenaDifficulty,
+                adminName: userName,
+                timePerQuestion: arenaTime,
+                gameMode: arenaMode,
+            });
+        }
+    }, [arenaTopic, arenaCount, arenaDifficulty, userName, arenaTime, arenaMode]);
+
+    const handleJoinArena = useCallback(() => {
+        if (!joinCode) return;
+        const socket = socketRef.current;
+        if (socket) {
+            socket.emit("join_arena", {
+                lobbyCode: joinCode,
+                participantName: userName,
+            });
+        }
+    }, [joinCode, userName]);
 
     const handleStart = () => socketRef.current?.emit("start_arena", lobbyCode);
     const handleLeave = () => { socketRef.current?.disconnect(); router.push("/chat"); };
@@ -979,14 +1012,14 @@ function ArenaContent() {
                                                         <select value={arenaMode} onChange={e => setArenaMode(e.target.value)} className={`w-full px-3 py-2.5 border rounded-xl text-xs bg-transparent ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}>
                                                             <option value="casual">Casual</option><option value="competitive">Competitive</option>
                                                         </select>
-                                                        <button onClick={() => router.push(`/battle-arena?host=true&name=${encodeURIComponent(userName)}&topic=${encodeURIComponent(arenaTopic)}&difficulty=${arenaDifficulty}&count=${arenaCount}&time=${arenaTime}&mode=${arenaMode}`)} className="w-full py-3 bg-amber-500 text-black rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-amber-600 transition-all">Create Arena</button>
+                                                        <button onClick={handleCreateArena} className="w-full py-3 bg-amber-500 text-black rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-amber-600 transition-all">Create Arena</button>
                                                     </div>
                                                 </div>
                                                 <div className={`p-6 border rounded-2xl text-left ${isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.01]"}`}>
                                                     <h3 className="text-sm font-black uppercase tracking-wider mb-4">Join Battle</h3>
                                                     <div className="space-y-3">
                                                         <input value={joinCode} onChange={e => setJoinCode(e.target.value)} placeholder="Enter lobby code" className={`w-full px-3 py-2.5 border rounded-xl text-xs bg-transparent uppercase tracking-widest ${isDarkMode ? "border-white/10 text-white placeholder:text-white/30" : "border-black/10 text-black placeholder:text-black/40"}`} />
-                                                        <button onClick={() => joinCode && router.push(`/battle-arena?code=${encodeURIComponent(joinCode)}&name=${encodeURIComponent(userName)}`)} className={`w-full py-3 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"}`}>Join Arena</button>
+                                                        <button onClick={handleJoinArena} className={`w-full py-3 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"}`}>Join Arena</button>
                                                     </div>
                                                 </div>
                                             </div>
