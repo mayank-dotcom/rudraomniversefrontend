@@ -414,7 +414,7 @@ const PricingContent = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.8, delay: i * 0.1 }}
-                                    className={`relative p-10 flex flex-col group transition-all duration-500 backdrop-blur-sm premium-card-wrapper ${getCardStyles(i, isSpeed, isAgency)}`}
+                                    className={`relative p-6 sm:p-10 flex flex-col group transition-all duration-500 backdrop-blur-sm premium-card-wrapper ${getCardStyles(i, isSpeed, isAgency)}`}
                                 >
                                     {/* Metallic background reflection and sweep shine */}
                                     <div className="metallic-gradient-overlay" />

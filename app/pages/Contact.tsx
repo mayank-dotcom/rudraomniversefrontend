@@ -125,7 +125,7 @@ export default function Contact() {
                                 </div>
                             </div>
 
-                            <div className={`p-10 md:p-14 border ${isDarkMode ? "bg-black/40 border-white/10" : "bg-white border-black/10"}`}>
+                            <div className={`p-6 sm:p-10 md:p-14 border ${isDarkMode ? "bg-black/40 border-white/10" : "bg-white border-black/10"}`}>
                                 {sent ? (
                                     <motion.div
                                         initial={{ opacity: 0, scale: 0.95 }}

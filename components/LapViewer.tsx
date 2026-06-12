@@ -32,8 +32,12 @@ function LapModel({ progress }: { progress: number }) {
 
   const hasVertexColors = !!(geometry && geometry.attributes.color);
 
-  useFrame(() => {
+  useFrame((state) => {
     if (meshRef.current) {
+      const { width, height } = state.size;
+      const aspect = width / height;
+      const responsiveScale = aspect < 1 ? aspect * 0.9 : 1.0;
+
       const baseRot = 1.5 * Math.PI;
       const extraRot = 20 * Math.PI / 180;
 
@@ -66,9 +70,11 @@ function LapModel({ progress }: { progress: number }) {
         rotX = baseRot + extraRot - forwardTilt * eased;
       }
 
+      const responsiveY = yPos * (aspect < 1 ? Math.max(0.7, aspect) : 1);
+
       meshRef.current.rotation.x = rotX;
-      meshRef.current.position.y = yPos;
-      meshRef.current.scale.set(scaleMul, scaleMul, scaleMul);
+      meshRef.current.position.y = responsiveY;
+      meshRef.current.scale.set(scaleMul * responsiveScale, scaleMul * responsiveScale, scaleMul * responsiveScale);
     }
   });
 

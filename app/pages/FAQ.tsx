@@ -170,7 +170,7 @@ export default function FAQ() {
                                                 >
                                                     <button
                                                         onClick={() => toggleItem(key)}
-                                                        className="w-full flex items-center justify-between gap-4 px-8 py-6 text-left"
+                                                        className="w-full flex items-center justify-between gap-4 px-5 sm:px-8 py-5 sm:py-6 text-left"
                                                     >
                                                         <span className="font-sans font-semibold text-sm md:text-base leading-snug tracking-tight">
                                                             {item.q}
@@ -186,7 +186,7 @@ export default function FAQ() {
                                                                 transition={{ duration: 0.3, ease: "easeInOut" }}
                                                                 className="overflow-hidden"
                                                             >
-                                                                <div className={`px-8 pb-6 text-sm md:text-base leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                                                                <div className={`px-5 sm:px-8 pb-5 sm:pb-6 text-sm md:text-base leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
                                                                     {item.a}
                                                                 </div>
                                                             </motion.div>

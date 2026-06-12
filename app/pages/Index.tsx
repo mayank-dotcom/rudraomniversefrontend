@@ -1182,6 +1182,12 @@ const Index = () => {
     const html = document.documentElement;
     let touchY = 0;
 
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    if (isMobile) {
+      phaseRef.current = "scroll";
+      return;
+    }
+
     const handleWheel = (e: WheelEvent) => {
       if (phaseRef.current === "scroll") return;
       e.preventDefault();
@@ -1255,6 +1261,14 @@ const Index = () => {
 
   useEffect(() => {
     const handleScroll = () => {
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+      if (isMobile) {
+        const scrollRange = window.innerHeight * 1.2;
+        const p = Math.min(window.scrollY / scrollRange, 1);
+        setProgress(p);
+        return;
+      }
+
       if (phaseRef.current !== "scroll") return;
       const heroH = window.innerHeight;
       const p = Math.min(window.scrollY / heroH, 1);
@@ -1266,7 +1280,12 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    if (progress >= 1) setShowNavbar(true);
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    if (isMobile) {
+      setShowNavbar(window.scrollY > 50);
+    } else {
+      if (progress >= 1) setShowNavbar(true);
+    }
   }, [progress]);
 
   return (
@@ -1331,7 +1350,7 @@ const Index = () => {
               </p>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[256px] grid-flow-row-dense">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[290px] md:auto-rows-[256px] grid-flow-row-dense">
               {tools.map((tool, i) => {
                 const layout = getCardLayout(i);
                 const isFlipped = flipped[i];
@@ -1371,7 +1390,7 @@ const Index = () => {
                         className={`absolute inset-0 backface-hidden w-full h-full rounded-2xl backdrop-blur-md transition-all duration-500 ease-out ${layout.bg} ${layout.glow}`}
                       >
                         {layout.type === "large" && (
-                          <div className="relative w-full h-full flex flex-col justify-start p-8">
+                          <div className="relative w-full h-full flex flex-col justify-start p-6 md:p-8">
                             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:20px_20px] opacity-40 pointer-events-none rounded-2xl transition-opacity duration-500 group-hover:opacity-10" />
                             <div className="absolute inset-0 bg-radial-gradient from-transparent to-black/60 pointer-events-none rounded-2xl transition-opacity duration-500 group-hover:opacity-0" />
 
@@ -1387,7 +1406,7 @@ const Index = () => {
                               <div className="w-12 h-12 rounded-xl border flex items-center justify-center mb-6 border-white/15 bg-white/5 text-white/80 shadow-[0_0_15px_rgba(255,255,255,0.02)] transition-all duration-500 group-hover:text-black group-hover:border-black/15 group-hover:bg-black/5">
                                 {tool.icon}
                               </div>
-                              <h3 className="font-serif text-3xl font-light text-white mb-3 italic tracking-tight transition-colors duration-500 group-hover:text-black">
+                              <h3 className="font-serif text-2xl md:text-3xl font-light text-white mb-3 italic tracking-tight transition-colors duration-500 group-hover:text-black">
                                 {tool.name}
                               </h3>
                               <div className="w-12 h-[1px] bg-white/10 mb-4 transition-colors duration-500 group-hover:bg-black/15" />
@@ -1399,7 +1418,7 @@ const Index = () => {
                         )}
 
                         {layout.type === "tall" && (
-                          <div className="w-full h-full flex flex-col justify-start p-6">
+                          <div className="w-full h-full flex flex-col justify-start p-5 md:p-6">
                             <div>
                               <div className="flex items-center justify-between mb-3">
                                 <span className="font-serif italic text-white/30 text-[10px] tracking-widest transition-colors duration-500 group-hover:text-black/40">
@@ -1424,7 +1443,7 @@ const Index = () => {
                         )}
 
                         {layout.type === "wide" && (
-                          <div className="w-full h-full flex flex-col justify-start p-6">
+                          <div className="w-full h-full flex flex-col justify-start p-5 md:p-6">
                             <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                               <div className="w-10 h-10 shrink-0 rounded-lg border flex items-center justify-center border-white/15 bg-white/5 text-white/80 transition-all duration-500 group-hover:text-black group-hover:border-black/15 group-hover:bg-black/5">
                                 {tool.icon}
@@ -1450,7 +1469,7 @@ const Index = () => {
                         )}
 
                         {layout.type === "standard" && (
-                          <div className="w-full h-full flex flex-col justify-start p-6">
+                          <div className="w-full h-full flex flex-col justify-start p-5 md:p-6">
                             <div>
                               <div className="flex items-center justify-between mb-3">
                                 <span className="font-serif italic text-white/30 text-[10px] tracking-widest transition-colors duration-500 group-hover:text-black/40">
@@ -1476,7 +1495,7 @@ const Index = () => {
 
                       {/* BACK FACE */}
                       <div
-                        className={`absolute inset-0 backface-hidden rotate-y-180 w-full h-full rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur-xl flex flex-col justify-between overflow-hidden shadow-[inset_0_0_30px_rgba(255,255,255,0.02)] transition-all duration-500 ease-out group-hover:bg-neutral-200 group-hover:border-transparent ${layout.type === "large" ? "p-8" : "p-6"
+                        className={`absolute inset-0 backface-hidden rotate-y-180 w-full h-full rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur-xl flex flex-col justify-between overflow-hidden shadow-[inset_0_0_30px_rgba(255,255,255,0.02)] transition-all duration-500 ease-out group-hover:bg-neutral-200 group-hover:border-transparent ${layout.type === "large" ? "p-6 md:p-8" : "p-5 md:p-6"
                           }`}
                       >
                         {/* Dot Grid background for back face */}
@@ -1665,6 +1684,7 @@ const Index = () => {
                   pauseOnHover={true}
                   activeIndex={activeStudentCard}
                   onActiveIndexChange={setActiveStudentCard}
+                  className="left-1/2 transform -translate-x-1/2 -translate-y-[6vh] max-[768px]:translate-y-[0%] max-[768px]:scale-[0.75] max-[480px]:scale-[0.6] origin-center"
                 >
                   {studentTools.map((tool, idx) => {
                     const isActive = activeStudentCard === idx;

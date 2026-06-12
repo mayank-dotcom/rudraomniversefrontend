@@ -141,7 +141,7 @@ export default function B2B() {
               return (
                 <div
                   key={i}
-                  className={`p-12 border-r last:border-r-0 ${
+                  className={`p-6 sm:p-12 border-b md:border-b-0 border-r-0 md:border-r last:border-b-0 last:border-r-0 ${
                     isDarkMode ? "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]" : "border-black/5 bg-white hover:bg-zinc-50"
                   } transition-all duration-500 group`}
                 >
@@ -169,7 +169,7 @@ export default function B2B() {
                   key="success"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className={`border p-12 text-center ${isDarkMode ? "bg-black/40 border-white/10" : "bg-white border-black/10"}`}
+                  className={`border p-6 sm:p-12 text-center ${isDarkMode ? "bg-black/40 border-white/10" : "bg-white border-black/10"}`}
                 >
                   <div className="h-16 w-16 rounded-full bg-[var(--brand-accent)]/10 flex items-center justify-center mx-auto mb-8">
                     <CheckCircle className="h-8 w-8 text-[var(--brand-accent)]" />
@@ -194,7 +194,7 @@ export default function B2B() {
                   </div>
                 </motion.div>
               ) : (
-                <div className={`p-10 md:p-14 border ${isDarkMode ? "bg-white/[0.02] border-white/10 backdrop-blur-md" : "bg-white border-black/10"}`}>
+                <div className={`p-6 sm:p-10 md:p-14 border ${isDarkMode ? "bg-white/[0.02] border-white/10 backdrop-blur-md" : "bg-white border-black/10"}`}>
                   <h2 className="text-2xl font-display font-bold mb-2 tracking-tighter uppercase">Enterprise Request</h2>
                   <p className={`text-[11px] font-sans font-bold uppercase tracking-[0.1em] mb-10 ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
                     Corporate Onboarding Form
