@@ -4,9 +4,11 @@ import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from "rea
 import { useSearchParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Swords, Users, Clock, Trophy, Copy, Check, Play, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, AlertTriangle, Eye, Moon, Sun, ChevronLeft, Flag, Percent, Award, TrendingUp, LayoutDashboard, BookOpen, Bookmark, Settings, LogOut, ChevronDown, Flame, Shield, Sparkles } from "lucide-react";
+import { Swords, Users, Clock, Trophy, Copy, Check, Play, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, AlertTriangle, Eye, Moon, Sun, ChevronLeft, Flag, Percent, Award, TrendingUp, LayoutDashboard, BookOpen, Bookmark, Settings, LogOut, ChevronDown, Flame, Shield, Sparkles, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { getApiKey, getUserInfo, getProfilePicture, getUserRole } from "@/lib/auth";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart as ReLineChart, Line, AreaChart, Area } from "recharts";
+import { getGlobalLeaderboard, getArenaHistory, getUserAnalytics } from "@/lib/chat-api";
+import type { GlobalLeaderboardEntry, ArenaHistoryItem, ArenaHistoryResponse } from "@/lib/chat-api";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart as ReLineChart, Line, AreaChart, Area, PieChart, Pie, Cell } from "recharts";
 import { ThemeProvider, useTheme } from "@/lib/theme-context";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
 import Link from "next/link";
@@ -85,6 +87,12 @@ function ArenaContent() {
     const [showAnalysis, setShowAnalysis] = useState(false);
     const [showQuitConfirm, setShowQuitConfirm] = useState(false);
     const [hasSubmitted, setHasSubmitted] = useState(false);
+    const [activeTab, setActiveTab] = useState<"results" | "leaderboard" | "history" | "stats">("results");
+    const [lobbyView, setLobbyView] = useState<"lobby" | "leaderboard" | "history" | "stats">("lobby");
+    const [globalLeaderboard, setGlobalLeaderboard] = useState<GlobalLeaderboardEntry[]>([]);
+    const [arenaHistory, setArenaHistory] = useState<ArenaHistoryItem[]>([]);
+    const [userStats, setUserStats] = useState<any>(null);
+    const [tabLoading, setTabLoading] = useState(false);
     const audioCtxRef = useRef<AudioContext | null>(null);
     const audioBufferRef = useRef<AudioBuffer | null>(null);
 
@@ -106,6 +114,20 @@ function ArenaContent() {
 
     const [sidebarWidth, setSidebarWidth] = useState(260);
     const [isResizing, setIsResizing] = useState(false);
+    const [collapsed, setCollapsed] = useState(false);
+    const [leaderboardSearch, setLeaderboardSearch] = useState("");
+    const [leaderboardPage, setLeaderboardPage] = useState(1);
+    const [leaderboardViewMode, setLeaderboardViewMode] = useState<"table" | "graph">("table");
+    const [historyPage, setHistoryPage] = useState(1);
+    const itemsPerPage = 10;
+    const [arenaTopic, setArenaTopic] = useState("");
+    const [arenaDifficulty, setArenaDifficulty] = useState("medium");
+    const [arenaCount, setArenaCount] = useState(5);
+    const [arenaTime, setArenaTime] = useState(30);
+    const [arenaMode, setArenaMode] = useState("casual");
+    const [joinCode, setJoinCode] = useState("");
+    const [streak, setStreak] = useState(0);
+    const [streakDays, setStreakDays] = useState<boolean[]>([false, false, false, false, false, false, false]);
     const [profilePic, setProfilePic] = useState<string | null>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [dbUser, setDbUser] = useState<{ name: string; email: string } | null>(null);
@@ -165,6 +187,41 @@ function ArenaContent() {
             if (info) {
                 setDbUser(info);
             }
+
+            const today = new Date().toDateString();
+            const stored = localStorage.getItem("rudranex_streak");
+            let currentStreak = 0;
+            let days: boolean[] = [false, false, false, false, false, false, false];
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    if (parsed.date === today) {
+                        currentStreak = parsed.streak;
+                        days = parsed.days || days;
+                    } else {
+                        const last = new Date(parsed.date);
+                        const diff = Math.floor((Date.now() - last.getTime()) / (1000 * 60 * 60 * 24));
+                        if (diff === 1) {
+                            currentStreak = parsed.streak + 1;
+                        } else {
+                            currentStreak = 1;
+                        }
+                        const dayIdx = new Date().getDay();
+                        const newDays = [...(parsed.days || [false, false, false, false, false, false, false])];
+                        newDays[dayIdx === 0 ? 6 : dayIdx - 1] = true;
+                        days = newDays;
+                    }
+                } catch (e) {}
+            } else {
+                currentStreak = 1;
+                const dayIdx = new Date().getDay();
+                const newDays = [false, false, false, false, false, false, false];
+                newDays[dayIdx === 0 ? 6 : dayIdx - 1] = true;
+                days = newDays;
+            }
+            localStorage.setItem("rudranex_streak", JSON.stringify({ date: today, streak: currentStreak, days }));
+            setStreak(currentStreak);
+            setStreakDays(days);
         }
     }, []);
 
@@ -350,6 +407,53 @@ function ArenaContent() {
         return () => { socket.disconnect(); };
     }, [searchParams]);
 
+    useEffect(() => {
+        if (phase !== "finished") return;
+        if (activeTab === "results") return;
+        setTabLoading(true);
+        (async () => {
+            try {
+                if (activeTab === "leaderboard") {
+                    const res = await getGlobalLeaderboard();
+                    setGlobalLeaderboard(res.leaderboard || []);
+                } else if (activeTab === "history") {
+                    const res = await getArenaHistory();
+                    setArenaHistory(res.history || []);
+                } else if (activeTab === "stats") {
+                    const res = await getUserAnalytics();
+                    setUserStats(res.analytics || {});
+                }
+            } catch (e: any) {
+                console.error("[Tab] Error fetching:", e.message);
+            } finally {
+                setTabLoading(false);
+            }
+        })();
+    }, [activeTab, phase]);
+
+    useEffect(() => {
+        if (phase !== "lobby" || lobbyView === "lobby") return;
+        setTabLoading(true);
+        (async () => {
+            try {
+                if (lobbyView === "leaderboard") {
+                    const res = await getGlobalLeaderboard();
+                    setGlobalLeaderboard(res.leaderboard || []);
+                } else if (lobbyView === "history") {
+                    const res = await getArenaHistory();
+                    setArenaHistory(res.history || []);
+                } else if (lobbyView === "stats") {
+                    const res = await getUserAnalytics();
+                    setUserStats(res.analytics || {});
+                }
+            } catch (e: any) {
+                console.error("[LobbyView] Error fetching:", e.message);
+            } finally {
+                setTabLoading(false);
+            }
+        })();
+    }, [lobbyView, phase]);
+
     const moveToNextQuestion = useCallback((updatedCorrectCount: number) => {
         const nextIdx = currentQuestionIndex + 1;
         if (nextIdx < questions.length) {
@@ -408,7 +512,7 @@ function ArenaContent() {
     };
 
     const handleStart = () => socketRef.current?.emit("start_arena", lobbyCode);
-    const handleLeave = () => { socketRef.current?.disconnect(); router.push("/"); };
+    const handleLeave = () => { socketRef.current?.disconnect(); router.push("/chat"); };
     const handleCopyCode = () => {
         navigator.clipboard.writeText(lobbyCode);
         setCopied(true);
@@ -470,7 +574,7 @@ function ArenaContent() {
 
             {/* Left Sidebar */}
             <aside 
-                style={{ width: `${sidebarWidth}px` }}
+                style={{ width: collapsed ? "72px" : `${sidebarWidth}px` }}
                 className={`hidden md:flex flex-col h-screen flex-shrink-0 border-r relative z-20 ${
                     isResizing ? "transition-none select-none" : "transition-all duration-300"
                 } ${
@@ -480,31 +584,43 @@ function ArenaContent() {
                 {/* Logo Header (shared across all phases, matches Query Mode) */}
                 <div className={`h-16 flex items-center justify-between px-5 border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
                     {phase === "active" ? (
-                        <div onClick={() => setShowQuitConfirm(true)} className="flex items-center gap-2 cursor-pointer select-none">
+                        <div onClick={() => setShowQuitConfirm(true)} className="flex items-center gap-2 cursor-pointer select-none min-w-0">
                             <img
                                 src={isDarkMode ? "/dark.png" : "/light.png"}
                                 alt="Logo"
-                                className={`${isDarkMode ? "w-6 h-6" : "w-[19px] h-[19px]"} object-contain`}
+                                className={`${isDarkMode ? "w-6 h-6" : "w-[19px] h-[19px]"} object-contain shrink-0`}
                             />
-                            <img
-                                src={isDarkMode ? "/dark_text.png" : "/light_text.png"}
-                                alt="Rudra Nexus"
-                                className="h-4 object-contain"
-                            />
+                            {!collapsed && (
+                                <img
+                                    src={isDarkMode ? "/dark_text.png" : "/light_text.png"}
+                                    alt="Rudra Nexus"
+                                    className="h-4 object-contain"
+                                />
+                            )}
                         </div>
                     ) : (
-                        <Link href="/" className="flex items-center gap-2 cursor-pointer select-none">
+                        <Link href="/" className="flex items-center gap-2 cursor-pointer select-none min-w-0">
                             <img
                                 src={isDarkMode ? "/dark.png" : "/light.png"}
                                 alt="Logo"
-                                className={`${isDarkMode ? "w-6 h-6" : "w-[19px] h-[19px]"} object-contain`}
+                                className={`${isDarkMode ? "w-6 h-6" : "w-[19px] h-[19px]"} object-contain shrink-0`}
                             />
-                            <img
-                                src={isDarkMode ? "/dark_text.png" : "/light_text.png"}
-                                alt="Rudra Nexus"
-                                className="h-4 object-contain"
-                            />
+                            {!collapsed && (
+                                <img
+                                    src={isDarkMode ? "/dark_text.png" : "/light_text.png"}
+                                    alt="Rudra Nexus"
+                                    className="h-4 object-contain"
+                                />
+                            )}
                         </Link>
+                    )}
+                    {!collapsed && (
+                        <button
+                            onClick={() => setCollapsed(true)}
+                            className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5"}`}
+                        >
+                            <PanelLeftClose className="h-4 w-4" />
+                        </button>
                     )}
                 </div>
 
@@ -646,25 +762,20 @@ function ArenaContent() {
                     </div>
                 ) : (
                     // Standard Dashboard Navigation Body
-                    <nav className="flex-1 py-6 px-4 space-y-1 overflow-y-auto scrollbar-hide">
-                        {[
-                            { label: "Dashboard", icon: LayoutDashboard, href: "/" },
-                            { label: "Quizzes", icon: Trophy, active: true, href: "/battle-arena" },
-                            { label: "My Attempts", icon: RefreshCw, href: "/arena-history" },
-                            { label: "Bookmarks", icon: Bookmark },
-                            { label: "Topics", icon: BookOpen },
-                            { label: "Leaderboard", icon: Trophy, href: "/global-leaderboard" },
-                            { label: "Analytics", icon: LineChart, href: "/user-analytics" },
-                            { label: "Achievements", icon: Award },
-                            { label: "Settings", icon: Settings },
-                        ].map((item, idx) => {
+                    <nav className={`flex-1 ${collapsed ? "py-6 px-2" : "py-6 px-4"} space-y-1 overflow-y-auto scrollbar-hide`}>
+                        {phase === "finished" ? [
+                            { label: "Results", value: "results" as const, icon: Trophy },
+                            { label: "Leaderboard", value: "leaderboard" as const, icon: TrendingUp },
+                            { label: "My Attempts", value: "history" as const, icon: RefreshCw },
+                            { label: "Analytics", value: "stats" as const, icon: LineChart },
+                        ].map((item) => {
                             const Icon = item.icon;
-                            const isActive = item.active;
+                            const isActive = activeTab === item.value;
                             return (
                                 <button
-                                    key={idx}
+                                    key={item.value}
                                     aria-label={item.label}
-                                    onClick={() => isActive ? null : item.href && router.push(item.href)}
+                                    onClick={() => setActiveTab(item.value)}
                                     className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold transition-all group text-left ${
                                         isActive
                                             ? isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold"
@@ -676,9 +787,42 @@ function ArenaContent() {
                                     <span>{item.label}</span>
                                 </button>
                             );
+                        }) : [
+                            { label: "Quizzes", icon: Trophy, active: true, lobbyView: "lobby" as "lobby" },
+                            { label: "Leaderboard", icon: TrendingUp, lobbyView: "leaderboard" as "leaderboard" },
+                            { label: "Arena History", icon: RefreshCw, lobbyView: "history" as "history" },
+                            { label: "My Stats", icon: LineChart, lobbyView: "stats" as "stats" },
+                        ].map((item, idx) => {
+                            const Icon = item.icon;
+                            const lv = (item as any).lobbyView as typeof lobbyView | undefined;
+                            const isActive = lv ? lobbyView === lv : item.active;
+                            return (
+                                <button
+                                    key={idx}
+                                    aria-label={item.label}
+                                                    onClick={() => {
+                                                        const lv = (item as any).lobbyView;
+                                                        if (lv) {
+                                                            setLobbyView(lv);
+                                                        } else if (!isActive && (item as any).href) {
+                                                            router.push((item as any).href);
+                                                        }
+                                                    }}
+                                    className={`w-full flex items-center ${collapsed ? "justify-center gap-0" : "gap-3.5"} px-4 py-3 rounded-xl text-xs font-semibold transition-all group text-left ${
+                                        isActive
+                                            ? isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold"
+                                            : isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5"
+                                    }`}
+                                    style={{ fontFamily: "var(--font-chat-heading)" }}
+                                    title={collapsed ? item.label : undefined}
+                                >
+                                    <Icon className={`${collapsed ? "h-5 w-5" : "h-4.5 w-4.5"} opacity-60 group-hover:opacity-100`} />
+                                    {!collapsed && <span>{item.label}</span>}
+                                </button>
+                            );
                         })}
 
-                        <div className={`mt-8 p-4 rounded-2xl border transition-all ${
+                        {!collapsed && <div className={`mt-8 p-4 rounded-2xl border transition-all ${
                             isDarkMode ? "bg-[#1f1f1d] border-white/5" : "bg-[#f6f5f2] border-black/5 shadow-sm"
                         }`}>
                             <div className="flex items-center gap-3 mb-3">
@@ -686,13 +830,13 @@ function ArenaContent() {
                                     <Flame className="h-5 w-5 text-orange-500 fill-current" />
                                 </div>
                                 <div className="flex flex-col text-left">
-                                    <span className="text-sm font-black tracking-tight text-orange-500" style={{ fontFamily: "var(--font-chat-heading)" }}>12</span>
+                                    <span className="text-sm font-black tracking-tight text-orange-500" style={{ fontFamily: "var(--font-chat-heading)" }}>{streak}</span>
                                     <span className="text-[8px] font-bold uppercase tracking-wider opacity-40" style={{ fontFamily: "var(--font-chat-accent)" }}>Day Streak</span>
                                 </div>
                             </div>
                             <div className="flex justify-between items-center gap-1 mb-3">
                                 {["M", "T", "W", "T", "F", "S", "S"].map((day, idx) => {
-                                    const isDayActive = idx < 5;
+                                    const isDayActive = streakDays[idx] ?? false;
                                     return (
                                         <div key={idx} className="flex flex-col items-center gap-1.5">
                                             <span className="text-[8px] font-bold opacity-45" style={{ fontFamily: "var(--font-chat-accent)" }}>{day}</span>
@@ -713,57 +857,68 @@ function ArenaContent() {
                             >
                                 You're on fire! 🔥
                             </div>
-                        </div>
+                        </div>}
                     </nav>
                 )}
 
                 {/* Profile Footer (shared across all phases, matches Query Mode) */}
-                <div className={`p-4 border-t ${isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"} flex items-center justify-between relative`}>
-                    <div className="flex items-center gap-2 min-w-0 text-left">
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center relative shrink-0 ${
-                            isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"
-                        } border overflow-hidden`}>
-                            {profilePic ? (
-                                <img src={profilePic} alt="Profile" className="h-full w-full object-cover" />
-                            ) : (
-                                <User className={`h-4 w-4 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
-                            )}
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                            <span 
-                                className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}
-                                style={{ fontFamily: "var(--font-chat-heading)" }}
-                            >
-                                {userName || "User"}
-                            </span>
-                            <span 
-                                className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}
-                                style={{ fontFamily: "var(--font-chat-accent)" }}
-                            >
-                                {userRole === "global_admin" ? "CEO" : (userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : "Learner")}
-                            </span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                        <button 
-                            onClick={toggleTheme} 
-                            aria-label="Toggle Theme"
-                            className={`p-1.5 rounded-lg border transition-all ${
-                                isDarkMode ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5" : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"
-                            }`}
+                <div className={`p-4 border-t ${isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"} flex items-center ${collapsed ? "justify-center gap-2 flex-col" : "justify-between"} relative`}>
+                    {collapsed ? (
+                        <button
+                            onClick={() => setCollapsed(false)}
+                            className={`p-1.5 rounded-lg border transition-all ${isDarkMode ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5" : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"}`}
                         >
-                            {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                            <PanelLeftOpen className="h-4 w-4" />
                         </button>
-                        <button 
-                            onClick={phase === "active" ? () => setShowQuitConfirm(true) : handleLeave} 
-                            aria-label="Leave or Logout"
-                            className={`p-1.5 rounded-lg border transition-all ${
-                                isDarkMode ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5" : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"
-                            }`}
-                        >
-                            <LogOut className="h-4 w-4" />
-                        </button>
-                    </div>
+                    ) : (
+                        <div className="flex items-center gap-2 min-w-0 text-left">
+                            <div className={`h-8 w-8 rounded-full flex items-center justify-center relative shrink-0 ${
+                                isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"
+                            } border overflow-hidden`}>
+                                {profilePic ? (
+                                    <img src={profilePic} alt="Profile" className="h-full w-full object-cover" />
+                                ) : (
+                                    <User className={`h-4 w-4 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
+                                )}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                                <span 
+                                    className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}
+                                    style={{ fontFamily: "var(--font-chat-heading)" }}
+                                >
+                                    {userName || "User"}
+                                </span>
+                                <span 
+                                    className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+                                    style={{ fontFamily: "var(--font-chat-accent)" }}
+                                >
+                                    {userRole === "global_admin" ? "CEO" : (userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : "Learner")}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                    {!collapsed && (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            <button 
+                                onClick={toggleTheme} 
+                                aria-label="Toggle Theme"
+                                className={`p-1.5 rounded-lg border transition-all ${
+                                    isDarkMode ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5" : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"
+                                }`}
+                            >
+                                {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                            </button>
+                            <button 
+                                onClick={() => router.push("/chat")} 
+                                aria-label="Exit to Chat"
+                                className={`p-1.5 rounded-lg border transition-all ${
+                                    isDarkMode ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5" : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"
+                                }`}
+                            >
+                                <LogOut className="h-4 w-4" />
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Resize Handle */}
@@ -789,127 +944,306 @@ function ArenaContent() {
                         }`}
                     />
                 </div>
-                <header className={`h-16 flex-shrink-0 border-b ${
-                    isDarkMode ? "bg-[#0d0d0c] border-white/5" : "bg-[#ebeae7] border-black/5"
-                } flex items-center justify-between px-6 sm:px-8 relative z-30 transition-all duration-300`}>
-
-                    <div className="flex items-center gap-4">
-                        <button 
-                            onClick={() => setShowQuitConfirm(true)} 
-                            aria-label="Go back"
-                            className={`p-2.5 border transition-all rounded-xl flex items-center justify-center ${
-                                isDarkMode ? "border-white/5 text-white/60 hover:bg-white/5" : "border-black/5 text-black/60 hover:bg-black/5"
-                            }`}
-                        >
-                            <ChevronLeft className="h-4.5 w-4.5" />
-                        </button>
-                        <div className="flex flex-col text-left">
-                            <div className="flex items-center gap-2">
-                                <h1 
-                                    className="text-base sm:text-lg font-black tracking-tight uppercase"
-                                    style={{ fontFamily: "var(--font-chat-heading)" }}
-                                >
-                                    {phase === "active" ? (topic || "JavaScript Fundamentals") : "Battle Arena"}
-                                </h1>
-                                {phase === "active" && difficulty && (
-                                    <span 
-                                        className={`text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider font-semibold border ${
-                                            isDarkMode ? "bg-white/5 border-white/10 text-white/70" : "bg-black/5 border-black/10 text-black/70"
-                                        }`}
-                                        style={{ fontFamily: "var(--font-chat-accent)" }}
-                                    >
-                                        {difficulty}
-                                    </span>
-                                )}
-                            </div>
-                            <span 
-                                className={`text-[8px] uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}
-                                style={{ fontFamily: "var(--font-chat-accent)" }}
-                            >
-                                {phase === "active" ? `${gameMode} mode` : "Real-time Multiplayer Quiz"}
-                            </span>
-                        </div>
-                    </div>
-
-                    {phase === "active" && (
-                        <div className="flex items-center gap-4">
-                            <div className={`flex items-center gap-2.5 px-4 py-2 border rounded-xl ${
-                                isDarkMode ? "bg-white/5 border-white/10" : "bg-[#f6f5f2] border-black/5 shadow-sm"
-                            }`}>
-                                <Clock className="h-4 w-4 text-orange-500" />
-                                <div className="flex flex-col text-left">
-                                    <span 
-                                        className="text-[8px] uppercase tracking-wider opacity-40"
-                                        style={{ fontFamily: "var(--font-chat-accent)" }}
-                                    >
-                                        Time Left
-                                    </span>
-                                    <span 
-                                        className="text-sm font-black leading-none"
-                                        style={{ fontFamily: "var(--font-chat-accent)" }}
-                                    >
-                                        {formatTime(timeLeft)}
-                                    </span>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowQuitConfirm(true)} 
-                                className="px-4 py-2 bg-red-500/10 border border-red-500/20 hover:bg-red-500 hover:text-white text-red-500 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all"
-                                style={{ fontFamily: "var(--font-chat-accent)" }}
-                            >
-                                End Quiz
-                            </button>
-                        </div>
-                    )}
-                </header>
+                <div className="h-0 flex-shrink-0" />
 
                 <main className="flex-1 overflow-y-auto scrollbar-hide p-2 sm:p-6 md:p-8">
                     {error && phase !== "finished" && (
                         <div className="max-w-xl mx-auto mt-20 p-6 border border-red-500/30 bg-red-500/10 text-center rounded-3xl">
                             <X className="h-8 w-8 mx-auto mb-4 text-red-400" />
                             <p className="text-red-400 text-sm font-mono mb-6">{error}</p>
-                            <button onClick={() => router.push("/")} className="px-6 py-3 bg-[#f6f5f2] text-black text-[10px] font-black uppercase tracking-[0.3em] rounded-xl hover:scale-105 transition-all">Back to Chat</button>
+                            <button onClick={() => router.push("/chat")} className="px-6 py-3 bg-[#f6f5f2] text-black text-[10px] font-black uppercase tracking-[0.3em] rounded-xl hover:scale-105 transition-all">Back to Chat</button>
                         </div>
                     )}
 
                     {!error && phase === "lobby" && (
-                        <div className="max-w-2xl mx-auto mt-12">
-                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`border p-10 rounded-[2rem] ${isDarkMode ? "border-white/5 bg-[#161615]" : "border-black/5 bg-[#fbfaf8] shadow-md"}`}>
-                                <div className="relative z-10 text-center">
-                                    <h2 className="text-2xl font-black tracking-tight uppercase mb-8">Waiting Room</h2>
-                                    {isHost && (
-                                        <div className={`mb-10 p-6 border rounded-2xl ${isDarkMode ? "border-white/5 bg-white/5" : "bg-black/5 border-black/5"}`}>
-                                            <p className="text-[9px] font-mono uppercase tracking-[0.3em] mb-3 opacity-30">Invite Code</p>
-                                            <div className="flex items-center justify-center gap-4">
-                                                <span className="text-4xl font-black tracking-[0.4em]">{lobbyCode}</span>
-                                                <button onClick={handleCopyCode} className={`p-3 border rounded-xl ${isDarkMode ? "bg-white/10 border-white/20" : "bg-[#f6f5f2] border-black/10 shadow-sm"}`}>
-                                                    {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
-                                                </button>
+                        lobbyView === "lobby" ? (
+                            !lobbyCode && participants.length === 0 ? (
+                                <div className="max-w-3xl mx-auto mt-12">
+                                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                                        <div className={`border p-10 rounded-[2rem] text-center ${isDarkMode ? "border-white/5 bg-[#161615]" : "border-black/5 bg-[#fbfaf8] shadow-md"}`}>
+                                            <Swords className="h-12 w-12 mx-auto mb-4 opacity-60" />
+                                            <h2 className="text-3xl font-black tracking-tight uppercase mb-2">Battle Arena</h2>
+                                            <p className="text-sm opacity-50 mb-8">Create or join a quiz battle to get started</p>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-xl mx-auto">
+                                                <div className={`p-6 border rounded-2xl text-left ${isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.01]"}`}>
+                                                    <h3 className="text-sm font-black uppercase tracking-wider mb-4">Create Battle</h3>
+                                                    <div className="space-y-3">
+                                                        <input value={arenaTopic} onChange={e => setArenaTopic(e.target.value)} placeholder="Topic (e.g. JavaScript)" className={`w-full px-3 py-2.5 border rounded-xl text-xs bg-transparent ${isDarkMode ? "border-white/10 text-white placeholder:text-white/30" : "border-black/10 text-black placeholder:text-black/40"}`} />
+                                                        <select value={arenaDifficulty} onChange={e => setArenaDifficulty(e.target.value)} className={`w-full px-3 py-2.5 border rounded-xl text-xs bg-transparent ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}>
+                                                            <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
+                                                        </select>
+                                                        <div className="flex gap-2">
+                                                            <input type="number" value={arenaCount} onChange={e => setArenaCount(Number(e.target.value))} min={3} max={20} className={`w-1/2 px-3 py-2.5 border rounded-xl text-xs bg-transparent ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`} />
+                                                            <input type="number" value={arenaTime} onChange={e => setArenaTime(Number(e.target.value))} min={10} max={120} className={`w-1/2 px-3 py-2.5 border rounded-xl text-xs bg-transparent ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`} />
+                                                        </div>
+                                                        <select value={arenaMode} onChange={e => setArenaMode(e.target.value)} className={`w-full px-3 py-2.5 border rounded-xl text-xs bg-transparent ${isDarkMode ? "border-white/10 text-white" : "border-black/10 text-black"}`}>
+                                                            <option value="casual">Casual</option><option value="competitive">Competitive</option>
+                                                        </select>
+                                                        <button onClick={() => router.push(`/battle-arena?host=true&name=${encodeURIComponent(userName)}&topic=${encodeURIComponent(arenaTopic)}&difficulty=${arenaDifficulty}&count=${arenaCount}&time=${arenaTime}&mode=${arenaMode}`)} className="w-full py-3 bg-amber-500 text-black rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-amber-600 transition-all">Create Arena</button>
+                                                    </div>
+                                                </div>
+                                                <div className={`p-6 border rounded-2xl text-left ${isDarkMode ? "border-white/5 bg-white/[0.02]" : "border-black/5 bg-black/[0.01]"}`}>
+                                                    <h3 className="text-sm font-black uppercase tracking-wider mb-4">Join Battle</h3>
+                                                    <div className="space-y-3">
+                                                        <input value={joinCode} onChange={e => setJoinCode(e.target.value)} placeholder="Enter lobby code" className={`w-full px-3 py-2.5 border rounded-xl text-xs bg-transparent uppercase tracking-widest ${isDarkMode ? "border-white/10 text-white placeholder:text-white/30" : "border-black/10 text-black placeholder:text-black/40"}`} />
+                                                        <button onClick={() => joinCode && router.push(`/battle-arena?code=${encodeURIComponent(joinCode)}&name=${encodeURIComponent(userName)}`)} className={`w-full py-3 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"}`}>Join Arena</button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    )}
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-2 mb-4 opacity-50"><Users className="h-4 w-4" /><span className="text-[10px] font-mono uppercase tracking-widest">Participants ({participants.length})</span></div>
-                                        {participants.map((p, i) => (
-                                            <div key={p.id} className={`flex items-center justify-between p-4 border rounded-2xl ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}><User className="h-4 w-4" /></div>
-                                                    <span className="text-sm font-medium">{p.name}</span>
-                                                </div>
-                                                {i === 0 && <span className="text-[8px] font-mono px-2 py-1 bg-amber-500/20 text-amber-500 rounded-full uppercase">Host</span>}
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {isHost && (
-                                        <button onClick={handleStart} disabled={isStarting} className={`mt-10 w-full py-5 text-[10px] font-black uppercase tracking-[0.3em] rounded-[2rem] transition-all flex items-center justify-center gap-3 ${
-                                            isDarkMode ? "bg-white text-black" : "bg-black text-white"
-                                        }`}>
-                                            {isStarting ? <><RefreshCw className="h-4 w-4 animate-spin" /> Starting...</> : "Start Battle"}
-                                        </button>
-                                    )}
+                                    </motion.div>
                                 </div>
+                            ) : (
+                                <div className="max-w-2xl mx-auto mt-12">
+                                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`border p-10 rounded-[2rem] ${isDarkMode ? "border-white/5 bg-[#161615]" : "border-black/5 bg-[#fbfaf8] shadow-md"}`}>
+                                        <div className="relative z-10 text-center">
+                                            <h2 className="text-2xl font-black tracking-tight uppercase mb-8">Waiting Room</h2>
+                                            {isHost && (
+                                                <div className={`mb-10 p-6 border rounded-2xl ${isDarkMode ? "border-white/5 bg-white/5" : "bg-black/5 border-black/5"}`}>
+                                                    <p className="text-[9px] font-mono uppercase tracking-[0.3em] mb-3 opacity-30">Invite Code</p>
+                                                    <div className="flex items-center justify-center gap-4">
+                                                        <span className="text-4xl font-black tracking-[0.4em]">{lobbyCode}</span>
+                                                        <button onClick={handleCopyCode} className={`p-3 border rounded-xl ${isDarkMode ? "bg-white/10 border-white/20" : "bg-[#f6f5f2] border-black/10 shadow-sm"}`}>
+                                                            {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="space-y-3">
+                                                <div className="flex items-center gap-2 mb-4 opacity-50"><Users className="h-4 w-4" /><span className="text-[10px] font-mono uppercase tracking-widest">Participants ({participants.length})</span></div>
+                                                {participants.map((p, i) => (
+                                                    <div key={p.id} className={`flex items-center justify-between p-4 border rounded-2xl ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}><User className="h-4 w-4" /></div>
+                                                            <span className="text-sm font-medium">{p.name}</span>
+                                                        </div>
+                                                        {i === 0 && <span className="text-[8px] font-mono px-2 py-1 bg-amber-500/20 text-amber-500 rounded-full uppercase">Host</span>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {isHost && (
+                                                <button onClick={handleStart} disabled={isStarting} className={`mt-10 w-full py-5 text-[10px] font-black uppercase tracking-[0.3em] rounded-[2rem] transition-all flex items-center justify-center gap-3 ${isDarkMode ? "bg-white text-black" : "bg-black text-white"}`}>
+                                                    {isStarting ? <><RefreshCw className="h-4 w-4 animate-spin" /> Starting...</> : "Start Battle"}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            )
+                        ) : (
+                            <motion.div key={lobbyView} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`border p-6 sm:p-8 rounded-[2rem] ${isDarkMode ? "border-white/5 bg-[#161615]" : "border-black/5 bg-[#fbfaf8] shadow-md"}`}>
+                                {tabLoading ? (
+                                    <div className="flex items-center justify-center py-20">
+                                        <RefreshCw className="h-6 w-6 animate-spin opacity-50" />
+                                    </div>
+                                ) : lobbyView === "leaderboard" ? (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="flex items-center gap-2">
+                                                <TrendingUp className="h-5 w-5 opacity-60" />
+                                                <h3 className="text-base font-black uppercase tracking-tight">Global Leaderboard</h3>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={() => setLeaderboardViewMode("table")} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all ${leaderboardViewMode === "table" ? (isDarkMode ? "bg-white/10 border-white/20 text-white" : "bg-black/10 border-black/20 text-black") : (isDarkMode ? "border-white/5 text-white/40 hover:text-white" : "border-black/5 text-black/40 hover:text-black")}`}><BarChart3 className="h-3.5 w-3.5 inline mr-1" />Table</button>
+                                                <button onClick={() => setLeaderboardViewMode("graph")} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all ${leaderboardViewMode === "graph" ? (isDarkMode ? "bg-white/10 border-white/20 text-white" : "bg-black/10 border-black/20 text-black") : (isDarkMode ? "border-white/5 text-white/40 hover:text-white" : "border-black/5 text-black/40 hover:text-black")}`}><LineChart className="h-3.5 w-3.5 inline mr-1" />Graph</button>
+                                            </div>
+                                        </div>
+                                        {globalLeaderboard.length === 0 ? (
+                                            <p className="text-sm opacity-50 text-center py-10">No leaderboard data available.</p>
+                                        ) : leaderboardViewMode === "graph" ? (
+                                            <div className="h-80 w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <BarChart data={globalLeaderboard.slice(0, 20)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
+                                                        <XAxis dataKey="name" tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 10 }} axisLine={false} tickLine={false} />
+                                                        <YAxis tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 10 }} axisLine={false} tickLine={false} />
+                                                        <Tooltip contentStyle={{ backgroundColor: isDarkMode ? "#161615" : "#ffffff", border: isDarkMode ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)", borderRadius: "12px", fontSize: "12px" }} />
+                                                        <Bar dataKey="score" radius={[4, 4, 0, 0]} fill={isDarkMode ? "#ffffff" : "#000000"} />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="relative mb-4">
+                                                    <input value={leaderboardSearch} onChange={e => { setLeaderboardSearch(e.target.value); setLeaderboardPage(1) }} placeholder="Search by name..." className={`w-full px-4 py-2.5 border rounded-xl text-xs bg-transparent pl-10 ${isDarkMode ? "border-white/10 text-white placeholder:text-white/30" : "border-black/10 text-black placeholder:text-black/40"}`} />
+                                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
+                                                </div>
+                                                {(() => {
+                                                    const filtered = globalLeaderboard.filter(e => e.name.toLowerCase().includes(leaderboardSearch.toLowerCase()));
+                                                    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+                                                    const paged = filtered.slice((leaderboardPage - 1) * itemsPerPage, leaderboardPage * itemsPerPage);
+                                                    return (
+                                                        <div className="overflow-x-auto">
+                                                            <table className="w-full text-xs">
+                                                                <thead>
+                                                                    <tr className={`border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                                        <th className="text-left py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Rank</th>
+                                                                        <th className="text-left py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Player</th>
+                                                                        <th className="text-right py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Score</th>
+                                                                        <th className="text-right py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Wins</th>
+                                                                        <th className="text-right py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Activities</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {paged.map((entry) => (
+                                                                        <tr key={entry.rank} className={`border-b ${isDarkMode ? "border-white/5" : "border-black/5"} ${isDarkMode ? "hover:bg-white/[0.02]" : "hover:bg-black/[0.02]"} transition-colors`}>
+                                                                            <td className="py-3 px-2">
+                                                                                <div className="relative h-8 w-8 flex items-center justify-center">
+                                                                                    {entry.rank === 1 ? <img src="/1 medal.svg" alt="1st" className="h-full w-full object-contain" />
+                                                                                    : entry.rank === 2 ? <img src="/2medal.svg" alt="2nd" className="h-full w-full object-contain" />
+                                                                                    : entry.rank === 3 ? <img src="/3medal.svg" alt="3rd" className="h-full w-full object-contain" />
+                                                                                    : <><img src="/badge.svg" alt="" className="h-full w-full object-contain absolute" /><span className="absolute text-[8px] font-black text-white">{entry.rank}</span></>}
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="py-3 px-2 font-semibold">{entry.name}</td>
+                                                                            <td className="py-3 px-2 text-right font-bold">{entry.score}</td>
+                                                                            <td className="py-3 px-2 text-right">{entry.arena_wins ?? 0}</td>
+                                                                            <td className="py-3 px-2 text-right opacity-60">{entry.activities ?? 0}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                            {totalPages > 1 && (
+                                                                <div className="flex items-center justify-center gap-2 mt-4">
+                                                                    <button onClick={() => setLeaderboardPage(Math.max(1, leaderboardPage - 1))} disabled={leaderboardPage === 1} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all disabled:opacity-30 ${isDarkMode ? "border-white/10 text-white/60" : "border-black/10 text-black/60"}`}>Prev</button>
+                                                                    <span className="text-[10px] opacity-50">{leaderboardPage} / {totalPages}</span>
+                                                                    <button onClick={() => setLeaderboardPage(Math.min(totalPages, leaderboardPage + 1))} disabled={leaderboardPage === totalPages} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all disabled:opacity-30 ${isDarkMode ? "border-white/10 text-white/60" : "border-black/10 text-black/60"}`}>Next</button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </>
+                                        )}
+                                    </div>
+                                ) : lobbyView === "history" ? (
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-6">
+                                            <RefreshCw className="h-5 w-5 opacity-60" />
+                                            <h3 className="text-base font-black uppercase tracking-tight">Arena History</h3>
+                                        </div>
+                                        {arenaHistory.length === 0 ? (
+                                            <p className="text-sm opacity-50 text-center py-10">No arena history available.</p>
+                                        ) : (
+                                            <>
+                                                {/* Summary Stats */}
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                                    <div className={`p-4 border rounded-2xl text-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                        <span className="text-xl font-black">{arenaHistory.length}</span>
+                                                        <span className="text-[8px] uppercase tracking-wider opacity-40 block mt-1">Total Battles</span>
+                                                    </div>
+                                                    <div className={`p-4 border rounded-2xl text-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                        <span className="text-xl font-black">{arenaHistory.filter(h => h.status === "completed").length}</span>
+                                                        <span className="text-[8px] uppercase tracking-wider opacity-40 block mt-1">Completed</span>
+                                                    </div>
+                                                    <div className={`p-4 border rounded-2xl text-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                        <span className="text-xl font-black">{new Set(arenaHistory.map(h => h.topic)).size}</span>
+                                                        <span className="text-[8px] uppercase tracking-wider opacity-40 block mt-1">Topics</span>
+                                                    </div>
+                                                    <div className={`p-4 border rounded-2xl text-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                        <span className="text-xl font-black">{arenaHistory.reduce((a, h) => a + (h.leaderboard?.length ?? 0), 0)}</span>
+                                                        <span className="text-[8px] uppercase tracking-wider opacity-40 block mt-1">Total Players</span>
+                                                    </div>
+                                                </div>
+                                                {/* Difficulty Distribution Chart */}
+                                                <div className={`p-4 border rounded-2xl mb-6 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                    <h4 className="text-[9px] font-bold uppercase tracking-wider opacity-50 mb-3">Difficulty Distribution</h4>
+                                                    <div className="h-40">
+                                                        <ResponsiveContainer width="100%" height="100%">
+                                                            <PieChart>
+                                                                <Pie data={(() => {
+                                                                    const counts: Record<string, number> = {};
+                                                                    arenaHistory.forEach(h => { counts[h.difficulty] = (counts[h.difficulty] || 0) + 1; });
+                                                                    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+                                                                })()} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}>
+                                                                    {["#22c55e", "#eab308", "#ef4444"].map((color, i) => <Cell key={i} fill={color} />)}
+                                                                </Pie>
+                                                                <Tooltip />
+                                                            </PieChart>
+                                                        </ResponsiveContainer>
+                                                    </div>
+                                                </div>
+                                                {/* History Table */}
+                                                <div className="overflow-x-auto">
+                                                    {(() => {
+                                                        const totalPages = Math.ceil(arenaHistory.length / itemsPerPage);
+                                                        const paged = arenaHistory.slice((historyPage - 1) * itemsPerPage, historyPage * itemsPerPage);
+                                                        return (
+                                                            <>
+                                                                <table className="w-full text-xs">
+                                                                    <thead>
+                                                                        <tr className={`border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                                            <th className="text-left py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Topic</th>
+                                                                            <th className="text-left py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Difficulty</th>
+                                                                            <th className="text-center py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Questions</th>
+                                                                            <th className="text-center py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Players</th>
+                                                                            <th className="text-center py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Status</th>
+                                                                            <th className="text-right py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Date</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {paged.map((item) => (
+                                                                            <tr key={item.id} className={`border-b ${isDarkMode ? "border-white/5" : "border-black/5"} ${isDarkMode ? "hover:bg-white/[0.02]" : "hover:bg-black/[0.02]"} transition-colors`}>
+                                                                                <td className="py-3 px-2 font-semibold">{item.topic}</td>
+                                                                                <td className="py-3 px-2">
+                                                                                    <span className={`text-[9px] px-2 py-0.5 rounded uppercase font-bold ${isDarkMode ? "bg-white/5 text-white/70" : "bg-black/5 text-black/70"}`}>{item.difficulty}</span>
+                                                                                </td>
+                                                                                <td className="py-3 px-2 text-center">{item.question_count}</td>
+                                                                                <td className="py-3 px-2 text-center">{item.participant_count ?? 0}</td>
+                                                                                <td className="py-3 px-2 text-center">
+                                                                                    <span className={`text-[9px] px-2 py-0.5 rounded uppercase font-bold ${item.status === "completed" ? "text-emerald-500 bg-emerald-500/10" : "text-amber-500 bg-amber-500/10"}`}>{item.status}</span>
+                                                                                </td>
+                                                                                <td className="py-3 px-2 text-right opacity-60">{new Date(item.created_at).toLocaleDateString()}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                                {totalPages > 1 && (
+                                                                    <div className="flex items-center justify-center gap-2 mt-4">
+                                                                        <button onClick={() => setHistoryPage(Math.max(1, historyPage - 1))} disabled={historyPage === 1} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all disabled:opacity-30 ${isDarkMode ? "border-white/10 text-white/60" : "border-black/10 text-black/60"}`}>Prev</button>
+                                                                        <span className="text-[10px] opacity-50">{historyPage} / {totalPages}</span>
+                                                                        <button onClick={() => setHistoryPage(Math.min(totalPages, historyPage + 1))} disabled={historyPage === totalPages} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all disabled:opacity-30 ${isDarkMode ? "border-white/10 text-white/60" : "border-black/10 text-black/60"}`}>Next</button>
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                ) : lobbyView === "stats" ? (
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-6">
+                                            <LineChart className="h-5 w-5 opacity-60" />
+                                            <h3 className="text-base font-black uppercase tracking-tight">My Stats</h3>
+                                        </div>
+                                        {userStats ? (
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className={`p-4 border rounded-2xl text-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                    <span className="text-2xl font-black">{userStats.total_battles ?? 0}</span>
+                                                    <span className="text-[9px] uppercase tracking-wider opacity-40 block mt-1">Battles</span>
+                                                </div>
+                                                <div className={`p-4 border rounded-2xl text-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                    <span className="text-2xl font-black">{userStats.total_wins ?? 0}</span>
+                                                    <span className="text-[9px] uppercase tracking-wider opacity-40 block mt-1">Wins</span>
+                                                </div>
+                                                <div className={`p-4 border rounded-2xl text-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                    <span className="text-2xl font-black">{userStats.total_participation ?? 0}</span>
+                                                    <span className="text-[9px] uppercase tracking-wider opacity-40 block mt-1">Participation</span>
+                                                </div>
+                                                <div className={`p-4 border rounded-2xl text-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                    <span className="text-2xl font-black">{(userStats.win_rate ?? 0).toFixed(1)}%</span>
+                                                    <span className="text-[9px] uppercase tracking-wider opacity-40 block mt-1">Win Rate</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm opacity-50 text-center py-10">No stats available.</p>
+                                        )}
+                                    </div>
+                                ) : null}
                             </motion.div>
-                        </div>
+                        )
                     )}
 
                     {!error && phase === "active" && questions.length > 0 && (
@@ -1380,8 +1714,8 @@ function ArenaContent() {
                         <h3 className="text-xl font-black uppercase mb-2">Quit Battle?</h3>
                         <p className="text-sm opacity-50 mb-8">You will lose all current progress and forfeit the match.</p>
                         <div className="flex gap-4">
-                            <button onClick={() => setShowQuitConfirm(false)} className="flex-1 py-4 border border-inherit rounded-2xl text-[10px] font-black uppercase opacity-60">Cancel</button>
-                            <button onClick={handleLeave} className="flex-1 py-4 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase">Quit</button>
+                            <button onClick={() => setShowQuitConfirm(false)} className={`flex-1 py-4 border rounded-2xl text-[10px] font-black uppercase transition-all hover:scale-[1.02] ${isDarkMode ? "border-white/10 text-white/60 hover:bg-white/5 hover:text-white" : "border-black/10 text-black/60 hover:bg-black/5 hover:text-black"}`}>Cancel</button>
+                            <button onClick={handleLeave} className="flex-1 py-4 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase transition-all hover:bg-red-600 hover:scale-[1.02] shadow-lg shadow-red-500/20">Quit</button>
                         </div>
                     </motion.div>
                 </div>
