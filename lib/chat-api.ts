@@ -2209,7 +2209,7 @@ export async function getArenaHistory() {
 
   const normalized: ArenaHistoryResponse = {
     success: data.success ?? true,
-    history: data.history || data.data || [],
+    history: Array.isArray(data) ? data : (data.history || data.data || []),
     error: data.error,
   }
 

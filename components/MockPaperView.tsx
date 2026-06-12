@@ -27,6 +27,20 @@ const MockPaperView: React.FC<MockPaperViewProps> = ({ paper, examType, duration
     return (
         <>
             <style dangerouslySetInnerHTML={{ __html: `
+                #printable-paper h1,
+                #printable-paper h2,
+                #printable-paper h3,
+                #printable-paper h4,
+                #printable-paper h5,
+                #printable-paper h6 {
+                    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+                    font-weight: bold !important;
+                }
+                #printable-paper strong {
+                    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+                    font-weight: bold !important;
+                }
+
                 @media print {
                     @page { 
                         margin: 15mm; 

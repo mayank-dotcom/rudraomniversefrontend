@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
+import { isAuthenticated } from "@/lib/auth";
+import AuthModal from "@/components/ui/AuthModal";
 
 const LapViewer = dynamic(() => import("@/components/LapViewer"), { ssr: false });
 const InfiniteMenu = dynamic(() => import("@/components/InfiniteMenu"), { ssr: false });
@@ -1116,6 +1118,12 @@ const Index = () => {
   const timeoutsRef = useRef<Record<number, NodeJS.Timeout>>({});
   const [activeStudentCard, setActiveStudentCard] = useState(0);
   const [activeEnterpriseCard, setActiveEnterpriseCard] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+
+  useEffect(() => {
+    setIsLoggedIn(isAuthenticated());
+  }, []);
 
   useEffect(() => {
     const reviewsList = reviewColumns.flat();
@@ -1860,7 +1868,16 @@ const Index = () => {
                 transform the way they work and learn.
               </p>
               <div className="flex flex-wrap justify-center gap-4">
-                <button className="text-sm bg-white text-black px-8 py-3.5 rounded-lg font-medium hover:bg-white/90 transition-all">
+                <button
+                  onClick={() => {
+                    if (isLoggedIn) {
+                      window.location.href = "/chat";
+                    } else {
+                      setAuthOpen(true);
+                    }
+                  }}
+                  className="text-sm bg-white text-black px-8 py-3.5 rounded-lg font-medium hover:bg-white/90 transition-all"
+                >
                   Start Free Trial
                 </button>
                 <button className="text-sm border border-white/10 text-white/70 px-8 py-3.5 rounded-lg font-medium hover:border-white/20 hover:text-white transition-all">
@@ -1974,6 +1991,7 @@ const Index = () => {
           </div>
         </footer>
       </div>
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 };

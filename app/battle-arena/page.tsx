@@ -1,13 +1,33 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState, useCallback } from "react";
+import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
-import { motion } from "framer-motion";
-import { Swords, Users, Clock, Trophy, Copy, Check, Play, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, AlertTriangle, Eye, Moon, Sun, ChevronLeft, Flag, Percent, Award, TrendingUp } from "lucide-react";
-import { getApiKey } from "@/lib/auth";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart as ReLineChart, Line } from "recharts";
+import { motion, AnimatePresence } from "framer-motion";
+import { Swords, Users, Clock, Trophy, Copy, Check, Play, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, AlertTriangle, Eye, Moon, Sun, ChevronLeft, Flag, Percent, Award, TrendingUp, LayoutDashboard, BookOpen, Bookmark, Settings, LogOut, ChevronDown, Flame, Shield, Sparkles } from "lucide-react";
+import { getApiKey, getUserInfo, getProfilePicture, getUserRole } from "@/lib/auth";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart as ReLineChart, Line, AreaChart, Area } from "recharts";
 import { ThemeProvider, useTheme } from "@/lib/theme-context";
+import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
+import Link from "next/link";
+
+const chatHeadingFont = Poppins({
+    subsets: ["latin"],
+    weight: ["400", "500", "600", "700", "800"],
+    variable: "--font-chat-heading",
+});
+
+const chatBodyFont = Roboto({
+    subsets: ["latin"],
+    weight: ["400", "500", "700"],
+    variable: "--font-chat-body",
+});
+
+const chatAccentFont = Space_Grotesk({
+    subsets: ["latin"],
+    weight: ["400", "500", "700"],
+    variable: "--font-chat-accent",
+});
 
 type Phase = "lobby" | "active" | "finished";
 type Question = {
@@ -25,12 +45,23 @@ type Participant = {
     finished?: boolean;
 };
 
+function formatTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `00:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
 function ArenaContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const socketRef = useRef<Socket | null>(null);
 
     const [phase, setPhase] = useState<Phase>("lobby");
+    const phaseRef = useRef<Phase>("lobby");
+    useEffect(() => {
+        phaseRef.current = phase;
+    }, [phase]);
+
     const [lobbyCode, setLobbyCode] = useState(searchParams.get("code") || "");
     const [isHost, setIsHost] = useState(searchParams.get("host") === "true");
     const [adminName, setAdminName] = useState(searchParams.get("name") || "");
@@ -52,7 +83,6 @@ function ArenaContent() {
     const [error, setError] = useState<string | null>(null);
     const [leaderboard, setLeaderboard] = useState<Participant[]>([]);
     const [showAnalysis, setShowAnalysis] = useState(false);
-    const [tab, setTab] = useState<"leaderboard" | "analysis">("leaderboard");
     const [showQuitConfirm, setShowQuitConfirm] = useState(false);
     const [hasSubmitted, setHasSubmitted] = useState(false);
     const audioCtxRef = useRef<AudioContext | null>(null);
@@ -62,7 +92,6 @@ function ArenaContent() {
     const [flaggedQuestions, setFlaggedQuestions] = useState<boolean[]>([]);
     const gameStartTimeRef = useRef<number>(0);
 
-    // ── Server-sync timer refs (shared across closure boundaries) ──
     const questionStartTimeRef = useRef<number>(0);
     const questionDurationRef = useRef<number>(30);
     const selectedAnswerRef = useRef<number | null>(null);
@@ -75,11 +104,66 @@ function ArenaContent() {
 
     const { isDarkMode, toggleTheme } = useTheme();
 
+    const [sidebarWidth, setSidebarWidth] = useState(260);
+    const [isResizing, setIsResizing] = useState(false);
+    const [profilePic, setProfilePic] = useState<string | null>(null);
+    const [userRole, setUserRole] = useState<string | null>(null);
+    const [dbUser, setDbUser] = useState<{ name: string; email: string } | null>(null);
+
+    const userName = dbUser?.name || (isHost ? adminName : participantName) || "Aman Verma";
+    const userInitials = userName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
+    const startResizing = useCallback((e: React.MouseEvent) => {
+        setIsResizing(true);
+        e.preventDefault();
+    }, []);
+
+    const stopResizing = useCallback(() => {
+        setIsResizing(false);
+    }, []);
+
+    const resize = useCallback((e: MouseEvent) => {
+        if (isResizing) {
+            const newWidth = e.clientX;
+            if (newWidth > 200 && newWidth < 450) {
+                setSidebarWidth(newWidth);
+            }
+        }
+    }, [isResizing]);
+
+    useEffect(() => {
+        window.addEventListener("mousemove", resize);
+        window.addEventListener("mouseup", stopResizing);
+        return () => {
+            window.removeEventListener("mousemove", resize);
+            window.removeEventListener("mouseup", stopResizing);
+        };
+    }, [resize, stopResizing]);
+
+    useEffect(() => {
+        if (isResizing) {
+            document.body.style.userSelect = "none";
+            document.body.style.cursor = "col-resize";
+        } else {
+            document.body.style.userSelect = "";
+            document.body.style.cursor = "";
+        }
+        return () => {
+            document.body.style.userSelect = "";
+            document.body.style.cursor = "";
+        };
+    }, [isResizing]);
+
     useEffect(() => {
         if (typeof window !== "undefined") {
             const savedAccent = localStorage.getItem("rudranex_accent");
-            if (savedAccent) {
-                setAccent(savedAccent);
+            if (savedAccent) setAccent(savedAccent);
+            setProfilePic(getProfilePicture());
+            setUserRole(getUserRole());
+
+            const info = getUserInfo();
+            if (info) {
+                setDbUser(info);
             }
         }
     }, []);
@@ -94,7 +178,6 @@ function ArenaContent() {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         audioCtxRef.current = ctx;
         fetch("/sword_sound.mp3")
-
             .then((res) => res.arrayBuffer())
             .then((data) => ctx.decodeAudioData(data))
             .then((buffer) => { audioBufferRef.current = buffer; })
@@ -130,6 +213,11 @@ function ArenaContent() {
         }
     }, [phase, playSwordSound]);
 
+    const userNameRef = useRef<string>(userName);
+    useEffect(() => {
+        userNameRef.current = userName;
+    }, [userName]);
+
     useEffect(() => {
         const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "";
         const SOCKET_URL = BASE_URL.replace("/api/v1", "");
@@ -148,6 +236,14 @@ function ArenaContent() {
 
         socket.on("connect", () => {
             setError(null);
+            if (lobbyCodeRef.current) {
+                socket.emit("join_arena", {
+                    lobbyCode: lobbyCodeRef.current,
+                    participantName: userNameRef.current,
+                });
+                return;
+            }
+
             if (searchParams.get("host") === "true") {
                 socket.emit("create_arena", {
                     topic: searchParams.get("topic") || "",
@@ -173,9 +269,7 @@ function ArenaContent() {
                 setTimePerQuestion(arena.timePerQuestion);
                 questionDurationRef.current = arena.timePerQuestion;
             }
-            if (arena.gameMode) {
-                setGameMode(arena.gameMode);
-            }
+            if (arena.gameMode) setGameMode(arena.gameMode);
         });
 
         socket.on("arena_joined", (arena) => {
@@ -186,26 +280,15 @@ function ArenaContent() {
                 setTimePerQuestion(arena.timePerQuestion);
                 questionDurationRef.current = arena.timePerQuestion;
             }
-            if (arena.gameMode) {
-                setGameMode(arena.gameMode);
-            }
+            if (arena.gameMode) setGameMode(arena.gameMode);
         });
 
-        socket.on("participant_joined", (data) => {
-            setParticipants(data.participants);
-        });
-
-        socket.on("participant_left", (data) => {
-            setParticipants(data.participants);
-        });
-
-        socket.on("arena_starting", () => {
-            setIsStarting(true);
-        });
+        socket.on("participant_joined", (data) => setParticipants(data.participants));
+        socket.on("participant_left", (data) => setParticipants(data.participants));
+        socket.on("arena_starting", () => setIsStarting(true));
 
         socket.on("arena_started", (data) => {
             const tpq = data.timePerQuestion || 30;
-            // Init all refs
             questionsRef.current = data.questions;
             correctCountRef.current = 0;
             currentQuestionIndexRef.current = 0;
@@ -213,8 +296,7 @@ function ArenaContent() {
             answersRef.current = new Array(data.questions.length).fill(-1);
             hasTimerEmittedRef.current = false;
             questionDurationRef.current = tpq;
-            questionStartTimeRef.current = 0; // will be set by question_timer_start
-            // Update state
+            
             setQuestions(data.questions);
             setFlaggedQuestions(new Array(data.questions.length).fill(false));
             gameStartTimeRef.current = Date.now();
@@ -228,31 +310,24 @@ function ArenaContent() {
             setHasSubmitted(false);
         });
 
-        // ── Server-authoritative per-question timer sync ──────────────────
         socket.on("question_timer_start", (data: { questionIndex: number; serverTime: number; duration: number }) => {
-            const { questionIndex, serverTime, duration } = data;
-            // Only sync initially (e.g. at start or if reconnecting), or if it's the very first question index.
-            // If the client is already active and playing, we ignore server-driven question timer syncs to prevent yanking.
             if (currentQuestionIndexRef.current === 0 && answersRef.current.every(a => a === -1)) {
-                questionStartTimeRef.current = serverTime;
-                questionDurationRef.current = duration;
+                questionStartTimeRef.current = data.serverTime;
+                questionDurationRef.current = data.duration;
                 hasTimerEmittedRef.current = false;
-                const elapsed = Math.floor((Date.now() - serverTime) / 1000);
-                const remaining = Math.max(0, duration - elapsed);
-                setCurrentQuestionIndex(questionIndex);
-                currentQuestionIndexRef.current = questionIndex;
+                const elapsed = Math.floor((Date.now() - data.serverTime) / 1000);
+                const remaining = Math.max(0, data.duration - elapsed);
+                setCurrentQuestionIndex(data.questionIndex);
+                currentQuestionIndexRef.current = data.questionIndex;
                 setSelectedAnswer(null);
                 selectedAnswerRef.current = null;
                 setHasSubmitted(false);
                 setTimeLeft(remaining);
-                setTimePerQuestion(duration);
+                setTimePerQuestion(data.duration);
             }
         });
 
-        socket.on("participant_progress", (updatedParticipants) => {
-            setParticipants(updatedParticipants);
-        });
-
+        socket.on("participant_progress", (updatedParticipants) => setParticipants(updatedParticipants));
         socket.on("arena_finished", (data) => {
             setLeaderboard(data.leaderboard);
             setPhase("finished");
@@ -260,29 +335,20 @@ function ArenaContent() {
         });
 
         socket.on("error", (data) => {
+            if (phaseRef.current === "finished") return;
             setError(data.message);
             socket.disconnect();
         });
 
-        socket.on("disconnect", (reason: string) => {
-            // Only show error for unexpected disconnects, not manual quit
-            if (reason !== "io client disconnect") {
-                setError("Connection lost. Reconnecting...");
-            }
+        socket.on("disconnect", (reason) => {
+            if (phaseRef.current === "finished") return;
+            if (reason !== "io client disconnect") setError("Connection lost. Reconnecting...");
         });
 
-        socket.on("reconnect", () => {
-            setError(null);
-        });
+        socket.on("reconnect", () => setError(null));
 
-        socket.on("reconnect_failed", () => {
-            setError("Connection failed. Please refresh the page.");
-        });
-
-        return () => {
-            socket.disconnect();
-        };
-    }, []);
+        return () => { socket.disconnect(); };
+    }, [searchParams]);
 
     const moveToNextQuestion = useCallback((updatedCorrectCount: number) => {
         const nextIdx = currentQuestionIndex + 1;
@@ -293,9 +359,7 @@ function ArenaContent() {
             selectedAnswerRef.current = null;
             setTimeLeft(timePerQuestion);
         } else {
-            // End of quiz: calculate time taken
             const timeTaken = Math.max(1, Math.floor((Date.now() - gameStartTimeRef.current) / 1000));
-            // Emit final results
             socketRef.current?.emit("submit_answer", {
                 lobbyCode: lobbyCodeRef.current,
                 score: updatedCorrectCount,
@@ -305,35 +369,21 @@ function ArenaContent() {
         }
     }, [currentQuestionIndex, questions.length, timePerQuestion]);
 
-    // Client-side count-down timer
     useEffect(() => {
         if (phase !== "active" || hasSubmitted || questions.length === 0) return;
-
         const interval = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev > 0) {
-                    return prev - 1;
-                }
-                return 0;
-            });
+            setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
         }, 1000);
-
         return () => clearInterval(interval);
     }, [phase, hasSubmitted, questions.length]);
 
-    // Handle when time runs out on the current question
     useEffect(() => {
         if (phase === "active" && !hasSubmitted && timeLeft === 0 && questions.length > 0) {
             const newAnswers = [...answers];
             newAnswers[currentQuestionIndex] = -1;
             answersRef.current = newAnswers;
             setAnswers(newAnswers);
-
-            socketRef.current?.emit("update_score", {
-                lobbyCode: lobbyCodeRef.current,
-                score: correctCount,
-            });
-
+            socketRef.current?.emit("update_score", { lobbyCode: lobbyCodeRef.current, score: correctCount });
             moveToNextQuestion(correctCount);
         }
     }, [timeLeft, phase, hasSubmitted, questions.length, answers, correctCount, moveToNextQuestion]);
@@ -342,7 +392,6 @@ function ArenaContent() {
         if (selectedAnswer !== null) return;
         setSelectedAnswer(optionIndex);
         selectedAnswerRef.current = optionIndex;
-
         const newAnswers = [...answers];
         newAnswers[currentQuestionIndex] = optionIndex;
         setAnswers(newAnswers);
@@ -354,296 +403,508 @@ function ArenaContent() {
             setCorrectCount(nextCorrectCount);
             correctCountRef.current = nextCorrectCount;
         }
-
-        socketRef.current?.emit("update_score", {
-            lobbyCode: lobbyCodeRef.current,
-            score: nextCorrectCount,
-        });
-
+        socketRef.current?.emit("update_score", { lobbyCode: lobbyCodeRef.current, score: nextCorrectCount });
         moveToNextQuestion(nextCorrectCount);
     };
 
-    const handleStart = () => {
-        socketRef.current?.emit("start_arena", lobbyCode);
-    };
-
-    const handleLeave = () => {
-        socketRef.current?.disconnect();
-        router.push("/");
-    };
-
+    const handleStart = () => socketRef.current?.emit("start_arena", lobbyCode);
+    const handleLeave = () => { socketRef.current?.disconnect(); router.push("/"); };
     const handleCopyCode = () => {
         navigator.clipboard.writeText(lobbyCode);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const progressPercent = questions.length > 0
-        ? ((currentQuestionIndex + (selectedAnswer !== null ? 1 : 0)) / questions.length) * 100
-        : 0;
-
-    const totalScore = leaderboard.find((p) => {
-        const myName = isHost ? adminName : participantName;
-        return p.name === myName;
-    })?.score || 0;
-
-    const barData = leaderboard.map((p) => ({
-        name: p.name,
-        score: p.score,
-    }));
-
-    const lineData = questions.map((_, i) => {
-        const entry: Record<string, any> = { question: `Q${i + 1}` };
-        leaderboard.forEach((p) => {
-            entry[p.name] = Math.round((p.score / questions.length) * (i + 1));
+    const progressChartData = useCallback(() => {
+        return questions.map((_, i) => {
+            let cumulativeCorrect = 0;
+            for (let j = 0; j <= i; j++) {
+                if (answers[j] !== undefined && answers[j] !== -1 && answers[j] === questions[j]?.correctOptionIndex) {
+                    cumulativeCorrect++;
+                }
+            }
+            return {
+                name: `Q${i + 1}`,
+                Score: (phase === "finished" || i <= currentQuestionIndex) ? (cumulativeCorrect * 100) : null,
+            };
         });
-        return entry;
-    });
+    }, [questions, answers, currentQuestionIndex, phase]);
+
+
+    const chartData = useMemo(() => progressChartData(), [progressChartData]);
+
+    const myRecord = useMemo(() => {
+        return leaderboard.find(p => p.name === userName);
+    }, [leaderboard, userName]);
+
+    const myRank = useMemo(() => {
+        if (!myRecord) return 1;
+        const index = leaderboard.findIndex(p => p.id === myRecord.id);
+        return index !== -1 ? index + 1 : 1;
+    }, [leaderboard, myRecord]);
+
+    const myScore = myRecord ? myRecord.score : correctCount;
+    const myTimeTaken = myRecord ? myRecord.timeTaken : 0;
+    
+    const myAccuracy = useMemo(() => {
+        const totalAnswers = answers.filter(a => a !== -1).length;
+        if (totalAnswers === 0) return 0;
+        return Math.round((correctCount / totalAnswers) * 100);
+    }, [answers, correctCount]);
+
 
     return (
-        <div className={`min-h-screen w-full ${isDarkMode ? "bg-[#222120] text-white" : "bg-[#faf6ee] text-black"} selection:bg-white selection:text-black font-sans overflow-hidden transition-all duration-300`}>
-            <div className="absolute inset-0 noise opacity-[0.02] pointer-events-none" />
-            <div className={`fixed inset-0 z-0 pointer-events-none overflow-hidden ${isDarkMode ? "opacity-10" : "opacity-5"}`}>
+        <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} font-sans min-h-screen w-full ${
+            isDarkMode ? "bg-[#0d0d0c] text-white" : "bg-[#ebeae7] text-black"
+        } selection:bg-white selection:text-black overflow-hidden flex transition-colors duration-300`}>
+
+            <div className="absolute inset-0 noise opacity-[0.02] pointer-events-none z-0" />
+            <div className={`fixed inset-0 z-0 pointer-events-none overflow-hidden ${isDarkMode ? "opacity-[0.03]" : "opacity-[0.01]"}`}>
                 <div className="absolute inset-0" style={{
                     backgroundImage: `linear-gradient(to right, ${isDarkMode ? "#ffffff05" : "#00000008"} 1px, transparent 1px), linear-gradient(to bottom, ${isDarkMode ? "#ffffff05" : "#00000008"} 1px, transparent 1px)`,
                     backgroundSize: '100px 100px'
                 }} />
             </div>
 
-            <div className="relative z-10 h-screen flex flex-col">
-                <header className={`h-20 flex-shrink-0 border-b ${
-                    isDarkMode ? "border-white/10 bg-[#2c2a29]" : "border-black/10 bg-[#f5f0e6]"
-                } backdrop-blur-xl flex items-center justify-between px-6 relative z-30 transition-all duration-300`}>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setShowQuitConfirm(true)}
+
+
+            {/* Left Sidebar */}
+            <aside 
+                style={{ width: `${sidebarWidth}px` }}
+                className={`hidden md:flex flex-col h-screen flex-shrink-0 border-r relative z-20 ${
+                    isResizing ? "transition-none select-none" : "transition-all duration-300"
+                } ${
+                    isDarkMode ? "bg-[#0d0d0c] border-white/10 text-white" : "bg-[#ebeae7] border-black/10 text-black"
+                }`}
+            >
+                {/* Logo Header (shared across all phases, matches Query Mode) */}
+                <div className={`h-16 flex items-center justify-between px-5 border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                    {phase === "active" ? (
+                        <div onClick={() => setShowQuitConfirm(true)} className="flex items-center gap-2 cursor-pointer select-none">
+                            <img
+                                src={isDarkMode ? "/dark.png" : "/light.png"}
+                                alt="Logo"
+                                className={`${isDarkMode ? "w-6 h-6" : "w-[19px] h-[19px]"} object-contain`}
+                            />
+                            <img
+                                src={isDarkMode ? "/dark_text.png" : "/light_text.png"}
+                                alt="Rudra Nexus"
+                                className="h-4 object-contain"
+                            />
+                        </div>
+                    ) : (
+                        <Link href="/" className="flex items-center gap-2 cursor-pointer select-none">
+                            <img
+                                src={isDarkMode ? "/dark.png" : "/light.png"}
+                                alt="Logo"
+                                className={`${isDarkMode ? "w-6 h-6" : "w-[19px] h-[19px]"} object-contain`}
+                            />
+                            <img
+                                src={isDarkMode ? "/dark_text.png" : "/light_text.png"}
+                                alt="Rudra Nexus"
+                                className="h-4 object-contain"
+                            />
+                        </Link>
+                    )}
+                </div>
+
+                {/* Sidebar Body */}
+                {phase === "active" && questions.length > 0 ? (
+                    // Quiz Active Navigation Body
+                    <div className="flex-1 overflow-y-auto scrollbar-hide px-6 py-6 space-y-5">
+                        {/* Quiz Progress */}
+                        <div className="space-y-1">
+                            <div 
+                                className={`text-[9px] font-bold uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}
+                                style={{ fontFamily: "var(--font-chat-accent)" }}
+                            >
+                                Quiz Progress
+                            </div>
+                            <div 
+                                className="text-lg font-black tracking-tight leading-tight"
+                                style={{ fontFamily: "var(--font-chat-heading)" }}
+                            >
+                                Question {currentQuestionIndex + 1} of {questions.length}
+                            </div>
+                            <div 
+                                className={`text-[11px] font-medium ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+                                style={{ fontFamily: "var(--font-chat-body)" }}
+                            >
+                                {questions.length - (currentQuestionIndex + 1)} questions remaining
+                            </div>
+                            <div className={`w-full ${isDarkMode ? "bg-white/5" : "bg-black/5"} rounded-full h-1.5 mt-3.5 overflow-hidden`}>
+                                <div 
+                                    className="bg-amber-500 h-1.5 rounded-full transition-all duration-300"
+                                    style={{ width: `${((currentQuestionIndex + (selectedAnswer !== null ? 1 : 0)) / questions.length) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Question Navigator */}
+                        <div className="space-y-3">
+                            <div 
+                                className={`text-[9px] font-bold uppercase tracking-[0.2em] ${isDarkMode ? "text-white/30" : "text-black/30"}`}
+                                style={{ fontFamily: "var(--font-chat-accent)" }}
+                            >
+                                Question Navigator
+                            </div>
+                            <div className="grid grid-cols-4 gap-2.5">
+                                {questions.map((_, idx) => {
+                                    const isCurrent = idx === currentQuestionIndex;
+                                    const isAnswered = answers[idx] !== -1;
+                                    const isFlagged = flaggedQuestions[idx];
+                                    
+                                    let cardClass = "";
+                                    if (isCurrent) {
+                                        cardClass = isDarkMode 
+                                            ? "bg-white text-black border-white" 
+                                            : "bg-black text-white border-black shadow-md";
+                                    } else if (isFlagged) {
+                                        cardClass = "bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20";
+                                    } else if (isAnswered) {
+                                        cardClass = isDarkMode 
+                                            ? "bg-white/10 border-white/10 text-white/95 hover:bg-white/15" 
+                                            : "bg-black/5 border-black/5 text-black/95 hover:bg-black/10";
+                                    } else {
+                                        cardClass = isDarkMode 
+                                            ? "bg-white/5 border-white/5 text-white/30 hover:bg-white/10 hover:text-white/60" 
+                                            : "bg-black/5 border-black/5 text-black/30 hover:bg-black/10 hover:text-black/60";
+                                    }
+
+                                    return (
+                                        <button
+                                            key={idx}
+                                            onClick={() => {
+                                                setCurrentQuestionIndex(idx);
+                                                setSelectedAnswer(answers[idx] !== -1 ? answers[idx] : null);
+                                            }}
+                                            className={`h-10 rounded-xl border flex items-center justify-center text-xs font-black transition-all relative ${cardClass}`}
+                                            style={{ fontFamily: "var(--font-chat-accent)" }}
+                                        >
+                                            {idx + 1}
+                                            {isFlagged && <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Legend */}
+                        <div 
+                            className="flex flex-wrap gap-x-3 gap-y-1.5 text-[9px] font-bold uppercase opacity-40"
+                            style={{ fontFamily: "var(--font-chat-accent)" }}
+                        >
+                            <div className="flex items-center gap-1"><div className={`h-1.5 w-1.5 rounded-full ${isDarkMode ? "bg-white/40" : "bg-black/40"}`} /> Answered</div>
+                            <div className="flex items-center gap-1"><div className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Current</div>
+                            <div className="flex items-center gap-1"><div className="h-1.5 w-1.5 rounded-full bg-red-500" /> Marked</div>
+                        </div>
+                        
+                        {/* Actions and Stats Card */}
+                        <div className={`pt-5 border-t ${isDarkMode ? "border-white/10" : "border-black/10"} space-y-4`}>
+                            <button 
+                                onClick={() => {
+                                    const n = [...flaggedQuestions];
+                                    n[currentQuestionIndex] = !n[currentQuestionIndex];
+                                    setFlaggedQuestions(n);
+                                }} 
+                                className={`w-full py-2.5 px-4 border rounded-xl text-[10px] font-mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                                    flaggedQuestions[currentQuestionIndex] 
+                                        ? "bg-red-500/20 border-red-500 text-red-400" 
+                                        : isDarkMode 
+                                            ? "border-white/10 hover:bg-white/5 text-white/70 hover:text-white" 
+                                            : "border-black/10 hover:bg-black/5 text-black/70 hover:text-black"
+                                }`}
+                                style={{ fontFamily: "var(--font-chat-accent)" }}
+                            >
+                                <Flag className={`h-3.5 w-3.5 ${flaggedQuestions[currentQuestionIndex] ? "fill-current" : ""}`} />
+                                {flaggedQuestions[currentQuestionIndex] ? "Question Marked" : "Mark for Review"}
+                            </button>
+
+                            <div className={`p-3.5 border rounded-2xl flex items-center justify-between ${
+                                isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                            }`}>
+                                <div className="flex flex-col text-left">
+                                    <span className="text-[8px] font-bold uppercase opacity-45" style={{ fontFamily: "var(--font-chat-accent)" }}>Accuracy</span>
+                                    <span className="text-base font-black" style={{ fontFamily: "var(--font-chat-accent)" }}>
+                                        {Math.round((correctCount / (answers.filter(a => a !== -1).length || 1)) * 100)}%
+                                    </span>
+                                </div>
+                                <div className="flex flex-col text-right">
+                                    <span className="text-[8px] font-bold uppercase opacity-45" style={{ fontFamily: "var(--font-chat-accent)" }}>Score</span>
+                                    <span className="text-base font-black text-amber-500" style={{ fontFamily: "var(--font-chat-accent)" }}>{correctCount * 100} XP</span>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={() => setShowQuitConfirm(true)} 
+                                className="w-full py-3.5 bg-red-500/10 border border-red-500/20 hover:bg-red-500 hover:text-white text-red-500 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all"
+                                style={{ fontFamily: "var(--font-chat-accent)" }}
+                            >
+                                End Quiz
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    // Standard Dashboard Navigation Body
+                    <nav className="flex-1 py-6 px-4 space-y-1 overflow-y-auto scrollbar-hide">
+                        {[
+                            { label: "Dashboard", icon: LayoutDashboard, href: "/" },
+                            { label: "Quizzes", icon: Trophy, active: true, href: "/battle-arena" },
+                            { label: "My Attempts", icon: RefreshCw, href: "/arena-history" },
+                            { label: "Bookmarks", icon: Bookmark },
+                            { label: "Topics", icon: BookOpen },
+                            { label: "Leaderboard", icon: Trophy, href: "/global-leaderboard" },
+                            { label: "Analytics", icon: LineChart, href: "/user-analytics" },
+                            { label: "Achievements", icon: Award },
+                            { label: "Settings", icon: Settings },
+                        ].map((item, idx) => {
+                            const Icon = item.icon;
+                            const isActive = item.active;
+                            return (
+                                <button
+                                    key={idx}
+                                    aria-label={item.label}
+                                    onClick={() => isActive ? null : item.href && router.push(item.href)}
+                                    className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold transition-all group text-left ${
+                                        isActive
+                                            ? isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black font-semibold"
+                                            : isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/60 hover:text-black hover:bg-black/5"
+                                    }`}
+                                    style={{ fontFamily: "var(--font-chat-heading)" }}
+                                >
+                                    <Icon className="h-4.5 w-4.5 opacity-60 group-hover:opacity-100" />
+                                    <span>{item.label}</span>
+                                </button>
+                            );
+                        })}
+
+                        <div className={`mt-8 p-4 rounded-2xl border transition-all ${
+                            isDarkMode ? "bg-[#1f1f1d] border-white/5" : "bg-[#f6f5f2] border-black/5 shadow-sm"
+                        }`}>
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="h-9 w-9 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-center justify-center animate-pulse">
+                                    <Flame className="h-5 w-5 text-orange-500 fill-current" />
+                                </div>
+                                <div className="flex flex-col text-left">
+                                    <span className="text-sm font-black tracking-tight text-orange-500" style={{ fontFamily: "var(--font-chat-heading)" }}>12</span>
+                                    <span className="text-[8px] font-bold uppercase tracking-wider opacity-40" style={{ fontFamily: "var(--font-chat-accent)" }}>Day Streak</span>
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-center gap-1 mb-3">
+                                {["M", "T", "W", "T", "F", "S", "S"].map((day, idx) => {
+                                    const isDayActive = idx < 5;
+                                    return (
+                                        <div key={idx} className="flex flex-col items-center gap-1.5">
+                                            <span className="text-[8px] font-bold opacity-45" style={{ fontFamily: "var(--font-chat-accent)" }}>{day}</span>
+                                            <div className={`h-4.5 w-4.5 rounded-full flex items-center justify-center border text-[9px] ${
+                                                isDayActive
+                                                    ? isDarkMode ? "bg-white border-white text-black" : "bg-black border-black text-white"
+                                                    : isDarkMode ? "border-white/10" : "border-black/10"
+                                            }`}>
+                                                {isDayActive && <Check className="h-2.5 w-2.5 font-bold" />}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div 
+                                className="text-[8px] font-black text-center uppercase tracking-wider text-orange-500"
+                                style={{ fontFamily: "var(--font-chat-accent)" }}
+                            >
+                                You're on fire! 🔥
+                            </div>
+                        </div>
+                    </nav>
+                )}
+
+                {/* Profile Footer (shared across all phases, matches Query Mode) */}
+                <div className={`p-4 border-t ${isDarkMode ? "border-white/5 bg-white/[0.01]" : "border-black/5 bg-black/[0.01]"} flex items-center justify-between relative`}>
+                    <div className="flex items-center gap-2 min-w-0 text-left">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center relative shrink-0 ${
+                            isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"
+                        } border overflow-hidden`}>
+                            {profilePic ? (
+                                <img src={profilePic} alt="Profile" className="h-full w-full object-cover" />
+                            ) : (
+                                <User className={`h-4 w-4 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
+                            )}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span 
+                                className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}
+                                style={{ fontFamily: "var(--font-chat-heading)" }}
+                            >
+                                {userName || "User"}
+                            </span>
+                            <span 
+                                className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+                                style={{ fontFamily: "var(--font-chat-accent)" }}
+                            >
+                                {userRole === "global_admin" ? "CEO" : (userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : "Learner")}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <button 
+                            onClick={toggleTheme} 
+                            aria-label="Toggle Theme"
+                            className={`p-1.5 rounded-lg border transition-all ${
+                                isDarkMode ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5" : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"
+                            }`}
+                        >
+                            {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                        </button>
+                        <button 
+                            onClick={phase === "active" ? () => setShowQuitConfirm(true) : handleLeave} 
+                            aria-label="Leave or Logout"
+                            className={`p-1.5 rounded-lg border transition-all ${
+                                isDarkMode ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5" : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"
+                            }`}
+                        >
+                            <LogOut className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Resize Handle */}
+                <div 
+                    onMouseDown={startResizing}
+                    className={`absolute top-0 right-0 bottom-0 w-[5px] cursor-col-resize hover:bg-amber-500/30 active:bg-amber-500 transition-colors z-30 ${
+                        isResizing ? "bg-amber-500" : ""
+                    }`}
+                />
+            </aside>
+
+            {/* Main Content Area */}
+            <div className="flex-1 h-screen flex flex-col overflow-hidden relative z-10">
+                {/* Faded Background Trophy Image (Centered in Main Content Area) */}
+                <div className={`absolute inset-0 flex items-center justify-center pointer-events-none z-0 transition-all duration-300 translate-y-12 ${
+                    isDarkMode ? "opacity-[0.07]" : "opacity-[0.09]"
+                }`}>
+                    <img 
+                        src="/trophy-cup-flat-style-icon-illustration-vector.png" 
+                        alt="Background Trophy" 
+                        className={`w-[90vw] md:w-[80vw] lg:w-[70vw] max-w-[1000px] h-auto object-contain select-none pointer-events-none grayscale ${
+                            isDarkMode ? "invert brightness-125 contrast-75" : ""
+                        }`}
+                    />
+                </div>
+                <header className={`h-16 flex-shrink-0 border-b ${
+                    isDarkMode ? "bg-[#0d0d0c] border-white/5" : "bg-[#ebeae7] border-black/5"
+                } flex items-center justify-between px-6 sm:px-8 relative z-30 transition-all duration-300`}>
+
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={() => setShowQuitConfirm(true)} 
+                            aria-label="Go back"
                             className={`p-2.5 border transition-all rounded-xl flex items-center justify-center ${
-                                isDarkMode 
-                                    ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5" 
-                                    : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"
+                                isDarkMode ? "border-white/5 text-white/60 hover:bg-white/5" : "border-black/5 text-black/60 hover:bg-black/5"
                             }`}
                         >
                             <ChevronLeft className="h-4.5 w-4.5" />
                         </button>
-                        
                         <div className="flex flex-col text-left">
                             <div className="flex items-center gap-2">
-                                <h1 className="text-base sm:text-lg font-black tracking-tight uppercase">
-                                    {phase === "active" ? (topic || "Battle Arena") : "Battle Arena"}
+                                <h1 
+                                    className="text-base sm:text-lg font-black tracking-tight uppercase"
+                                    style={{ fontFamily: "var(--font-chat-heading)" }}
+                                >
+                                    {phase === "active" ? (topic || "JavaScript Fundamentals") : "Battle Arena"}
                                 </h1>
                                 {phase === "active" && difficulty && (
-                                    <span className={`text-[9px] font-mono px-2 py-0.5 rounded-md uppercase tracking-wider font-semibold border ${
-                                        isDarkMode ? "bg-white/5 border-white/10 text-white/70" : "bg-black/5 border-black/10 text-black/70"
-                                    }`}>
+                                    <span 
+                                        className={`text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider font-semibold border ${
+                                            isDarkMode ? "bg-white/5 border-white/10 text-white/70" : "bg-black/5 border-black/10 text-black/70"
+                                        }`}
+                                        style={{ fontFamily: "var(--font-chat-accent)" }}
+                                    >
                                         {difficulty}
                                     </span>
                                 )}
                             </div>
-                            <span className={`text-[8px] font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                {phase === "active" ? `${gameMode || "casual"} mode` : "real-time multiplayer quiz"}
+                            <span 
+                                className={`text-[8px] uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}
+                                style={{ fontFamily: "var(--font-chat-accent)" }}
+                            >
+                                {phase === "active" ? `${gameMode} mode` : "Real-time Multiplayer Quiz"}
                             </span>
                         </div>
                     </div>
 
-                    {phase === "lobby" && lobbyCode && (
-                        <div className="flex items-center gap-3">
-                            <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Lobby</span>
-                            <span className="text-lg font-black tracking-[0.3em]">{lobbyCode}</span>
-                            <button
-                                onClick={handleCopyCode}
-                                className={`p-2 border transition-all rounded-lg ${isDarkMode ? "border-white/20 hover:border-white/50 text-white/60 hover:text-white" : "border-black/20 hover:border-black/50 text-black/60 hover:text-black"}`}
-                            >
-                                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                            </button>
-                        </div>
-                    )}
-
                     {phase === "active" && (
                         <div className="flex items-center gap-4">
-                            {/* Time Left Badge */}
-                            {(() => {
-                                const mins = Math.floor(timeLeft / 60);
-                                const secs = timeLeft % 60;
-                                const formattedTime = `00:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                                return (
-                                    <div className="flex items-center gap-2 px-4 py-2 bg-black/10 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl">
-                                        <Clock className="h-4 w-4 animate-pulse" style={{ color: accent }} />
-                                        <div className="flex flex-col text-left">
-                                            <span className={`text-[8px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                Time Left
-                                            </span>
-                                            <span className="text-sm font-black font-mono leading-none">
-                                                {formattedTime}
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-
-                            <button
-                                onClick={() => setShowQuitConfirm(true)}
-                                className={`px-4 py-2 bg-red-500/10 border border-red-500/20 hover:bg-red-500 hover:text-white text-red-400 font-mono text-[10px] font-black uppercase tracking-wider rounded-xl transition-all`}
+                            <div className={`flex items-center gap-2.5 px-4 py-2 border rounded-xl ${
+                                isDarkMode ? "bg-white/5 border-white/10" : "bg-[#f6f5f2] border-black/5 shadow-sm"
+                            }`}>
+                                <Clock className="h-4 w-4 text-orange-500" />
+                                <div className="flex flex-col text-left">
+                                    <span 
+                                        className="text-[8px] uppercase tracking-wider opacity-40"
+                                        style={{ fontFamily: "var(--font-chat-accent)" }}
+                                    >
+                                        Time Left
+                                    </span>
+                                    <span 
+                                        className="text-sm font-black leading-none"
+                                        style={{ fontFamily: "var(--font-chat-accent)" }}
+                                    >
+                                        {formatTime(timeLeft)}
+                                    </span>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowQuitConfirm(true)} 
+                                className="px-4 py-2 bg-red-500/10 border border-red-500/20 hover:bg-red-500 hover:text-white text-red-500 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all"
+                                style={{ fontFamily: "var(--font-chat-accent)" }}
                             >
                                 End Quiz
                             </button>
                         </div>
                     )}
-
-                    {phase === "finished" && (
-                        <div className="flex items-center gap-3">
-                            <Trophy className="h-4 w-4 text-amber-400" />
-                            <span className={`text-sm font-mono ${isDarkMode ? "text-white/80" : "text-black/80"}`}>Battle Complete</span>
-                        </div>
-                    )}
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={toggleTheme}
-                            className={`p-2 border transition-all duration-300 rounded-xl group ${isDarkMode ? "border-white/10 text-white/60 hover:text-white hover:bg-white/5" : "border-black/10 text-black/60 hover:text-black hover:bg-black/5"}`}
-                            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                        >
-                            <div className="group-hover:rotate-180 transition-transform duration-500">
-                                {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                            </div>
-                        </button>
-                    </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto scrollbar-hide p-6">
-                    {error && (
-                        <div className="max-w-xl mx-auto mt-20 p-6 border border-red-500/30 bg-red-500/10 text-center">
+                <main className="flex-1 overflow-y-auto scrollbar-hide p-2 sm:p-6 md:p-8">
+                    {error && phase !== "finished" && (
+                        <div className="max-w-xl mx-auto mt-20 p-6 border border-red-500/30 bg-red-500/10 text-center rounded-3xl">
                             <X className="h-8 w-8 mx-auto mb-4 text-red-400" />
-                            <p className="text-red-400 text-sm font-mono mb-4">{error}</p>
-                            <button
-                                onClick={() => router.push("/")}
-                                className="px-6 py-3 bg-white text-black text-[10px] font-mono font-black uppercase tracking-[0.3em] hover:scale-105 transition-all"
-                            >
-                                Back to Chat
-                            </button>
+                            <p className="text-red-400 text-sm font-mono mb-6">{error}</p>
+                            <button onClick={() => router.push("/")} className="px-6 py-3 bg-[#f6f5f2] text-black text-[10px] font-black uppercase tracking-[0.3em] rounded-xl hover:scale-105 transition-all">Back to Chat</button>
                         </div>
                     )}
 
                     {!error && phase === "lobby" && (
                         <div className="max-w-2xl mx-auto mt-12">
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className={`border p-10 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black bg-white"}`}
-                            >
-                                <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] rounded-full pointer-events-none ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-                                <div className={`absolute bottom-0 left-0 w-32 h-32 blur-[60px] rounded-full pointer-events-none ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-4 mb-8">
-                                        <div className="h-12 w-12 bg-white text-black rounded-2xl flex items-center justify-center">
-                                            <Users className="h-6 w-6" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-2xl font-black tracking-tight uppercase">Waiting Room</h2>
-                                            <p className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                {isHost ? "Share the code to invite players" : "Waiting for host to start..."}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {isHost && lobbyCode && (
-                                        <div className={`mb-10 p-6 border rounded-2xl text-center ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}>
-                                            <p className={`text-[9px] font-mono uppercase tracking-[0.3em] mb-3 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Invite Code</p>
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`border p-10 rounded-[2rem] ${isDarkMode ? "border-white/5 bg-[#161615]" : "border-black/5 bg-[#fbfaf8] shadow-md"}`}>
+                                <div className="relative z-10 text-center">
+                                    <h2 className="text-2xl font-black tracking-tight uppercase mb-8">Waiting Room</h2>
+                                    {isHost && (
+                                        <div className={`mb-10 p-6 border rounded-2xl ${isDarkMode ? "border-white/5 bg-white/5" : "bg-black/5 border-black/5"}`}>
+                                            <p className="text-[9px] font-mono uppercase tracking-[0.3em] mb-3 opacity-30">Invite Code</p>
                                             <div className="flex items-center justify-center gap-4">
                                                 <span className="text-4xl font-black tracking-[0.4em]">{lobbyCode}</span>
-                                                <button
-                                                    onClick={handleCopyCode}
-                                                    className={`p-3 border transition-all rounded-xl ${isDarkMode ? "bg-white/10 hover:bg-white/20 border-white/20" : "bg-[#00DDDD]/10 hover:bg-[#00DDDD]/20 border-[#00DDDD]/20"}`}
-                                                >
+                                                <button onClick={handleCopyCode} className={`p-3 border rounded-xl ${isDarkMode ? "bg-white/10 border-white/20" : "bg-[#f6f5f2] border-black/10 shadow-sm"}`}>
                                                     {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
                                                 </button>
                                             </div>
-                                            <div className={`flex items-center justify-center gap-2 mt-4 text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                                Listening for connections...
-                                            </div>
                                         </div>
                                     )}
-
-                                    <div className="mb-8">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <Users className={`h-4 w-4 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
-                                            <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                Participants ({participants.length})
-                                            </span>
-                                        </div>
-                                        <div className="space-y-2">
-                                            {participants.map((p, i) => (
-                                                <motion.div
-                                                    key={p.id}
-                                                    initial={{ opacity: 0, x: -20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ delay: i * 0.1 }}
-                                                    className={`flex items-center justify-between p-4 border rounded-2xl ${(isHost && p.name === adminName) || (!isHost && p.name === participantName)
-                                                        ? `${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/10 border-black/30"}`
-                                                        : `${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`
-                                                        }`}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
-                                                            <User className="h-4 w-4" />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-sm font-medium">{p.name}</span>
-                                                            {((isHost && p.name === adminName) || (!isHost && p.name === participantName)) && (
-                                                                <span className={`ml-2 text-[9px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>(You)</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    {i === 0 && (
-                                                        <span className="text-[8px] font-mono px-2 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full uppercase tracking-wider">
-                                                            Host
-                                                        </span>
-                                                    )}
-                                                </motion.div>
-                                            ))}
-                                            {participants.length === 0 && (
-                                                <div className={`p-8 text-center text-xs font-mono ${isDarkMode ? "text-white/20" : "text-black/20"}`}>
-                                                    Waiting for players to join...
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2 mb-4 opacity-50"><Users className="h-4 w-4" /><span className="text-[10px] font-mono uppercase tracking-widest">Participants ({participants.length})</span></div>
+                                        {participants.map((p, i) => (
+                                            <div key={p.id} className={`flex items-center justify-between p-4 border rounded-2xl ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}><User className="h-4 w-4" /></div>
+                                                    <span className="text-sm font-medium">{p.name}</span>
                                                 </div>
-                                            )}
-                                        </div>
+                                                {i === 0 && <span className="text-[8px] font-mono px-2 py-1 bg-amber-500/20 text-amber-500 rounded-full uppercase">Host</span>}
+                                            </div>
+                                        ))}
                                     </div>
-
                                     {isHost && (
-                                        <button
-                                            onClick={handleStart}
-                                            disabled={participants.length < 1 || isStarting}
-                                            className={`w-full py-5 text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 flex items-center justify-center gap-3 ${isDarkMode ? "bg-white text-black" : "bg-[#00DDDD] text-white"}`}
-                                        >
-                                            {isStarting ? (
-                                                <>
-                                                    <span className="relative flex items-center justify-center" style={{ width: 20, height: 20 }}>
-                                                        <motion.span
-                                                            className="absolute"
-                                                            animate={{ rotate: [0, -20, 0], x: [0, -4, 0] }}
-                                                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
-                                                            style={{ display: 'flex' }}
-                                                        >
-                                                            <Swords className="h-4 w-4" style={{ transform: 'scaleX(-1)' }} />
-                                                        </motion.span>
-                                                        <motion.span
-                                                            className="absolute"
-                                                            animate={{ rotate: [0, 20, 0], x: [0, 4, 0] }}
-                                                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
-                                                            style={{ display: 'flex' }}
-                                                        >
-                                                            <Swords className="h-4 w-4" />
-                                                        </motion.span>
-                                                    </span>
-                                                    Generating Questions...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Play className="h-4 w-4" />
-                                                    Start Battle
-                                                </>
-                                            )}
+                                        <button onClick={handleStart} disabled={isStarting} className={`mt-10 w-full py-5 text-[10px] font-black uppercase tracking-[0.3em] rounded-[2rem] transition-all flex items-center justify-center gap-3 ${
+                                            isDarkMode ? "bg-white text-black" : "bg-black text-white"
+                                        }`}>
+                                            {isStarting ? <><RefreshCw className="h-4 w-4 animate-spin" /> Starting...</> : "Start Battle"}
                                         </button>
                                     )}
                                 </div>
@@ -651,900 +912,725 @@ function ArenaContent() {
                         </div>
                     )}
 
-                    {!error && phase === "active" && questions.length > 0 && !hasSubmitted && (
-                        <div className="max-w-7xl mx-auto mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start px-4 sm:px-6">
-                            {/* LEFT/CENTER: Quiz question card + statistics */}
-                            <div className="lg:col-span-8 space-y-6">
-                                {/* Quiz Question Card */}
-                                <motion.div
-                                    key={currentQuestionIndex}
-                                    initial={{ opacity: 0, y: 15 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className={`p-6 sm:p-8 rounded-[2.5rem] border shadow-xl transition-all duration-300 relative overflow-hidden ${
-                                        isDarkMode
-                                            ? "bg-[#2c2a29]/80 border-white/5 text-white"
-                                            : "bg-[#f5f0e6]/80 border-black/5 text-black"
-                                    }`}
-                                >
-                                    {/* Top glow effects */}
-                                    <div className={`absolute top-0 right-0 w-48 h-48 blur-[80px] rounded-full pointer-events-none ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-
-                                    {/* Header info in Card */}
-                                    <div className="flex items-center justify-between mb-4 relative z-10">
-                                        <div className="flex items-center gap-3">
-                                            <span className={`text-[10px] font-mono font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
-                                                isDarkMode ? "bg-white/10 text-white/70" : "bg-black/10 text-black/70"
-                                            }`}>
+                    {!error && phase === "active" && questions.length > 0 && (
+                        <div className="w-full max-w-3xl mx-auto py-2 sm:py-4 px-2 sm:px-0">
+                            {hasSubmitted ? (
+                                <div className="text-center py-20 space-y-6">
+                                    <div className="relative h-20 w-20 mx-auto">
+                                        <div className="absolute inset-0 rounded-full border-4 border-amber-500/20 border-t-amber-500 animate-spin" />
+                                        <Trophy className="absolute inset-0 m-auto h-8 w-8 text-amber-500" />
+                                    </div>
+                                    <h2 className="text-2xl font-black uppercase">Waiting for other players...</h2>
+                                    <p className="opacity-50">Great job! The final results will be ready shortly.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <motion.div 
+                                        key={currentQuestionIndex} 
+                                        initial={{ opacity: 0, y: 15 }} 
+                                        animate={{ opacity: 1, y: 0 }} 
+                                        className="w-full relative transition-all duration-300"
+                                    >
+                                        <div className="flex items-center justify-between mb-4 sm:mb-6 relative z-10">
+                                            <span 
+                                                className={`text-[10px] font-bold px-3 py-1.5 rounded-xl uppercase tracking-wider ${isDarkMode ? "bg-white/5 text-white/70" : "bg-black/5 text-black/70"}`}
+                                                style={{ fontFamily: "var(--font-chat-accent)" }}
+                                            >
                                                 Single Choice
                                             </span>
-                                            <span className={`text-[10px] font-mono px-3 py-1 rounded-full uppercase tracking-wider`}
-                                                  style={{ backgroundColor: `${accent}20`, color: accent }}
-                                            >
-                                                {topic}
-                                            </span>
                                         </div>
-                                        {/* Floating JS-box style decoration */}
-                                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center border transition-all ${
-                                            isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"
-                                        }`}
-                                             style={{ boxShadow: `0 0 15px ${accent}20` }}
-                                        >
-                                            <Swords className="h-5 w-5" style={{ color: accent }} />
-                                        </div>
-                                    </div>
 
-                                    {/* Segmented Progress Bar */}
-                                    <div className="mb-6 relative z-10">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                Question {currentQuestionIndex + 1} of {questions.length}
-                                            </span>
-                                            <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                {Math.round(((currentQuestionIndex + (selectedAnswer !== null ? 1 : 0)) / questions.length) * 100)}% Completed
-                                            </span>
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4 sm:mb-6 lg:mb-8 relative z-10">
+                                            <h3 
+                                                className="text-sm sm:text-lg lg:text-2xl font-black tracking-tight leading-snug flex-1"
+                                                style={{ fontFamily: "var(--font-chat-heading)" }}
+                                            >
+                                                {questions[currentQuestionIndex]?.question}
+                                            </h3>
                                         </div>
-                                        <div className="flex gap-1.5">
-                                            {questions.map((_, idx) => {
-                                                const isCompleted = idx < currentQuestionIndex;
-                                                const isActive = idx === currentQuestionIndex;
+
+                                        <div className="grid grid-cols-1 gap-2.5 sm:gap-3 relative z-10">
+                                            {questions[currentQuestionIndex]?.options.map((opt, i) => {
+                                                const isSelected = selectedAnswer === i;
+                                                const isCorrect = questions[currentQuestionIndex]?.correctOptionIndex === i;
+                                                const showResult = selectedAnswer !== null;
+                                                const optionLabels = ["A", "B", "C", "D"];
+
+                                                let btnClass = isDarkMode ? "bg-[#1f1f1d] border-white/5 hover:bg-white/5 text-white/80" : "bg-[#f6f5f2] border-black/5 hover:bg-black/5 text-black/80 shadow-sm";
+                                                if (showResult) {
+                                                    if (isCorrect) btnClass = "bg-emerald-500/10 border-emerald-500 text-emerald-500";
+                                                    else if (isSelected) btnClass = "bg-red-500/10 border-red-500 text-red-500";
+                                                    else btnClass += " opacity-40";
+                                                } else if (isSelected) {
+                                                    btnClass = isDarkMode ? "bg-white/5 border-white text-white shadow-lg" : "bg-black/5 border-black text-black shadow-md";
+                                                }
+
                                                 return (
-                                                    <div
-                                                        key={idx}
-                                                        className={`h-2 flex-1 rounded-full transition-all duration-300 ${
-                                                            isCompleted 
-                                                                ? "bg-current" 
-                                                                : isActive 
-                                                                    ? "bg-current animate-pulse shadow-sm" 
-                                                                    : isDarkMode ? "bg-white/10" : "bg-black/10"
-                                                        }`}
-                                                        style={{
-                                                            color: isCompleted || isActive ? accent : undefined
-                                                        }}
-                                                    />
+                                                    <button 
+                                                        key={i} 
+                                                        onClick={() => handleSelectAnswer(i)} 
+                                                        disabled={selectedAnswer !== null} 
+                                                        className={`w-full text-left px-3.5 py-2.5 sm:px-4 sm:py-3.5 lg:p-5 border rounded-xl lg:rounded-2xl text-xs sm:text-sm lg:text-base font-semibold transition-all flex items-center gap-2.5 sm:gap-3 lg:gap-4 ${btnClass}`}
+                                                        style={{ fontFamily: "var(--font-chat-body)" }}
+                                                    >
+                                                        <span 
+                                                            className={`h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 flex items-center justify-center rounded-full text-[10px] sm:text-xs lg:text-sm font-mono border flex-shrink-0 ${
+                                                                isSelected 
+                                                                    ? (isDarkMode ? "bg-white border-white text-black" : "bg-black border-black text-white") 
+                                                                    : (isDarkMode ? "border-white/20 bg-white/5" : "border-black/10 bg-black/5")
+                                                            }`}
+                                                            style={{ fontFamily: "var(--font-chat-accent)" }}
+                                                        >
+                                                            {optionLabels[i]}
+                                                        </span>
+                                                        <span className="flex-1 leading-normal">{opt}</span>
+                                                        {showResult && (isCorrect ? <Check className="h-5 w-5" /> : isSelected && <X className="h-5 w-5" />)}
+                                                    </button>
                                                 );
                                             })}
                                         </div>
-                                    </div>
 
-                                    {/* Question Text */}
-                                    <h3 className="text-xl sm:text-2xl font-sans font-black tracking-tight mb-8 leading-snug relative z-10">
-                                        {questions[currentQuestionIndex]?.question}
-                                    </h3>
-
-                                    {/* Options List */}
-                                    <div className="space-y-3 relative z-10 mb-8">
-                                        {questions[currentQuestionIndex]?.options.map((opt, i) => {
-                                            const isSelected = selectedAnswer === i;
-                                            const isCorrect = questions[currentQuestionIndex]?.correctOptionIndex === i;
-                                            const showResult = selectedAnswer !== null;
-                                            
-                                            let optionClass = isDarkMode 
-                                                ? "bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10" 
-                                                : "bg-black/5 border-black/10 hover:border-black/15 hover:bg-black/10";
-
-                                            let styleObj = {};
-
-                                            if (showResult) {
-                                                if (isCorrect) {
-                                                    optionClass = "bg-emerald-500/15 border-emerald-500 text-emerald-400";
-                                                } else if (isSelected && !isCorrect) {
-                                                    optionClass = "bg-red-500/15 border-red-500 text-red-400";
-                                                } else {
-                                                    optionClass = isDarkMode 
-                                                        ? "bg-white/5 border-white/5 text-white/30" 
-                                                        : "bg-black/5 border-black/5 text-black/30";
-                                                }
-                                            } else if (isSelected) {
-                                                optionClass = "bg-current/10";
-                                                styleObj = { borderColor: accent, color: accent };
-                                            }
-
-                                            const optionLabels = ["A", "B", "C", "D", "E", "F"];
-
-                                            return (
-                                                <button
-                                                    key={i}
-                                                    onClick={() => handleSelectAnswer(i)}
-                                                    disabled={selectedAnswer !== null}
-                                                    className={`w-full text-left p-5 border rounded-2xl text-base font-semibold transition-all duration-200 flex items-center gap-4 ${optionClass}`}
-                                                    style={styleObj}
+                                        {selectedAnswer !== null && questions[currentQuestionIndex]?.explanation && (
+                                            <motion.div 
+                                                initial={{ opacity: 0, y: 10 }} 
+                                                animate={{ opacity: 1, y: 0 }} 
+                                                className={`mt-4 sm:mt-5 lg:mt-6 p-3 sm:p-4 lg:p-5 border rounded-xl lg:rounded-2xl ${
+                                                    isDarkMode ? "border-white/10 bg-white/5" : "border-black/5 bg-black/5"
+                                                }`}
+                                            >
+                                                <span 
+                                                    className="text-[9px] uppercase tracking-widest opacity-40 block mb-2"
+                                                    style={{ fontFamily: "var(--font-chat-accent)" }}
                                                 >
-                                                    <span className={`h-8 w-8 flex items-center justify-center rounded-full text-sm font-mono border flex-shrink-0 transition-all ${
-                                                        isSelected
-                                                            ? "bg-current text-white font-bold"
-                                                            : isDarkMode ? "border-white/20 bg-white/5" : "border-black/20 bg-black/5"
-                                                    }`}
-                                                          style={isSelected ? { backgroundColor: accent, color: isDarkMode ? "#000" : "#fff", borderColor: accent } : undefined}
-                                                    >
-                                                        {optionLabels[i]}
-                                                    </span>
-                                                    <span className="flex-1 leading-normal">{opt}</span>
-                                                    {showResult && isCorrect && <Check className="h-5 w-5 text-emerald-400 flex-shrink-0" />}
-                                                    {showResult && isSelected && !isCorrect && <X className="h-5 w-5 text-red-400 flex-shrink-0" />}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-                                    {/* Explanation Card */}
-                                    {selectedAnswer !== null && questions[currentQuestionIndex]?.explanation && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className={`mt-6 p-5 border rounded-2xl relative overflow-hidden ${
-                                                isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"
-                                            }`}
-                                        >
-                                            <span className={`text-[10px] font-mono uppercase tracking-[0.2em] block mb-2 ${
-                                                isDarkMode ? "text-white/40" : "text-black/40"
-                                            }`}>
-                                                Explanation
-                                            </span>
-                                            <p className={`text-sm leading-relaxed ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
-                                                {questions[currentQuestionIndex]?.explanation}
-                                            </p>
-                                        </motion.div>
-                                    )}
-
-                                    {/* Bottom Control Buttons (Previous, Flag, Next) */}
-                                    <div className="flex items-center justify-between border-t mt-8 pt-6 relative z-10"
-                                         style={{ borderColor: isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}
-                                    >
-                                        <button
-                                            disabled
-                                            className={`px-6 py-3 border rounded-xl text-xs font-mono uppercase tracking-wider transition-all duration-300 opacity-40 cursor-not-allowed flex items-center gap-2 ${
-                                                isDarkMode ? "border-white/10 text-white/50" : "border-black/10 text-black/50"
-                                            }`}
-                                        >
-                                            <ChevronLeft className="h-4 w-4" />
-                                            Previous
-                                        </button>
-
-                                        <button
-                                            onClick={() => {
-                                                const newFlags = [...flaggedQuestions];
-                                                newFlags[currentQuestionIndex] = !newFlags[currentQuestionIndex];
-                                                setFlaggedQuestions(newFlags);
-                                            }}
-                                            className={`px-6 py-3 border rounded-xl text-xs font-mono uppercase tracking-wider transition-all duration-300 flex items-center gap-2 ${
-                                                flaggedQuestions[currentQuestionIndex]
-                                                    ? "bg-red-500/20 border-red-500/50 text-red-400"
-                                                    : isDarkMode 
-                                                        ? "border-white/10 text-white/60 hover:bg-white/5 hover:text-white" 
-                                                        : "border-black/10 text-black/60 hover:bg-black/5 hover:text-black"
-                                            }`}
-                                        >
-                                            <Flag className={`h-4 w-4 ${flaggedQuestions[currentQuestionIndex] ? "fill-current" : ""}`} />
-                                            {flaggedQuestions[currentQuestionIndex] ? "Flagged" : "Flag Question"}
-                                        </button>
-
-                                        <button
-                                            onClick={() => {
-                                                if (selectedAnswer === null) {
-                                                    const curIndex = currentQuestionIndexRef.current;
-                                                    const newAnswers = [...answersRef.current];
-                                                    newAnswers[curIndex] = -1;
-                                                    answersRef.current = newAnswers;
-                                                    setSelectedAnswer(-1); // show timeout feedback
-                                                    selectedAnswerRef.current = -1;
-                                                    moveToNextQuestion(correctCount);
-                                                } else {
-                                                    moveToNextQuestion(correctCount);
-                                                }
-                                            }}
-                                            className={`px-6 py-3 text-xs font-mono font-black uppercase tracking-[0.2em] rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 text-white`}
-                                            style={{ backgroundColor: accent }}
-                                        >
-                                            {selectedAnswer === null ? "Skip" : "Next"}
-                                        </button>
-                                    </div>
-                                </motion.div>
-
-                                {/* Bottom Statistics (Live Stats) */}
-                                <div className="space-y-6">
-                                    <div className="grid grid-cols-3 gap-4">
-                                        {/* Score Card */}
-                                        <div className={`p-5 border rounded-3xl transition-all duration-300 relative overflow-hidden ${
-                                            isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
-                                        }`}>
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Award className="h-4 w-4" style={{ color: accent }} />
-                                                <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                    Score
+                                                    Explanation
                                                 </span>
-                                            </div>
-                                            <div className="text-2xl font-black">
-                                                {correctCount * 100}
-                                                <span className={`text-xs font-normal font-mono ml-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                                    / {questions.length * 100}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Accuracy Card */}
-                                        {(() => {
-                                            const answered = answers.filter(a => a !== -1).length + (selectedAnswer !== null ? 1 : 0);
-                                            const correct = correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
-                                            const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
-                                            return (
-                                                <div className={`p-5 border rounded-3xl transition-all duration-300 relative overflow-hidden ${
-                                                    isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
-                                                }`}>
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <Percent className="h-4 w-4 animate-pulse" style={{ color: accent }} />
-                                                        <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                            Accuracy
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-2xl font-black">{accuracy}%</div>
-                                                </div>
-                                            );
-                                        })()}
-
-                                        {/* Rank Card */}
-                                        {(() => {
-                                            const sorted = [...participants].sort((a, b) => b.score - a.score);
-                                            const myName = isHost ? adminName : participantName;
-                                            const rankIdx = sorted.findIndex(p => p.name === myName);
-                                            const rank = rankIdx !== -1 ? rankIdx + 1 : 1;
-                                            return (
-                                                <div className={`p-5 border rounded-3xl transition-all duration-300 relative overflow-hidden ${
-                                                    isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
-                                                }`}>
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <TrendingUp className="h-4 w-4" style={{ color: accent }} />
-                                                        <span className={`text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                            Rank
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-2xl font-black">
-                                                        #{rank}
-                                                        <span className={`text-xs font-normal font-mono ml-1 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                                            / {participants.length}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
-
-                                    {/* Progress Area Chart */}
-                                    {(() => {
-                                        const progressChartData = questions.map((_, i) => {
-                                            let cumulativeCorrectCount = 0;
-                                            for (let j = 0; j <= i; j++) {
-                                                const ans = answers[j];
-                                                if (ans !== undefined && ans !== -1 && ans === questions[j]?.correctOptionIndex) {
-                                                    cumulativeCorrectCount++;
-                                                }
-                                            }
-                                            const isAnswered = i < currentQuestionIndex || (i === currentQuestionIndex && selectedAnswer !== null);
-                                            return {
-                                                name: `Q${i + 1}`,
-                                                Score: isAnswered ? cumulativeCorrectCount * 100 : null,
-                                            };
-                                        });
-
-                                        return (
-                                            <div className={`p-6 border rounded-[2.5rem] relative overflow-hidden ${
-                                                isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
-                                            }`}>
-                                                <div className="flex items-center gap-2 mb-4 text-left">
-                                                    <BarChart3 className="h-4 w-4" style={{ color: accent }} />
-                                                    <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                        Score Progression
-                                                    </span>
-                                                </div>
-                                                <div className="h-56">
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <ReLineChart data={progressChartData}>
-                                                            <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
-                                                            <XAxis dataKey="name" tick={{ fill: isDarkMode ? "#ffffff40" : "#00000040", fontSize: 10 }} />
-                                                            <YAxis tick={{ fill: isDarkMode ? "#ffffff40" : "#00000040", fontSize: 10 }} domain={[0, questions.length * 100]} />
-                                                            <Tooltip
-                                                                contentStyle={{
-                                                                    backgroundColor: isDarkMode ? "#222120" : "#faf6ee",
-                                                                    border: isDarkMode ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)",
-                                                                    borderRadius: "12px",
-                                                                    color: isDarkMode ? "#fff" : "#000",
-                                                                }}
-                                                            />
-                                                            <Line
-                                                                type="monotone"
-                                                                dataKey="Score"
-                                                                stroke={accent}
-                                                                strokeWidth={3}
-                                                                dot={{ r: 5, stroke: accent, strokeWidth: 2, fill: isDarkMode ? "#222120" : "#faf6ee" }}
-                                                                activeDot={{ r: 8 }}
-                                                            />
-                                                        </ReLineChart>
-                                                    </ResponsiveContainer>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-                                </div>
-                            </div>
-
-                            {/* RIGHT SIDEBAR: Question Navigator + Quiz Summary + Live Opponents */}
-                            <div className="lg:col-span-4 space-y-6">
-                                {/* Question Navigator */}
-                                <div className={`p-6 border rounded-[2.5rem] relative overflow-hidden ${
-                                    isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
-                                }`}>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                            Question Navigator
-                                        </span>
-                                    </div>
-
-                                    {/* Legend */}
-                                    <div className="grid grid-cols-2 gap-2 mb-6 text-[9px] font-mono text-left">
-                                        <div className="flex items-center gap-1.5">
-                                            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: accent }} />
-                                            <span>Answered</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <div className="h-2.5 w-2.5 rounded-full border border-current" style={{ color: accent }} />
-                                            <span>Current</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <div className={`h-2.5 w-2.5 rounded-full border ${isDarkMode ? "border-white/20" : "border-black/20"}`} />
-                                            <span>Not Answered</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
-                                            <span>Marked/Flagged</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Grid of buttons */}
-                                    <div className="grid grid-cols-5 gap-2.5">
-                                        {questions.map((_, idx) => {
-                                            const isCurrent = idx === currentQuestionIndex;
-                                            const isAnswered = answers[idx] !== undefined && answers[idx] !== -1;
-                                            const isFlagged = flaggedQuestions[idx];
-
-                                            let btnClass = isDarkMode ? "border-white/10 hover:border-white/30 text-white/50" : "border-black/10 hover:border-black/20 text-black/50";
-                                            let style = {};
-
-                                            if (isFlagged) {
-                                                btnClass = "bg-red-500/25 border-red-500 text-red-400";
-                                            } else if (isCurrent) {
-                                                btnClass = "border-2 bg-transparent";
-                                                style = { borderColor: accent, color: accent };
-                                            } else if (isAnswered) {
-                                                btnClass = "text-white border-transparent";
-                                                style = { backgroundColor: accent, color: isDarkMode ? "#000" : "#fff" };
-                                            }
-
-                                            return (
-                                                <div
-                                                    key={idx}
-                                                    className={`h-11 rounded-xl border flex items-center justify-center text-sm font-bold font-mono transition-all duration-200 relative ${btnClass}`}
-                                                    style={style}
+                                                <p 
+                                                    className="text-xs sm:text-sm opacity-80 leading-relaxed"
+                                                    style={{ fontFamily: "var(--font-chat-body)" }}
                                                 >
-                                                    {idx + 1}
-                                                    {isFlagged && <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Quiz Summary Card */}
-                                <div className={`p-6 border rounded-[2.5rem] relative overflow-hidden ${
-                                    isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
-                                }`}>
-                                    <div className="flex items-center gap-2 mb-4 text-left">
-                                        <BarChart3 className="h-4 w-4" style={{ color: accent }} />
-                                        <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                            Quiz Summary
-                                        </span>
-                                    </div>
-
-                                    {(() => {
-                                        const total = questions.length;
-                                        const answered = answers.filter(a => a !== -1 && a !== undefined).length;
-                                        const percentage = Math.round((answered / total) * 100);
-                                        const notAnswered = total - answered;
-                                        const marked = flaggedQuestions.filter(Boolean).length;
-                                        
-                                        const radius = 36;
-                                        const circumference = 2 * Math.PI * radius;
-                                        const strokeDashoffset = circumference - (percentage / 100) * circumference;
-
-                                        return (
-                                            <div className="flex items-center gap-6">
-                                                {/* Radial ring chart */}
-                                                <div className="relative h-24 w-24 flex items-center justify-center">
-                                                    <svg className="w-full h-full -rotate-90">
-                                                        <circle
-                                                            cx="48"
-                                                            cy="48"
-                                                            r={radius}
-                                                            fill="transparent"
-                                                            stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
-                                                            strokeWidth="8"
-                                                        />
-                                                        <circle
-                                                            cx="48"
-                                                            cy="48"
-                                                            r={radius}
-                                                            fill="transparent"
-                                                            stroke={accent}
-                                                            strokeWidth="8"
-                                                            strokeDasharray={circumference}
-                                                            strokeDashoffset={strokeDashoffset}
-                                                            strokeLinecap="round"
-                                                            className="transition-all duration-500"
-                                                        />
-                                                    </svg>
-                                                    <div className="absolute flex flex-col items-center justify-center">
-                                                        <span className="text-lg font-black">{percentage}%</span>
-                                                        <span className={`text-[8px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                                            Score
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Details list */}
-                                                <div className="flex-1 space-y-2 text-xs font-medium">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className={isDarkMode ? "text-white/40" : "text-black/40"}>Total Questions</span>
-                                                        <span className="font-black">{total}</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className={isDarkMode ? "text-white/40" : "text-black/40"}>Answered</span>
-                                                        <span className="font-black">{answered}</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className={isDarkMode ? "text-white/40" : "text-black/40"}>Not Answered</span>
-                                                        <span className="font-black">{notAnswered}</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className={isDarkMode ? "text-white/40" : "text-black/40"}>Marked</span>
-                                                        <span className="font-black text-red-400">{marked}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-                                </div>
-
-                                {/* Achievements style card: Players Leaderboard */}
-                                <div className={`p-6 border rounded-[2.5rem] relative overflow-hidden ${
-                                    isDarkMode ? "bg-[#2c2a29]/80 border-white/5 text-white" : "bg-[#f5f0e6]/80 border-black/5 text-black"
-                                }`}>
-                                    <div className="flex items-center gap-2 mb-4 text-left">
-                                        <Users className="h-4 w-4" style={{ color: accent }} />
-                                        <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                            Players Leaderboard
-                                        </span>
-                                    </div>
-                                    <div className="space-y-4">
-                                        {participants.map((p, index) => {
-                                            const isMe = (isHost && p.name === adminName) || (!isHost && p.name === participantName);
-                                            const myCurrentScore = correctCount + (selectedAnswer !== null && selectedAnswer === questions[currentQuestionIndex]?.correctOptionIndex ? 1 : 0);
-                                            const scoreToDisplay = isMe ? myCurrentScore * 100 : p.score * 100;
-                                            
-                                            return (
-                                                <div key={p.id} className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`h-9 w-9 rounded-xl flex items-center justify-center transition-all ${
-                                                            isMe 
-                                                                ? "text-white" 
-                                                                : (isDarkMode ? "bg-white/5 border border-white/10 text-white/60" : "bg-black/5 border border-black/10 text-black/60")
-                                                        }`}
-                                                             style={isMe ? { backgroundColor: accent, color: isDarkMode ? "#000" : "#fff" } : undefined}
-                                                        >
-                                                            {index === 0 ? <Trophy className="h-4 w-4" /> : <User className="h-4 w-4" />}
-                                                        </div>
-                                                        <div className="text-left">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <span className="text-xs font-bold leading-none">{p.name}</span>
-                                                                {isMe && <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>(You)</span>}
-                                                            </div>
-                                                            <span className={`text-[8px] font-mono uppercase tracking-wider ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                                                {p.finished ? "Completed" : "Answering..."}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="text-xs font-black" style={{ color: accent }}>
-                                                            +{scoreToDisplay} XP
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
+                                                    {questions[currentQuestionIndex]?.explanation}
+                                                </p>
+                                            </motion.div>
+                                        )}
+                                    </motion.div>
+                                </>
+                            )}
                         </div>
                     )}
 
-                    {!error && phase === "active" && hasSubmitted && (
-                        <div className="max-w-lg mx-auto mt-20 text-center">
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className={`border p-10 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}
-                            >
-                                <div className="h-16 w-16 bg-amber-500/20 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-6 overflow-hidden">
-                                    <div className="relative flex items-center justify-center" style={{ width: 40, height: 40 }}>
-                                        <motion.div
-                                            className="absolute"
-                                            animate={{ rotate: [0, -25, 0], x: [0, -6, 0] }}
-                                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
+                    {phase === "finished" && (
+                        <div className="w-full mx-auto space-y-10">
+                            {/* Party Popper Confetti Canvas Effect */}
+                            <PartyPopperEffect />
+
+                            {/* Section 1: Leaderboard Standings Grid */}
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
+                                {/* Left Column: Trophy Illustration & Podium Card + Action Card */}
+                                <div className="lg:col-span-5 space-y-6 flex flex-col h-full justify-between">
+                                    {/* Big Card: Final Standings with Trophy illustration */}
+                                    <div className={`p-6 sm:p-8 rounded-[2rem] border relative overflow-hidden flex-1 ${
+                                        isDarkMode ? "bg-[#161615] border-white/5" : "bg-[#fbfaf8] border-black/5 shadow-md"
+                                    }`}>
+                                        {/* Continuously falling/popping sparkles */}
+                                        <TrophySparklesEffect />
+
+                                        <div className="text-center py-4 relative z-10">
+                                            {/* Laurel Leaves (Patte) and Trophy Image */}
+                                            <div className="relative flex items-center justify-center mx-auto mb-2" style={{ width: 180, height: 140 }}>
+                                                <img 
+                                                    src="/trophy_4645225 (1).png" 
+                                                    alt="Trophy" 
+                                                    className="w-full h-full object-contain relative z-10 select-none pointer-events-none"
+                                                />
+                                            </div>
+                                            <h2 className="text-xl font-black uppercase tracking-wider" style={{ fontFamily: "var(--font-chat-heading)" }}>Final Standings</h2>
+                                            <span className="text-[10px] opacity-40 uppercase tracking-widest block mt-1" style={{ fontFamily: "var(--font-chat-accent)" }}>Battle Arena Results</span>
+                                        </div>
+
+                                        {/* Top Player Card (Cream background with orange border) */}
+                                        {leaderboard.slice(0, 1).map((p) => (
+                                            <div 
+                                                key={p.id}
+                                                className={`p-5 rounded-3xl border flex items-center justify-between relative z-10 mt-4 ${
+                                                    isDarkMode 
+                                                        ? "bg-orange-500/5 border-orange-500/20 text-orange-400" 
+                                                        : "bg-orange-500/[0.03] border-orange-500/20 text-orange-600"
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="relative h-12 w-12 flex items-center justify-center shrink-0">
+                                                        <img 
+                                                            src="/1 medal.svg" 
+                                                            alt="1st Medal" 
+                                                            className="h-full w-full object-contain select-none pointer-events-none" 
+                                                        />
+                                                    </div>
+                                                    <div className="flex flex-col text-left">
+                                                        <span className="text-base font-black truncate max-w-[150px] leading-tight" style={{ fontFamily: "var(--font-chat-heading)" }}>
+                                                            {p.name}
+                                                        </span>
+                                                        <span className="text-[9px] opacity-60 uppercase font-mono flex items-center gap-1 mt-1">
+                                                            <Clock className="h-3 w-3" /> {p.timeTaken}s TAKEN
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <span className="text-base font-black tracking-tight" style={{ fontFamily: "var(--font-chat-accent)" }}>
+                                                    {p.score * 100} PTS
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Action Card: Finish the session */}
+                                    <div className={`p-5 rounded-3xl border flex items-center justify-between gap-4 ${
+                                        isDarkMode ? "bg-[#161615] border-white/5" : "bg-[#fbfaf8] border-black/5 shadow-md"
+                                    }`}>
+                                        <div className="flex items-center gap-3.5 min-w-0">
+                                            <div className={`h-11 w-11 rounded-full flex items-center justify-center shrink-0 ${
+                                                isDarkMode ? "bg-indigo-500/10 text-indigo-400" : "bg-indigo-500/10 text-indigo-600"
+                                            }`}>
+                                                <Flag className="h-5 w-5" />
+                                            </div>
+                                            <div className="flex flex-col text-left min-w-0">
+                                                <span className="text-xs font-black uppercase leading-tight" style={{ fontFamily: "var(--font-chat-heading)" }}>Finish the session</span>
+                                                <span className="text-[9px] opacity-40 mt-1 leading-normal" style={{ fontFamily: "var(--font-chat-body)" }}>You can't make changes after finishing.</span>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => router.push("/chat")} 
+                                            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 shadow-lg shadow-indigo-600/20 hover:scale-102"
+                                            style={{ fontFamily: "var(--font-chat-accent)" }}
                                         >
-                                            <Swords className="h-7 w-7 text-amber-400" style={{ transform: 'scaleX(-1)' }} />
-                                        </motion.div>
-                                        <motion.div
-                                            className="absolute"
-                                            animate={{ rotate: [0, 25, 0], x: [0, 6, 0] }}
-                                            transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
-                                        >
-                                            <Swords className="h-7 w-7 text-amber-400" />
-                                        </motion.div>
+                                            <Flag className="h-3.5 w-3.5" />
+                                            Finish Session
+                                        </button>
                                     </div>
                                 </div>
-                                <h2 className="text-xl font-black uppercase tracking-tight mb-2">You're All Set!</h2>
-                                <p className={`text-sm mb-2 ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
-                                    You answered all {questions.length} questions.
-                                </p>
-                                <div className="flex items-center justify-center gap-2 mb-6">
-                                    <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
-                                    <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                        Waiting for opponent to finish...
-                                    </span>
+
+                                {/* Right Column: Detailed Standings */}
+                                <div className="lg:col-span-7 h-full">
+                                    <div className={`p-6 sm:p-8 rounded-[2rem] border h-full flex flex-col relative overflow-hidden min-h-[400px] ${
+                                        isDarkMode ? "bg-[#161615] border-white/5" : "bg-[#fbfaf8] border-black/5 shadow-md"
+                                    }`}>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-sm font-black uppercase tracking-wider" style={{ fontFamily: "var(--font-chat-heading)" }}>Detailed Standings</h3>
+                                            <div className="flex items-center gap-1.5 opacity-60">
+                                                <Users className="h-4 w-4" />
+                                                <span className="text-[10px] font-black uppercase tracking-wider" style={{ fontFamily: "var(--font-chat-accent)" }}>
+                                                    {leaderboard.length} {leaderboard.length === 1 ? "PLAYER" : "PLAYERS"}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="relative flex items-center my-4">
+                                            <div className={`flex-1 border-t ${isDarkMode ? "border-white/5" : "border-black/5"}`} />
+                                            <div className={`mx-4 px-2.5 py-1 rounded-full border text-[10px] ${
+                                                isDarkMode ? "bg-orange-500/10 border-orange-500/20 text-orange-400" : "bg-orange-500/5 border-orange-500/20 text-orange-500"
+                                            }`}>
+                                                <Trophy className="h-3.5 w-3.5" />
+                                            </div>
+                                            <div className={`flex-1 border-t ${isDarkMode ? "border-white/5" : "border-black/5"}`} />
+                                        </div>
+
+                                        <div className="space-y-2.5 overflow-y-auto scrollbar-hide flex-1 max-h-[350px] pr-1 relative z-10">
+                                            {leaderboard.map((p, i) => (
+                                                <div 
+                                                    key={p.id} 
+                                                    className={`flex items-center justify-between p-4 border rounded-2xl transition-all ${
+                                                        p.name === userName 
+                                                            ? (isDarkMode ? "bg-orange-500/10 border-orange-500/20" : "bg-orange-500/[0.03] border-orange-500/20") 
+                                                            : (isDarkMode ? "bg-white/[0.02] border-white/5" : "bg-black/[0.01] border-black/5")
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        {i < 3 ? (
+                                                            <div className="relative h-9 w-9 flex items-center justify-center shrink-0 mr-1.5">
+                                                                <img 
+                                                                    src={i === 0 ? "/1 medal.svg" : i === 1 ? "/2medal.svg" : "/3medal.svg"} 
+                                                                    alt={`Rank ${i + 1}`} 
+                                                                    className="h-full w-full object-contain select-none pointer-events-none" 
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="relative h-9 w-9 flex items-center justify-center shrink-0 mr-1.5">
+                                                                <img 
+                                                                    src="/badge.svg" 
+                                                                    alt={`Rank ${i + 1}`} 
+                                                                    className="h-full w-full object-contain select-none pointer-events-none" 
+                                                                />
+                                                                <span className="absolute text-[9px] font-black text-white" style={{ fontFamily: "var(--font-chat-accent)" }}>
+                                                                    {i + 1}
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                        <span className="text-sm font-bold" style={{ fontFamily: "var(--font-chat-heading)" }}>
+                                                            {p.name} {p.name === userName && "(You)"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="block text-sm font-black" style={{ fontFamily: "var(--font-chat-heading)" }}>{p.score * 100}</span>
+                                                        <span className="text-[9px] font-mono opacity-40 uppercase block mt-0.5">{p.timeTaken}s</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Decorative grid pattern in bottom right corner */}
+                                        <div className="absolute bottom-4 right-4 opacity-[0.05] pointer-events-none">
+                                            <svg width="60" height="60" viewBox="0 0 60 60" fill="currentColor">
+                                                <circle cx="5" cy="5" r="1.5" />
+                                                <circle cx="20" cy="5" r="1.5" />
+                                                <circle cx="35" cy="5" r="1.5" />
+                                                <circle cx="50" cy="5" r="1.5" />
+                                                <circle cx="5" cy="20" r="1.5" />
+                                                <circle cx="20" cy="20" r="1.5" />
+                                                <circle cx="35" cy="20" r="1.5" />
+                                                <circle cx="50" cy="20" r="1.5" />
+                                                <circle cx="5" cy="35" r="1.5" />
+                                                <circle cx="20" cy="35" r="1.5" />
+                                                <circle cx="35" cy="35" r="1.5" />
+                                                <circle cx="50" cy="35" r="1.5" />
+                                                <circle cx="5" cy="50" r="1.5" />
+                                                <circle cx="20" cy="50" r="1.5" />
+                                                <circle cx="35" cy="50" r="1.5" />
+                                                <circle cx="50" cy="50" r="1.5" />
+                                            </svg>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-3 justify-center mb-6">
-                                    {participants.filter(p => {
-                                        const isMe = (isHost && p.name === adminName) || (!isHost && p.name === participantName);
-                                        return !isMe;
-                                    }).map(opponent => (
-                                        <div key={opponent.id} className={`flex items-center gap-2 px-4 py-2 border rounded-xl ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
-                                            <div className={`h-2 w-2 rounded-full ${opponent.finished ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
-                                            <span className="text-xs">{opponent.name}</span>
-                                            <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{opponent.finished ? "Done" : "Playing..."}</span>
+                            </div>
+
+                            {/* Section 2: Bottom Stats Card */}
+                            <div className={`w-full grid grid-cols-2 md:grid-cols-7 gap-4 p-5 rounded-3xl border transition-all ${
+                                isDarkMode ? "bg-[#161615] border-white/5" : "bg-[#fbfaf8] border-black/5 shadow-md"
+                            }`}>
+                                <div className="flex items-center gap-3 pl-2 md:col-span-1">
+                                    <div className="h-9 w-9 bg-orange-500/10 rounded-full flex items-center justify-center text-orange-500 shrink-0">
+                                        <Star className="h-4.5 w-4.5" />
+                                    </div>
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-[8px] font-bold uppercase tracking-wider opacity-40" style={{ fontFamily: "var(--font-chat-accent)" }}>Your Rank</span>
+                                        <span className="text-sm font-black" style={{ fontFamily: "var(--font-chat-heading)" }}>
+                                            #{myRank}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="hidden md:block border-r border-inherit h-6 my-auto opacity-10 md:col-span-1 justify-self-center" />
+
+                                <div className="flex items-center gap-3 pl-2 md:col-span-1">
+                                    <div className="h-9 w-9 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500 shrink-0">
+                                        <Target className="h-4.5 w-4.5" />
+                                    </div>
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-[8px] font-bold uppercase tracking-wider opacity-40" style={{ fontFamily: "var(--font-chat-accent)" }}>Your Score</span>
+                                        <span className="text-sm font-black" style={{ fontFamily: "var(--font-chat-heading)" }}>
+                                            {myScore * 100} PTS
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="hidden md:block border-r border-inherit h-6 my-auto opacity-10 md:col-span-1 justify-self-center" />
+
+                                <div className="flex items-center gap-3 pl-2 md:col-span-1">
+                                    <div className="h-9 w-9 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 shrink-0">
+                                        <Clock className="h-4.5 w-4.5" />
+                                    </div>
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-[8px] font-bold uppercase tracking-wider opacity-40" style={{ fontFamily: "var(--font-chat-accent)" }}>Time Taken</span>
+                                        <span className="text-sm font-black" style={{ fontFamily: "var(--font-chat-heading)" }}>
+                                            {myTimeTaken}s
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="hidden md:block border-r border-inherit h-6 my-auto opacity-10 md:col-span-1 justify-self-center" />
+
+                                <div className="flex items-center gap-3 pl-2 md:col-span-1">
+                                    <div className="h-9 w-9 bg-purple-500/10 rounded-full flex items-center justify-center text-purple-500 shrink-0">
+                                        <BarChart3 className="h-4.5 w-4.5" />
+                                    </div>
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-[8px] font-bold uppercase tracking-wider opacity-40" style={{ fontFamily: "var(--font-chat-accent)" }}>Accuracy</span>
+                                        <span className="text-sm font-black" style={{ fontFamily: "var(--font-chat-heading)" }}>
+                                            {myAccuracy}%
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 3: Divider Line */}
+                            <div className={`w-full border-t ${isDarkMode ? "border-white/5" : "border-black/5"}`} />
+
+                            {/* Section 4: Battle Analysis Chart */}
+                            <div className={`w-full p-6 sm:p-8 rounded-[2rem] border transition-all ${
+                                isDarkMode ? "bg-[#161615] border-white text-white" : "bg-[#fbfaf8] border-black text-black shadow-md"
+                            }`}>
+                                <div className="flex items-center gap-2 mb-6">
+                                    <BarChart3 className="h-5 w-5 opacity-60" />
+                                    <h3 className="text-base font-black uppercase tracking-tight">Battle Analysis</h3>
+                                </div>
+                                <div className="h-80 w-full min-h-[300px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor={isDarkMode ? "#ffffff" : "#000000"} stopOpacity={0.15}/>
+                                                    <stop offset="95%" stopColor={isDarkMode ? "#ffffff" : "#000000"} stopOpacity={0}/>
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
+                                            <XAxis 
+                                                dataKey="name" 
+                                                tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 10 }} 
+                                                axisLine={false}
+                                                tickLine={false}
+                                            />
+                                            <YAxis 
+                                                tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 10 }} 
+                                                axisLine={false}
+                                                tickLine={false}
+                                            />
+                                            <Tooltip 
+                                                contentStyle={{ 
+                                                    backgroundColor: isDarkMode ? "#161615" : "#ffffff", 
+                                                    border: isDarkMode ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid rgba(0, 0, 0, 0.1)", 
+                                                    borderRadius: "12px",
+                                                    fontSize: "12px",
+                                                    color: isDarkMode ? "#ffffff" : "#000000"
+                                                }} 
+                                                itemStyle={{ color: isDarkMode ? "#ffffff" : "#000000" }}
+                                                labelClassName="font-bold font-mono"
+                                            />
+                                            <Area 
+                                                type="monotone" 
+                                                dataKey="Score" 
+                                                stroke={isDarkMode ? "#ffffff" : "#000000"} 
+                                                strokeWidth={2.5} 
+                                                fillOpacity={1} 
+                                                fill="url(#chartGradient)" 
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Section 5: Divider Line */}
+                            <div className={`w-full border-t ${isDarkMode ? "border-white/5" : "border-black/5"}`} />
+
+                            {/* Section 6: Review Questions */}
+                            <div className="w-full space-y-6">
+                                <div className="flex items-center gap-2">
+                                    <Star className="h-5 w-5 opacity-60" />
+                                    <h3 className="text-base font-black uppercase tracking-tight">Review Questions</h3>
+                                </div>
+                                <div className="space-y-6">
+                                    {questions.map((q, i) => (
+                                        <div 
+                                            key={i} 
+                                            className={`pb-6 border-b last:border-b-0 ${
+                                                isDarkMode ? "border-white/5" : "border-black/5"
+                                            }`}
+                                        >
+                                            <div className="flex items-start gap-4">
+                                                <div className={`h-8 w-8 rounded-full flex items-center justify-center border text-xs font-mono shrink-0 mt-0.5 ${
+                                                    answers[i] === q.correctOptionIndex 
+                                                        ? "border-emerald-500 bg-emerald-500/10 text-emerald-500" 
+                                                        : "border-red-500 bg-red-500/10 text-red-500"
+                                                }`}>
+                                                    {answers[i] === q.correctOptionIndex ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold text-sm leading-normal mb-4">Q{i+1}. {q.question}</p>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                                                        {q.options.map((opt, oi) => (
+                                                            <div 
+                                                                key={oi} 
+                                                                className={`p-3.5 rounded-xl text-xs border leading-normal ${
+                                                                    oi === q.correctOptionIndex 
+                                                                        ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-500 font-semibold" 
+                                                                        : (oi === answers[i] ? "border-red-500/50 bg-red-500/10 text-red-500 font-semibold" : "opacity-35")
+                                                                }`}
+                                                            >
+                                                                {String.fromCharCode(65+oi)}. {opt}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className={`p-4 rounded-xl text-xs italic leading-normal ${
+                                                        isDarkMode ? "bg-white/5 opacity-70" : "bg-black/5 opacity-70"
+                                                    }`}>
+                                                        {q.explanation}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
-                                <div className={`w-full rounded-full h-1 overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
-                                    <motion.div
-                                        className={`h-full ${isDarkMode ? "bg-white" : "bg-black"}`}
-                                        animate={{ x: ["-100%", "100%"] }}
-                                        transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                                    />
-                                </div>
-                                <button
-                                    onClick={() => setShowQuitConfirm(true)}
-                                    className="mt-6 px-6 py-3 border border-red-500/30 text-red-400 text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:bg-red-500/10 transition-all"
-                                >
-                                    Quit Battle
-                                </button>
-                            </motion.div>
-                        </div>
-                    )}
-
-                    {!error && phase === "finished" && (
-                        <div className="max-w-5xl mx-auto mt-6">
-                            {/* Tab Switcher */}
-                            <div className={`flex mb-6 border-b ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                                <button
-                                    onClick={() => setTab("leaderboard")}
-className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "leaderboard"
-                                                        ? `${isDarkMode ? "bg-white text-black" : "bg-[#00DDDD] text-white"} font-bold`
-                                                        : `${isDarkMode ? "text-white/40 hover:text-white" : "text-[#00DDDD]/40 hover:text-[#00DDDD]"}`
-                                                        }`}
-                                            >
-                                                <Trophy className="h-3 w-3 inline mr-1.5 -mt-0.5" />
-                                                Leaderboard
-                                            </button>
-                                            <button
-                                                onClick={() => setTab("analysis")}
-                                                className={`px-6 py-3 text-[9px] font-mono uppercase tracking-[0.2em] transition-all ${tab === "analysis"
-                                                        ? `${isDarkMode ? "bg-white text-black" : "bg-[#00DDDD] text-white"} font-bold`
-                                                        : `${isDarkMode ? "text-white/40 hover:text-white" : "text-[#00DDDD]/40 hover:text-[#00DDDD]"}`
-                                                        }`}
-                                >
-                                    <BarChart3 className="h-3 w-3 inline mr-1.5 -mt-0.5" />
-                                    Analysis
-                                </button>
                             </div>
-
-                            {tab === "leaderboard" && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className={`border p-8 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}
-                                >
-                                    <div className="flex items-center gap-4 mb-8">
-                                        <div className="h-12 w-12 bg-amber-500 text-black rounded-2xl flex items-center justify-center">
-                                            <Trophy className="h-6 w-6" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-2xl font-black tracking-tight uppercase">Final Rankings</h2>
-                                            <p className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{topic} Battle</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        {leaderboard.map((p, i) => {
-                                            const isMe = (isHost && p.name === adminName) || (!isHost && p.name === participantName);
-                                            const medals = ["text-amber-400", "text-gray-300", "text-amber-600"];
-                                            return (
-                                                <motion.div
-                                                    key={p.id}
-                                                    initial={{ opacity: 0, x: -20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ delay: i * 0.1 }}
-                                                    className={`flex items-center p-5 rounded-2xl border transition-all ${isMe
-                                                        ? `${isDarkMode ? "bg-white/10 border-white/30" : "bg-black/10 border-black/30"} scale-[1.02]`
-                                                        : `${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`
-                                                        }`}
-                                                >
-                                                    <div className={`w-10 h-10 flex items-center justify-center text-lg font-black font-mono ${i < 3 ? medals[i] : `${isDarkMode ? "text-white/30" : "text-black/30"}`}`}>
-                                                        {i === 0 ? <Trophy className="h-6 w-6" /> : `#${i + 1}`}
-                                                    </div>
-                                                    <div className="flex-1 ml-4">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-bold">{p.name}</span>
-                                                            {isMe && <span className={`text-[8px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>(You)</span>}
-                                                        </div>
-                                                        <div className={`flex items-center gap-4 mt-1 text-[10px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                            <span>Score: {p.score}/{questions.length}</span>
-                                                            <span>Time: {p.timeTaken}s</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="text-2xl font-black">{p.score}</div>
-                                                        <div className={`text-[9px] font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>points</div>
-                                                    </div>
-                                                </motion.div>
-                                            );
-                                        })}
-                                    </div>
-
-                                    <button
-                                        onClick={() => router.push("/")}
-                                        className="w-full mt-8 py-5 bg-white text-black text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all"
-                                    >
-                                        Back to Chat
-                                    </button>
-                                </motion.div>
-                            )}
-
-                            {tab === "analysis" && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="space-y-6"
-                                >
-                                    {/* Score Comparison Bar Chart */}
-                                    <div className={`border p-8 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <BarChart3 className={`h-5 w-5 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
-                                            <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Score Comparison</span>
-                                        </div>
-                                        <div className="h-72">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={barData}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#ffffff10" : "#00000010"} />
-                                                    <XAxis dataKey="name" tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 11 }} />
-                                                    <YAxis tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 11 }} />
-                                                    <Tooltip
-                                                        contentStyle={{
-                                                            backgroundColor: isDarkMode ? "#1a1a1a" : "#f5f5f5",
-                                                            border: isDarkMode ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)",
-                                                            borderRadius: "12px",
-                                                            color: isDarkMode ? "#fff" : "#000",
-                                                        }}
-                                                    />
-                                                    <Bar dataKey="score" fill={isDarkMode ? "#ffffff" : "#000000"} radius={[8, 8, 0, 0]} />
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-
-                                    <div className={`border p-8 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <LineChart className={`h-5 w-5 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
-                                            <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Performance Trend</span>
-                                        </div>
-                                        <div className="h-72">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <ReLineChart data={lineData}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#ffffff10" : "#00000010"} />
-                                                    <XAxis dataKey="question" tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 11 }} />
-                                                    <YAxis tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 11 }} />
-                                                    <Tooltip
-                                                        contentStyle={{
-                                                            backgroundColor: isDarkMode ? "#1a1a1a" : "#f5f5f5",
-                                                            border: isDarkMode ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)",
-                                                            borderRadius: "12px",
-                                                            color: isDarkMode ? "#fff" : "#000",
-                                                        }}
-                                                    />
-                                                    <Legend
-                                                        formatter={(value) => <span style={{ color: isDarkMode ? "#ffffff80" : "#00000080", fontSize: "11px" }}>{value}</span>}
-                                                    />
-                                                    {leaderboard.map((p, i) => (
-                                                        <Line
-                                                            key={p.id}
-                                                            type="monotone"
-                                                            dataKey={p.name}
-                                                            stroke={isDarkMode ? ["#ffffff", "#60a5fa", "#f59e0b", "#ef4444", "#10b981"][i % 5] : ["#000000", "#3b82f6", "#d97706", "#dc2626", "#059669"][i % 5]}
-                                                            strokeWidth={2}
-                                                            dot={{ r: 4 }}
-                                                        />
-                                                    ))}
-                                                </ReLineChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-
-                                    {questions.length > 0 && (
-                                        <div className={`border p-8 rounded-[2.5rem] ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}>
-                                            <div className="flex items-center gap-3 mb-6">
-                                                <Star className={`h-5 w-5 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />
-                                                <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Answer Key & Explanations</span>
-                                            </div>
-                                            <div className="space-y-6">
-                                                {questions.map((q, i) => {
-                                                    const userAnswer = answers[i];
-                                                    const isUserCorrect = userAnswer === q.correctOptionIndex;
-                                                    return (
-                                                        <div key={i} className={`p-5 border rounded-2xl ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}>
-                                                            <div className="flex items-start gap-3">
-                                                                <div className={`h-7 w-7 flex items-center justify-center rounded-full text-xs font-mono border flex-shrink-0 mt-0.5 ${userAnswer === -1
-                                                                    ? `${isDarkMode ? "border-white/10 text-white/30" : "border-black/10 text-black/30"}`
-                                                                    : isUserCorrect
-                                                                        ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
-                                                                        : "border-red-500 bg-red-500/20 text-red-400"
-                                                                    }`}>
-                                                                    {userAnswer === -1 ? "—" : isUserCorrect ? "✓" : "✗"}
-                                                                </div>
-                                                                <div className="flex-1">
-                                                                    <p className="text-sm font-bold mb-3">
-                                                                        <span className={`font-mono text-[10px] mr-2 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>Q{i + 1}.</span>
-                                                                        {q.question}
-                                                                    </p>
-                                                                    <div className="grid grid-cols-2 gap-2 mb-3">
-                                                                        {q.options.map((opt, oi) => {
-                                                                            const isCorrectOpt = q.correctOptionIndex === oi;
-                                                                            const isUserOpt = userAnswer === oi;
-                                                                            return (
-                                                                                <div key={oi} className={`p-3 rounded-xl text-xs border ${isCorrectOpt
-                                                                                    ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
-                                                                                    : isUserOpt && !isCorrectOpt
-                                                                                        ? "border-red-500/50 bg-red-500/10 text-red-400"
-                                                                                        : `${isDarkMode ? "border-white/5 text-white/50" : "border-black/5 text-black/50"}`
-                                                                                    }`}>
-                                                                                    <span className="font-mono text-[9px] opacity-60 mr-2">{String.fromCharCode(65 + oi)}</span>
-                                                                                    {opt}
-                                                                                    {isCorrectOpt && <Check className="h-3 w-3 inline ml-1" />}
-                                                                                </div>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                    <p className={`text-[10px] italic ${isDarkMode ? "text-white/50" : "text-black/50"}`}>{q.explanation}</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="flex gap-4">
-                                        <button
-                                            onClick={() => router.push("/")}
-                                            className="flex-1 py-5 bg-white text-black text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all"
-                                        >
-                                            Back to Chat
-                                        </button>
-                                        <button
-                                            onClick={() => router.push(`/?arena=host&topic=${encodeURIComponent(topic)}&difficulty=${difficulty}&count=${questionCount}`)}
-                                            className={`px-8 py-5 border text-[10px] font-mono font-black uppercase tracking-[0.3em] rounded-[2rem] transition-all flex items-center gap-2 ${isDarkMode ? "border-white/20 text-white hover:bg-white/10 hover:border-white/40" : "border-[#00DDDD]/20 text-[#00DDDD] hover:bg-[#00DDDD]/10 hover:border-[#00DDDD]/40"}`}
-                                        >
-                                            <RefreshCw className="h-4 w-4" />
-                                            Rematch
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            )}
                         </div>
                     )}
                 </main>
             </div>
 
             {showQuitConfirm && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className={`fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm p-6 ${isDarkMode ? "bg-black/70" : "bg-white/70"}`}
-                    onClick={() => setShowQuitConfirm(false)}
-                >
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                        className={`border p-8 rounded-[2.5rem] max-w-sm w-full text-center ${isDarkMode ? "border-white/10 bg-[#0d0d0d]" : "border-black/10 bg-white"}`}
-                    >
-                        <div className="h-14 w-14 bg-red-500/20 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-5">
-                            <AlertTriangle className="h-7 w-7 text-red-400" />
-                        </div>
-                        <h3 className="text-lg font-black uppercase tracking-tight mb-2">Quit Battle?</h3>
-                        <p className={`text-sm mb-6 ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
-                            {phase === "active"
-                                ? "You will forfeit the match and your progress will be lost."
-                                : "Are you sure you want to leave the battle arena?"}
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowQuitConfirm(false)}
-                                className={`flex-1 py-3 border text-[10px] font-mono font-black uppercase tracking-[0.2em] rounded-[2rem] transition-all ${isDarkMode ? "border-white/20 text-white/80 hover:bg-white/10" : "border-[#00DDDD]/20 text-[#00DDDD]/80 hover:bg-[#00DDDD]/10"}`}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowQuitConfirm(false);
-                                    handleLeave();
-                                }}
-                                className="flex-1 py-3 bg-red-500 text-white text-[10px] font-mono font-black uppercase tracking-[0.2em] rounded-[2rem] hover:bg-red-600 transition-all"
-                            >
-                                Quit
-                            </button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-black/60 p-6" onClick={() => setShowQuitConfirm(false)}>
+                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={e => e.stopPropagation()} className={`p-10 rounded-[2.5rem] border max-w-sm w-full text-center ${isDarkMode ? "bg-[#0d0d0c] border-white/10" : "bg-[#fbfaf8] border-black/10 shadow-2xl"}`}>
+                        <div className="h-14 w-14 bg-red-500/20 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-6"><AlertTriangle className="h-8 w-8 text-red-500" /></div>
+                        <h3 className="text-xl font-black uppercase mb-2">Quit Battle?</h3>
+                        <p className="text-sm opacity-50 mb-8">You will lose all current progress and forfeit the match.</p>
+                        <div className="flex gap-4">
+                            <button onClick={() => setShowQuitConfirm(false)} className="flex-1 py-4 border border-inherit rounded-2xl text-[10px] font-black uppercase opacity-60">Cancel</button>
+                            <button onClick={handleLeave} className="flex-1 py-4 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase">Quit</button>
                         </div>
                     </motion.div>
-                </motion.div>
+                </div>
             )}
         </div>
+    );
+}
+
+function TrophySparklesEffect() {
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        let animationFrameId: number;
+        let width = canvas.width = canvas.parentElement?.offsetWidth || 300;
+        let height = canvas.height = canvas.parentElement?.offsetHeight || 300;
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (let entry of entries) {
+                width = canvas.width = entry.contentRect.width;
+                height = canvas.height = entry.contentRect.height;
+            }
+        });
+        if (canvas.parentElement) {
+            resizeObserver.observe(canvas.parentElement);
+        }
+
+        const colors = ["#ffffff", "#ffca3a", "#ff9f1c", "#fbbf24", "#f59e0b", "#f97316"];
+        
+        type Sparkle = {
+            x: number;
+            y: number;
+            size: number;
+            scale: number;
+            opacity: number;
+            dx: number;
+            dy: number;
+            color: string;
+            life: number;
+            maxLife: number;
+            pulseSpeed: number;
+            pulseTime: number;
+        };
+
+        const sparkles: Sparkle[] = [];
+        const maxSparkles = 25;
+
+        const createSparkle = (initY = false): Sparkle => {
+            const size = Math.random() * 8 + 4;
+            const maxLife = Math.random() * 100 + 100;
+            return {
+                x: Math.random() * width,
+                y: initY ? Math.random() * height : -20,
+                size,
+                scale: 0,
+                opacity: 0,
+                dx: Math.random() * 0.8 - 0.4,
+                dy: Math.random() * 0.8 + 0.4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                life: 0,
+                maxLife,
+                pulseSpeed: Math.random() * 0.1 + 0.05,
+                pulseTime: Math.random() * Math.PI
+            };
+        };
+
+        for (let i = 0; i < maxSparkles; i++) {
+            sparkles.push(createSparkle(true));
+        }
+
+        const drawStar = (c: CanvasRenderingContext2D, cx: number, cy: number, spikes: number, outer: number, inner: number, color: string, alpha: number) => {
+            let rot = Math.PI / 2 * 3;
+            let x = cx;
+            let y = cy;
+            let step = Math.PI / spikes;
+
+            c.save();
+            c.globalAlpha = alpha;
+            c.beginPath();
+            c.moveTo(cx, cy - outer);
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot) * outer;
+                y = cy + Math.sin(rot) * outer;
+                c.lineTo(x, y);
+                rot += step;
+
+                x = cx + Math.cos(rot) * inner;
+                y = cy + Math.sin(rot) * inner;
+                c.lineTo(x, y);
+                rot += step;
+            }
+            c.lineTo(cx, cy - outer);
+            c.closePath();
+            c.fillStyle = color;
+            c.shadowBlur = outer * 1.5;
+            c.shadowColor = color;
+            c.fill();
+            c.restore();
+        };
+
+        const animate = () => {
+            ctx.clearRect(0, 0, width, height);
+
+            for (let i = 0; i < sparkles.length; i++) {
+                const s = sparkles[i];
+                s.life++;
+                s.y += s.dy;
+                s.x += s.dx;
+                s.pulseTime += s.pulseSpeed;
+
+                const lifeProgress = s.life / s.maxLife;
+                if (lifeProgress < 0.2) {
+                    s.opacity = lifeProgress * 5;
+                } else if (lifeProgress > 0.8) {
+                    s.opacity = (1 - lifeProgress) * 5;
+                } else {
+                    s.opacity = 1;
+                }
+                s.opacity = Math.max(0, Math.min(1, s.opacity));
+                s.scale = (Math.sin(s.pulseTime) * 0.3 + 0.7);
+
+                drawStar(ctx, s.x, s.y, 4, s.size * s.scale, s.size * s.scale * 0.3, s.color, s.opacity);
+
+                if (s.y > height + 20 || s.x < -20 || s.x > width + 20 || s.life >= s.maxLife) {
+                    sparkles[i] = createSparkle(false);
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(animate);
+        };
+
+        animate();
+
+        return () => {
+            cancelAnimationFrame(animationFrameId);
+            resizeObserver.disconnect();
+        };
+    }, []);
+
+    return (
+        <canvas 
+            ref={canvasRef} 
+            className="absolute inset-0 pointer-events-none z-0 w-full h-full rounded-[2rem]" 
+        />
+    );
+}
+
+function PartyPopperEffect() {
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        let animationFrameId: number;
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        const handleResize = () => {
+            if (canvas) {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+        };
+        window.addEventListener("resize", handleResize);
+
+        const colors = ["#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93", "#ff9f1c", "#00f5d4"];
+        type Particle = {
+            x: number;
+            y: number;
+            r: number;
+            color: string;
+            dx: number;
+            dy: number;
+            tilt: number;
+            tiltAngle: number;
+            tiltAngleSpeed: number;
+        };
+
+        const particles: Particle[] = [];
+        for (let i = 0; i < 150; i++) {
+            particles.push({
+                x: Math.random() * width,
+                y: Math.random() * -height - 20,
+                r: Math.random() * 5 + 3,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                dx: Math.random() * 2 - 1,
+                dy: Math.random() * 4 + 2,
+                tilt: Math.random() * 10 - 5,
+                tiltAngle: Math.random() * Math.PI,
+                tiltAngleSpeed: Math.random() * 0.05 + 0.02
+            });
+        }
+
+        const draw = () => {
+            ctx.clearRect(0, 0, width, height);
+
+            particles.forEach((p) => {
+                p.y += p.dy;
+                p.x += p.dx;
+                p.tiltAngle += p.tiltAngleSpeed;
+                p.tilt = Math.sin(p.tiltAngle) * 12;
+
+                ctx.beginPath();
+                ctx.lineWidth = p.r * 2;
+                ctx.strokeStyle = p.color;
+                ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+                ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+                ctx.stroke();
+            });
+
+            const activeParticles = particles.filter(p => p.y < height);
+            if (activeParticles.length > 0) {
+                animationFrameId = requestAnimationFrame(draw);
+            }
+        };
+
+        draw();
+
+        return () => {
+            window.removeEventListener("resize", handleResize);
+            cancelAnimationFrame(animationFrameId);
+        };
+    }, []);
+
+    return (
+        <canvas 
+            ref={canvasRef} 
+            className="fixed inset-0 pointer-events-none z-50 w-full h-full"
+        />
     );
 }
 
 function LoadingFallback() {
     const { isDarkMode } = useTheme();
     return (
-        <div className={`min-h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} flex items-center justify-center`}>
+        <div className={`min-h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-[#ebeae7] text-black"} flex items-center justify-center`}>
             <div className="text-center">
                 <div className="relative flex items-center justify-center mx-auto mb-4" style={{ width: 48, height: 48 }}>
-                    <motion.div
-                        className="absolute"
-                        animate={{ rotate: [0, -25, 0], x: [0, -8, 0] }}
-                        transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
-                    >
+                    <motion.div className="absolute" animate={{ rotate: [0, -25, 0], x: [0, -8, 0] }} transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}>
                         <Swords className={`h-8 w-8 ${isDarkMode ? "text-white/80" : "text-black/80"}`} style={{ transform: 'scaleX(-1)' }} />
                     </motion.div>
-                    <motion.div
-                        className="absolute"
-                        animate={{ rotate: [0, 25, 0], x: [0, 8, 0] }}
-                        transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}
-                    >
+                    <motion.div className="absolute" animate={{ rotate: [0, 25, 0], x: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut" }}>
                         <Swords className={`h-8 w-8 ${isDarkMode ? "text-white/80" : "text-black/80"}`} />
                     </motion.div>
                 </div>
