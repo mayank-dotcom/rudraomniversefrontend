@@ -1463,10 +1463,9 @@ export async function createEnterpriseManager(payload: CreateEnterpriseManagerPa
     headers: getHeaders(),
     body: JSON.stringify(payload),
   })
-  const data = await parseJson<{ success: boolean; manager?: EnterpriseManager; error?: string; details?: string }>(res)
+  const data = await parseJson<{ success: boolean; manager?: EnterpriseManager; error?: string }>(res)
   if (!res.ok || !data.success) {
-    const message = data.details ? `${data.error}: ${data.details}` : (data.error || "Unable to create manager.")
-    throw new Error(message)
+    throw new Error(data.error || "Unable to create manager.")
   }
   return data
 }

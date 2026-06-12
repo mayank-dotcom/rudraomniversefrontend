@@ -328,6 +328,9 @@ const Chat = () => {
     const [gmailAutoSignature, setGmailAutoSignature] = useState("");
     const [gmailAutoInstructions, setGmailAutoInstructions] = useState("");
     const [gmailBulkModal, setGmailBulkModal] = useState(false);
+    const [gmailRewriteModal, setGmailRewriteModal] = useState(false);
+    const [gmailRewriting, setGmailRewriting] = useState(false);
+    const [gmailRewrittenBody, setGmailRewrittenBody] = useState("");
     const gmailAutoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const gmailAutoRunningRef = useRef(false);
     const PLACEHOLDER_TEXTS = useMemo(() => [
@@ -2136,6 +2139,144 @@ STRICT RULES:
                         style={{ maxHeight: '30vh' }}
                     />
                 </div>
+
+                {/* ─── Mail Quick Actions Row (Enterprise + Gmail) ─── */}
+                {gmailConnected && showEmployeeView && isEnterpriseModeActive && (
+                    <div className={`mt-2 pt-2 border-t border-dashed flex items-center gap-1.5 flex-wrap ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                        <span className={`text-[8px] font-mono uppercase tracking-[0.2em] mr-1 ${isDarkMode ? "text-white/40" : "text-black/50"}`}>Mail</span>
+
+                        {/* Auto Reply */}
+                        <motion.button
+                            onClick={() => {
+                                const next = !gmailAutoOn;
+                                setGmailAutoOn(next);
+                                if (next) setGmailAutoShowModal(true);
+                            }}
+                            whileHover={isLoading || isProcessingFile ? undefined : { scale: 1.05 }}
+                            whileTap={isLoading || isProcessingFile ? undefined : { scale: 0.95 }}
+                            disabled={isLoading || isProcessingFile}
+                            className={`flex items-center gap-1 px-2.5 py-1 text-[9px] font-mono uppercase tracking-[0.15em] rounded-md border transition-all ${gmailAutoOn
+                                ? (isDarkMode ? "bg-accent/20 border-accent text-accent" : "bg-accent/15 border-accent text-accent")
+                                : (isDarkMode ? "border-white/15 bg-white/5 text-white/80 hover:border-white/30 hover:text-white" : "border-black/15 bg-black/5 text-black/80 hover:border-black/30 hover:text-black")
+                                } ${isLoading || isProcessingFile ? "opacity-50 pointer-events-none" : ""}`}
+                            title="Auto Reply"
+                        >
+                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                            </svg>
+                            {gmailAutoOn ? "Auto ON" : "Auto Reply"}
+                        </motion.button>
+
+                        {/* Bulk Auto */}
+                        <motion.button
+                            onClick={() => setGmailBulkModal(true)}
+                            whileHover={isLoading || isProcessingFile ? undefined : { scale: 1.05 }}
+                            whileTap={isLoading || isProcessingFile ? undefined : { scale: 0.95 }}
+                            disabled={isLoading || isProcessingFile || gmailSending}
+                            className={`flex items-center gap-1 px-2.5 py-1 text-[9px] font-mono uppercase tracking-[0.15em] rounded-md border transition-all ${isDarkMode ? "border-white/15 bg-white/5 text-white/80 hover:border-white/30 hover:text-white" : "border-black/15 bg-black/5 text-black/80 hover:border-black/30 hover:text-black"} ${isLoading || isProcessingFile ? "opacity-50 pointer-events-none" : ""}`}
+                            title="Bulk Auto Reply"
+                        >
+                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                            Bulk Auto
+                        </motion.button>
+
+                        {/* Send Mail */}
+                        <motion.button
+                            onClick={() => {
+                                if (!gmailMailTo.trim() || !input.trim()) {
+                                    setGmailSendResult("Add recipient(s) in the right panel first");
+                                    setTimeout(() => setGmailSendResult(""), 2500);
+                                    return;
+                                }
+                                setGmailConfirmSend(true);
+                            }}
+                            whileHover={isLoading || isProcessingFile ? undefined : { scale: 1.05 }}
+                            whileTap={isLoading || isProcessingFile ? undefined : { scale: 0.95 }}
+                            disabled={isLoading || isProcessingFile || gmailSending}
+                            className={`flex items-center gap-1 px-2.5 py-1 text-[9px] font-mono uppercase tracking-[0.15em] rounded-md border transition-all ${isDarkMode ? "border-[#EA4335]/40 bg-[#EA4335]/10 text-[#EA4335] hover:border-[#EA4335]/60 hover:bg-[#EA4335]/15" : "border-[#EA4335]/50 bg-[#EA4335]/10 text-[#EA4335] hover:border-[#EA4335]/70 hover:bg-[#EA4335]/15"} ${isLoading || isProcessingFile ? "opacity-50 pointer-events-none" : ""}`}
+                            title="Send Mail"
+                        >
+                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M22 2L11 13" /><path d="M22 2L15 22l-4-9-9-4z" />
+                            </svg>
+                            Send Mail
+                        </motion.button>
+
+                        {/* Rewrite Mail */}
+                        <motion.button
+                            onClick={async () => {
+                                const trimmedInput = input.trim();
+                                if (!trimmedInput) {
+                                    setGmailSendResult("Type something to rewrite");
+                                    setTimeout(() => setGmailSendResult(""), 2500);
+                                    return;
+                                }
+                                setGmailRewriteModal(true);
+                                setGmailRewriting(true);
+                                setGmailRewrittenBody("");
+                                try {
+                                    const { sendChatCompletion } = await import("@/lib/chat-api");
+                                    const res = await sendChatCompletion({
+                                        messages: [
+                                            { role: "system", content: "You are an email writing assistant. Rewrite the following rough text into a polished, professional email. Fix grammar, improve clarity, structure the content well, and return ONLY the rewritten email body — no explanations, no greetings, no extra commentary." },
+                                            { role: "user", content: trimmedInput }
+                                        ]
+                                    });
+                                    const rewritten = (res as any)?.response || res.data?.[0]?.message?.content || trimmedInput;
+                                    setGmailRewrittenBody(rewritten);
+                                } catch {
+                                    setGmailRewrittenBody(trimmedInput);
+                                }
+                                setGmailRewriting(false);
+                            }}
+                            whileHover={isLoading || isProcessingFile ? undefined : { scale: 1.05 }}
+                            whileTap={isLoading || isProcessingFile ? undefined : { scale: 0.95 }}
+                            disabled={isLoading || isProcessingFile || gmailRewriting}
+                            className={`flex items-center gap-1 px-2.5 py-1 text-[9px] font-mono uppercase tracking-[0.15em] rounded-md border transition-all ${isDarkMode ? "border-[#4285F4]/40 bg-[#4285F4]/10 text-[#4285F4] hover:border-[#4285F4]/60 hover:bg-[#4285F4]/15" : "border-[#4285F4]/50 bg-[#4285F4]/10 text-[#4285F4] hover:border-[#4285F4]/70 hover:bg-[#4285F4]/15"} ${isLoading || isProcessingFile ? "opacity-50 pointer-events-none" : ""}`}
+                            title="Rewrite Mail with AI"
+                        >
+                            {gmailRewriting ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 20h9" />
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                                </svg>
+                            )}
+                            {gmailRewriting ? "Rewriting..." : "Rewrite Mail"}
+                        </motion.button>
+
+                        {/* To: field for quick recipient entry */}
+                        <div className="flex items-center gap-1.5 ml-auto min-w-0">
+                            <span className={`text-[8px] font-mono uppercase tracking-widest shrink-0 ${isDarkMode ? "text-white/40" : "text-black/50"}`}>To:</span>
+                            <input
+                                type="text"
+                                placeholder="email@example.com"
+                                value={gmailMailTo}
+                                onChange={(e) => setGmailMailTo(e.target.value)}
+                                className={`w-32 md:w-44 px-2 py-1 text-[9px] font-mono rounded border outline-none transition-all ${isDarkMode
+                                    ? "bg-white/[0.05] border-white/15 text-white placeholder-white/30 focus:border-[#4285F4]/50"
+                                    : "bg-black/[0.04] border-black/25 text-black placeholder-black/40 focus:border-[#4285F4]/70"
+                                    }`}
+                            />
+                            {gmailMailTo && (
+                                <button
+                                    onClick={() => setGmailMailTo("")}
+                                    className={`p-1 rounded ${isDarkMode ? "hover:bg-white/10 text-white/40" : "hover:bg-black/10 text-black/50"}`}
+                                    title="Clear"
+                                >
+                                    <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                                    </svg>
+                                                </button>
+                                            )}
+                        </div>
+                    </div>
+                )}
 
                 <div className={`flex items-center justify-between mt-3 pt-2 border-t ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
                     {/* Bottom Left: Add files button + minimal quick toggles */}
@@ -4895,6 +5036,113 @@ STRICT RULES:
                                 }} disabled={!gmailAutoMode || (gmailAutoMode === "to" && !gmailAutoTargetEmail.trim())}
                                     className={`px-4 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all disabled:opacity-50 ${isDarkMode ? "bg-accent text-black hover:bg-accent/90" : "bg-accent text-black hover:bg-accent/90"}`}
                                 >Apply</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ─── Rewrite Mail Modal ─── */}
+            <AnimatePresence>
+                {gmailRewriteModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[150] flex items-center justify-center p-4"
+                        onClick={() => { setGmailRewriteModal(false); setGmailRewrittenBody(""); }}
+                    >
+                        <div className={`absolute inset-0 ${isDarkMode ? "bg-black/60" : "bg-black/60"} backdrop-blur-sm`} />
+                        <motion.div
+                            initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                            className={`relative w-full max-w-lg rounded-xl border p-5 shadow-2xl ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/20"}`}
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className={`p-1.5 rounded-lg ${isDarkMode ? "bg-[#4285F4]/10" : "bg-[#4285F4]/15"}`}>
+                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="#4285F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M12 20h9" />
+                                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className={`text-[10px] font-bold font-mono uppercase tracking-[0.15em] ${isDarkMode ? "text-white" : "text-black"}`}>Rewrite Mail</p>
+                                    <p className={`text-[8px] font-mono ${isDarkMode ? "text-white/60" : "text-black/80"}`}>AI-polished version of your draft</p>
+                                </div>
+                            </div>
+
+                            {gmailRewriting ? (
+                                <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-white/[0.05]">
+                                    <div className="h-4 w-4 rounded-full border-2 border-t-transparent animate-spin border-[#4285F4]" />
+                                    <span className={`text-[9px] font-mono ${isDarkMode ? "text-white/70" : "text-black/80"}`}>AI is rewriting your message...</span>
+                                </div>
+                            ) : (
+                                <textarea
+                                    value={gmailRewrittenBody}
+                                    onChange={(e) => setGmailRewrittenBody(e.target.value)}
+                                    rows={8}
+                                    className={`w-full mb-3 p-2.5 text-[10px] font-mono leading-relaxed rounded-lg border outline-none resize-none transition-all ${isDarkMode
+                                        ? "bg-white/[0.05] border-white/20 text-white/90 focus:border-[#4285F4]/50"
+                                        : "bg-black/[0.04] border-black/30 text-black/90 focus:border-[#4285F4]/70"
+                                        }`}
+                                />
+                            )}
+
+                            <div className="flex items-center justify-between gap-2">
+                                <button
+                                    onClick={async () => {
+                                        const trimmedInput = input.trim();
+                                        if (!trimmedInput) return;
+                                        setGmailRewriting(true);
+                                        setGmailRewrittenBody("");
+                                        try {
+                                            const { sendChatCompletion } = await import("@/lib/chat-api");
+                                            const res = await sendChatCompletion({
+                                                messages: [
+                                                    { role: "system", content: "You are an email writing assistant. Rewrite the following rough text into a polished, professional email. Fix grammar, improve clarity, structure the content well, and return ONLY the rewritten email body — no explanations, no greetings, no extra commentary." },
+                                                    { role: "user", content: trimmedInput }
+                                                ]
+                                            });
+                                            const rewritten = (res as any)?.response || res.data?.[0]?.message?.content || trimmedInput;
+                                            setGmailRewrittenBody(rewritten);
+                                        } catch {
+                                            setGmailRewrittenBody(trimmedInput);
+                                        }
+                                        setGmailRewriting(false);
+                                    }}
+                                    disabled={gmailRewriting}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] rounded-md border transition-all disabled:opacity-50 ${isDarkMode ? "border-white/25 text-white/70 hover:border-white/40 hover:text-white" : "border-black/30 text-black/80 hover:border-black/50 hover:text-black"}`}
+                                >
+                                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                    </svg>
+                                    Re-Rewrite
+                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => { setGmailRewriteModal(false); setGmailRewrittenBody(""); }}
+                                        className={`px-3 py-1.5 text-[9px] font-mono rounded-md transition-all ${isDarkMode ? "text-white/70 hover:bg-white/10" : "text-black/80 hover:bg-black/10"}`}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            // Replace the input with the rewritten text and close the modal
+                                            if (gmailRewrittenBody.trim()) {
+                                                setInput(gmailRewrittenBody);
+                                            }
+                                            setGmailRewriteModal(false);
+                                            setGmailRewrittenBody("");
+                                        }}
+                                        disabled={gmailRewriting || !gmailRewrittenBody.trim()}
+                                        className={`px-4 py-1.5 text-[9px] font-mono uppercase tracking-[0.15em] font-bold rounded-md transition-all disabled:opacity-50 ${isDarkMode ? "bg-[#4285F4] text-white hover:bg-[#4285F4]/90" : "bg-[#4285F4] text-white hover:bg-[#4285F4]/90"}`}
+                                    >
+                                        Use Rewrite
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>
