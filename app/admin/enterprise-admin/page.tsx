@@ -171,6 +171,10 @@ function EnterpriseAdminPageInner() {
       toast.error("Required fields missing")
       return
     }
+    if (newManagerPassword.length < 8) {
+      toast.error("Password must be at least 8 characters long")
+      return
+    }
 
     setIsActionLoading(true)
     try {
