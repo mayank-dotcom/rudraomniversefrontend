@@ -53,15 +53,17 @@ function LapModel({ progress }: { progress: number }) {
       } else if (progress < zoomEnd) {
         const t = (progress - enterEnd) / (zoomEnd - enterEnd);
         const eased = t * t;
-        yPos = -1.5 * eased;
+        yPos = -2.1 * eased;
         scaleMul = 1 + eased;
         rotX = baseRot + extraRot * eased;
       } else {
         const t = (progress - zoomEnd) / (1 - zoomEnd);
         const eased = t * t;
-        yPos = -1.5;
+        yPos = -2.1;
         scaleMul = 2 + eased;
-        rotX = baseRot + extraRot;
+        // Bend the screen slightly towards the viewer (tilt forward) in the final step
+        const forwardTilt = -10 * Math.PI / 180;
+        rotX = baseRot + extraRot - forwardTilt * eased;
       }
 
       meshRef.current.rotation.x = rotX;

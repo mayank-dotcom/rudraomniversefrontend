@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import Navbar from "@/components/ui/Navbar"
+import Navbar from "@/components/Navbar"
 import Footer from "@/components/ui/Footer"
 import { useTheme } from "@/lib/theme-context"
 import { getPublicSiteSettings } from "@/lib/chat-api"
@@ -98,8 +98,8 @@ export default function FAQ() {
     })).filter(cat => cat.questions.length > 0)
 
     return (
-        <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white`}>
-            <Navbar />
+        <div className={`min-h-screen ${isDarkMode ? "bg-[#050308] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white`}>
+            <Navbar visible={true} />
 
             <section className="pt-48 pb-32 px-6 md:px-12 bg-mesh">
                 <div className="container mx-auto max-w-4xl">
@@ -123,7 +123,7 @@ export default function FAQ() {
                                 <span key={idx}>
                                     {idx > 0 && <br />}
                                     {idx === arr.length - 1 ? (
-                                        <span className="italic text-[var(--color-cyan)]">{line}</span>
+                                        <span className="font-serif italic font-normal text-black dark:text-white">{line}</span>
                                     ) : line}
                                 </span>
                             ))}
@@ -165,7 +165,7 @@ export default function FAQ() {
                                                 <div
                                                     key={key}
                                                     className={`border transition-all duration-300 ${
-                                                        isDarkMode ? "border-white/5 hover:border-white/10" : "border-black/5 hover:border-black/10"
+                                                        isDarkMode ? "border-white/5 hover:border-white/10 bg-white/[0.02] hover:bg-white/[0.04]" : "border-black/5 hover:border-black/10 bg-black/[0.01] hover:bg-black/[0.02]"
                                                     } ${isOpen ? (isDarkMode ? "border-white/10" : "border-black/10") : ""}`}
                                                 >
                                                     <button

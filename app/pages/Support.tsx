@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import Navbar from "@/components/ui/Navbar"
+import Navbar from "@/components/Navbar"
 import Footer from "@/components/ui/Footer"
 import { useTheme } from "@/lib/theme-context"
 import { getPublicSiteSettings } from "@/lib/chat-api"
@@ -78,8 +78,8 @@ export default function Support() {
     }
 
     return (
-        <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white`}>
-            <Navbar />
+        <div className={`min-h-screen ${isDarkMode ? "bg-[#050308] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white`}>
+            <Navbar visible={true} />
 
             <section className="pt-48 pb-32 px-6 md:px-12 bg-mesh">
                 <div className="container mx-auto max-w-4xl">
@@ -103,7 +103,7 @@ export default function Support() {
                                 <span key={idx}>
                                     {idx > 0 && <br />}
                                     {idx === arr.length - 1 ? (
-                                        <span className="italic text-[var(--color-cyan)]">{line}</span>
+                                        <span className="font-serif italic font-normal text-black dark:text-white">{line}</span>
                                     ) : line}
                                 </span>
                             ))}
@@ -118,8 +118,8 @@ export default function Support() {
                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
                             <div className="lg:col-span-2 space-y-10">
                                 <div className="flex items-center gap-6 group">
-                                    <div className={`h-12 w-12 rounded-full border flex items-center justify-center transition-colors group-hover:border-[var(--color-cyan)] ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                                        <Mail className="h-5 w-5 text-[var(--color-cyan)]" />
+                                    <div className={`h-12 w-12 rounded-full border flex items-center justify-center transition-colors group-hover:border-[var(--brand-accent)] ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                        <Mail className="h-5 w-5 text-[var(--brand-accent)]" />
                                     </div>
                                     <div>
                                         <p className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>Email</p>
@@ -127,8 +127,8 @@ export default function Support() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-6 group">
-                                    <div className={`h-12 w-12 rounded-full border flex items-center justify-center transition-colors group-hover:border-[var(--color-cyan)] ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                                        <Clock className="h-5 w-5 text-[var(--color-cyan)]" />
+                                    <div className={`h-12 w-12 rounded-full border flex items-center justify-center transition-colors group-hover:border-[var(--brand-accent)] ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                        <Clock className="h-5 w-5 text-[var(--brand-accent)]" />
                                     </div>
                                     <div>
                                         <p className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>Response Time</p>
@@ -136,8 +136,8 @@ export default function Support() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-6 group">
-                                    <div className={`h-12 w-12 rounded-full border flex items-center justify-center transition-colors group-hover:border-[var(--color-cyan)] ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                                        <Bug className="h-5 w-5 text-[var(--color-cyan)]" />
+                                    <div className={`h-12 w-12 rounded-full border flex items-center justify-center transition-colors group-hover:border-[var(--brand-accent)] ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                        <Bug className="h-5 w-5 text-[var(--brand-accent)]" />
                                     </div>
                                     <div>
                                         <p className={`font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "10px" }}>Bug Reports</p>
@@ -155,7 +155,7 @@ export default function Support() {
                                                 key={topic}
                                                 onClick={() => { setSubject(topic); setCategory(topic === "Bug Report" ? "bug" : topic === "Feature Request" ? "feature" : topic === "Account Issues" || topic === "Payment" ? "account" : "general") }}
                                                 className={`px-4 py-2 text-[11px] font-sans font-bold uppercase tracking-widest border transition-all ${
-                                                    isDarkMode ? "border-white/10 text-white/50 hover:border-white/30 hover:text-white" : "border-black/10 text-black/50 hover:border-black/30 hover:text-black"
+                                                    isDarkMode ? "border-white/10 text-white/50 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/30 hover:text-white" : "border-black/10 text-black/50 bg-black/[0.01] hover:bg-black/[0.03] hover:border-black/30 hover:text-black"
                                                 }`}
                                             >
                                                 {topic}
@@ -165,7 +165,7 @@ export default function Support() {
                                 </div>
                             </div>
 
-                            <div className={`lg:col-span-3 p-10 md:p-14 border ${isDarkMode ? "bg-black/40 border-white/10" : "bg-white border-black/10"}`}>
+                            <div className={`lg:col-span-3 p-10 md:p-14 border ${isDarkMode ? "bg-white/[0.02] border-white/10 backdrop-blur-md" : "bg-white border-black/10"}`}>
                                 <AnimatePresence mode="wait">
                                     {success ? (
                                         <motion.div
@@ -174,12 +174,12 @@ export default function Support() {
                                             animate={{ opacity: 1, scale: 1 }}
                                             className="text-center py-10"
                                         >
-                                            <div className="h-16 w-16 rounded-full bg-[var(--color-cyan)]/10 flex items-center justify-center mx-auto mb-8">
-                                                <Send className="h-8 w-8 text-[var(--color-cyan)]" />
+                                            <div className="h-16 w-16 rounded-full bg-[var(--brand-accent)]/10 flex items-center justify-center mx-auto mb-8">
+                                                <Send className="h-8 w-8 text-[var(--brand-accent)]" />
                                             </div>
                                             <h3 className="font-display font-bold text-2xl mb-4 tracking-tighter uppercase">Ticket Submitted</h3>
                                             <p className={`text-[14px] leading-relaxed mb-10 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-                                                Thank you for reaching out. Our support team will get back to you at <span className="text-[var(--color-cyan)]">{email}</span> within 24 hours.
+                                                Thank you for reaching out. Our support team will get back to you at <span className="text-[var(--brand-accent)]">{email}</span> within 24 hours.
                                             </p>
                                             <button
                                                 onClick={() => { setSuccess(false); setName(""); setEmail(""); setSubject(""); setMessage(""); setCategory("general") }}
@@ -194,36 +194,36 @@ export default function Support() {
                                                 <div className="space-y-1">
                                                     <label className={`text-[10px] font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Your Name</label>
                                                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} required
-                                                        className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"}`}
+                                                        className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/5 border-black/5 text-black"}`}
                                                     />
                                                 </div>
                                                 <div className="space-y-1">
                                                     <label className={`text-[10px] font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Email Address</label>
                                                     <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                                                        className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"}`}
+                                                        className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/5 border-black/5 text-black"}`}
                                                     />
                                                 </div>
                                             </div>
                                             <div className="space-y-1">
                                                 <label className={`text-[10px] font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Category</label>
                                                 <select value={category} onChange={(e) => setCategory(e.target.value)}
-                                                    className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"}`}
+                                                    className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/5 border-black/5 text-black"}`}
                                                 >
                                                     {SUPPORT_CATEGORIES.map(c => (
-                                                        <option key={c.value} value={c.value} className={isDarkMode ? "bg-[#0a0a0a]" : "bg-white"}>{c.label}</option>
+                                                        <option key={c.value} value={c.value} className={isDarkMode ? "bg-[#050308]" : "bg-white"}>{c.label}</option>
                                                     ))}
                                                 </select>
                                             </div>
                                             <div className="space-y-1">
                                                 <label className={`text-[10px] font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Subject</label>
                                                 <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} required
-                                                    className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"}`}
+                                                    className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/5 border-black/5 text-black"}`}
                                                 />
                                             </div>
                                             <div className="space-y-1">
                                                 <label className={`text-[10px] font-sans font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/30"}`}>Message</label>
                                                 <textarea rows={5} value={message} onChange={(e) => setMessage(e.target.value)} required
-                                                    className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all resize-none ${isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"}`}
+                                                    className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all resize-none ${isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/5 border-black/5 text-black"}`}
                                                 />
                                             </div>
 

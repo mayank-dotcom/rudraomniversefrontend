@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import Navbar from "@/components/ui/Navbar";
+import Navbar from "@/components/Navbar";
 import Footer from "@/components/ui/Footer";
 import { useTheme } from "@/lib/theme-context";
 import { getPublicSiteSettings } from "@/lib/chat-api";
@@ -54,8 +54,8 @@ export default function Contact() {
     };
 
     return (
-        <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white`}>
-            <Navbar />
+        <div className={`min-h-screen ${isDarkMode ? "bg-[#050308] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white`}>
+            <Navbar visible={true} />
 
             <section className="pt-48 pb-32 px-6 md:px-12 bg-mesh">
                 <div className="container mx-auto">
@@ -79,7 +79,7 @@ export default function Contact() {
                             style={{ fontSize: "clamp(3.5rem, 8vw, 72px)", letterSpacing: "-0.04em" }}
                         >
                             Get in <br />
-                            <span className="italic text-[var(--color-cyan)]">Touch.</span>
+                            <span className="font-serif italic font-normal text-black dark:text-white">Touch.</span>
                         </h1>
 
                         <div className={`h-px w-full ${isDarkMode ? "bg-white/10" : "bg-black/10"} mb-20`} />
@@ -94,8 +94,8 @@ export default function Contact() {
 
                                 <div className="space-y-8 pt-8">
                                     <div className="flex items-center gap-6 group">
-                                        <div className={`h-12 w-12 rounded-full border flex items-center justify-center transition-colors group-hover:border-[var(--color-cyan)] ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                                            <Mail className="h-5 w-5 text-[var(--color-cyan)]" />
+                                        <div className={`h-12 w-12 rounded-full border flex items-center justify-center transition-colors group-hover:border-[var(--brand-accent)] ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                            <Mail className="h-5 w-5 text-[var(--brand-accent)]" />
                                         </div>
                                         <div>
                                             <p 
@@ -109,8 +109,8 @@ export default function Contact() {
                                     </div>
 
                                     <div className="flex items-center gap-6 group">
-                                        <div className={`h-12 w-12 rounded-full border flex items-center justify-center transition-colors group-hover:border-[var(--color-cyan)] ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                                            <MessageSquare className="h-5 w-5 text-[var(--color-cyan)]" />
+                                        <div className={`h-12 w-12 rounded-full border flex items-center justify-center transition-colors group-hover:border-[var(--brand-accent)] ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                                            <MessageSquare className="h-5 w-5 text-[var(--brand-accent)]" />
                                         </div>
                                         <div>
                                             <p 
@@ -132,8 +132,8 @@ export default function Contact() {
                                         animate={{ opacity: 1, scale: 1 }}
                                         className="text-center py-10"
                                     >
-                                        <div className="h-16 w-16 rounded-full bg-[var(--color-cyan)]/10 flex items-center justify-center mx-auto mb-8">
-                                            <Send className="h-8 w-8 text-[var(--color-cyan)]" />
+                                        <div className="h-16 w-16 rounded-full bg-[var(--brand-accent)]/10 flex items-center justify-center mx-auto mb-8">
+                                            <Send className="h-8 w-8 text-[var(--brand-accent)]" />
                                         </div>
                                         <h3 className="font-display font-bold text-2xl mb-4 tracking-tighter uppercase">Message Sent</h3>
                                         <p className={`text-[14px] leading-relaxed mb-10 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>

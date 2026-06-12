@@ -3321,23 +3321,6 @@ STRICT RULES:
                                 </motion.div>
                             </AnimatePresence>
                         </motion.button>
-
-                        {/* Right Sidebar Toggler */}
-                        {showEmployeeView && (
-                            <button
-                                onClick={() => {
-                                    setIsRightSidebarCollapsed(!isRightSidebarCollapsed);
-                                    if (isMobile) setIsSidebarCollapsed(true);
-                                }}
-                                className={`p-2 border rounded-xl transition-all duration-200 cursor-pointer ${!isRightSidebarCollapsed
-                                        ? (isDarkMode ? "bg-white/10 border-white/20 text-white" : "bg-black/10 border-black/20 text-black")
-                                        : (isDarkMode ? "border-white/10 text-white hover:bg-white/5 hover:border-white/20" : "border-black/10 text-black hover:bg-black/5 hover:border-black/20")
-                                    }`}
-                                title={t("toggle_panel")}
-                            >
-                                <UserCog className="h-4 w-4" />
-                            </button>
-                        )}
                     </div>
                 </header>
 

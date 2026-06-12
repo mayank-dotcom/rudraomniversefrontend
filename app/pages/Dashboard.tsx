@@ -2823,6 +2823,62 @@ const Dashboard = () => {
                                                             placeholder="e.g. /pricing"
                                                         />
                                                     </div>
+                                                    <div className="space-y-4">
+                                                        <label className={`text-[9px] font-mono uppercase tracking-widest mb-1 block ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>Features</label>
+                                                        {(Array.isArray(siteFormData?.features) ? siteFormData.features : []).map((feature: any, i: number) => {
+                                                            const updateFeature = (field: string, val: string) => {
+                                                                const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                if (next.features && next.features[i]) next.features[i][field] = val;
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            };
+                                                            return (
+                                                                <div key={i} className={`p-4 rounded-xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"}`}>
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <span className="text-xs font-mono">Feature {i + 1}</span>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const next = JSON.parse(JSON.stringify(siteFormData));
+                                                                                next.features = next.features.filter((_: any, j: number) => j !== i);
+                                                                                setSiteFormData(next);
+                                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                                            }}
+                                                                            className="text-[10px] font-mono uppercase tracking-widest text-red-400 hover:text-red-300"
+                                                                        >
+                                                                            Remove
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <input
+                                                                            value={feature.title || ''}
+                                                                            onChange={(e) => updateFeature('title', e.target.value)}
+                                                                            placeholder="Feature Title"
+                                                                            className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                                        />
+                                                                        <textarea
+                                                                            value={feature.desc || ''}
+                                                                            onChange={(e) => updateFeature('desc', e.target.value)}
+                                                                            placeholder="Feature Description"
+                                                                            rows={2}
+                                                                            className={`w-full p-3 text-xs font-mono border rounded-xl focus:outline-none focus:border-emerald-500/50 resize-none ${isDarkMode ? "bg-white/5 border-white/10 text-white" : "bg-black/5 border-black/10 text-black"}`}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        <button
+                                                            onClick={() => {
+                                                                const next = JSON.parse(JSON.stringify(siteFormData || {}));
+                                                                if (!next.features) next.features = [];
+                                                                next.features.push({ title: '', desc: '' });
+                                                                setSiteFormData(next);
+                                                                setEditingSiteSetting({ ...editingSiteSetting, value: JSON.stringify(next) });
+                                                            }}
+                                                            className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"} transition`}
+                                                        >
+                                                            + Add Feature
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             )}
 

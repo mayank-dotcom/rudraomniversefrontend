@@ -6,10 +6,12 @@ import AuthModal from "@/components/ui/AuthModal";
 import { isAuthenticated } from "@/lib/auth";
 
 const navLinks = [
-  { label: "Features", href: "#features" },
-  { label: "Students", href: "#students" },
-  { label: "Enterprise", href: "#enterprise" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Features", href: "/#features" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "FAQ", href: "/faq" },
+  { label: "Support", href: "/support" },
+  { label: "Schools", href: "/schools" },
+  { label: "Enterprise", href: "/b2b" },
 ];
 
 export default function Navbar({ visible }: { visible: boolean }) {
@@ -61,7 +63,7 @@ export default function Navbar({ visible }: { visible: boolean }) {
     >
       <div className="px-6 h-14 md:h-16 flex items-center justify-between">
         {/* Logo */}
-        <a href="#hero" className="flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-200">
+        <a href="/" className="flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform duration-200">
           <img src="/dark.png" alt="Rudranex Logo" className="h-7 w-auto object-contain" />
           <img src="/dark_text.png" alt="Rudranex" className="h-4.5 w-auto object-contain" />
         </a>

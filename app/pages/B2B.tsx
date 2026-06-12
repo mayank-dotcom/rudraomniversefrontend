@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import Navbar from "@/components/ui/Navbar"
+import Navbar from "@/components/Navbar"
 import Footer from "@/components/ui/Footer"
 import { Building2, ShieldCheck, Cpu, CheckCircle, ArrowLeft } from "lucide-react"
 import { useTheme } from "@/lib/theme-context"
@@ -50,7 +50,8 @@ export default function B2B() {
             title: parsed.title || "Quiet power.\nTailored access.",
             description: parsed.description || "Choose the level of intelligence that fits your workflow. From late-night study sessions to building the next big thing.",
             linkText: parsed.linkText || "Learn More",
-            linkUrl: parsed.linkUrl || "/pricing"
+            linkUrl: parsed.linkUrl || "/pricing",
+            features: Array.isArray(parsed.features) && parsed.features.length > 0 ? parsed.features : prev.features
           }));
         } catch (e) {
           console.error("Error parsing B2B settings", e);
@@ -87,8 +88,8 @@ export default function B2B() {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white overflow-x-hidden`}>
-      <Navbar />
+    <div className={`min-h-screen ${isDarkMode ? "bg-[#050308] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white overflow-x-hidden`}>
+      <Navbar visible={true} />
 
       {/* Hero Section */}
       <section className="relative pt-48 pb-20 px-6 md:px-12 bg-mesh">
@@ -116,7 +117,7 @@ export default function B2B() {
                 <span key={idx}>
                   {idx > 0 && <br />}
                   {idx === arr.length - 1 ? (
-                    <span className="italic text-[var(--color-cyan)]">{line}</span>
+                    <span className="font-serif italic font-normal text-black dark:text-white">{line}</span>
                   ) : (
                     line
                   )}
@@ -134,19 +135,21 @@ export default function B2B() {
           </motion.div>
 
           {/* Features Grid */}
-          <div className={`grid grid-cols-1 md:grid-cols-3 gap-0 border border-white/5 mb-32 overflow-hidden ${isDarkMode ? "bg-black/20" : "bg-black/[0.02]"}`}>
+          <div className={`grid grid-cols-1 md:grid-cols-3 gap-0 border mb-32 overflow-hidden ${isDarkMode ? "border-white/5 bg-black/20" : "border-black/5 bg-black/[0.02]"}`}>
             {pageData.features.map((feature, i) => {
               const Icon = i === 0 ? Building2 : i === 1 ? ShieldCheck : Cpu;
               return (
                 <div
                   key={i}
-                  className={`p-12 border-r last:border-r-0 border-white/5 ${isDarkMode ? "bg-[#0d0d0d] hover:bg-[#111]" : "bg-white hover:bg-zinc-50"} transition-all duration-500 group`}
+                  className={`p-12 border-r last:border-r-0 ${
+                    isDarkMode ? "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]" : "border-black/5 bg-white hover:bg-zinc-50"
+                  } transition-all duration-500 group`}
                 >
                   <div className="flex justify-between items-center mb-12">
-                    <Icon className={`h-6 w-6 ${isDarkMode ? "text-white/30" : "text-black/35"} group-hover:text-[var(--color-cyan)] transition-colors`} />
+                    <Icon className={`h-6 w-6 ${isDarkMode ? "text-white/30" : "text-black/35"} group-hover:text-[var(--brand-accent)] transition-colors`} />
                     <span className={`font-sans font-bold text-[11px] ${isDarkMode ? "text-white/10 group-hover:text-white/20" : "text-black/10 group-hover:text-black/20"}`} style={{ letterSpacing: "0.1em" }}>0{i + 1}</span>
                   </div>
-                  <h3 className={`font-display font-semibold ${isDarkMode ? "text-white" : "text-black"} text-xl mb-4 uppercase tracking-tight group-hover:text-[var(--color-cyan)] transition-colors`}>{feature.title}</h3>
+                  <h3 className={`font-display font-semibold ${isDarkMode ? "text-white" : "text-black"} text-xl mb-4 uppercase tracking-tight group-hover:text-[var(--brand-accent)] transition-colors`}>{feature.title}</h3>
                   <p className={`font-sans font-normal ${isDarkMode ? "text-white/35 group-hover:text-white/50" : "text-black/45 group-hover:text-black/60"} text-[14px] leading-relaxed transition-colors`}>{feature.desc}</p>
                 </div>
               );
@@ -168,12 +171,12 @@ export default function B2B() {
                   animate={{ opacity: 1, scale: 1 }}
                   className={`border p-12 text-center ${isDarkMode ? "bg-black/40 border-white/10" : "bg-white border-black/10"}`}
                 >
-                  <div className="h-16 w-16 rounded-full bg-[var(--color-cyan)]/10 flex items-center justify-center mx-auto mb-8">
-                    <CheckCircle className="h-8 w-8 text-[var(--color-cyan)]" />
+                  <div className="h-16 w-16 rounded-full bg-[var(--brand-accent)]/10 flex items-center justify-center mx-auto mb-8">
+                    <CheckCircle className="h-8 w-8 text-[var(--brand-accent)]" />
                   </div>
                   <h2 className="text-2xl font-display font-bold mb-4 tracking-tighter">Request Received</h2>
                   <p className={`text-[14px] mb-10 leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-                    Our enterprise team will review your application and reach out to <span className="text-[var(--color-cyan)]">{adminEmail}</span> with your dedicated onboarding package.
+                    Our enterprise team will review your application and reach out to <span className="text-[var(--brand-accent)]">{adminEmail}</span> with your dedicated onboarding package.
                   </p>
                   <div className="flex flex-col gap-4">
                     <button
@@ -191,7 +194,7 @@ export default function B2B() {
                   </div>
                 </motion.div>
               ) : (
-                <div className={`p-10 md:p-14 border ${isDarkMode ? "bg-black/40 border-white/10" : "bg-white border-black/10"}`}>
+                <div className={`p-10 md:p-14 border ${isDarkMode ? "bg-white/[0.02] border-white/10 backdrop-blur-md" : "bg-white border-black/10"}`}>
                   <h2 className="text-2xl font-display font-bold mb-2 tracking-tighter uppercase">Enterprise Request</h2>
                   <p className={`text-[11px] font-sans font-bold uppercase tracking-[0.1em] mb-10 ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
                     Corporate Onboarding Form
@@ -212,7 +215,7 @@ export default function B2B() {
                         onChange={(e) => setEnterpriseName(e.target.value)}
                         required
                         className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${
-                          isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"
+                          isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/5 border-black/5 text-black"
                         }`}
                       />
                     </div>
@@ -224,7 +227,7 @@ export default function B2B() {
                         onChange={(e) => setAdminName(e.target.value)}
                         required
                         className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${
-                          isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"
+                          isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/5 border-black/5 text-black"
                         }`}
                       />
                     </div>
@@ -236,7 +239,7 @@ export default function B2B() {
                         onChange={(e) => setAdminEmail(e.target.value)}
                         required
                         className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${
-                          isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"
+                          isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/5 border-black/5 text-black"
                         }`}
                       />
                     </div>
@@ -249,7 +252,7 @@ export default function B2B() {
                         required
                         minLength={6}
                         className={`w-full px-5 py-4 text-[13px] font-sans border focus:outline-none focus:border-[var(--color-cyan)] transition-all ${
-                          isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black"
+                          isDarkMode ? "bg-white/[0.03] border-white/10 text-white" : "bg-black/5 border-black/5 text-black"
                         }`}
                       />
                     </div>

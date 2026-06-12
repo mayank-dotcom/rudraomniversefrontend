@@ -4,11 +4,11 @@ import { useState, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import ChatLoader from "@/components/ui/ChatLoader";
 import PageLoader from "@/components/ui/PageLoader";
 import { createChat, saveChatMessage, sendAiRequest, generateTTSAudio, transcribeSpeech, transcribeSpeechFallback, stopSpeechRecognition } from "@/lib/chat-api";
 import { ThemeProvider } from "@/lib/theme-context";
-import { MultiStepLoader } from "@/components/ui/multi-step-loader";
+import { HorizontalProgressLoader } from "@/components/ui/horizontal-progress-loader";
+import { Brain, FileText, Database, Sparkles, ArrowRight, Save } from "lucide-react";
 
 function InterviewRoomContent() {
     const router = useRouter();
@@ -28,6 +28,7 @@ function InterviewRoomContent() {
     };
 
     const videoRef = useRef<HTMLVideoElement>(null);
+    const botVideoRef = useRef<HTMLVideoElement>(null);
     const [isMicOn, setIsMicOn] = useState(true);
     const [isCameraOn, setIsCameraOn] = useState(true);
     const [stream, setStream] = useState<MediaStream | null>(null);
@@ -42,13 +43,15 @@ function InterviewRoomContent() {
     const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
     const FEEDBACK_STEPS = [
-        { text: "Saving your verbal interview answers..." },
-        { text: "Analyzing candidates responses & technical accuracy..." },
-        { text: "Synthesizing progress points and scores..." },
-        { text: "Formatting the final performance analysis report..." },
-        { text: "Syncing analysis data with your chat feed..." },
-        { text: "Redirecting you to the chat room..." }
+        { text: "Saving responses", icon: Save },
+        { text: "Analyzing accuracy", icon: Brain },
+        { text: "Synthesizing scores", icon: Sparkles },
+        { text: "Formatting report", icon: FileText },
+        { text: "Syncing with chat", icon: Database },
+        { text: "Redirecting", icon: ArrowRight }
     ];
+
+    const [ttsProvider, setTtsProvider] = useState<"sarvam" | "browser" | "loading">("loading");
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
@@ -101,6 +104,22 @@ function InterviewRoomContent() {
         }
     }, [timeLeft, isInterviewActive, interviewEnded]);
 
+    // Play / pause the bot avatar video based on isBotSpeaking
+    useEffect(() => {
+        const v = botVideoRef.current;
+        if (!v) return;
+        if (isBotSpeaking) {
+            // Always start from the beginning while the bot is actively talking
+            v.currentTime = 0;
+            const playPromise = v.play();
+            if (playPromise && typeof playPromise.catch === "function") {
+                playPromise.catch(() => { /* autoplay may be blocked; ignore */ });
+            }
+        } else {
+            v.pause();
+        }
+    }, [isBotSpeaking]);
+
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
@@ -148,6 +167,9 @@ function InterviewRoomContent() {
         if (botAudioRef.current) {
             botAudioRef.current.pause();
             botAudioRef.current = null;
+        }
+        if (botVideoRef.current) {
+            botVideoRef.current.pause();
         }
 
         // Cleanup audio contexts
@@ -293,7 +315,12 @@ function InterviewRoomContent() {
 
     const playTTSAudio = async (text: string) => {
         try {
+            // PRIMARY: Sarvam AI (deployed on backend as /tts/generate → bulbul:v3)
+            console.log("[Interview TTS] Attempting primary: Sarvam AI...");
             const audioBlob = await generateTTSAudio(text, getLanguage());
+            console.log("[Interview TTS] ✓ Sarvam AI succeeded");
+            setTtsProvider("sarvam");
+
             const audioUrl = URL.createObjectURL(audioBlob);
             const audio = new Audio(audioUrl);
             currentAudioRef.current = audio;
@@ -344,7 +371,9 @@ function InterviewRoomContent() {
 
             URL.revokeObjectURL(audioUrl);
         } catch (error) {
-            console.error("TTS Error, using browser fallback:", error);
+            // FALLBACK: Browser speechSynthesis (only if Sarvam fails)
+            console.warn("[Interview TTS] Sarvam AI failed, using browser speechSynthesis fallback:", error);
+            setTtsProvider("browser");
             await playBrowserTTS(text);
         }
     };
@@ -637,11 +666,13 @@ function InterviewRoomContent() {
 
     return (
         <div className="h-screen w-full bg-black relative overflow-hidden">
-            <MultiStepLoader
+            <HorizontalProgressLoader
                 loadingStates={FEEDBACK_STEPS}
                 loading={isGeneratingFeedback}
                 duration={1800}
                 loop={true}
+                title="Analyzing Your Interview"
+                subtitle="Hold tight while our AI engine prepares your performance report"
             />
             {/* User Video (Small - Bottom Left) */}
             <div className="absolute bottom-24 left-6 h-40 w-56 bg-[#1a1a1a] rounded-lg overflow-hidden border border-white/10 shadow-2xl z-10">
@@ -660,74 +691,56 @@ function InterviewRoomContent() {
                 )}
             </div>
 
-            {/* AI Interviewer (Large - Center) */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
-                <div className="relative group">
-                    {/* Resonance Rings - Layered Ripple Effect */}
-                    <AnimatePresence>
-                        {(isBotSpeaking || isUserSpeaking) && (
-                            <>
-                                {/* Outer Ripple */}
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 1 }}
-                                    animate={{
-                                        scale: 1 + audioLevel * 2.5,
-                                        opacity: [0, 0.3, 0],
-                                        borderRadius: ["50% 50% 50% 50%", "40% 60% 45% 55%", "55% 45% 60% 40%", "50% 50% 50% 50%"],
-                                    }}
-                                    transition={{ duration: 0.8, repeat: Infinity, ease: "easeOut" }}
-                                    className="absolute inset-0 border-4 border-[#39FF14] blur-xl"
-                                />
-                                {/* Middle Vibration */}
-                                <motion.div
-                                    animate={{
-                                        scale: 1 + audioLevel * 1.2,
-                                        rotate: [0, 5, -5, 0],
-                                        borderRadius: ["50% 50% 50% 50%", "48% 52% 45% 55%", "52% 48% 55% 45%", "50% 50% 50% 50%"],
-                                    }}
-                                    transition={{ duration: 0.15, repeat: Infinity, ease: "linear" }}
-                                    className="absolute inset-0 border-2 border-[#39FF14] opacity-40 blur-md"
-                                />
-                            </>
-                        )}
-                    </AnimatePresence>
+            {/* AI Interviewer (Large - Center) - Video Background */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black overflow-hidden">
+                {/* Fullscreen bot video as the AI interviewer backdrop */}
+                <video
+                    ref={botVideoRef}
+                    src={encodeURI("/WhatsApp Video 2026-06-12 at 12.57.45 PM.mp4")}
+                    muted
+                    playsInline
+                    loop
+                    preload="auto"
+                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isBotSpeaking ? "opacity-100" : "opacity-40"}`}
+                    style={{ objectPosition: "center 20%" }}
+                />
 
-                    {/* Primary Vibrating Ring */}
-                    <motion.div
-                        animate={{
-                            scale: 1 + audioLevel * 0.45,
-                            x: (isBotSpeaking || isUserSpeaking) ? [0, audioLevel * 8, -audioLevel * 8, 0] : 0,
-                            y: (isBotSpeaking || isUserSpeaking) ? [0, -audioLevel * 8, audioLevel * 8, 0] : 0,
-                            borderRadius: (isBotSpeaking || isUserSpeaking) ? ["50% 50% 50% 50%", "45% 55% 48% 52%", "52% 48% 55% 45%", "50% 50% 50% 50%"] : "50%",
-                        }}
-                        transition={{
-                            duration: 0.1,
-                            repeat: (isBotSpeaking || isUserSpeaking) ? Infinity : 0,
-                            repeatType: "mirror",
-                            ease: "linear"
-                        }}
-                        className={`relative rounded-full bg-black flex items-center justify-center transition-all duration-100 z-10 ${isUserSpeaking ? 'h-80 w-80' : 'h-64 w-64'
-                            }`}
-                        style={{
-                            border: `2px solid #39FF14`,
-                            boxShadow: `0 0 ${20 + audioLevel * 120}px rgba(57, 255, 20, 0.9), 0 0 ${40 + audioLevel * 200}px rgba(57, 255, 20, 0.5), inset 0 0 ${15 + audioLevel * 60}px rgba(57, 255, 20, 0.7)`,
-                            filter: `drop-shadow(0 0 ${15 + audioLevel * 40}px rgba(57, 255, 20, 0.6))`,
-                        }}
-                    >
-                        <div className="scale-[2.5]">
-                            <ChatLoader isDarkMode={true} />
+                {/* Dark overlay to keep UI elements readable */}
+                <div className={`absolute inset-0 bg-gradient-to-b transition-opacity duration-500 pointer-events-none ${isBotSpeaking
+                    ? "from-black/40 via-black/20 to-black/60"
+                    : "from-black/70 via-black/60 to-black/80"
+                    }`} />
+
+                {/* "Listening" state indicator when user is speaking (no video playback) */}
+                {isUserSpeaking && !isBotSpeaking && (
+                    <div className="relative z-10 flex flex-col items-center gap-3">
+                        <div className="h-20 w-20 rounded-full border-2 border-[#39FF14]/60 flex items-center justify-center bg-black/40 backdrop-blur-md">
+                            <Mic className="h-8 w-8 text-[#39FF14] animate-pulse" />
                         </div>
-                    </motion.div>
-                    {isBotSpeaking && (
-                        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex gap-1">
-                            <div className="h-1 w-1 bg-[#39FF14] rounded-full animate-bounce" />
-                            <div className="h-1 w-1 bg-[#39FF14] rounded-full animate-bounce delay-100" />
-                            <div className="h-1 w-1 bg-[#39FF14] rounded-full animate-bounce delay-200" />
+                        <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/70">
+                            Listening...
+                        </span>
+                    </div>
+                )}
+
+                {/* Idle indicator when neither bot nor user is speaking */}
+                {!isBotSpeaking && !isUserSpeaking && (
+                    <div className="relative z-10 flex flex-col items-center gap-3">
+                        <div className="h-16 w-16 rounded-full border border-white/20 flex items-center justify-center bg-black/40 backdrop-blur-md">
+                            <Video className="h-7 w-7 text-white/60" />
                         </div>
-                    )}
-                </div>
-                <div className="mt-6">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/40">AI Interviewer</span>
+                        <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/40">
+                            Standby
+                        </span>
+                    </div>
+                )}
+
+                {/* Bottom-center caption */}
+                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
+                    <span className={`h-1.5 w-1.5 rounded-full ${isBotSpeaking ? "bg-[#39FF14] shadow-[0_0_8px_#39FF14] animate-pulse" : isUserSpeaking ? "bg-[#4285F4] shadow-[0_0_8px_#4285F4] animate-pulse" : "bg-white/30"}`} />
+                    <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/50">
+                        AI Interviewer
+                    </span>
                 </div>
             </div>
 
@@ -779,6 +792,18 @@ function InterviewRoomContent() {
             <div className="absolute top-6 left-6 px-4 py-3 bg-black/60 backdrop-blur-sm border border-white/10 rounded-lg shadow-2xl">
                 <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/40">Topic</span>
                 <p className="text-sm text-white font-sans mt-1 font-medium">{topic}</p>
+            </div>
+
+            {/* TTS Provider Badge (Top Right) */}
+            <div className="absolute top-6 right-6 px-3 py-2 bg-black/60 backdrop-blur-sm border border-white/10 rounded-lg shadow-2xl flex items-center gap-2 z-10">
+                <div className={`h-1.5 w-1.5 rounded-full ${ttsProvider === "sarvam" ? "bg-[#39FF14] shadow-[0_0_6px_#39FF14]"
+                    : ttsProvider === "browser" ? "bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.6)]"
+                    : "bg-white/30"
+                    }`} />
+                <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-white/50">Voice</span>
+                <span className="text-[9px] font-mono uppercase tracking-wider font-bold text-white/80">
+                    {ttsProvider === "sarvam" ? "Sarvam AI" : ttsProvider === "browser" ? "Browser Fallback" : "Initializing"}
+                </span>
             </div>
 
             {/* Timer (Top Center) */}

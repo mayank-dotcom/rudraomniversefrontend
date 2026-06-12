@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import Navbar from "@/components/ui/Navbar"
+import Navbar from "@/components/Navbar"
 import Footer from "@/components/ui/Footer"
 import { useTheme } from "@/lib/theme-context"
 import { Smartphone, Cpu, Sparkles, Calendar, Download, CheckCircle } from "lucide-react"
@@ -52,8 +52,8 @@ export default function MobileApp() {
   ]
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white overflow-x-hidden`}>
-      <Navbar />
+    <div className={`min-h-screen ${isDarkMode ? "bg-[#050308] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white overflow-x-hidden`}>
+      <Navbar visible={true} />
 
       {/* Hero Section */}
       <section className="relative pt-48 pb-20 px-6 md:px-12 bg-mesh overflow-hidden">
@@ -86,7 +86,7 @@ export default function MobileApp() {
                 <span key={idx}>
                   {idx > 0 && ' '}
                   {idx === arr.length - 1 ? (
-                    <span className="text-[var(--color-cyan)]">{word}</span>
+                    <span className="font-serif italic font-normal text-black dark:text-white">{word}</span>
                   ) : (
                     word
                   )}

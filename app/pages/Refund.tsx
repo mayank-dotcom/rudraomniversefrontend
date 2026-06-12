@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import Navbar from "@/components/ui/Navbar";
+import Navbar from "@/components/Navbar";
 import Footer from "@/components/ui/Footer";
 import { useTheme } from "@/lib/theme-context";
 import { getPublicSiteSettings } from "@/lib/chat-api";
@@ -45,8 +45,8 @@ export default function Refund() {
     }, []);
 
     return (
-        <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white`}>
-            <Navbar />
+        <div className={`min-h-screen ${isDarkMode ? "bg-[#050308] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white`}>
+            <Navbar visible={true} />
 
             <section className="pt-48 pb-32 px-6 md:px-12">
                 <div className="container mx-auto">
@@ -70,7 +70,7 @@ export default function Refund() {
                             style={{ fontSize: "clamp(3.5rem, 8vw, 72px)", letterSpacing: "-0.04em" }}
                         >
                             Refund <br />
-                            <span className="italic text-[var(--color-cyan)]">Policy.</span>
+                            <span className="font-serif italic font-normal text-black dark:text-white">Policy.</span>
                         </h1>
 
                         <div className={`h-px w-full ${isDarkMode ? "bg-white/10" : "bg-black/10"} mb-12`} />

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import Navbar from "@/components/ui/Navbar";
+import Navbar from "@/components/Navbar";
 import Footer from "@/components/ui/Footer";
 import { ThemeProvider } from "@/lib/theme-context";
 import { Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, ArrowRight, Volume2, Mic, Sparkles, X, Coins, Scan, Puzzle } from "lucide-react";
@@ -197,6 +197,7 @@ const PricingContent = () => {
         if (planName.toLowerCase().includes('basic')) return 'BASIC';
         if (planName.toLowerCase().includes('pro student')) return 'BEST VALUE';
         if (planName.toLowerCase().includes('developer')) return 'MOST POPULAR';
+        if (planName.toLowerCase().includes('acceleration')) return 'HIGH PERFORMANCE';
         if (planName.toLowerCase().includes('agenc')) return 'ENTERPRISE';
         return 'STANDARD';
     };
@@ -279,40 +280,29 @@ const PricingContent = () => {
         return md ? md.features : [];
     };
 
-    const getCardStyles = (index: number) => {
-        const darkBgs = [
-            'bg-[#0e0e0e]/80 hover:bg-[#121212]/90 border-white/10 hover:border-white/20',
-            'bg-[#0b1416]/80 hover:bg-[#0f1d20]/90 border-teal-500/20 hover:border-teal-500/30',
-            'bg-[#0a111a]/80 hover:bg-[#0f1929]/90 border-blue-500/20 hover:border-blue-500/30',
-            'bg-[#100b1a]/80 hover:bg-[#170f29]/90 border-purple-500/20 hover:border-purple-500/30',
-            'bg-[#1a0e14]/80 hover:bg-[#26131c]/90 border-pink-500/20 hover:border-pink-500/30',
-            'bg-[#071818]/90 hover:bg-[#0a2626]/90 border-[var(--color-cyan)]/30 hover:border-[var(--color-cyan)]/50 shadow-[0_0_30px_rgba(0,221,221,0.05)] hover:shadow-[0_0_30px_rgba(0,221,221,0.1)]',
-        ];
-
-        const lightBgs = [
-            'bg-[#f7f7f7] hover:bg-[#f2f2f2] border-black/5 hover:border-black/10',
-            'bg-[#f0f9f9] hover:bg-[#e6f5f5] border-teal-500/10 hover:border-teal-500/20',
-            'bg-[#edf4fc] hover:bg-[#e1edfa] border-blue-500/10 hover:border-blue-500/20',
-            'bg-[#f3edf9] hover:bg-[#e7daf3] border-purple-500/10 hover:border-purple-500/20',
-            'bg-[#faf0f3] hover:bg-[#f5e1e7] border-pink-500/10 hover:border-pink-500/20',
-            'bg-[#e6fbfb] hover:bg-[#d2f7f7] border-[var(--color-cyan)]/30 hover:border-[var(--color-cyan)]/50 shadow-[0_0_30px_rgba(0,221,221,0.03)] hover:shadow-[0_0_30px_rgba(0,221,221,0.06)]',
-        ];
-
-        const idx = Math.min(index, darkBgs.length - 1);
-        return isDarkMode ? darkBgs[idx] : lightBgs[idx];
+    const getCardStyles = (index: number, isSpeed: boolean, isAgency: boolean) => {
+        if (isDarkMode) {
+            if (isSpeed) return 'premium-card-speed-dark';
+            if (isAgency) return 'premium-card-agency-dark';
+            return 'premium-card-dark';
+        } else {
+            if (isSpeed) return 'premium-card-speed-light';
+            if (isAgency) return 'premium-card-agency-light';
+            return 'premium-card-light';
+        }
     };
 
     if (isLoading) {
         return (
-            <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? "bg-[#0a0a0a]" : "bg-[#fdfdfd]"}`}>
+            <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? "bg-[#050308]" : "bg-[#fdfdfd]"}`}>
                 <Loader2 className={`h-8 w-8 animate-spin ${isDarkMode ? "text-white/20" : "text-black/20"}`} />
             </div>
         );
     }
 
     return (
-        <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white`}>
-            <Navbar />
+        <div className={`min-h-screen ${isDarkMode ? "bg-[#050308] text-white" : "bg-[#fdfdfd] text-black"} selection:bg-[var(--color-cyan)] selection:text-white`}>
+            <Navbar visible={true} />
 
             <section className="relative pt-48 pb-20 px-6 md:px-12 bg-mesh">
                 <div className="container mx-auto">
@@ -342,7 +332,7 @@ const PricingContent = () => {
                                     <span key={idx}>
                                         {idx > 0 && <br />}
                                         {idx === arr.length - 1 ? (
-                                            <span className="italic text-[var(--color-cyan)]">{line}</span>
+                                            <span className="font-serif italic font-normal text-black dark:text-white">{line}</span>
                                         ) : (
                                             line
                                         )}
@@ -368,19 +358,19 @@ const PricingContent = () => {
                                 onClick={() => setBillingPeriod('monthly')}
                                 className={`relative z-10 px-8 py-3 text-xs font-sans font-bold uppercase tracking-widest rounded-full transition-all duration-300 overflow-hidden ${
                                     billingPeriod === 'monthly'
-                                        ? "upgrade-btn !w-auto !font-sans text-black shadow-[0_0_20px_rgba(0,221,221,0.4)]"
+                                        ? "upgrade-btn !w-auto !font-sans text-black shadow-[0_0_20px_rgba(200,200,200,0.5)]"
                                         : (isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black")
                                 }`}
                             >
                                 {billingPeriod === 'monthly' && (
                                     <>
-                                        <div className="bubble-layer bubble-1"></div>
-                                        <div className="bubble-layer bubble-2"></div>
-                                        <div className="bubble-layer bubble-3"></div>
-                                        <div className="bubble-layer bubble-4"></div>
-                                        <div className="bubble-layer bubble-5"></div>
-                                        <div className="bubble-layer bubble-6"></div>
-                                        <div className="bubble-layer bubble-7"></div>
+                                        <div className="bubble-layer silver-bubble-1"></div>
+                                        <div className="bubble-layer silver-bubble-2"></div>
+                                        <div className="bubble-layer silver-bubble-3"></div>
+                                        <div className="bubble-layer silver-bubble-4"></div>
+                                        <div className="bubble-layer silver-bubble-5"></div>
+                                        <div className="bubble-layer silver-bubble-6"></div>
+                                        <div className="bubble-layer silver-bubble-7"></div>
                                     </>
                                 )}
                                 <span className="relative z-10">Monthly</span>
@@ -389,23 +379,23 @@ const PricingContent = () => {
                                 onClick={() => setBillingPeriod('yearly')}
                                 className={`relative z-10 px-8 py-3 text-xs font-sans font-bold uppercase tracking-widest rounded-full transition-all duration-300 overflow-hidden ${
                                     billingPeriod === 'yearly'
-                                        ? "upgrade-btn !w-auto !font-sans text-black shadow-[0_0_20px_rgba(0,221,221,0.4)]"
+                                        ? "upgrade-btn !w-auto !font-sans text-black shadow-[0_0_20px_rgba(200,200,200,0.5)]"
                                         : (isDarkMode ? "text-white/60 hover:text-white" : "text-black/60 hover:text-black")
                                 }`}
                             >
                                 {billingPeriod === 'yearly' && (
                                     <>
-                                        <div className="bubble-layer bubble-1"></div>
-                                        <div className="bubble-layer bubble-2"></div>
-                                        <div className="bubble-layer bubble-3"></div>
-                                        <div className="bubble-layer bubble-4"></div>
-                                        <div className="bubble-layer bubble-5"></div>
-                                        <div className="bubble-layer bubble-6"></div>
-                                        <div className="bubble-layer bubble-7"></div>
+                                        <div className="bubble-layer silver-bubble-1"></div>
+                                        <div className="bubble-layer silver-bubble-2"></div>
+                                        <div className="bubble-layer silver-bubble-3"></div>
+                                        <div className="bubble-layer silver-bubble-4"></div>
+                                        <div className="bubble-layer silver-bubble-5"></div>
+                                        <div className="bubble-layer silver-bubble-6"></div>
+                                        <div className="bubble-layer silver-bubble-7"></div>
                                     </>
                                 )}
                                 <span className="relative z-10">
-                                    Yearly <span className={`normal-case text-[9px] font-bold ml-1 px-1.5 py-0.5 rounded-full ${billingPeriod === 'yearly' ? "bg-black/15 text-black/80" : "bg-[var(--color-cyan)]/20 text-[var(--color-cyan)]"}`}>Save 30%</span>
+                                    Yearly <span className={`normal-case text-[9px] font-bold ml-1 px-1.5 py-0.5 rounded-full ${billingPeriod === 'yearly' ? "bg-black/15 text-black/80" : "bg-[var(--brand-accent)]/20 text-[var(--brand-accent)]"}`}>Save 30%</span>
                                 </span>
                             </button>
                         </div>
@@ -415,7 +405,8 @@ const PricingContent = () => {
                         {plans.map((plan, i) => {
                             const Icon = getPlanIcon(plan.plan_name || '');
                             const tag = getPlanTag(plan.plan_name || '');
-                            const isPro = plan.plan_name?.toLowerCase().includes('pro') || plan.plan_name?.toLowerCase().includes('developer');
+                            const isSpeed = plan.plan_name?.toLowerCase().includes('speed') || plan.plan_name?.toLowerCase().includes('developer') || plan.plan_name?.toLowerCase().includes('pro') || plan.plan_name?.toLowerCase().includes('acceleration');
+                            const isAgency = plan.plan_name?.toLowerCase().includes('agenc') || plan.plan_name?.toLowerCase().includes('heavy duty') || plan.plan_name?.toLowerCase().includes('enterprise');
 
                             return (
                                 <motion.div
@@ -423,10 +414,14 @@ const PricingContent = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.8, delay: i * 0.1 }}
-                                    className={`relative p-10 flex flex-col border group transition-all duration-500 backdrop-blur-sm ${getCardStyles(i)}`}
+                                    className={`relative p-10 flex flex-col group transition-all duration-500 backdrop-blur-sm premium-card-wrapper ${getCardStyles(i, isSpeed, isAgency)}`}
                                 >
+                                    {/* Metallic background reflection and sweep shine */}
+                                    <div className="metallic-gradient-overlay" />
+                                    <div className="card-shine" />
+
                                     {/* Plan Tag — Cyan Blue Badge style */}
-                                    <div className="flex justify-between items-center mb-16">
+                                    <div className="flex justify-between items-center mb-16 relative z-10">
                                         <span 
                                             className={`font-sans font-bold uppercase tracking-widest px-3.5 py-1.5 rounded-full text-[10px] ${
                                                 isDarkMode 
@@ -436,11 +431,11 @@ const PricingContent = () => {
                                         >
                                             {tag}
                                         </span>
-                                        {isPro && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)] animate-pulse" />}
+                                        {(isSpeed || isAgency) && <div className="h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)] animate-pulse" />}
                                     </div>
 
                                     {/* Plan Title & Price */}
-                                    <div className="mb-12">
+                                    <div className="mb-12 relative z-10">
                                         <h3 
                                             className="font-display font-semibold uppercase mb-4 tracking-tight"
                                             style={{ fontSize: "20px" }}
@@ -518,7 +513,7 @@ const PricingContent = () => {
                                     </div>
 
                                     {/* Features */}
-                                    <div className="flex-1 space-y-5 mb-16">
+                                    <div className="flex-1 space-y-5 mb-16 relative z-10">
                                         {(() => {
                                             const features = getPlanFeaturesList(plan.plan_name || '');
                                             return features.length > 0 ? (
@@ -540,7 +535,7 @@ const PricingContent = () => {
                                     <button
                                         onClick={() => handleSelectPlan(plan)}
                                         disabled={processingPlanId === String(plan.id) || plan.price_inr === 0}
-                                        className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                                        className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed relative z-10 ${
                                             plan.price_inr === 0
                                                 ? (isDarkMode ? "border border-white/10 text-white" : "border border-black/10 text-black")
                                                 : (isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")
@@ -581,7 +576,7 @@ const PricingContent = () => {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className={`relative w-full max-w-md ${isDarkMode ? "bg-[#0a0a0a] border-white/10" : "bg-[#fcfcfc] border-black/10"} border p-8`}
+                        className={`relative w-full max-w-md ${isDarkMode ? "bg-[#0c0914] border-white/10" : "bg-[#fcfcfc] border-black/10"} border p-8`}
                     >
                         <button
                             onClick={() => setCheckoutPlan(null)}
@@ -627,7 +622,7 @@ const PricingContent = () => {
 
                         {/* Wallet & Coin Discount */}
                         {walletBalance !== null && walletBalance > 0 && (
-                            <div className={`p-4 mb-6 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                            <div className={`p-4 mb-6 ${isDarkMode ? "bg-white/[0.03]" : "bg-black/5"}`}>
                                 <div className="flex items-center gap-2 mb-3">
                                     <Coins className={`h-4 w-4 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
                                     <span className={`text-[10px] font-mono uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>

@@ -56,290 +56,131 @@ export default function Footer() {
     }, []);
 
     return (
-        <footer className={`py-16 md:py-24 border-t transition-colors duration-300 ${isDarkMode ? "bg-[#0a0a0a] border-white/5 text-white" : "bg-[#fdfdfd] border-black/5 text-black"}`}>
-            <div className="container mx-auto px-6 md:px-12 max-w-7xl">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 mb-16 md:mb-24">
-                    {/* Left Section - occupies 8 columns on desktop */}
-                    <div className="lg:col-span-8 flex flex-col gap-12">
-                        {/* Brand & Logo */}
-                        <div className="flex flex-col gap-5">
-                            <div className="flex items-center gap-3">
-                                <div className="h-9 w-9 flex items-center justify-center shrink-0 overflow-hidden">
-                                    <img 
-                                        src={isDarkMode ? "/dark.png" : "/light.png"} 
-                                        alt="Logo" 
-                                        className="h-full w-full object-contain"
-                                        style={{ transform: isDarkMode ? "scale(1.5)" : "none" }}
-                                    />
-                                </div>
-                                <span className={`font-display font-extrabold tracking-tight text-2xl ${isDarkMode ? "text-white" : "text-black"}`}>
-                                    RUDRANEX
-                                </span>
-                            </div>
-                            
-                            <p className={`font-sans font-bold uppercase tracking-widest text-[11px] ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
-                                AI CO-PILOT FOR THE CLINICAL MIND.
-                            </p>
-                            
-                            <p className={`max-w-xl text-[13px] leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/60"}`}>
-                                {footerData.description}
-                            </p>
-                        </div>
+        <footer className={`border-t transition-colors duration-300 ${isDarkMode ? "bg-[#050308] border-white/5 text-white" : "bg-white border-black/5 text-black"} rounded-b-[40px]`}>
+          <div className="max-w-7xl mx-auto px-6 py-10 md:py-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 mb-10">
+              {/* Brand - 4 cols */}
+              <div className="lg:col-span-4 flex flex-col gap-5 text-left">
+                  <div className="flex items-center gap-2">
+                    <img src={isDarkMode ? "/dark.png" : "/light.png"} alt="Rudranex" className="h-9 w-9 object-contain" />
+                    <img src={isDarkMode ? "/dark_text.png" : "/light_text.png"} alt="Rudranex" className="h-7 md:h-8 w-auto object-contain" />
+                  </div>
+                <p className={`font-sans font-bold uppercase tracking-widest text-[11px] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>AI Co-Pilot for the Clinical Mind</p>
+                <p className={`text-sm leading-relaxed max-w-xs ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                  {footerData.description}
+                </p>
+              </div>
 
-                        {/* Link Grid - 3 columns on tablet/desktop, 2 columns on mobile */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-10">
-                            {[
-                                { 
-                                    heading: "Company", 
-                                    links: [
-                                        { label: "About Us", href: "/about" }, 
-                                        { label: "FAQ", href: "/faq" }, 
-                                        { label: "Support", href: "/support" }, 
-                                        { label: "Contact Us", href: "/contact" }
-                                    ] 
-                                },
-                                { 
-                                    heading: "Policy", 
-                                    links: [
-                                        { label: "Privacy Policy", href: "/privacy" }, 
-                                        { label: "Terms of Service", href: "/terms" }, 
-                                        { label: "Refund Policy", href: "/refund-policy" }
-                                    ] 
-                                },
-                                { 
-                                    heading: "Platforms", 
-                                    links: [
-                                        { label: "For Schools", href: "/schools" }, 
-                                        { label: "For B2B", href: "/b2b" }, 
-                                        { label: "Pricing", href: "/pricing" }
-                                    ] 
-                                },
-                            ].map((col) => (
-                                <div key={col.heading} className="flex flex-col gap-4">
-                                    {/* Capsule Column Header */}
-                                    <div>
-                                        <span
-                                            className={`inline-block font-sans font-bold uppercase text-[11px] tracking-widest px-4 py-1.5 rounded-full ${
-                                                isDarkMode 
-                                                    ? "bg-white/10 text-white border border-white/5" 
-                                                    : "bg-black text-white"
-                                            }`}
-                                        >
-                                            {col.heading}
-                                        </span>
-                                    </div>
-                                    
-                                    {/* Column Links */}
-                                    <div className="flex flex-col gap-3 mt-2">
-                                        {col.links.map((l) => (
-                                            <a
-                                                key={l.label}
-                                                href={l.href}
-                                                className={`text-[13px] font-medium transition-colors duration-200 ${
-                                                    isDarkMode 
-                                                        ? "text-white/50 hover:text-white" 
-                                                        : "text-black/60 hover:text-black"
-                                                }`}
-                                            >
-                                                {l.label}
-                                            </a>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+              {/* Quick Links - 2 cols */}
+              <div className="lg:col-span-2 text-left">
+                <h4 className={`text-xs font-semibold uppercase tracking-[0.2em] mb-5 ${isDarkMode ? "text-white/60" : "text-black/60"}`}>Company</h4>
+                <ul className="flex flex-col gap-3">
+                  {[
+                    { label: "About Us", href: "/about" },
+                    { label: "FAQ", href: "/faq" },
+                    { label: "Support", href: "/support" },
+                    { label: "Contact Us", href: "/contact" }
+                  ].map((link) => (
+                    <li key={link.label}>
+                      <a href={link.href} className={`text-sm transition-colors ${isDarkMode ? "text-white/40 hover:text-white/80" : "text-black/40 hover:text-black/80"}`}>
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-                        {/* Bottom of Left Section: Feedback + Social Links (Fully Responsive) */}
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8 pt-8 border-t border-dashed border-current/10">
-                            <div className="flex flex-col gap-2 max-w-sm">
-                                <h4 className={`text-sm font-bold uppercase tracking-wider ${isDarkMode ? "text-white" : "text-black"}`}>
-                                    We Value Your Feedback
-                                </h4>
-                                <p className={`text-xs ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
-                                    Share your thoughts with us to help improve your experience!
-                                </p>
-                            </div>
+              {/* Policy Links - 2 cols */}
+              <div className="lg:col-span-2 text-left">
+                <h4 className={`text-xs font-semibold uppercase tracking-[0.2em] mb-5 ${isDarkMode ? "text-white/60" : "text-black/60"}`}>Policy</h4>
+                <ul className="flex flex-col gap-3">
+                  {[
+                    { label: "Privacy Policy", href: "/privacy" },
+                    { label: "Terms of Service", href: "/terms" },
+                    { label: "Refund Policy", href: "/refund-policy" },
+                    { label: "Cookie Policy", href: "/privacy" }
+                  ].map((link) => (
+                    <li key={link.label}>
+                      <a href={link.href} className={`text-sm transition-colors ${isDarkMode ? "text-white/40 hover:text-white/80" : "text-black/40 hover:text-black/80"}`}>
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6 shrink-0 w-full sm:w-auto">
-                                {/* Feedback Button */}
-                                <a
-                                    href="/support"
-                                    className={`flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-300 w-full sm:w-auto text-center ${
-                                        isDarkMode 
-                                            ? "bg-white text-black hover:bg-white/95" 
-                                            : "bg-black text-white hover:bg-black/95"
-                                    }`}
-                                >
-                                    Feedback <ArrowRight className="w-3.5 h-3.5" />
-                                </a>
-
-                                {/* Social Links */}
-                                <div className="flex items-center justify-center sm:justify-end gap-3.5 w-full sm:w-auto">
-                                    {[
-                                        { 
-                                            label: "Twitter", 
-                                            href: socialLinks.twitter, 
-                                            svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> 
-                                        },
-                                        { 
-                                            label: "LinkedIn", 
-                                            href: socialLinks.linkedin, 
-                                            svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                                        },
-                                        { 
-                                            label: "GitHub", 
-                                            href: socialLinks.github, 
-                                            svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
-                                        }
-                                    ].map((social) => (
-                                        <a
-                                            key={social.label}
-                                            href={social.href}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className={`p-2 rounded-lg border transition-colors duration-200 ${
-                                                isDarkMode 
-                                                    ? "border-white/5 bg-white/5 text-white/60 hover:text-white hover:border-white/20" 
-                                                    : "border-black/5 bg-black/5 text-black/60 hover:text-black hover:border-black/20"
-                                            }`}
-                                        >
-                                            {social.svg}
-                                        </a>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
+              {/* Connect - 2 cols */}
+              <div className="lg:col-span-2 flex flex-col gap-6 text-left">
+                <h4 className={`text-xs font-semibold uppercase tracking-[0.2em] ${isDarkMode ? "text-white/60" : "text-black/60"}`}>Connect</h4>
+                <div className="flex flex-col gap-4">
+                  <a href={`mailto:${footerData.email}`} className={`flex items-center gap-3 text-sm transition-colors group ${isDarkMode ? "text-white hover:text-white/80" : "text-black hover:text-black/80"}`}>
+                    <div className={`w-9 h-9 rounded-lg border flex items-center justify-center transition-all duration-300 ${
+                      isDarkMode 
+                        ? "border-white/10 group-hover:border-white group-hover:scale-110 group-hover:bg-white group-hover:text-black" 
+                        : "border-black group-hover:border-black group-hover:scale-110 group-hover:bg-black group-hover:text-white"
+                    }`}>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                     </div>
-
-                    {/* Right Section - 4 columns on desktop, with top border on mobile and left border on desktop */}
-                    <div className={`lg:col-span-4 flex flex-col gap-8 pt-12 lg:pt-0 lg:pl-12 border-t lg:border-t-0 lg:border-l ${isDarkMode ? "border-white/5 animate-fade-in" : "border-black/10"}`}>
-                        
-                        {/* Connect with Us */}
-                        <div className="flex flex-col gap-5">
-                            <h3 className={`text-sm font-bold uppercase tracking-wider ${isDarkMode ? "text-white" : "text-black"}`}>
-                                Connect with Us
-                            </h3>
-
-                            <div className="flex flex-col gap-4">
-                                {/* Mail Card */}
-                                <a
-                                    href={`mailto:${footerData.email}`}
-                                    className={`flex items-start gap-4 p-4 rounded-xl border transition-all duration-300 hover:scale-[1.01] ${
-                                        isDarkMode 
-                                            ? "bg-white/[0.03] border-white/5 hover:bg-white/[0.05]" 
-                                            : "bg-black/[0.03] border-black/5 hover:bg-black/[0.05]"
-                                    }`}
-                                >
-                                    <div className={`p-2.5 rounded-lg flex items-center justify-center shrink-0 ${
-                                        isDarkMode ? "bg-white/10" : "bg-black"
-                                    }`} style={{ color: "var(--brand-accent)" }}>
-                                        <Mail className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
-                                            Mail Us
-                                        </span>
-                                        <span className={`text-[14px] font-semibold break-all ${isDarkMode ? "text-white" : "text-black"}`}>
-                                            {footerData.email}
-                                        </span>
-                                    </div>
-                                </a>
-
-                                {/* Location Card */}
-                                <div
-                                    className={`flex items-start gap-4 p-4 rounded-xl border ${
-                                        isDarkMode 
-                                            ? "bg-white/[0.03] border-white/5" 
-                                            : "bg-black/[0.03] border-black/5"
-                                    }`}
-                                >
-                                    <div className={`p-2.5 rounded-lg flex items-center justify-center shrink-0 ${
-                                        isDarkMode ? "bg-white/10" : "bg-black"
-                                    }`} style={{ color: "var(--brand-accent)" }}>
-                                        <MapPin className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
-                                            Find Us Here
-                                        </span>
-                                        <span className={`text-[13px] font-medium leading-relaxed ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
-                                            {footerData.location}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className={`h-px w-full ${isDarkMode ? "bg-white/5" : "bg-black/10"}`} />
-
-                        {/* Customer Support */}
-                        <div className="flex flex-col gap-5">
-                            <h3 className={`text-sm font-bold uppercase tracking-wider ${isDarkMode ? "text-white" : "text-black"}`}>
-                                Customer Support
-                            </h3>
-
-                            <div className="flex flex-col gap-3">
-                                {[
-                                    { name: "Technical Support", phone: footerData.techSupportPhone },
-                                    { name: "Enterprise Queries", phone: footerData.enterprisePhone }
-                                ].map((support) => (
-                                    <a
-                                        key={support.name}
-                                        href={`tel:${support.phone.replace(/\s+/g, '')}`}
-                                        className={`flex items-center gap-4 p-3.5 rounded-xl border transition-all duration-300 hover:scale-[1.01] ${
-                                            isDarkMode 
-                                                ? "bg-white/[0.03] border-white/5 hover:bg-white/[0.05]" 
-                                                : "bg-black/[0.03] border-black/5 hover:bg-black/[0.05]"
-                                        }`}
-                                    >
-                                        <div className={`p-2 rounded-lg flex items-center justify-center shrink-0 ${
-                                        isDarkMode ? "bg-white/10" : "bg-black"
-                                    }`} style={{ color: "var(--brand-accent)" }}>
-                                            <Phone className="w-4 h-4" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className={`text-[12px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>
-                                                {support.name}
-                                            </span>
-                                            <span className={`text-[13px] font-medium tracking-wide ${isDarkMode ? "text-white/50" : "text-black/60"}`}>
-                                                {support.phone}
-                                            </span>
-                                        </div>
-                                    </a>
-                                ))}
-                            </div>
-                        </div>
-
+                    <span className="text-xs truncate">{footerData.email}</span>
+                  </a>
+                  <div className={`flex items-center gap-3 text-sm ${isDarkMode ? "text-white" : "text-black"}`}>
+                    <div className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 transition-all duration-300 hover:scale-110 ${
+                      isDarkMode 
+                        ? "border-white/10 hover:bg-white hover:text-black" 
+                        : "border-black hover:bg-black hover:text-white"
+                    }`}>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     </div>
+                    <span className="text-xs">{footerData.location}</span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <a href={`tel:${footerData.techSupportPhone.replace(/\s+/g, '')}`} className={`flex items-center gap-3 text-sm transition-colors group ${isDarkMode ? "text-white hover:text-white/80" : "text-black hover:text-black/80"}`}>
+                      <div className={`w-9 h-9 rounded-lg border flex items-center justify-center transition-all duration-300 ${
+                        isDarkMode 
+                          ? "border-white/10 group-hover:border-white group-hover:scale-110 group-hover:bg-white group-hover:text-black" 
+                          : "border-black group-hover:border-black group-hover:scale-110 group-hover:bg-black group-hover:text-white"
+                      }`}>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                      </div>
+                      <span className="text-xs">{footerData.techSupportPhone}</span>
+                    </a>
+                    <a href={`tel:${footerData.enterprisePhone.replace(/\s+/g, '')}`} className={`flex items-center gap-3 text-sm transition-colors group ml-12 ${isDarkMode ? "text-white hover:text-white/80" : "text-black hover:text-black/80"}`}>
+                      <span className="text-xs">{footerData.enterprisePhone}</span>
+                    </a>
+                  </div>
                 </div>
+              </div>
 
-                {/* Footer Bottom Bar (Highly Optimized with clean wrap constraints) */}
-                <div className={`flex flex-col lg:flex-row items-center justify-between border-t ${isDarkMode ? "border-white/5" : "border-black/10"} pt-8 pb-2 gap-6`}>
-                    <p className={`font-sans font-bold uppercase text-center lg:text-left ${isDarkMode ? "text-white/20" : "text-black/30"}`} style={{ fontSize: "11px", letterSpacing: "0.1em" }}>
-                        © 2026 Rudranex AI Systems. All rights reserved.
-                    </p>
-                    <div className="flex flex-wrap items-center justify-center lg:justify-end gap-x-6 gap-y-3">
-                        {[
-                            { label: "Terms of use", href: "/terms" },
-                            { label: "Privacy Policies", href: "/privacy" },
-                            { label: "Copyright & Disclaimer", href: "/terms" },
-                            { label: "Refund Policy", href: "/refund-policy" },
-                            { label: "Cookie Policy", href: "/privacy" }
-                        ].map((item) => (
-                            <a
-                                key={item.label}
-                                href={item.href}
-                                className={`font-sans font-bold uppercase transition-colors duration-205 hover:underline ${
-                                    isDarkMode ? "text-white/25 hover:text-white" : "text-black/35 hover:text-black"
-                                }`}
-                                style={{ fontSize: "11px", letterSpacing: "0.1em" }}
-                            >
-                                {item.label}
-                            </a>
-                        ))}
-                    </div>
+              {/* Social - 2 cols */}
+              <div className="lg:col-span-2 flex flex-col gap-6 text-left">
+                <h4 className={`text-xs font-semibold uppercase tracking-[0.2em] ${isDarkMode ? "text-white/60" : "text-black/60"}`}>Follow Us</h4>
+                <div className="flex items-center gap-3">
+                  {[
+                    { href: socialLinks.twitter, label: "Twitter", path: "M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" },
+                    { href: socialLinks.linkedin, label: "LinkedIn", path: "M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2zM4 6a2 2 0 100-4 2 2 0 000 4z" },
+                    { href: socialLinks.github, label: "GitHub", path: "M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" },
+                  ].map((social) => (
+                    <a key={social.label} href={social.href} aria-label={social.label} className={`w-9 h-9 rounded-lg border flex items-center justify-center transition-all duration-300 ${
+                      isDarkMode 
+                        ? "border-white/10 text-white hover:bg-white hover:text-black hover:scale-110" 
+                        : "border-black text-black hover:bg-black hover:text-white hover:scale-110"
+                    }`}>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d={social.path} />
+                      </svg>
+                    </a>
+                  ))}
                 </div>
+              </div>
             </div>
+
+            {/* Bottom Bar */}
+            <div className={`pt-3 border-t flex items-center justify-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+              <span className={`text-xs ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                &copy; 2026 Rudranex AI Systems. All rights reserved.
+              </span>
+            </div>
+          </div>
         </footer>
     );
 }
