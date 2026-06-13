@@ -221,6 +221,8 @@ export default function LibraryPage() {
   const [publicGalleryAssets, setPublicGalleryAssets] = useState<LibraryAsset[]>([])
   const [isFetchingPublicGalleryAssets, setIsFetchingPublicGalleryAssets] = useState(false)
   const [showcaseTab, setShowcaseTab] = useState<"assets" | "galleries">("assets")
+  const [exploreTab, setExploreTab] = useState<"images" | "folders">("images")
+  const [publicGallerySource, setPublicGallerySource] = useState<"featured" | "public_showcase">("public_showcase")
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false)
   const [moveAssetId, setMoveAssetId] = useState<string | null>(null)
   const [expandedAsset, setExpandedAsset] = useState<LibraryAsset | null>(null)
@@ -1165,7 +1167,7 @@ export default function LibraryPage() {
   useEffect(() => {
     setVisibleCount(FEATURED_INITIAL_BATCH)
     setLoadedImages(new Set())
-  }, [activeCategory, searchQuery, createdOnFilter, sourceFilter, selectedGalleryId, selectedPublicGalleryId])
+  }, [activeCategory, searchQuery, createdOnFilter, sourceFilter, selectedGalleryId, selectedPublicGalleryId, exploreTab])
 
   const getCardAspectRatioClass = (index: number, idxInCol?: number, colIdx?: number) => {
     switch (aspectRatio) {
@@ -1432,7 +1434,7 @@ export default function LibraryPage() {
 
               {/* Explore */}
               <motion.button
-                onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); }}
+                onClick={() => { setActiveCategory("featured"); setExploreTab("images"); setIsUploadDragging(false); }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 className={`p-2 rounded-xl transition-colors cursor-pointer relative ${
@@ -1603,7 +1605,7 @@ export default function LibraryPage() {
                 <div className="space-y-1">
                   
                   <button
-                    onClick={() => { setActiveCategory("featured"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
+                    onClick={() => { setActiveCategory("featured"); setExploreTab("images"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
                     className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
                       activeCategory === "featured"
                         ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
@@ -2189,8 +2191,13 @@ export default function LibraryPage() {
                 {activeCategory === "public_gallery" && (
                   <button
                     onClick={() => {
-                      setActiveCategory("public_showcase");
-                      setShowcaseTab("galleries");
+                      if (publicGallerySource === "featured") {
+                        setActiveCategory("featured");
+                        setExploreTab("folders");
+                      } else {
+                        setActiveCategory("public_showcase");
+                        setShowcaseTab("galleries");
+                      }
                       setSelectedPublicGalleryId(null);
                     }}
                     className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${
@@ -2234,6 +2241,32 @@ export default function LibraryPage() {
             </div>
           )}
 
+          {/* Explore Tabs */}
+          {activeCategory === "featured" && (
+            <div className="mb-6 flex gap-2 p-1 bg-black/10 dark:bg-white/[0.03] border border-black/5 dark:border-white/[0.05] rounded-xl w-fit">
+              <button
+                onClick={() => setExploreTab("images")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold font-sans tracking-wide transition-all ${
+                  exploreTab === "images"
+                    ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/10 text-black shadow-sm")
+                    : (isDarkMode ? "text-white/45 hover:text-white/80" : "text-black/55 hover:text-black")
+                }`}
+              >
+                Public Images
+              </button>
+              <button
+                onClick={() => setExploreTab("folders")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold font-sans tracking-wide transition-all flex items-center gap-1.5 ${
+                  exploreTab === "folders"
+                    ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/10 text-black shadow-sm")
+                    : (isDarkMode ? "text-white/45 hover:text-white/80" : "text-black/55 hover:text-black")
+                }`}
+              >
+                <Folder className="h-3.5 w-3.5" />
+                <span>Public Folder</span>
+              </button>
+            </div>
+          )}
 
 
           {/* ================= COMPACT FILTERS & SEARCH ROW ================= */}
@@ -2295,7 +2328,7 @@ export default function LibraryPage() {
           </div>
 
           <div className="relative">
-            {activeCategory === "public_showcase" && showcaseTab === "galleries" ? (
+            {(activeCategory === "public_showcase" && showcaseTab === "galleries") || (activeCategory === "featured" && exploreTab === "folders") ? (
               /* Community Shared Galleries Grid view */
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {publicGalleries.length === 0 ? (
@@ -2322,6 +2355,7 @@ export default function LibraryPage() {
                         onClick={() => {
                           setSelectedPublicGalleryId(g.id);
                           setActiveCategory("public_gallery");
+                          setPublicGallerySource(activeCategory === "featured" ? "featured" : "public_showcase");
                           fetchPublicGalleryAssetsCallback(g.id);
                         }}
                         className="cursor-pointer"
