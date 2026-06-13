@@ -105,6 +105,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid"
+import JSZip from "jszip"
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google"
 import SettingsModal from "@/components/ui/SettingsModal"
 import WalletModal from "@/components/ui/WalletModal"
@@ -325,23 +326,7 @@ export default function LibraryPage() {
     }
   }, [isPersonalizationModalOpen])
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const expandAssetId = localStorage.getItem("expand_asset_id");
-      if (expandAssetId) {
-        localStorage.removeItem("expand_asset_id");
-        getSingleAsset(expandAssetId)
-          .then((res) => {
-            if (res.success && res.asset) {
-              setExpandedAsset(res.asset);
-            }
-          })
-          .catch((err) => {
-            console.error("Failed to expand asset from notification:", err);
-          });
-      }
-    }
-  }, []);
+
 
   useEffect(() => {
     setIsSubscriptionLoading(true)
@@ -1027,11 +1012,60 @@ export default function LibraryPage() {
     }
   }
 
+  // Download all images in a gallery as a single ZIP file
+  const handleDownloadGalleryAsZip = async (assetsList: LibraryAsset[], galleryName = "gallery") => {
+    if (assetsList.length === 0) {
+      toast.error("No images to download.");
+      return;
+    }
+    
+    const toastId = toast.loading(`Creating ZIP of ${assetsList.length} images...`);
+    
+    try {
+      const zip = new JSZip();
+      
+      const downloadPromises = assetsList.map(async (asset, index) => {
+        const imageUrl = getAssetImageUrl(asset);
+        try {
+          const res = await fetch(imageUrl);
+          if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+          const blob = await res.blob();
+          
+          let ext = blob.type.split("/")[1] || "jpg";
+          if (ext.includes("+") || ext.length > 4) ext = "png";
+          
+          const filename = `image_${index + 1}.${ext}`;
+          zip.file(filename, blob);
+        } catch (err) {
+          console.error(`Failed to include image ${asset.id} in ZIP:`, err);
+        }
+      });
+      
+      await Promise.all(downloadPromises);
+      
+      const content = await zip.generateAsync({ type: "blob" });
+      const blobUrl = URL.createObjectURL(content);
+      
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `${galleryName.replace(/[^a-zA-Z0-9]/g, "_")}_images.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      
+      toast.success("ZIP download complete!", { id: toastId });
+    } catch (err) {
+      console.error("ZIP creation failed:", err);
+      toast.error("Failed to download ZIP file.", { id: toastId });
+    }
+  }
+
   // Share image via clipboard (reliable for all asset types)
   const handleShareImage = async (url: string, title = "Library Image") => {
     try {
       await navigator.clipboard.writeText(url)
-      toast.success("Image link copied to clipboard.")
+      toast.success("Link copied to clipboard.")
     } catch {
       toast.error("Could not copy link.")
     }
@@ -1234,6 +1268,61 @@ export default function LibraryPage() {
       setIsFetchingPublicGalleryAssets(false)
     }
   }, [])
+
+  // Handle URL parameter deep links (?asset=xxx and ?gallery=xxx) and localStorage expand requests on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const expandAssetId = localStorage.getItem("expand_asset_id");
+      if (expandAssetId) {
+        localStorage.removeItem("expand_asset_id");
+        getSingleAsset(expandAssetId)
+          .then((res) => {
+            if (res.success && res.asset) {
+              setExpandedAsset(res.asset);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to expand asset from notification:", err);
+          });
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const assetParam = params.get("asset");
+      const galleryParam = params.get("gallery");
+
+      if (assetParam) {
+        getSingleAsset(assetParam)
+          .then((res) => {
+            if (res.success && res.asset) {
+              setExpandedAsset(res.asset);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to load asset from URL parameter:", err);
+          });
+      }
+
+      if (galleryParam) {
+        getLibraryGalleries()
+          .then((res) => {
+            if (res.success && res.galleries.some(g => g.id === galleryParam)) {
+              setSelectedGalleryId(galleryParam);
+              setActiveCategory("gallery");
+            } else {
+              getPublicLibraryGalleries()
+                .then((pubRes) => {
+                  if (pubRes.success && pubRes.galleries.some(g => g.id === galleryParam)) {
+                    setSelectedPublicGalleryId(galleryParam);
+                    setActiveCategory("public_gallery");
+                    fetchPublicGalleryAssetsCallback(galleryParam);
+                  }
+                });
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [fetchPublicGalleryAssetsCallback])
 
   // Simulated drag and drop uploads
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsUploadDragging(true); }
@@ -1563,11 +1652,11 @@ export default function LibraryPage() {
               <div className="flex items-center justify-between pt-3 border-t border-white/10">
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleShareImage(getAssetImageUrl(asset), asset.prompt || "Library Image"); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleShareImage(`${window.location.origin}/library?asset=${asset.id}`, asset.prompt || "Library Image"); }}
                     className="text-white/60 hover:text-cyan-400 transition-colors cursor-pointer"
                     title="Share"
                   >
-                    <Globe className="h-4 w-4" />
+                    <Share2 className="h-4 w-4" />
                   </button>
                   <button
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyPrompt(asset.prompt || "", asset.id); }}
@@ -2389,19 +2478,18 @@ export default function LibraryPage() {
                                   <Share2 className="h-3.5 w-3.5" />
                                 </button>
 
-                                {/* Save Gallery */}
+                                {/* Save Gallery as ZIP */}
                                 <button
                                   onClick={() => {
                                     const galleryAssetIds = assets.filter(a => a.gallery_id === currentGallery.id);
-                                    galleryAssetIds.forEach(a => handleDownloadImage(getAssetImageUrl(a), a.id));
-                                    toast.success(`Saving ${galleryAssetIds.length} images...`);
+                                    handleDownloadGalleryAsZip(galleryAssetIds, currentGallery.name);
                                   }}
                                   className={`p-1.5 rounded border transition-colors ${
                                     isDarkMode
                                       ? "bg-white/5 border-white/10 text-white/60 hover:bg-emerald-500/80 hover:text-white"
                                       : "bg-black/5 border-black/10 text-black/60 hover:bg-emerald-500/80 hover:text-white"
                                   }`}
-                                  title="Save All Images"
+                                  title="Download All Images as ZIP"
                                 >
                                   <Download className="h-3.5 w-3.5" />
                                 </button>
@@ -2423,14 +2511,50 @@ export default function LibraryPage() {
                         })()}
                       </>
                     )}
-                    {activeCategory === "public_gallery" && (
-                      <>
-                        <span>{publicGalleries.find(g => g.id === selectedPublicGalleryId)?.name || "Shared Folder"}</span>
-                        <span className="text-xs font-mono font-normal opacity-40 px-2 py-0.5 border border-white/10 bg-white/5 rounded-full ml-2">
-                          by {publicGalleries.find(g => g.id === selectedPublicGalleryId)?.owner_name || "Community User"}
-                        </span>
-                      </>
-                    )}
+                    {activeCategory === "public_gallery" && (() => {
+                      const currentPubGallery = publicGalleries.find(g => g.id === selectedPublicGalleryId);
+                      if (!currentPubGallery) return null;
+                      return (
+                        <>
+                          <span>{currentPubGallery.name}</span>
+                          <span className="text-xs font-mono font-normal opacity-40 px-2 py-0.5 border border-white/10 bg-white/5 rounded-full ml-2">
+                            by {currentPubGallery.owner_name || "Community User"}
+                          </span>
+                          <div className="flex items-center gap-1.5 ml-2">
+                            {/* Share Public Gallery */}
+                            <button
+                              onClick={() => handleShareImage(
+                                `${window.location.origin}/library?gallery=${currentPubGallery.id}`,
+                                currentPubGallery.name
+                              )}
+                              className={`p-1.5 rounded border transition-colors ${
+                                isDarkMode
+                                  ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                  : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
+                              }`}
+                              title="Share Folder Link"
+                            >
+                              <Share2 className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Download Public Gallery ZIP */}
+                            <button
+                              onClick={() => {
+                                handleDownloadGalleryAsZip(publicGalleryAssets, currentPubGallery.name);
+                              }}
+                              className={`p-1.5 rounded border transition-colors ${
+                                isDarkMode
+                                  ? "bg-white/5 border-white/10 text-white/60 hover:bg-emerald-500/80 hover:text-white"
+                                  : "bg-black/5 border-black/10 text-black/60 hover:bg-emerald-500/80 hover:text-white"
+                              }`}
+                              title="Download All Images as ZIP"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </h1>
                 </div>
               </div>
@@ -3160,13 +3284,13 @@ export default function LibraryPage() {
                     {/* Copy Link Button */}
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(getAssetImageUrl(expandedAsset))
-                        toast.success("Image link copied!")
+                        navigator.clipboard.writeText(`${window.location.origin}/library?asset=${expandedAsset.id}`)
+                        toast.success("Post link copied!")
                       }}
                       className="text-zinc-655 hover:text-black dark:text-zinc-400 dark:hover:text-white hover:scale-110 active:scale-95 transition-all duration-200"
                       title="Copy Link"
                     >
-                      <Upload className="h-6 w-6" />
+                      <Share2 className="h-6 w-6" />
                     </button>
 
                     {/* Save to Personal Folder */}
@@ -3393,12 +3517,12 @@ export default function LibraryPage() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(getAssetImageUrl(expandedAsset))
-                    toast.success("Image link copied!")
+                    navigator.clipboard.writeText(`${window.location.origin}/library?asset=${expandedAsset.id}`)
+                    toast.success("Post link copied!")
                   }}
                   className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-white font-bold text-xs font-mono tracking-wider transition-all"
                 >
-                  <Upload className="h-4 w-4" />
+                  <Share2 className="h-4 w-4" />
                   SHARE
                 </button>
               </div>
