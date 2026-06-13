@@ -1094,27 +1094,62 @@ export default function LibraryPage() {
   const handleToggleVisibility = async (id: string, currentPublic: boolean) => {
     setTogglingVisibilityId(id)
     const targetPublic = !currentPublic
-    try {
-      if (id.startsWith("feat-") || id.startsWith("uploaded-")) {
-        if (id.startsWith("uploaded-")) {
-          setUploadedAssets((prev) =>
-            prev.map((a) => (a.id === id ? { ...a, is_public: targetPublic } : a))
-          )
-        }
-        toast.success(`Mock visibility set to ${targetPublic ? "Public Showcase" : "Private Library"}.`)
-      } else {
-        await toggleAssetVisibility(id, targetPublic)
-        setAssets((prev) =>
+    
+    if (id.startsWith("feat-") || id.startsWith("uploaded-")) {
+      if (id.startsWith("uploaded-")) {
+        setUploadedAssets((prev) =>
           prev.map((a) => (a.id === id ? { ...a, is_public: targetPublic } : a))
         )
-        const pubData = await getPublicLibraryAssets()
-        setPublicAssets(pubData.assets)
-        toast.success(`Asset is now ${targetPublic ? "Public" : "Private"}.`)
       }
+      toast.success(`Mock visibility set to ${targetPublic ? "Public Showcase" : "Private Library"}.`)
+      setTogglingVisibilityId(null)
+      return
+    }
+
+    try {
+      // Optimistically update local assets visibility
+      setAssets((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, is_public: targetPublic } : a))
+      )
+      
+      setPublicAssets((prev) => {
+        if (targetPublic) {
+          const exists = prev.some(a => a.id === id)
+          if (!exists) {
+            const asset = assets.find(a => a.id === id)
+            if (asset) return [{ ...asset, is_public: true }, ...prev]
+          }
+          return prev.map((a) => (a.id === id ? { ...a, is_public: true } : a))
+        } else {
+          return prev.filter((a) => a.id !== id)
+        }
+      })
+
+      if (expandedAsset && expandedAsset.id === id) {
+        setExpandedAsset((prev: any) => prev ? { ...prev, is_public: targetPublic } : null)
+      }
+
+      // Instantly show success toast
+      toast.success(`Asset is now ${targetPublic ? "Public" : "Private"}.`)
+      setTogglingVisibilityId(null)
+
+      // Fire backend request in parallel
+      await toggleAssetVisibility(id, targetPublic)
+
+      // Sync public assets in background
+      getPublicLibraryAssets()
+        .then((pubData) => setPublicAssets(pubData.assets))
+        .catch((err) => console.error("Background public assets sync failed:", err))
+
     } catch (err: any) {
       toast.error(err.message || "Failed to update visibility.")
-    } finally {
-      setTogglingVisibilityId(null)
+      // Revert/rollback on failure
+      setAssets((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, is_public: currentPublic } : a))
+      )
+      getPublicLibraryAssets()
+        .then((pubData) => setPublicAssets(pubData.assets))
+        .catch((err) => console.error("Rollback public assets sync failed:", err))
     }
   }
 
@@ -1381,19 +1416,36 @@ export default function LibraryPage() {
   const handleToggleGalleryVisibility = async (id: string, currentPublic: boolean) => {
     const targetPublic = !currentPublic
     try {
-      const data = await updateLibraryGallery(id, { is_public: targetPublic })
-      setGalleries((prev) => prev.map((g) => (g.id === id ? data.gallery : g)))
+      // Optimistically update galleries
+      setGalleries((prev) => prev.map((g) => (g.id === id ? { ...g, is_public: targetPublic } : g)))
+      
       // Update all assets belonging to this gallery locally
       setAssets((prev) => prev.map((a) => (a.gallery_id === id ? { ...a, is_public: targetPublic } : a)))
-      
-      const pubData = await getPublicLibraryAssets()
-      setPublicAssets(pubData.assets)
-      const pubGalleriesData = await getPublicLibraryGalleries()
-      setPublicGalleries(pubGalleriesData.galleries)
 
-      toast.success(`Gallery "${data.gallery.name}" is now ${targetPublic ? "Public" : "Private"}.`)
+      // Instantly show success toast
+      const galleryName = galleries.find(g => g.id === id)?.name || "Folder"
+      toast.success(`Gallery "${galleryName}" is now ${targetPublic ? "Public" : "Private"}.`)
+
+      // Fire backend request in parallel
+      const data = await updateLibraryGallery(id, { is_public: targetPublic })
+      
+      // Sync exact returned gallery object
+      setGalleries((prev) => prev.map((g) => (g.id === id ? data.gallery : g)))
+
+      // Update lists in background
+      getPublicLibraryAssets()
+        .then((pubData) => setPublicAssets(pubData.assets))
+        .catch((err) => console.error("Background public assets sync failed:", err))
+
+      getPublicLibraryGalleries()
+        .then((pubGalleriesData) => setPublicGalleries(pubGalleriesData.galleries))
+        .catch((err) => console.error("Background public galleries sync failed:", err))
+
     } catch (err: any) {
       toast.error(err.message || "Failed to toggle gallery visibility.")
+      // Revert/rollback on failure
+      setGalleries((prev) => prev.map((g) => (g.id === id ? { ...g, is_public: currentPublic } : g)))
+      setAssets((prev) => prev.map((a) => (a.gallery_id === id ? { ...a, is_public: currentPublic } : a)))
     }
   }
 
