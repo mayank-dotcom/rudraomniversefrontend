@@ -1416,7 +1416,10 @@ export default function LibraryPage() {
             </div>
 
             {/* Hover Content Overlay */}
-            <div className={`absolute inset-0 bg-black/40 backdrop-blur-xl opacity-0 group-hover/card:opacity-100 flex flex-col justify-end p-5 transition-all duration-500 ease-out translate-y-4 group-hover/card:translate-y-0 z-30`}>
+            <div
+              onClick={() => setExpandedAsset(asset)}
+              className={`absolute inset-0 bg-black/40 backdrop-blur-xl opacity-0 group-hover/card:opacity-100 flex flex-col justify-end p-5 transition-all duration-500 ease-out translate-y-4 group-hover/card:translate-y-0 z-30 cursor-pointer`}
+            >
               <p className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest mb-1.5">Prompt Detail</p>
               <p className="text-xs font-medium leading-relaxed text-white/90 line-clamp-3 mb-4">
                 {asset.prompt || "No prompt description available for this visual concept."}
@@ -1425,28 +1428,28 @@ export default function LibraryPage() {
               <div className="flex items-center justify-between pt-3 border-t border-white/10">
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={(e) => { e.preventDefault(); handleShareImage(getAssetImageUrl(asset), asset.prompt || "Library Image"); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleShareImage(getAssetImageUrl(asset), asset.prompt || "Library Image"); }}
                     className="text-white/60 hover:text-cyan-400 transition-colors cursor-pointer"
                     title="Share"
                   >
                     <Globe className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={(e) => { e.preventDefault(); handleCopyPrompt(asset.prompt || "", asset.id); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyPrompt(asset.prompt || "", asset.id); }}
                     className={`transition-colors cursor-pointer ${copiedId === asset.id ? "text-emerald-400" : "text-white/60 hover:text-cyan-400"}`}
                     title="Copy Prompt"
                   >
                     {copiedId === asset.id ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </button>
                   <button
-                    onClick={(e) => { e.preventDefault(); handleDownloadImage(getAssetImageUrl(asset), asset.id); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadImage(getAssetImageUrl(asset), asset.id); }}
                     className="text-white/60 hover:text-cyan-400 transition-colors cursor-pointer"
                     title="Download"
                   >
                     <Download className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={(e) => { e.preventDefault(); handleCopyToLibrary(asset); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyToLibrary(asset); }}
                     className="text-white/60 hover:text-emerald-400 transition-colors cursor-pointer"
                     title="Save to My Library"
                   >
@@ -1454,7 +1457,7 @@ export default function LibraryPage() {
                   </button>
                   {!asset.id.startsWith("feat-") && (
                     <button
-                      onClick={(e) => { e.preventDefault(); handleDelete(asset.id); }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(asset.id); }}
                       className="text-white/60 hover:text-red-400 transition-colors cursor-pointer"
                       title="Delete"
                     >
@@ -1472,7 +1475,7 @@ export default function LibraryPage() {
               }`}
             >
               <button
-                onClick={(e) => { e.preventDefault(); setMoveAssetId(asset.id); setIsMoveModalOpen(true); }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMoveAssetId(asset.id); setIsMoveModalOpen(true); }}
                 className="p-1.5 rounded-lg bg-black/60 border border-white/10 text-white/70 hover:text-white hover:bg-black/80 transition-all cursor-pointer shadow-lg backdrop-blur-sm"
                 title="Move to Folder"
               >
@@ -1481,7 +1484,7 @@ export default function LibraryPage() {
 
               {!asset.id.startsWith("feat-") && (
                 <button
-                  onClick={(e) => { e.preventDefault(); handleToggleVisibility(asset.id, asset.is_public); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleVisibility(asset.id, asset.is_public); }}
                   disabled={togglingVisibilityId === asset.id}
                   className={`p-1.5 rounded-lg bg-black/60 border border-white/10 text-white/70 hover:text-white hover:bg-black/80 transition-all cursor-pointer shadow-lg backdrop-blur-sm ${
                     asset.is_public ? "text-cyan-400" : ""
