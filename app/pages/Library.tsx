@@ -265,10 +265,10 @@ const ReplyItem = ({
       <div className="flex gap-2.5 items-start text-sm relative pl-6 group/reply">
         
         {/* Curved arrow line */}
-        <div className="absolute left-3 -top-3 h-6 w-3 border-l border-b border-black dark:border-zinc-800 rounded-bl-lg pointer-events-none" />
+        <div className="absolute left-3 -top-3 h-6 w-3 border-l border-b border-black dark:border-white rounded-bl-lg pointer-events-none" />
         
         {/* Arrowhead */}
-        <div className="absolute left-[20px] top-[9px] w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-l-[4px] border-l-black dark:border-l-zinc-800 pointer-events-none" />
+        <div className="absolute left-[20px] top-[9px] w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-l-[4px] border-l-black dark:border-l-white pointer-events-none" />
         
         {/* Avatar */}
         <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 transition-colors duration-300 relative z-10 ${
@@ -327,7 +327,7 @@ const ReplyItem = ({
       {hasReplies && !isCollapsed && (
         <div className="ml-6 relative space-y-3 mt-3">
           {/* Vertical timeline line for this reply's own children */}
-          <div className="absolute left-3 top-0 bottom-5 w-px bg-black dark:bg-zinc-800 pointer-events-none" />
+          <div className="absolute left-3 top-0 bottom-5 w-px bg-black dark:bg-white pointer-events-none" />
           
           {reply.replies.map((childReply: any) => (
             <ReplyItem 
@@ -3632,7 +3632,7 @@ export default function LibraryPage() {
                             {comment.replies && comment.replies.length > 0 && !collapsedComments[comment.id] && (
                               <div className="ml-9 mt-2 space-y-3 relative">
                                 {/* Vertical timeline connector line */}
-                                <div className="absolute left-3 top-0 bottom-4 w-px bg-black dark:bg-zinc-800 pointer-events-none" />
+                                <div className="absolute left-3 top-0 bottom-4 w-px bg-black dark:bg-white pointer-events-none" />
 
                                 {buildReplyTree(comment).map((replyNode: any) => (
                                   <ReplyItem
