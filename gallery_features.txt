@@ -56,3 +56,106 @@ RUDRA NEXUS - IMAGE GALLERY FEATURE SHEET
 
 9. HEADER GENERATION SYNC
    - Polling listener syncs active image generation status (`image_gen_status`) from localStorage so generation updates from Chat reflect instantly in the Library header.
+
+=========================================================
+AI IMAGE LABS & ASSET LIBRARY API DOCUMENTATION
+=========================================================
+
+This section lists the image-related APIs in the backend and explains what each API does.
+
+---
+
+POST /api/v1/features/image/generate
+Generates high-fidelity images using text prompts. It also supports image editing and inpainting if a reference base64 image or image URL is supplied in the request body.
+
+POST /api/chat
+Used for the AI assistant chatbot. It dynamically executes the image generation tool during the conversation when a user asks for an image, picture, diagram, or other visual aid.
+
+GET /api/v1/library/assets/:id/image
+Serves the raw image file directly from the database. It decodes the stored base64 image data and sends it back as a binary image stream with caching headers. If it is an HTTP link, it redirects directly.
+
+GET /api/v1/library/assets
+Retrieves all generated image and diagram assets created by the logged-in user.
+
+GET /api/v1/library/public-assets
+Retrieves all community-shared public image assets.
+
+GET /api/v1/library/assets/:id
+Fetches the detailed metadata, prompt, category, and folder information of a single asset.
+
+PATCH /api/v1/library/assets/:id/visibility
+Toggles whether a specific image is public and shared with the community or remains private to the user.
+
+DELETE /api/v1/library/assets/:id
+Permanently deletes a specific image asset from the user's library.
+
+PATCH /api/v1/library/assets/:id/category
+Updates the category tag of a user's image asset.
+
+POST /api/v1/library/assets/:id/copy-to-library
+Copies another user's public image asset into the personal library of the calling user.
+
+POST /api/v1/library/galleries
+Creates a new custom folder or gallery to organize image assets.
+
+GET /api/v1/library/galleries
+Retrieves a list of all folders and galleries owned by the user, showing the count of images inside each folder.
+
+GET /api/v1/library/public-galleries
+Retrieves all public folders and galleries shared by other users.
+
+PATCH /api/v1/library/galleries/:id
+Renames a folder/gallery or changes its visibility. Updating folder visibility also updates the visibility of all images inside it.
+
+DELETE /api/v1/library/galleries/:id
+Deletes a folder/gallery. The images inside the folder are not deleted; they are simply moved out of the folder.
+
+PATCH /api/v1/library/assets/:id/gallery
+Assigns an image asset to a specific folder or gallery.
+
+GET /api/v1/library/public-galleries/:id/assets
+Fetches all public images stored inside a specific public shared gallery.
+
+GET /api/v1/library/saved-assets
+Fetches all bookmarked/saved images for the user.
+
+POST /api/v1/library/saved-assets/:id/save
+Saves/bookmarks a specific image asset.
+
+DELETE /api/v1/library/saved-assets/:id/unsave
+Removes a saved/bookmarked image asset.
+
+POST /api/v1/library/assets/:id/like
+Likes a public image asset and automatically bookmarks it for the user for 5 days.
+
+DELETE /api/v1/library/assets/:id/unlike
+Unlikes a public image asset and removes it from the bookmarks.
+
+GET /api/v1/library/assets/:id/social
+Fetches the social interaction data of an image asset, including total likes, liked status of the current user, threaded comments, and the owner's profile info.
+
+POST /api/v1/library/assets/:id/comment
+Posts a comment or a reply to an existing comment on an image asset.
+
+GET /api/v1/library/notifications
+Retrieves all social notifications for the user, such as when someone likes or comments on their shared images.
+
+POST /api/v1/library/notifications/:id/read
+Marks a specific social notification as read.
+
+
+=========================================================
+AI IMAGE LAB - IMAGE EDIT API INTEGRATION GUIDE
+=========================================================
+
+To perform image editing (image-to-image) in the AI Image Lab from the web frontend, you need to call the existing Chat API endpoint with a specific payload structure.
+
+1. API Endpoint Details
+URL: /api/v1/chat (or /api/v1/features/image/generate)
+Method: POST
+Headers:
+- Content-Type: application/json
+- Authorization: Bearer <API_KEY> (or x-api-key: <API_KEY>)
+
+2. Request Body Payload (JSON)
+When normal generation is performed, a simple text string is sent in "content". However, for Image Edit, "content" should be an array supplying the text instruction and the reference image. Both backend-supported formats are valid:
