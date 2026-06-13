@@ -1,0 +1,58 @@
+=========================================
+RUDRA NEXUS - IMAGE GALLERY FEATURE SHEET
+=========================================
+
+1. CURATED & FEATURED FEED (EXPLORE)
+   - Showcases premium curated "Featured" assets for community inspiration.
+   - Seeded shuffle randomization logic ensures dynamic layouts per cycle.
+   - Live likes counts map dynamically displays backend database-backed social counts for featured items.
+
+2. PERSONAL LIBRARY & GALLERY
+   - Keeps track of all assets created, uploaded, or saved by the logged-in user.
+   - Clean Pinterest-style bento grid layout with customizable aspect ratios (1:1 Square, 16:9 Landscape, 9:16 Portrait, or Staggered heights).
+   - Supports image uploads via file selection or interactive drag-and-drop.
+
+3. PERSISTENT SAVE & LIKE SYSTEM
+   - Liking an image bookmarks it in the database for 5 days.
+   - Optimistic UI state updates ensure the heart icon fills red and the count increments/decrements instantly without waiting for network latency.
+   - State synchronization keeps card lists and detailed modals perfectly in sync.
+
+4. DYNAMIC FOLDER / GALLERY MANAGEMENT
+   - Create custom named gallery folders.
+   - Folder visibility settings (Public to Community or Private to Personal).
+   - Move images between folder folders instantly using optimized optimistic client-side changes and background synchronization.
+   - Folder renaming and safe deletion (assets remain in the library, only their folder association is cleared).
+   - Sidebar folder navigation displaying realtime asset counts.
+
+5. SOCIAL METADATA & NESTED COMMENTS
+   - Interactive expanded detailed modal for each asset.
+   - Full comment pane supporting threaded replies.
+   - Displays asset creator handles and profile pictures.
+
+6. SOCIAL NOTIFICATIONS & SYSTEM INTEGRATION
+   - Periodic social notification polling (every 15 seconds) with bell dropdown in both Chat (Query Mode) and Library (Image Mode).
+   - Specialized notification messages:
+     - Like: "[User] liked your image."
+     - Top-level Comment: "[User] commented on your image."
+     - Nested Reply: "[User] replied to your comment."
+     - Asset creation: "[User] created a new image."
+   - Click navigation: Clicking a notification automatically redirects the user to the Library page and auto-opens the corresponding image details modal.
+
+7. COMPREHENSIVE FILTERING & SEARCH
+   - Realtime prompt search (filters images by prompt terms case-insensitively).
+   - Source Filter:
+     - All: Shows everything.
+     - Personal: Filters down to user-created/uploaded/saved private assets.
+     - Community: Filters to public explore/community showcase.
+   - Created On Filter: Filter images created "Today", "This Week", or "This Month".
+   - Category Filter: Group and filter assets by specific creative domains (e.g. Abstract, Nature, Wildlife, Cyberpunk).
+
+8. CONTEXTUAL IMAGE ACTIONS
+   - Share Link: Copy the image link directly to the clipboard.
+   - Copy Prompt: Instantly copy the prompt string to paste in the generation composer.
+   - Download: Download high-resolution files to the device storage.
+   - Delete: Permanently remove user-owned assets from the database.
+   - Toggle Visibility: Directly switch assets between Public and Private visibility.
+
+9. HEADER GENERATION SYNC
+   - Polling listener syncs active image generation status (`image_gen_status`) from localStorage so generation updates from Chat reflect instantly in the Library header.
