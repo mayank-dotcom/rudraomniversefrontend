@@ -1084,7 +1084,14 @@ export default function LibraryPage() {
   // Assign an asset to a gallery
   const handleMoveAssetToGallery = async (assetId: string, galleryId: string | null) => {
     try {
-      await assignAssetToGallery(assetId, galleryId)
+      const allPossibleAssets = [...assets, ...publicAssets, ...uploadedAssets, ...publicGalleryAssets, ...FEATURED_ASSETS];
+      const asset = allPossibleAssets.find(a => a.id === assetId);
+      
+      await assignAssetToGallery(assetId, galleryId, asset?.asset_type, asset?.asset_url, asset?.prompt || "")
+      
+      // Update assets lists from database to sync everything
+      await fetchAssets()
+      
       // Sync local assets state
       let targetPublic = false;
       if (galleryId) {
@@ -1302,6 +1309,13 @@ export default function LibraryPage() {
     }
   }
 
+  // Check if asset is created by current user
+  const isCreatedByMe = (asset: LibraryAsset) => {
+    if (asset.id.startsWith("feat-")) return false;
+    if (asset.id.startsWith("uploaded-")) return true;
+    return assets.some((a) => a.id === asset.id);
+  }
+
   // Creator handle mock generator
   const getCreatorHandle = (assetId: string) => {
     if (assetId.startsWith("feat-1")) return "jiwoodanielhyun"
@@ -1402,19 +1416,6 @@ export default function LibraryPage() {
               </div>
             </div>
 
-            {/* Top-left Like/Save button (visible on hover) */}
-            <div className="absolute top-3 left-3 z-30 opacity-0 group-hover/card:opacity-100 transition-all duration-300 translate-y-1 group-hover/card:translate-y-0 pointer-events-auto">
-              <div
-                className="flex items-center gap-1 px-2 py-1 bg-black/50 backdrop-blur-md rounded-lg border border-white/10 text-white/80 cursor-pointer hover:bg-black/70 transition-all"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSaved(asset); }}
-              >
-                <Heart className={`h-3.5 w-3.5 ${savedIds.includes(asset.id) ? "fill-red-500 text-red-500" : ""}`} />
-                <span className="text-[10px] font-bold select-none">
-                  {getLikesCount(asset.id)}
-                </span>
-              </div>
-            </div>
-
             {/* Hover Content Overlay */}
             <div
               onClick={() => setExpandedAsset(asset)}
@@ -1448,14 +1449,7 @@ export default function LibraryPage() {
                   >
                     <Download className="h-4 w-4" />
                   </button>
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyToLibrary(asset); }}
-                    className="text-white/60 hover:text-emerald-400 transition-colors cursor-pointer"
-                    title="Save to My Library"
-                  >
-                    <FolderPlus className="h-4 w-4" />
-                  </button>
-                  {!asset.id.startsWith("feat-") && (
+                  {isCreatedByMe(asset) && (
                     <button
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(asset.id); }}
                       className="text-white/60 hover:text-red-400 transition-colors cursor-pointer"
@@ -1465,6 +1459,18 @@ export default function LibraryPage() {
                     </button>
                   )}
                 </div>
+
+                {/* Like Count / Save Button */}
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSaved(asset); }}
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-black/50 hover:bg-black/70 backdrop-blur-md rounded-lg border border-white/10 text-white/80 cursor-pointer transition-all"
+                  title={savedIds.includes(asset.id) ? "Unlike" : "Like & Save"}
+                >
+                  <Heart className={`h-3.5 w-3.5 transition-all ${savedIds.includes(asset.id) ? "fill-red-500 text-red-500 scale-110" : ""}`} />
+                  <span className="text-[10px] font-bold select-none">
+                    {getLikesCount(asset.id)}
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -1482,7 +1488,7 @@ export default function LibraryPage() {
                 <Move className="h-3.5 w-3.5" />
               </button>
 
-              {!asset.id.startsWith("feat-") && (
+              {isCreatedByMe(asset) && (
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleVisibility(asset.id, asset.is_public); }}
                   disabled={togglingVisibilityId === asset.id}

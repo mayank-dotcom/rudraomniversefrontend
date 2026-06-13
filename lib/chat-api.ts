@@ -2873,14 +2873,19 @@ export async function deleteLibraryGallery(id: string) {
   return data
 }
 
-export async function assignAssetToGallery(assetId: string, galleryId: string | null) {
+export async function assignAssetToGallery(assetId: string, galleryId: string | null, assetType?: string, assetUrl?: string, prompt?: string) {
   const res = await fetch(`${API_BASE}/library/assets/${assetId}/gallery`, {
     method: "PATCH",
     headers: {
       ...getHeaders(),
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ gallery_id: galleryId }),
+    body: JSON.stringify({
+      gallery_id: galleryId,
+      asset_type: assetType,
+      asset_url: assetUrl,
+      prompt: prompt
+    }),
   })
   const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
   if (!res.ok || !data.success) {
