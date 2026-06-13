@@ -22,6 +22,7 @@ import {
   getAssetImageUrl,
   likeAsset,
   unlikeAsset,
+  getLikesCounts,
   getAssetSocial,
   addAssetComment,
   getNotifications,
@@ -222,6 +223,7 @@ export default function LibraryPage() {
   const [sourceFilter, setSourceFilter] = useState<"all" | "personal" | "community">("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [savedIds, setSavedIds] = useState<string[]>([])
+  const [likesCountsMap, setLikesCountsMap] = useState<Record<string, number>>({})
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [isUploadDragging, setIsUploadDragging] = useState(false)
   const [uploadedAssets, setUploadedAssets] = useState<LibraryAsset[]>([])
@@ -481,11 +483,12 @@ export default function LibraryPage() {
 
     let hasError = false
     try {
-      const [data, pubData, galleriesData, pubGalleriesData] = await Promise.all([
+      const [data, pubData, galleriesData, pubGalleriesData, likesCountsData] = await Promise.all([
         fetchWithRetry(() => getLibraryAssets()).catch((err: any) => { hasError = true; return null }),
         fetchWithRetry(() => getPublicLibraryAssets(1, PUBLIC_PAGE_SIZE)).catch((err: any) => { hasError = true; return null }),
         fetchWithRetry(() => getLibraryGalleries()).catch((err: any) => { hasError = true; return null }),
         fetchWithRetry(() => getPublicLibraryGalleries()).catch((err: any) => { hasError = true; return null }),
+        fetchWithRetry(() => getLikesCounts()).catch((err: any) => { return null }),
       ])
       if (data) setAssets(data.assets)
       if (pubData && pubData.assets) {
@@ -499,6 +502,9 @@ export default function LibraryPage() {
       }
       if (galleriesData) setGalleries(galleriesData.galleries)
       if (pubGalleriesData) setPublicGalleries(pubGalleriesData.galleries)
+      if (likesCountsData && likesCountsData.counts) {
+        setLikesCountsMap(likesCountsData.counts)
+      }
       if (hasError) {
         toast.error("Some library data failed to load. Refresh to try again.")
       }
@@ -619,10 +625,14 @@ export default function LibraryPage() {
     if (!expandedAsset) return
     const prevLiked = isLiked
     const prevCount = likesCount
+    const updatedCount = prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1
 
-    // Optimistically update UI
+    // Optimistically update UI states
     setIsLiked(!prevLiked)
-    setLikesCount(prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1)
+    setLikesCount(updatedCount)
+    setLikesCountsMap((prev) => ({ ...prev, [expandedAsset.id]: updatedCount }))
+    setAssets((prev) => prev.map((a) => a.id === expandedAsset.id ? { ...a, likes_count: updatedCount, is_liked: !prevLiked } : a))
+    setPublicAssets((prev) => prev.map((a) => a.id === expandedAsset.id ? { ...a, likes_count: updatedCount, is_liked: !prevLiked } : a))
 
     try {
       if (prevLiked) {
@@ -647,6 +657,9 @@ export default function LibraryPage() {
       // Revert optimistic updates on error
       setIsLiked(prevLiked)
       setLikesCount(prevCount)
+      setLikesCountsMap((prev) => ({ ...prev, [expandedAsset.id]: prevCount }))
+      setAssets((prev) => prev.map((a) => a.id === expandedAsset.id ? { ...a, likes_count: prevCount, is_liked: prevLiked } : a))
+      setPublicAssets((prev) => prev.map((a) => a.id === expandedAsset.id ? { ...a, likes_count: prevCount, is_liked: prevLiked } : a))
       toast.error(err.message || "Failed to update like status")
     }
   }
@@ -942,8 +955,18 @@ export default function LibraryPage() {
       try {
         await unlikeAsset(id)
         setSavedIds((prev) => prev.filter((sId) => sId !== id))
-        setAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: Math.max(0, (a.likes_count || 0) - 1), is_liked: false } : a))
-        setPublicAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: Math.max(0, (a.likes_count || 0) - 1), is_liked: false } : a))
+        
+        const updatedCount = Math.max(0, (likesCountsMap[id] ?? asset.likes_count ?? 0) - 1)
+        setLikesCountsMap((prev) => ({ ...prev, [id]: updatedCount }))
+        
+        setAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: updatedCount, is_liked: false } : a))
+        setPublicAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: updatedCount, is_liked: false } : a))
+        
+        if (expandedAsset && expandedAsset.id === id) {
+          setIsLiked(false)
+          setLikesCount(updatedCount)
+        }
+        
         toast.success("Removed from Saved.")
       } catch {
         toast.error("Failed to unsave.")
@@ -952,8 +975,18 @@ export default function LibraryPage() {
       try {
         await likeAsset(id, asset.asset_type, asset.asset_url, asset.prompt || "")
         setSavedIds((prev) => [...prev, id])
-        setAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: (a.likes_count || 0) + 1, is_liked: true } : a))
-        setPublicAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: (a.likes_count || 0) + 1, is_liked: true } : a))
+        
+        const updatedCount = (likesCountsMap[id] ?? asset.likes_count ?? 0) + 1
+        setLikesCountsMap((prev) => ({ ...prev, [id]: updatedCount }))
+        
+        setAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: updatedCount, is_liked: true } : a))
+        setPublicAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: updatedCount, is_liked: true } : a))
+        
+        if (expandedAsset && expandedAsset.id === id) {
+          setIsLiked(true)
+          setLikesCount(updatedCount)
+        }
+        
         toast.success("Saved!")
       } catch {
         toast.error("Failed to save.")
@@ -1378,15 +1411,13 @@ export default function LibraryPage() {
   // Likes count mock generator
   const getLikesCount = (asset: LibraryAsset | string) => {
     const assetId = typeof asset === "string" ? asset : asset.id;
+    if (likesCountsMap[assetId] !== undefined) {
+      return String(likesCountsMap[assetId]);
+    }
     if (typeof asset !== "string" && asset.likes_count !== undefined) {
       return String(asset.likes_count);
     }
-    if (assetId.startsWith("feat-1")) return "261"
-    if (assetId.startsWith("feat-2")) return "184"
-    if (assetId.startsWith("feat-3")) return "92"
-    if (assetId.startsWith("feat-4")) return "395"
-    const charCodeSum = assetId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    return String((charCodeSum % 150) + 5)
+    return "0";
   }
 
   const getBentoSpanClass = (index: number) => {

@@ -3090,4 +3090,16 @@ export async function getSingleAsset(id: string) {
   return data
 }
 
+export async function getLikesCounts() {
+  const res = await fetch(`${API_BASE}/library/likes/counts`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; counts: Record<string, number>; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch likes counts.")
+  }
+  return data
+}
+
 
