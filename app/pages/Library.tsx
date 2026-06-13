@@ -191,6 +191,124 @@ const seededShuffle = <T,>(array: T[], seed: number): T[] => {
   return arr;
 }
 
+const renderCommentContent = (content: string) => {
+  const match = content.match(/^@([^\s:]+)/);
+  if (match) {
+    const username = match[1];
+    const prefixLength = content.startsWith(`@${username}:`) ? username.length + 2 : username.length + 1;
+    const rest = content.slice(prefixLength);
+    return (
+      <>
+        <span className="font-semibold text-cyan-500 mr-1 select-none">@{username}</span>
+        {rest}
+      </>
+    );
+  }
+  return content;
+};
+
+const ReplyItem = ({ 
+  reply, 
+  depth, 
+  commentId, 
+  isDarkMode, 
+  handleReplyClick 
+}: { 
+  reply: any; 
+  depth: number; 
+  commentId: any; 
+  isDarkMode: boolean; 
+  handleReplyClick: (commentId: any, targetUsername: string) => void;
+}) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const hasReplies = reply.replies && reply.replies.length > 0;
+
+  return (
+    <div className="relative">
+      {/* Sibling reply layout */}
+      <div className="flex gap-2.5 items-start text-sm relative pl-6 group/reply">
+        
+        {/* Curved arrow line */}
+        <div className="absolute left-3 -top-3 h-6 w-3 border-l border-b border-zinc-200 dark:border-zinc-800 rounded-bl-lg pointer-events-none" />
+        
+        {/* Arrowhead */}
+        <div className="absolute left-[20px] top-[9px] w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-l-[4px] border-l-zinc-200 dark:border-zinc-850 pointer-events-none" />
+        
+        {/* Avatar */}
+        <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 transition-colors duration-300 relative z-10 ${
+          isDarkMode 
+            ? "bg-[#f4f3f2] text-black" 
+            : "bg-[#0d0d0c] text-white"
+        }`}>
+          {reply.user_avatar ? (
+            <img src={reply.user_avatar} className="h-full w-full object-cover rounded-full" alt={reply.user_name} />
+          ) : (
+            reply.user_name.slice(0, 2).toUpperCase()
+          )}
+        </div>
+
+        {/* Content pane (Clean YouTube style) */}
+        <div className="flex-1 flex flex-col pt-0.5 pl-0.5">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-xs text-zinc-800 dark:text-zinc-200">@{reply.user_name}</span>
+            <span className="text-[10px] text-zinc-400 select-none">
+              {new Date(reply.created_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit"
+              })}
+            </span>
+          </div>
+          
+          <p className="leading-normal text-xs md:text-sm mt-1 text-zinc-700 dark:text-zinc-300">
+            {renderCommentContent(reply.content)}
+          </p>
+
+          <div className="flex items-center gap-3 mt-1.5 pb-1">
+            <button
+              onClick={() => handleReplyClick(commentId, reply.user_name)}
+              className="text-[10px] font-bold text-zinc-500 hover:text-cyan-500 dark:text-zinc-400 dark:hover:text-cyan-400 transition-colors cursor-pointer"
+            >
+              Reply
+            </button>
+            {hasReplies && (
+              <>
+                <span className="text-[10px] text-zinc-400 select-none">•</span>
+                <button
+                  onClick={() => setIsCollapsed(!isCollapsed)}
+                  className="text-[10px] font-bold text-zinc-500 hover:text-cyan-500 dark:text-zinc-400 dark:hover:text-cyan-400 transition-colors cursor-pointer"
+                >
+                  {isCollapsed ? `Show replies (${reply.replies.length})` : "Hide replies"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Children replies */}
+      {hasReplies && !isCollapsed && (
+        <div className="ml-6 relative space-y-3 mt-3">
+          {/* Vertical timeline line for this reply's own children */}
+          <div className="absolute left-3 top-0 bottom-5 w-px bg-zinc-200 dark:bg-zinc-800 pointer-events-none" />
+          
+          {reply.replies.map((childReply: any) => (
+            <ReplyItem 
+              key={childReply.id} 
+              reply={childReply} 
+              depth={depth + 1} 
+              commentId={commentId} 
+              isDarkMode={isDarkMode}
+              handleReplyClick={handleReplyClick}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function LibraryPage() {
   const router = useRouter()
   const { isDarkMode, toggleTheme } = useTheme()
@@ -206,7 +324,8 @@ export default function LibraryPage() {
   const [isLiked, setIsLiked] = useState(false)
   const [newCommentText, setNewCommentText] = useState("")
   const [socialLoading, setSocialLoading] = useState(false)
-  const [replyToComment, setReplyToComment] = useState<{ id: number; user_name: string } | null>(null)
+  const [replyToComment, setReplyToComment] = useState<{ id: any; user_name: string } | null>(null)
+  const [collapsedComments, setCollapsedComments] = useState<Record<any, boolean>>({})
   const [creatorInfo, setCreatorInfo] = useState<{ name: string; avatar: string | null }>({ name: "AWEDICT", avatar: null })
   const [notifications, setNotifications] = useState<SocialNotification[]>([])
 
@@ -647,6 +766,35 @@ export default function LibraryPage() {
       setPublicAssets((prev) => prev.map((a) => a.id === expandedAsset.id ? { ...a, likes_count: prevCount, is_liked: prevLiked } : a))
       toast.error(err.message || "Failed to update like status")
     }
+  }
+
+  const handleReplyClick = (commentId: any, targetUsername: string) => {
+    setReplyToComment({ id: commentId, user_name: targetUsername })
+    setNewCommentText(`@${targetUsername} `)
+    const commentInput = document.getElementById("comment-input-field")
+    if (commentInput) commentInput.focus()
+  }
+
+  const buildReplyTree = (comment: any) => {
+    const replies = comment.replies || []
+    const rootNodes: any[] = []
+    const nodeMap: { [username: string]: any } = {}
+
+    replies.forEach((reply: any) => {
+      const node = { ...reply, replies: [] }
+      const match = reply.content.match(/^@([^\s:]+)/)
+      const mentionedUser = match ? match[1] : null
+
+      if (mentionedUser && mentionedUser !== comment.user_name && nodeMap[mentionedUser]) {
+        const parentNode = nodeMap[mentionedUser]
+        parentNode.replies.push(node)
+      } else {
+        rootNodes.push(node)
+      }
+      nodeMap[reply.user_name] = node
+    })
+
+    return rootNodes
   }
 
   const handleAddComment = async (e?: React.FormEvent) => {
@@ -3366,7 +3514,7 @@ export default function LibraryPage() {
                       </button>
                     </div>
 
-                    <div className="space-y-4 max-h-[200px] overflow-y-auto pr-1">
+                    <div className="space-y-4 max-h-[200px] overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {socialLoading ? (
                         <div className="flex items-center gap-2 text-xs text-zinc-400 py-2">
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -3389,13 +3537,10 @@ export default function LibraryPage() {
                                   comment.user_name.slice(0, 2).toUpperCase()
                                 )}
                               </div>
-                              <div className="flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-900/30 p-2.5 rounded-2xl border border-zinc-100/50 dark:border-zinc-800/30">
-                                <p className="leading-normal">
-                                  <span className="font-bold mr-1.5 text-zinc-800 dark:text-zinc-200">{comment.user_name}</span>
-                                  <span className="text-zinc-600 dark:text-zinc-300">{comment.content}</span>
-                                </p>
-                                <div className="flex items-center gap-3 mt-1">
-                                  <span className="text-[9px] text-zinc-400 select-none">
+                              <div className="flex-1 flex flex-col pt-0.5 pl-0.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-xs text-zinc-800 dark:text-zinc-200">@{comment.user_name}</span>
+                                  <span className="text-[10px] text-zinc-400 select-none">
                                     {new Date(comment.created_at).toLocaleDateString("en-US", {
                                       month: "short",
                                       day: "numeric",
@@ -3403,63 +3548,45 @@ export default function LibraryPage() {
                                       minute: "2-digit"
                                     })}
                                   </span>
+                                </div>
+                                <p className="leading-normal text-xs md:text-sm mt-1 text-zinc-700 dark:text-zinc-305">
+                                  {renderCommentContent(comment.content)}
+                                </p>
+                                <div className="flex items-center gap-3 mt-1.5 pb-1">
                                   <button
-                                    onClick={() => setReplyToComment({ id: comment.id, user_name: comment.user_name })}
-                                    className="text-[9px] font-semibold text-zinc-400 hover:text-cyan-400 transition-colors"
+                                    onClick={() => handleReplyClick(comment.id, comment.user_name)}
+                                    className="text-[10px] font-bold text-zinc-500 hover:text-cyan-500 dark:text-zinc-400 dark:hover:text-cyan-400 transition-colors"
                                   >
                                     Reply
                                   </button>
+                                  {comment.replies && comment.replies.length > 0 && (
+                                    <>
+                                      <span className="text-[10px] text-zinc-400 select-none">•</span>
+                                      <button
+                                        onClick={() => setCollapsedComments(prev => ({ ...prev, [comment.id]: !prev[comment.id] }))}
+                                        className="text-[10px] font-bold text-zinc-500 hover:text-cyan-500 dark:text-zinc-400 dark:hover:text-cyan-400 transition-colors"
+                                      >
+                                        {collapsedComments[comment.id] ? `Show replies (${comment.replies.length})` : "Hide replies"}
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </div>
-                            {comment.replies && comment.replies.length > 0 && (
+                            {comment.replies && comment.replies.length > 0 && !collapsedComments[comment.id] && (
                               <div className="ml-9 mt-2 space-y-3 relative">
                                 {/* Vertical timeline connector line */}
                                 <div className="absolute left-3 top-0 bottom-4 w-px bg-zinc-200 dark:bg-zinc-850 pointer-events-none" />
 
-                                {comment.replies.map((reply: any) => (
-                                  <div key={reply.id} className="flex gap-2.5 items-start text-sm relative pl-6 group/reply">
-                                    {/* Curved tree line connecting parent vertical line to reply avatar */}
-                                    <div className="absolute left-3 -top-2.5 h-6 w-3 border-l border-b border-zinc-200 dark:border-zinc-850 rounded-bl-lg pointer-events-none" />
-
-                                    <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 transition-colors duration-300 relative z-10 ${
-                                      isDarkMode 
-                                        ? "bg-[#f4f3f2] text-black" 
-                                        : "bg-[#0d0d0c] text-white"
-                                    }`}>
-                                      {reply.user_avatar ? (
-                                        <img src={reply.user_avatar} className="h-full w-full object-cover rounded-full" alt={reply.user_name} />
-                                      ) : (
-                                        reply.user_name.slice(0, 2).toUpperCase()
-                                      )}
-                                    </div>
-                                    <div className="flex-1 flex flex-col bg-zinc-50/50 dark:bg-zinc-900/20 p-2 rounded-2xl border border-zinc-100/30 dark:border-zinc-800/20">
-                                      <p className="leading-normal">
-                                        <span className="font-bold mr-1.5 text-zinc-800 dark:text-zinc-200">{reply.user_name}</span>
-                                        <span className="text-zinc-600 dark:text-zinc-300">{reply.content}</span>
-                                      </p>
-                                      <div className="flex items-center gap-3 mt-1">
-                                        <span className="text-[9px] text-zinc-400 select-none">
-                                          {new Date(reply.created_at).toLocaleDateString("en-US", {
-                                            month: "short",
-                                            day: "numeric",
-                                            hour: "numeric",
-                                            minute: "2-digit"
-                                          })}
-                                        </span>
-                                        <button
-                                          onClick={() => {
-                                            setReplyToComment({ id: comment.id, user_name: reply.user_name });
-                                            const commentInput = document.getElementById("comment-input-field");
-                                            if (commentInput) commentInput.focus();
-                                          }}
-                                          className="text-[9px] font-semibold text-zinc-400 hover:text-cyan-400 transition-colors cursor-pointer"
-                                        >
-                                          Reply
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
+                                {buildReplyTree(comment).map((replyNode: any) => (
+                                  <ReplyItem
+                                    key={replyNode.id}
+                                    reply={replyNode}
+                                    depth={0}
+                                    commentId={comment.id}
+                                    isDarkMode={isDarkMode}
+                                    handleReplyClick={handleReplyClick}
+                                  />
                                 ))}
                               </div>
                             )}
@@ -3496,7 +3623,10 @@ export default function LibraryPage() {
                       {replyToComment && (
                         <button
                           type="button"
-                          onClick={() => setReplyToComment(null)}
+                          onClick={() => {
+                            setReplyToComment(null);
+                            setNewCommentText("");
+                          }}
                           className="text-[10px] font-semibold text-zinc-400 hover:text-red-400 transition-colors shrink-0"
                         >
                           Cancel
