@@ -1166,16 +1166,35 @@ export default function LibraryPage() {
 
   // Copy another user's asset to personal library
   const handleCopyToLibrary = async (asset: LibraryAsset) => {
+    const id = asset.id
     try {
-      const res = await copyAssetToLibrary(asset.id, asset.asset_type, asset.asset_url, asset.prompt || "")
-      if (res.saved) {
-        // Featured asset was bookmarked
-        setSavedIds((prev) => prev.includes(asset.id) ? prev : [...prev, asset.id])
+      // Optimistically add to savedIds
+      setSavedIds((prev) => prev.includes(id) ? prev : [...prev, id])
+
+      // Optimistically add to personal assets list
+      const tempNewAsset: LibraryAsset = {
+        ...asset,
+        is_public: false
       }
+      setAssets((prev) => {
+        if (prev.some(a => a.id === id)) return prev
+        return [tempNewAsset, ...prev]
+      })
+
+      // Instantly show success toast
       toast.success("Saved to your library!")
-      await fetchAssets()
+
+      // Fire backend request in parallel
+      await copyAssetToLibrary(asset.id, asset.asset_type, asset.asset_url, asset.prompt || "")
+      
+      // Update in background to ensure database sync
+      fetchAssets().catch((err) => console.error("Background copy sync failed:", err))
+
     } catch (err: any) {
       toast.error(err.message || "Failed to save to library")
+      // Revert on failure
+      setSavedIds((prev) => prev.filter((sId) => sId !== id))
+      setAssets((prev) => prev.filter((a) => a.id !== id))
     }
   }
 
