@@ -27,6 +27,7 @@ import {
   getNotifications,
   markNotificationAsRead,
   getSingleAsset,
+  updateAssetCategory,
   type LibraryAsset,
   type LibraryGallery,
   type SocialNotification
@@ -93,7 +94,8 @@ import {
   Bell,
   MoreHorizontal,
   Minus,
-  Smile
+  Smile,
+  Tag
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -143,6 +145,19 @@ const FEATURED_ASSETS: LibraryAsset[] = [
   }
 ]
 
+const ASSET_CATEGORIES = [
+  "Abstract",
+  "Nature & Landscapes",
+  "People & Portraits",
+  "Animals & Wildlife",
+  "Fantasy & Sci-Fi",
+  "Architecture & Cityscapes",
+  "Food & Drinks",
+  "Technology & Cyberpunk",
+  "Fashion & Beauty",
+  "Minimalist & Geometric"
+]
+
 const chatHeadingFont = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
@@ -187,6 +202,7 @@ export default function LibraryPage() {
   const [isLiked, setIsLiked] = useState(false)
   const [newCommentText, setNewCommentText] = useState("")
   const [socialLoading, setSocialLoading] = useState(false)
+  const [replyToComment, setReplyToComment] = useState<{ id: number; user_name: string } | null>(null)
   const [creatorInfo, setCreatorInfo] = useState<{ name: string; avatar: string | null }>({ name: "AWEDICT", avatar: null })
   const [notifications, setNotifications] = useState<SocialNotification[]>([])
 
@@ -212,6 +228,11 @@ export default function LibraryPage() {
   const [isRecording, setIsRecording] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState<string>("all")
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [generatedAssetId, setGeneratedAssetId] = useState<string | null>(null)
+  const [pendingCategory, setPendingCategory] = useState<string | null>(null)
+  const [customCategory, setCustomCategory] = useState("")
   
   // Custom Real Database-backed Galleries States
   const [galleries, setGalleries] = useState<LibraryGallery[]>([])
@@ -589,13 +610,25 @@ export default function LibraryPage() {
 
     const commentContent = newCommentText.trim()
     setNewCommentText("")
+    const parentId = replyToComment?.id || null
 
     try {
-      const res = await addAssetComment(expandedAsset.id, commentContent)
+      const res = await addAssetComment(expandedAsset.id, commentContent, parentId)
       if (res.success && res.comment) {
-        setComments((prev) => [...prev, res.comment])
-        toast.success("Comment added!")
+        if (parentId) {
+          setComments((prev) =>
+            prev.map((c) =>
+              c.id === parentId
+                ? { ...c, replies: [...(c.replies || []), res.comment] }
+                : c
+            )
+          )
+        } else {
+          setComments((prev) => [...prev, res.comment])
+        }
+        toast.success("Reply added!")
       }
+      setReplyToComment(null)
     } catch (err: any) {
       toast.error(err.message || "Failed to post comment")
     }
@@ -748,6 +781,13 @@ export default function LibraryPage() {
         // Refresh local assets to show the new image
         await fetchAssets()
         
+        // Get the newly created asset ID from response
+        const newAssetId = res?.asset_id || (assets.length > 0 ? assets[0].id : null)
+        if (newAssetId) {
+          setGeneratedAssetId(newAssetId)
+          setShowCategoryModal(true)
+        }
+        
         // Switch to "all" (My Private Gallery) to show the new asset immediately
         setActiveCategory("all")
       } else {
@@ -897,6 +937,28 @@ export default function LibraryPage() {
     const options: ("all" | "personal" | "community")[] = ["all", "personal", "community"]
     const nextIndex = (options.indexOf(sourceFilter) + 1) % options.length
     setSourceFilter(options[nextIndex])
+  }
+
+  const handleCycleCategoryFilter = () => {
+    const options = ["all", ...ASSET_CATEGORIES]
+    const nextIndex = (options.indexOf(categoryFilter) + 1) % options.length
+    setCategoryFilter(options[nextIndex])
+  }
+
+  const handleCategoryAssign = async () => {
+    const finalCategory = pendingCategory || customCategory.trim()
+    if (!generatedAssetId || !finalCategory) return
+    try {
+      await updateAssetCategory(generatedAssetId, finalCategory)
+      setShowCategoryModal(false)
+      setPendingCategory(null)
+      setGeneratedAssetId(null)
+      setCustomCategory("")
+      await fetchAssets()
+      toast.success(`Image categorized as "${finalCategory}"`)
+    } catch (err: any) {
+      toast.error(err.message || "Failed to assign category")
+    }
   }
 
   const handleCopyPrompt = (promptText: string, id: string) => {
@@ -1126,12 +1188,17 @@ export default function LibraryPage() {
       });
     }
 
+    // Apply Category filter
+    if (categoryFilter !== "all") {
+      pool = pool.filter((asset) => asset.category === categoryFilter);
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       pool = pool.filter((asset) => asset.prompt?.toLowerCase().includes(q))
     }
     return pool
-  }, [activeCategory, assets, publicAssets, uploadedAssets, savedIds, searchQuery, selectedGalleryId, publicGalleryAssets, sourceFilter, createdOnFilter, visibleCount])
+  }, [activeCategory, assets, publicAssets, uploadedAssets, savedIds, searchQuery, selectedGalleryId, publicGalleryAssets, sourceFilter, createdOnFilter, categoryFilter, visibleCount])
 
   // Check if all currently visible images in activeAssets have loaded (either success or broken)
   const visibleAssets = useMemo(() => {
@@ -1333,18 +1400,6 @@ export default function LibraryPage() {
                     </button>
                   )}
                 </div>
-                
-                <button
-                  onClick={() => setExpandedAsset(asset)}
-                  className={`p-1.5 rounded-full transition-all cursor-pointer ${
-                    isDarkMode
-                      ? "bg-white/10 text-white hover:bg-white/20"
-                      : "bg-black/10 text-black hover:bg-black/20"
-                  }`}
-                  title="Expand"
-                >
-                  <Maximize2 className="h-3.5 w-3.5" />
-                </button>
               </div>
             </div>
 
@@ -2241,34 +2296,6 @@ export default function LibraryPage() {
             </div>
           )}
 
-          {/* Explore Tabs */}
-          {activeCategory === "featured" && (
-            <div className="mb-6 flex gap-2 p-1 bg-black/10 dark:bg-white/[0.03] border border-black/5 dark:border-white/[0.05] rounded-xl w-fit">
-              <button
-                onClick={() => setExploreTab("images")}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold font-sans tracking-wide transition-all ${
-                  exploreTab === "images"
-                    ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/10 text-black shadow-sm")
-                    : (isDarkMode ? "text-white/45 hover:text-white/80" : "text-black/55 hover:text-black")
-                }`}
-              >
-                Public Images
-              </button>
-              <button
-                onClick={() => setExploreTab("folders")}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold font-sans tracking-wide transition-all flex items-center gap-1.5 ${
-                  exploreTab === "folders"
-                    ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/10 text-black shadow-sm")
-                    : (isDarkMode ? "text-white/45 hover:text-white/80" : "text-black/55 hover:text-black")
-                }`}
-              >
-                <Folder className="h-3.5 w-3.5" />
-                <span>Public Folder</span>
-              </button>
-            </div>
-          )}
-
-
           {/* ================= COMPACT FILTERS & SEARCH ROW ================= */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/5">
             {/* Left side: Filter pills */}
@@ -2298,6 +2325,55 @@ export default function LibraryPage() {
                 <Globe className="h-3.5 w-3.5" />
                 <span>Source: {sourceFilter === "all" ? "All" : sourceFilter === "personal" ? "Personal" : "Community"}</span>
               </button>
+
+              {/* Category filter */}
+              <button
+                onClick={handleCycleCategoryFilter}
+                className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+                  isDarkMode
+                    ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                    : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                }`}
+              >
+                <Tag className="h-3.5 w-3.5" />
+                <span>Category: {categoryFilter === "all" ? "All" : categoryFilter}</span>
+              </button>
+
+              {/* Explore tab toggler (only in featured view) */}
+              {activeCategory === "featured" && (
+                <>
+                  <button
+                    onClick={() => setExploreTab("images")}
+                    className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+                      exploreTab === "images"
+                        ? isDarkMode
+                          ? "bg-white/15 border-white/30 text-white"
+                          : "bg-black/10 border-black/30 text-black"
+                        : isDarkMode
+                          ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                          : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                    }`}
+                  >
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    <span>Images</span>
+                  </button>
+                  <button
+                    onClick={() => setExploreTab("folders")}
+                    className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+                      exploreTab === "folders"
+                        ? isDarkMode
+                          ? "bg-white/15 border-white/30 text-white"
+                          : "bg-black/10 border-black/30 text-black"
+                        : isDarkMode
+                          ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                          : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                    }`}
+                  >
+                    <Folder className="h-3.5 w-3.5" />
+                    <span>Folder</span>
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Right side: Search Input */}
@@ -2841,6 +2917,19 @@ export default function LibraryPage() {
                     >
                       <Upload className="h-6 w-6" />
                     </button>
+
+                    {/* Save to Personal Folder */}
+                    <button
+                      onClick={() => toggleSaved(expandedAsset)}
+                      className={`hover:scale-110 active:scale-95 transition-all duration-200 ${
+                        savedIds.includes(expandedAsset.id)
+                          ? "text-blue-500"
+                          : "text-zinc-650 hover:text-black dark:text-zinc-400 dark:hover:text-white"
+                      }`}
+                      title={savedIds.includes(expandedAsset.id) ? "Unsave" : "Save to Personal Folder"}
+                    >
+                      <Bookmark className={`h-6 w-6 transition-all ${savedIds.includes(expandedAsset.id) ? "fill-blue-500" : ""}`} />
+                    </button>
                   </div>
                 </div>
 
@@ -2903,32 +2992,75 @@ export default function LibraryPage() {
                         <p className="text-xs text-zinc-400 italic py-2">No comments yet. Share your thoughts!</p>
                       ) : (
                         comments.map((comment) => (
-                          <div key={comment.id} className="flex gap-2.5 items-start text-sm">
-                            <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors duration-300 ${
-                              isDarkMode 
-                                ? "bg-[#f4f3f2] text-black" 
-                                : "bg-[#0d0d0c] text-white"
-                            }`}>
-                              {comment.user_avatar ? (
-                                <img src={comment.user_avatar} className="h-full w-full object-cover rounded-full" alt={comment.user_name} />
-                              ) : (
-                                comment.user_name.slice(0, 2).toUpperCase()
-                              )}
+                          <div key={comment.id}>
+                            <div className="flex gap-2.5 items-start text-sm">
+                              <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors duration-300 ${
+                                isDarkMode 
+                                  ? "bg-[#f4f3f2] text-black" 
+                                  : "bg-[#0d0d0c] text-white"
+                              }`}>
+                                {comment.user_avatar ? (
+                                  <img src={comment.user_avatar} className="h-full w-full object-cover rounded-full" alt={comment.user_name} />
+                                ) : (
+                                  comment.user_name.slice(0, 2).toUpperCase()
+                                )}
+                              </div>
+                              <div className="flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-900/30 p-2.5 rounded-2xl border border-zinc-100/50 dark:border-zinc-800/30">
+                                <p className="leading-normal">
+                                  <span className="font-bold mr-1.5 text-zinc-800 dark:text-zinc-200">{comment.user_name}</span>
+                                  <span className="text-zinc-600 dark:text-zinc-300">{comment.content}</span>
+                                </p>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <span className="text-[9px] text-zinc-400 select-none">
+                                    {new Date(comment.created_at).toLocaleDateString("en-US", {
+                                      month: "short",
+                                      day: "numeric",
+                                      hour: "numeric",
+                                      minute: "2-digit"
+                                    })}
+                                  </span>
+                                  <button
+                                    onClick={() => setReplyToComment({ id: comment.id, user_name: comment.user_name })}
+                                    className="text-[9px] font-semibold text-zinc-400 hover:text-cyan-400 transition-colors"
+                                  >
+                                    Reply
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-900/30 p-2.5 rounded-2xl border border-zinc-100/50 dark:border-zinc-800/30">
-                              <p className="leading-normal">
-                                <span className="font-bold mr-1.5 text-zinc-800 dark:text-zinc-200">{comment.user_name}</span>
-                                <span className="text-zinc-600 dark:text-zinc-300">{comment.content}</span>
-                              </p>
-                              <span className="text-[9px] text-zinc-400 mt-1 select-none">
-                                {new Date(comment.created_at).toLocaleDateString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "numeric",
-                                  minute: "2-digit"
-                                })}
-                              </span>
-                            </div>
+                            {comment.replies && comment.replies.length > 0 && (
+                              <div className="ml-9 mt-2 space-y-2">
+                                {comment.replies.map((reply: any) => (
+                                  <div key={reply.id} className="flex gap-2.5 items-start text-sm">
+                                    <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 transition-colors duration-300 ${
+                                      isDarkMode 
+                                        ? "bg-[#f4f3f2] text-black" 
+                                        : "bg-[#0d0d0c] text-white"
+                                    }`}>
+                                      {reply.user_avatar ? (
+                                        <img src={reply.user_avatar} className="h-full w-full object-cover rounded-full" alt={reply.user_name} />
+                                      ) : (
+                                        reply.user_name.slice(0, 2).toUpperCase()
+                                      )}
+                                    </div>
+                                    <div className="flex-1 flex flex-col bg-zinc-50/50 dark:bg-zinc-900/20 p-2 rounded-2xl border border-zinc-100/30 dark:border-zinc-800/20">
+                                      <p className="leading-normal">
+                                        <span className="font-bold mr-1.5 text-zinc-800 dark:text-zinc-200">{reply.user_name}</span>
+                                        <span className="text-zinc-600 dark:text-zinc-300">{reply.content}</span>
+                                      </p>
+                                      <span className="text-[9px] text-zinc-400 mt-1 select-none">
+                                        {new Date(reply.created_at).toLocaleDateString("en-US", {
+                                          month: "short",
+                                          day: "numeric",
+                                          hour: "numeric",
+                                          minute: "2-digit"
+                                        })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))
                       )}
@@ -2954,22 +3086,20 @@ export default function LibraryPage() {
                       <input
                         id="comment-input-field"
                         type="text"
-                        placeholder="Add a comment"
+                        placeholder={replyToComment ? `Reply to ${replyToComment.user_name}...` : "Add a comment..."}
                         value={newCommentText}
                         onChange={(e) => setNewCommentText(e.target.value)}
                         className="flex-1 bg-transparent border-none outline-none text-sm placeholder-zinc-400 pr-2"
                       />
-                      <div className="flex items-center gap-2 text-zinc-400 shrink-0 select-none">
-                        <button type="button" className="hover:text-zinc-650 dark:hover:text-zinc-250 hover:scale-115 active:scale-95 transition-all duration-200">
-                          <Smile className="h-5 w-5" />
+                      {replyToComment && (
+                        <button
+                          type="button"
+                          onClick={() => setReplyToComment(null)}
+                          className="text-[10px] font-semibold text-zinc-400 hover:text-red-400 transition-colors shrink-0"
+                        >
+                          Cancel
                         </button>
-                        <button type="button" className="hover:text-zinc-650 dark:hover:text-zinc-250 hover:scale-115 active:scale-95 transition-all duration-200 text-[10px] font-bold leading-none font-mono tracking-tight bg-zinc-100 dark:bg-zinc-700 px-1 py-0.5 rounded">
-                          GIF
-                        </button>
-                        <button type="button" className="hover:text-zinc-650 dark:hover:text-zinc-250 hover:scale-115 active:scale-95 transition-all duration-200">
-                          <ImageIcon className="h-4 w-4" />
-                        </button>
-                      </div>
+                      )}
                     </div>
                   </form>
                 </div>
@@ -3097,6 +3227,100 @@ export default function LibraryPage() {
         isDarkMode={isDarkMode}
         isMobile={isMobile}
       />
+
+      {/* Category Assignment Modal */}
+      <AnimatePresence>
+        {showCategoryModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => { setShowCategoryModal(false); setPendingCategory(null); setGeneratedAssetId(null) }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className={`relative w-full max-w-lg rounded-2xl p-6 border ${
+                isDarkMode ? "bg-[#1a1a1a] border-white/10" : "bg-white border-black/10"
+              }`}
+            >
+              <h3 className={`text-lg font-semibold mb-1 ${isDarkMode ? "text-white" : "text-black"}`}>
+                Assign a Category
+              </h3>
+              <p className={`text-sm mb-4 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                Categorize your generated image to find it easily later.
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {ASSET_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setPendingCategory(cat)}
+                    className={`px-3 py-2.5 rounded-xl border text-sm font-medium text-left transition-all duration-200 cursor-pointer ${
+                      pendingCategory === cat
+                        ? isDarkMode
+                          ? "bg-white/15 border-white/30 text-white"
+                          : "bg-black/10 border-black/30 text-black"
+                        : isDarkMode
+                          ? "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:border-white/20"
+                          : "bg-black/5 border-black/10 text-black/70 hover:bg-black/10 hover:border-black/20"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom category input */}
+              <div className="mb-4">
+                <input
+                  type="text"
+                  placeholder="Or type a custom category..."
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none transition-all ${
+                    isDarkMode
+                      ? "bg-white/5 border-white/10 text-white placeholder-white/30 focus:border-white/30"
+                      : "bg-black/5 border-black/10 text-black placeholder-black/30 focus:border-black/30"
+                  }`}
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => { setShowCategoryModal(false); setPendingCategory(null); setGeneratedAssetId(null); setCustomCategory("") }}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+                    isDarkMode
+                      ? "bg-white/10 text-white/70 hover:bg-white/15"
+                      : "bg-black/10 text-black/70 hover:bg-black/15"
+                  }`}
+                >
+                  Skip
+                </button>
+                <button
+                  onClick={handleCategoryAssign}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+                    pendingCategory || customCategory.trim()
+                      ? isDarkMode
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "bg-blue-500 text-white hover:bg-blue-600"
+                      : isDarkMode
+                        ? "bg-white/5 text-white/30 cursor-not-allowed"
+                        : "bg-black/5 text-black/30 cursor-not-allowed"
+                  }`}
+                >
+                  Assign
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Onboarding Walkthrough */}
       <OnboardingWalkthrough

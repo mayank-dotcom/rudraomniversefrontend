@@ -2691,6 +2691,17 @@ export interface LibraryAsset {
   is_public: boolean
   created_at: string
   gallery_id?: string | null
+  category?: string | null
+}
+
+export interface AssetComment {
+  id: number
+  content: string
+  created_at: string
+  user_name: string
+  user_avatar: string | null
+  parent_id?: number | null
+  replies?: AssetComment[]
 }
 
 export interface LibraryAssetsResponse {
@@ -2756,6 +2767,22 @@ export async function toggleAssetVisibility(id: string, isPublic: boolean) {
   const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
   if (!res.ok || !data.success) {
     throw new Error(data.error || "Failed to update visibility.")
+  }
+  return data
+}
+
+export async function updateAssetCategory(id: string, category: string) {
+  const res = await fetch(`${API_BASE}/library/assets/${id}/category`, {
+    method: "PATCH",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ category }),
+  })
+  const data = await parseJson<{ success: boolean; asset?: LibraryAsset; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to update category.")
   }
   return data
 }
@@ -2921,6 +2948,8 @@ export interface AssetComment {
   created_at: string
   user_name: string
   user_avatar: string | null
+  parent_id?: number | null
+  replies?: AssetComment[]
 }
 
 export interface AssetSocialResponse {
@@ -2975,14 +3004,14 @@ export async function getAssetSocial(id: string) {
   return data
 }
 
-export async function addAssetComment(id: string, content: string) {
+export async function addAssetComment(id: string, content: string, parent_id?: number | null) {
   const res = await fetch(`${API_BASE}/library/assets/${id}/comment`, {
     method: "POST",
     headers: {
       ...getHeaders(),
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, parent_id }),
   })
   const data = await parseJson<{ success: boolean; comment: AssetComment; error?: string }>(res)
   if (!res.ok || !data.success) {
