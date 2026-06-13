@@ -3413,10 +3413,16 @@ export default function LibraryPage() {
                               </div>
                             </div>
                             {comment.replies && comment.replies.length > 0 && (
-                              <div className="ml-9 mt-2 space-y-2">
+                              <div className="ml-9 mt-2 space-y-3 relative">
+                                {/* Vertical timeline connector line */}
+                                <div className="absolute left-3 top-0 bottom-4 w-px bg-zinc-200 dark:bg-zinc-850 pointer-events-none" />
+
                                 {comment.replies.map((reply: any) => (
-                                  <div key={reply.id} className="flex gap-2.5 items-start text-sm">
-                                    <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 transition-colors duration-300 ${
+                                  <div key={reply.id} className="flex gap-2.5 items-start text-sm relative pl-6 group/reply">
+                                    {/* Curved tree line connecting parent vertical line to reply avatar */}
+                                    <div className="absolute left-3 -top-2.5 h-6 w-3 border-l border-b border-zinc-200 dark:border-zinc-850 rounded-bl-lg pointer-events-none" />
+
+                                    <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 transition-colors duration-300 relative z-10 ${
                                       isDarkMode 
                                         ? "bg-[#f4f3f2] text-black" 
                                         : "bg-[#0d0d0c] text-white"
@@ -3432,14 +3438,26 @@ export default function LibraryPage() {
                                         <span className="font-bold mr-1.5 text-zinc-800 dark:text-zinc-200">{reply.user_name}</span>
                                         <span className="text-zinc-600 dark:text-zinc-300">{reply.content}</span>
                                       </p>
-                                      <span className="text-[9px] text-zinc-400 mt-1 select-none">
-                                        {new Date(reply.created_at).toLocaleDateString("en-US", {
-                                          month: "short",
-                                          day: "numeric",
-                                          hour: "numeric",
-                                          minute: "2-digit"
-                                        })}
-                                      </span>
+                                      <div className="flex items-center gap-3 mt-1">
+                                        <span className="text-[9px] text-zinc-400 select-none">
+                                          {new Date(reply.created_at).toLocaleDateString("en-US", {
+                                            month: "short",
+                                            day: "numeric",
+                                            hour: "numeric",
+                                            minute: "2-digit"
+                                          })}
+                                        </span>
+                                        <button
+                                          onClick={() => {
+                                            setReplyToComment({ id: comment.id, user_name: reply.user_name });
+                                            const commentInput = document.getElementById("comment-input-field");
+                                            if (commentInput) commentInput.focus();
+                                          }}
+                                          className="text-[9px] font-semibold text-zinc-400 hover:text-cyan-400 transition-colors cursor-pointer"
+                                        >
+                                          Reply
+                                        </button>
+                                      </div>
                                     </div>
                                   </div>
                                 ))}
