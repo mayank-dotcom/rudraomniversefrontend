@@ -1164,34 +1164,61 @@ export default function LibraryPage() {
     try {
       const allPossibleAssets = [...assets, ...publicAssets, ...uploadedAssets, ...publicGalleryAssets, ...FEATURED_ASSETS];
       const asset = allPossibleAssets.find(a => a.id === assetId);
-      
-      await assignAssetToGallery(assetId, galleryId, asset?.asset_type, asset?.asset_url, asset?.prompt || "")
-      
-      // Update assets lists from database to sync everything
-      await fetchAssets()
-      
-      // Sync local assets state
+
+      // Determine visibility based on target gallery
       let targetPublic = false;
       if (galleryId) {
         const g = galleries.find((g) => g.id === galleryId)
         if (g) targetPublic = g.is_public
       }
-      setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, gallery_id: galleryId, is_public: galleryId ? targetPublic : a.is_public } : a)))
-      
-      // Update public assets if needed
-      const pubData = await getPublicLibraryAssets()
-      setPublicAssets(pubData.assets)
-      const galleriesData = await getLibraryGalleries()
-      setGalleries(galleriesData.galleries)
 
       const isNewSave = !assets.some((a) => a.id === assetId)
+
+      // Optimistically update personal assets list
+      if (isNewSave && asset) {
+        const tempNewAsset: LibraryAsset = {
+          ...asset,
+          gallery_id: galleryId,
+          is_public: galleryId ? targetPublic : asset.is_public
+        }
+        setAssets((prev) => [tempNewAsset, ...prev])
+      } else {
+        setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, gallery_id: galleryId, is_public: galleryId ? targetPublic : a.is_public } : a)))
+      }
+
+      // Optimistically update public assets visibility
+      setPublicAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, gallery_id: galleryId, is_public: galleryId ? targetPublic : a.is_public } : a)))
+
+      // Optimistically update gallery asset counts
+      setGalleries((prev) => prev.map((g) => {
+        const wasInG = assets.find(a => a.id === assetId)?.gallery_id === g.id
+        const isNowInG = galleryId === g.id
+        let diff = 0
+        if (wasInG && !isNowInG) diff = -1
+        if (!wasInG && isNowInG) diff = 1
+        if (diff !== 0) {
+          return { ...g, asset_count: Math.max(0, (g.asset_count || 0) + diff) }
+        }
+        return g
+      }))
+
+      // Instantly show success toast message
       if (isNewSave) {
         toast.success("Image saved to gallery.")
       } else {
         toast.success(galleryId ? "Image added to gallery folder." : "Image removed from gallery folder.")
       }
+
+      // Fire backend request in parallel without blocking UI thread
+      await assignAssetToGallery(assetId, galleryId, asset?.asset_type, asset?.asset_url, asset?.prompt || "")
+      
+      // Update in background to ensure database IDs sync (e.g. for copied explore assets)
+      fetchAssets().catch((err) => console.error("Background sync failed:", err))
+
     } catch (err: any) {
       toast.error(err.message || "Failed to move image.")
+      // Revert/sync with database on failure
+      fetchAssets().catch((err) => console.error("Rollback sync failed:", err))
     }
   }
 
@@ -1262,6 +1289,13 @@ export default function LibraryPage() {
     if (!searchQuery.trim()) return
     toast.success("Prompt copied to clipboard. Paste in chat workspace!")
     navigator.clipboard.writeText(searchQuery.trim())
+  }
+
+  // Check if asset is created by current user
+  const isCreatedByMe = (asset: LibraryAsset) => {
+    if (asset.id.startsWith("feat-")) return false;
+    if (asset.id.startsWith("uploaded-")) return true;
+    return assets.some((a) => a.id === asset.id);
   }
 
   // ── Filtered Assets calculation ──
@@ -1392,12 +1426,6 @@ export default function LibraryPage() {
     }
   }
 
-  // Check if asset is created by current user
-  const isCreatedByMe = (asset: LibraryAsset) => {
-    if (asset.id.startsWith("feat-")) return false;
-    if (asset.id.startsWith("uploaded-")) return true;
-    return assets.some((a) => a.id === asset.id);
-  }
 
   // Creator handle mock generator
   const getCreatorHandle = (assetId: string) => {
