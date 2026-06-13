@@ -364,6 +364,8 @@ export default function LibraryPage() {
   const [replyToComment, setReplyToComment] = useState<{ id: any; user_name: string } | null>(null)
   const [collapsedComments, setCollapsedComments] = useState<Record<any, boolean>>({})
   const [creatorInfo, setCreatorInfo] = useState<{ name: string; avatar: string | null }>({ name: "AWEDICT", avatar: null })
+  const [variations, setVariations] = useState<LibraryAsset[]>([])
+  const [parentAsset, setParentAsset] = useState<LibraryAsset | null>(null)
   const [notifications, setNotifications] = useState<SocialNotification[]>([])
 
   const [isLoading, setIsLoading] = useState(true)
@@ -738,6 +740,8 @@ export default function LibraryPage() {
       setLikesCount(0)
       setIsLiked(false)
       setCreatorInfo({ name: "AWEDICT", avatar: null })
+      setVariations([])
+      setParentAsset(null)
       return
     }
 
@@ -745,13 +749,15 @@ export default function LibraryPage() {
     setSocialLoading(true)
 
     getAssetSocial(expandedAsset.id)
-      .then((res) => {
+      .then((res: any) => {
         if (!isSubscribed) return
         if (res.success) {
           setLikesCount(res.likes_count)
           setIsLiked(res.is_liked)
           setComments(res.comments || [])
           setCreatorInfo(res.owner || { name: "AWEDICT", avatar: null })
+          setVariations(res.variations || [])
+          setParentAsset(res.parent_asset || null)
         }
       })
       .catch((err) => {
@@ -1057,10 +1063,16 @@ export default function LibraryPage() {
         contentPayload = generatePrompt
       }
 
-      const payload = {
+      const payload: any = {
         endpoint: "/features/image/generate",
         messages: [{ role: "user" as const, content: contentPayload }],
         modality: "image_gen"
+      }
+
+      if (isEditingMode && editImages.length > 0 && editImages[0]?.id) {
+        if (!editImages[0].id.startsWith("upload-")) {
+          payload.parent_id = editImages[0].id
+        }
       }
 
       const res: any = await sendAiRequest(payload)
@@ -3749,19 +3761,57 @@ export default function LibraryPage() {
 
                 {/* Middle Content Section - Scrollable */}
                 <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6">
-                  {/* Creator Info */}
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full overflow-hidden bg-gradient-to-tr from-[#A855F7] to-[#00DDDD] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
-                      {creatorInfo.avatar ? (
-                        <img src={creatorInfo.avatar} className="h-full w-full object-cover" alt={creatorInfo.name} />
-                      ) : (
-                        creatorInfo.name.slice(0, 2).toUpperCase()
-                      )}
+                  {/* Creator Info & Variations/Parent Panel */}
+                  <div className="flex flex-row items-center justify-between gap-3 bg-zinc-100/10 dark:bg-zinc-900/20 p-3 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/40">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full overflow-hidden bg-gradient-to-tr from-[#A855F7] to-[#00DDDD] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
+                        {creatorInfo.avatar ? (
+                          <img src={creatorInfo.avatar} className="h-full w-full object-cover" alt={creatorInfo.name} />
+                        ) : (
+                          creatorInfo.name.slice(0, 2).toUpperCase()
+                        )}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm leading-tight text-zinc-950 dark:text-zinc-50 hover:underline cursor-pointer">{creatorInfo.name}</span>
+                        <span className="text-[9px] uppercase font-mono tracking-widest text-[#00DDDD] dark:text-[#00DDDD] font-semibold mt-0.5">Creator</span>
+                      </div>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-sm leading-tight text-zinc-950 dark:text-zinc-50 hover:underline cursor-pointer">{creatorInfo.name}</span>
-                      <span className="text-[9px] uppercase font-mono tracking-widest text-[#00DDDD] dark:text-[#00DDDD] font-semibold mt-0.5">Creator</span>
-                    </div>
+
+                    {/* Variations list */}
+                    {variations && variations.length > 0 && (
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-[8px] uppercase font-mono tracking-wider text-zinc-400 dark:text-zinc-500 font-bold">Variations</span>
+                        <div className="flex items-center gap-1.5 overflow-x-auto max-w-[150px] no-scrollbar">
+                          {variations.map((v) => (
+                            <button
+                              key={v.id}
+                              onClick={() => setExpandedAsset(v)}
+                              className="h-8 w-8 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 hover:ring-2 hover:ring-cyan-400 hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
+                              title={v.prompt || "Variation"}
+                            >
+                              <img src={getAssetImageUrl(v)} className="h-full w-full object-cover" alt="Variation" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Original parent asset */}
+                    {parentAsset && (
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-[8px] uppercase font-mono tracking-wider text-zinc-400 dark:text-zinc-500 font-bold">Original Image</span>
+                        <button
+                          onClick={() => setExpandedAsset(parentAsset)}
+                          className="flex items-center gap-2 px-2 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 hover:scale-102 active:scale-98 transition-all cursor-pointer text-left shrink-0"
+                          title="View Original"
+                        >
+                          <img src={getAssetImageUrl(parentAsset)} className="h-6 w-6 rounded-lg object-cover" alt="Original" />
+                          <span className="text-[9px] font-semibold text-zinc-550 dark:text-zinc-350 max-w-[65px] truncate">
+                            {parentAsset.prompt || "Parent Asset"}
+                          </span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Caption / Prompt Description */}

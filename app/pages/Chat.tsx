@@ -2913,7 +2913,7 @@ STRICT RULES:
                         </div>
 
                         {/* Agent Promotion Card */}
-                        {showPromo && (
+                        {showPromo && !isEnterpriseModeActive && (
                             <div className="p-3 mx-3 mb-2 rounded-xl bg-gradient-to-b from-zinc-900 to-black border border-white/5 relative overflow-hidden flex flex-col gap-2">
                                 <div className="flex items-start justify-between">
                                     <div className="flex flex-col gap-1">
@@ -3322,48 +3322,6 @@ STRICT RULES:
                                             </div>
                                             <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
 
-                                            {/* Social Notifications */}
-                                            {notifications.length > 0 && (
-                                                <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
-                                                    {notifications.map((notif) => (
-                                                        <button
-                                                            key={notif.id}
-                                                            onClick={() => handleNotificationClick(notif)}
-                                                            className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors text-xs relative ${
-                                                                notif.is_read
-                                                                    ? (isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5")
-                                                                    : (isDarkMode ? "bg-white/[0.03] hover:bg-white/5 font-medium" : "bg-black/[0.03] hover:bg-black/5 font-medium")
-                                                            }`}
-                                                        >
-                                                            <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px] text-zinc-650 dark:text-zinc-350">
-                                                                {notif.sender_avatar ? (
-                                                                    <img src={notif.sender_avatar} className="h-full w-full object-cover" alt="" />
-                                                                ) : (
-                                                                    notif.sender_name.slice(0, 2).toUpperCase()
-                                                                )}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0 pr-2">
-                                                                <p className="leading-tight text-zinc-900 dark:text-zinc-100">
-                                                                    <span className="font-bold mr-1">{notif.sender_name}</span>
-                                                                    {notif.type === 'like' ? 'liked your image.' : notif.type === 'reply' ? 'replied to your comment.' : notif.type === 'message' ? 'sent you a message.' : (notif.type === 'creation' || notif.type === 'created') ? 'created a new image.' : 'commented on your image.'}
-                                                                </p>
-                                                                {notif.type !== 'like' && notif.content && (
-                                                                    <p className={`text-[10px] truncate mt-1 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-                                                                        "{notif.content}"
-                                                                    </p>
-                                                                )}
-                                                                <span className={`text-[9px] block mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                                                    {new Date(notif.created_at).toLocaleDateString()}
-                                                                </span>
-                                                            </div>
-                                                            {!notif.is_read && (
-                                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#00DDDD]" />
-                                                            )}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-
                                             {imageGenStatus === "generating" && (
                                                 <button
                                                     onClick={() => { setShowNotificationPanel(false); router.push("/library"); }}
@@ -3396,6 +3354,51 @@ STRICT RULES:
                                                     </div>
                                                 </button>
                                             )}
+
+                                            {/* Social Notifications */}
+                                            {notifications.length > 0 && (
+                                                <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+                                                    {[...notifications]
+                                                        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                                                        .map((notif) => (
+                                                            <button
+                                                                key={notif.id}
+                                                                onClick={() => handleNotificationClick(notif)}
+                                                                className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors text-xs relative ${
+                                                                    notif.is_read
+                                                                        ? (isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5")
+                                                                        : (isDarkMode ? "bg-white/[0.03] hover:bg-white/5 font-medium" : "bg-black/[0.03] hover:bg-black/5 font-medium")
+                                                                }`}
+                                                            >
+                                                                <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px] text-zinc-650 dark:text-zinc-350">
+                                                                    {notif.sender_avatar ? (
+                                                                        <img src={notif.sender_avatar} className="h-full w-full object-cover" alt="" />
+                                                                    ) : (
+                                                                        notif.sender_name.slice(0, 2).toUpperCase()
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0 pr-2">
+                                                                    <p className="leading-tight text-zinc-900 dark:text-zinc-100">
+                                                                        <span className="font-bold mr-1">{notif.sender_name}</span>
+                                                                        {notif.type === 'like' ? 'liked your image.' : notif.type === 'reply' ? 'replied to your comment.' : notif.type === 'message' ? 'sent you a message.' : (notif.type === 'creation' || notif.type === 'created') ? 'created a new image.' : 'commented on your image.'}
+                                                                    </p>
+                                                                    {notif.type !== 'like' && notif.content && (
+                                                                        <p className={`text-[10px] truncate mt-1 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                                                                            "{notif.content}"
+                                                                        </p>
+                                                                    )}
+                                                                    <span className={`text-[9px] block mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                                        {new Date(notif.created_at).toLocaleDateString()}
+                                                                    </span>
+                                                                </div>
+                                                                {!notif.is_read && (
+                                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#00DDDD]" />
+                                                                )}
+                                                            </button>
+                                                        ))}
+                                                </div>
+                                            )}
+
                                             {imageGenStatus === "idle" && notifications.length === 0 && (
                                                 <div className={`px-3 py-6 text-center text-xs ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
                                                     No notifications

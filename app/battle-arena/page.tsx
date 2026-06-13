@@ -571,7 +571,7 @@ function ArenaContent() {
     const chartData = useMemo(() => progressChartData(), [progressChartData]);
 
     const myRecord = useMemo(() => {
-        return leaderboard.find(p => p.name === userName);
+        return leaderboard.find(p => p.id === socketRef.current?.id || p.name === userName);
     }, [leaderboard, userName]);
 
     const myRank = useMemo(() => {
@@ -1504,7 +1504,7 @@ function ArenaContent() {
                                                 <div 
                                                     key={p.id} 
                                                     className={`flex items-center justify-between p-4 border rounded-2xl transition-all ${
-                                                        p.name === userName 
+                                                        (p.id === socketRef.current?.id || p.name === userName)
                                                             ? (isDarkMode ? "bg-orange-500/10 border-orange-500/20" : "bg-orange-500/[0.03] border-orange-500/20") 
                                                             : (isDarkMode ? "bg-white/[0.02] border-white/5" : "bg-black/[0.01] border-black/5")
                                                     }`}
@@ -1532,7 +1532,7 @@ function ArenaContent() {
                                                         )}
 
                                                         <span className="text-sm font-bold" style={{ fontFamily: "var(--font-chat-heading)" }}>
-                                                            {p.name} {p.name === userName && "(You)"}
+                                                            {p.name} {(p.id === socketRef.current?.id || p.name === userName) && "(You)"}
                                                         </span>
                                                     </div>
                                                     <div className="text-right">

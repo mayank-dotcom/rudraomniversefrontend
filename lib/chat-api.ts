@@ -1898,6 +1898,7 @@ export async function sendAiRequest(payload: {
   messages: Array<{ role: "user" | "assistant" | "system"; content: any }>
   chat_id?: string
   modality?: string
+  parent_id?: string
 }) {
   const fullUrl = `${API_BASE}${payload.endpoint}`;
   console.log(`[sendAiRequest] Fetching: ${fullUrl}`);
@@ -1910,6 +1911,7 @@ export async function sendAiRequest(payload: {
       messages: payload.messages,
       ...(payload.modality ? { modality: payload.modality } : {}),
       ...(payload.chat_id ? { chat_id: payload.chat_id } : {}),
+      ...(payload.parent_id ? { parent_id: payload.parent_id } : {}),
     }),
   })
 
@@ -2694,6 +2696,7 @@ export interface LibraryAsset {
   category?: string | null
   likes_count?: number
   is_liked?: boolean
+  parent_id?: string | null
 }
 
 export interface AssetComment {
@@ -2984,6 +2987,8 @@ export interface AssetSocialResponse {
     avatar: string | null
   }
   comments: AssetComment[]
+  variations?: LibraryAsset[]
+  parent_asset?: LibraryAsset | null
   error?: string
 }
 
