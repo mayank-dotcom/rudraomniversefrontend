@@ -191,7 +191,41 @@ const seededShuffle = <T,>(array: T[], seed: number): T[] => {
   return arr;
 }
 
-const renderCommentContent = (content: string) => {
+const renderCommentContent = (content: string, siblingUsernames: string[] = []) => {
+  const sortedUsernames = [...siblingUsernames].sort((a, b) => b.length - a.length);
+  let matchedUser: string | null = null;
+  let prefixLength = 0;
+
+  for (const username of sortedUsernames) {
+    const prefixWithColon = `@${username}:`;
+    const prefixWithSpace = `@${username} `;
+    const exactPrefix = `@${username}`;
+
+    if (content.startsWith(prefixWithColon)) {
+      matchedUser = username;
+      prefixLength = prefixWithColon.length;
+      break;
+    } else if (content.startsWith(prefixWithSpace)) {
+      matchedUser = username;
+      prefixLength = prefixWithSpace.length;
+      break;
+    } else if (content === exactPrefix) {
+      matchedUser = username;
+      prefixLength = exactPrefix.length;
+      break;
+    }
+  }
+
+  if (matchedUser) {
+    const rest = content.slice(prefixLength);
+    return (
+      <>
+        <span className="font-semibold text-cyan-500 mr-1 select-none">@{matchedUser}</span>
+        {rest}
+      </>
+    );
+  }
+
   const match = content.match(/^@([^\s:]+)/);
   if (match) {
     const username = match[1];
@@ -212,13 +246,15 @@ const ReplyItem = ({
   depth, 
   commentId, 
   isDarkMode, 
-  handleReplyClick 
+  handleReplyClick,
+  siblingUsernames
 }: { 
   reply: any; 
   depth: number; 
   commentId: any; 
   isDarkMode: boolean; 
   handleReplyClick: (commentId: any, targetUsername: string) => void;
+  siblingUsernames: string[];
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const hasReplies = reply.replies && reply.replies.length > 0;
@@ -262,7 +298,7 @@ const ReplyItem = ({
           </div>
           
           <p className="leading-normal text-xs md:text-sm mt-1 text-zinc-700 dark:text-zinc-300">
-            {renderCommentContent(reply.content)}
+            {renderCommentContent(reply.content, siblingUsernames)}
           </p>
 
           <div className="flex items-center gap-3 mt-1.5 pb-1">
@@ -291,7 +327,7 @@ const ReplyItem = ({
       {hasReplies && !isCollapsed && (
         <div className="ml-6 relative space-y-3 mt-3">
           {/* Vertical timeline line for this reply's own children */}
-          <div className="absolute left-3 top-0 bottom-5 w-px bg-zinc-200 dark:bg-zinc-800 pointer-events-none" />
+          <div className="absolute left-3 top-0 bottom-5 w-px bg-zinc-200 dark:bg-zinc-850 pointer-events-none" />
           
           {reply.replies.map((childReply: any) => (
             <ReplyItem 
@@ -301,6 +337,7 @@ const ReplyItem = ({
               commentId={commentId} 
               isDarkMode={isDarkMode}
               handleReplyClick={handleReplyClick}
+              siblingUsernames={siblingUsernames}
             />
           ))}
         </div>
@@ -3550,7 +3587,7 @@ export default function LibraryPage() {
                                   </span>
                                 </div>
                                 <p className="leading-normal text-xs md:text-sm mt-1 text-zinc-700 dark:text-zinc-305">
-                                  {renderCommentContent(comment.content)}
+                                  {renderCommentContent(comment.content, [])}
                                 </p>
                                 <div className="flex items-center gap-3 mt-1.5 pb-1">
                                   <button
@@ -3586,6 +3623,7 @@ export default function LibraryPage() {
                                     commentId={comment.id}
                                     isDarkMode={isDarkMode}
                                     handleReplyClick={handleReplyClick}
+                                    siblingUsernames={comment.replies.map((r: any) => r.user_name)}
                                   />
                                 ))}
                               </div>
