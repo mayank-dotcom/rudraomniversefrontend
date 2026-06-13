@@ -661,6 +661,42 @@ function ArenaContent() {
                 {phase === "active" && questions.length > 0 ? (
                     // Quiz Active Navigation Body
                     <div className="flex-1 overflow-y-auto scrollbar-hide px-6 py-6 space-y-5">
+                        {/* Quiz Timer Card */}
+                        <div className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
+                            timeLeft <= 5
+                                ? "bg-red-500/10 border-red-500/30 text-red-500 animate-pulse"
+                                : (isDarkMode ? "bg-white/5 border-white/5 text-white" : "bg-black/5 border-black/5 text-black")
+                        }`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${
+                                    timeLeft <= 5 ? "bg-red-500/20 text-red-500" : "bg-amber-500/10 text-amber-500"
+                                }`}>
+                                    <Clock className={`h-4.5 w-4.5 ${timeLeft <= 5 ? "animate-pulse" : ""}`} />
+                                </div>
+                                <div className="flex flex-col text-left">
+                                    <span 
+                                        className="text-[8px] font-bold uppercase tracking-wider opacity-40" 
+                                        style={{ fontFamily: "var(--font-chat-accent)" }}
+                                    >
+                                        Time Remaining
+                                    </span>
+                                    <span 
+                                        className="text-sm font-black font-mono leading-none mt-0.5" 
+                                        style={{ fontFamily: "var(--font-chat-heading)" }}
+                                    >
+                                        {formatTime(timeLeft)}
+                                    </span>
+                                </div>
+                            </div>
+                            <span 
+                                className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                                    timeLeft <= 5 ? "bg-red-500/20" : "bg-zinc-500/10"
+                                }`}
+                            >
+                                {timeLeft}s
+                            </span>
+                        </div>
+
                         {/* Quiz Progress */}
                         <div className="space-y-1">
                             <div 
@@ -1305,6 +1341,18 @@ function ArenaContent() {
                                             >
                                                 Single Choice
                                             </span>
+                                            <div className="flex items-center gap-2">
+                                                <Clock className={`h-4 w-4 ${timeLeft <= 5 ? "text-red-500 animate-pulse" : "text-amber-500"}`} />
+                                                <span 
+                                                    className={`text-xs font-black font-mono px-3 py-1.5 rounded-xl border transition-all ${
+                                                        timeLeft <= 5 
+                                                            ? "bg-red-500/10 border-red-500/20 text-red-500 animate-pulse" 
+                                                            : (isDarkMode ? "bg-white/5 border-white/10 text-white/70" : "bg-black/5 border-black/10 text-black/70")
+                                                    }`}
+                                                >
+                                                    {timeLeft}s
+                                                </span>
+                                            </div>
                                         </div>
 
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4 sm:mb-6 lg:mb-8 relative z-10">
