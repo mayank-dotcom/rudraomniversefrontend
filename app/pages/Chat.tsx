@@ -423,8 +423,8 @@ const Chat = () => {
 
     const employeeRestrictedEngines = ["Explore Mode", "Interview Prep", "Mock Paper Generator", "Battle Arena"];
     const visibleEngines = showEmployeeView
-        ? engines.filter(e => !employeeRestrictedEngines.includes(e.name) && e.name !== "Persona Mode" && e.name !== "AI Image Lab")
-        : engines.filter(e => e.name !== "Assistant Mode" && e.name !== "Persona Mode" && e.name !== "AI Image Lab");
+        ? engines.filter(e => !employeeRestrictedEngines.includes(e.name) && e.name !== "Persona Mode")
+        : engines.filter(e => e.name !== "Assistant Mode" && e.name !== "Persona Mode");
 
     // Set default engine based on user role
     useEffect(() => {
@@ -1742,12 +1742,21 @@ STRICT RULES:
                     : `[📎 ${selectedFile.name}]`;
 
                 if (isRegularImage) {
-                    userContent = [
-                        { type: "text", text: trimmedInput || "Please extract and return ALL text visible in this image. Perform OCR on the entire image and return the extracted text." },
-                        { type: "image_url", image_url: { url: selectedFile.content } }
-                    ];
-                    requestModality = "ocr";
-                    requestEndpoint = "/features/vision/solve";
+                    if (isImageGenMode) {
+                        userContent = [
+                            { type: "text", text: trimmedInput },
+                            { type: "image_url", image_url: { url: selectedFile.content } }
+                        ];
+                        requestModality = "image_gen";
+                        requestEndpoint = "/features/image/generate";
+                    } else {
+                        userContent = [
+                            { type: "text", text: trimmedInput || "Please extract and return ALL text visible in this image. Perform OCR on the entire image and return the extracted text." },
+                            { type: "image_url", image_url: { url: selectedFile.content } }
+                        ];
+                        requestModality = "ocr";
+                        requestEndpoint = "/features/vision/solve";
+                    }
 
                 } else if (isScannedPdf) {
                     // ── Scanned (image-only) PDF → PDF Intel with OCR modality ─────
