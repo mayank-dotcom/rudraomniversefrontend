@@ -1534,6 +1534,27 @@ export default function LibraryPage() {
               onClick={() => setExpandedAsset(asset)}
               className={`absolute inset-0 bg-black/40 backdrop-blur-xl opacity-0 group-hover/card:opacity-100 flex flex-col justify-end p-5 transition-all duration-500 ease-out translate-y-4 group-hover/card:translate-y-0 z-30 cursor-pointer`}
             >
+              {/* Like Count / Save Button on Top Left of Hover Overlay */}
+              <div className="absolute top-3 left-3 z-40">
+                <motion.button
+                  whileTap={{ scale: 0.8 }}
+                  whileHover={{ scale: 1.1 }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSaved(asset); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-xl border border-white/10 text-white/95 cursor-pointer shadow-lg transition-all"
+                  title={savedIds.includes(asset.id) ? "Unlike" : "Like & Save"}
+                >
+                  <motion.div
+                    animate={{ scale: savedIds.includes(asset.id) ? [1, 1.45, 1.15] : 1 }}
+                    transition={{ type: "spring", stiffness: 600, damping: 15 }}
+                  >
+                    <Heart className={`h-4.5 w-4.5 transition-all ${savedIds.includes(asset.id) ? "fill-red-500 text-red-500" : ""}`} />
+                  </motion.div>
+                  <span className="text-xs font-bold select-none leading-none">
+                    {getLikesCount(asset)}
+                  </span>
+                </motion.button>
+              </div>
+
               <p className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest mb-1.5">Prompt Detail</p>
               <p className="text-xs font-medium leading-relaxed text-white/90 line-clamp-3 mb-4">
                 {asset.prompt || "No prompt description available for this visual concept."}
@@ -1572,18 +1593,6 @@ export default function LibraryPage() {
                     </button>
                   )}
                 </div>
-
-                {/* Like Count / Save Button */}
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSaved(asset); }}
-                  className="flex items-center gap-1.5 px-2.5 py-1 bg-black/50 hover:bg-black/70 backdrop-blur-md rounded-lg border border-white/10 text-white/80 cursor-pointer transition-all"
-                  title={savedIds.includes(asset.id) ? "Unlike" : "Like & Save"}
-                >
-                  <Heart className={`h-3.5 w-3.5 transition-all ${savedIds.includes(asset.id) ? "fill-red-500 text-red-500 scale-110" : ""}`} />
-                  <span className="text-[10px] font-bold select-none">
-                    {getLikesCount(asset)}
-                  </span>
-                </button>
               </div>
             </div>
 
@@ -3120,14 +3129,21 @@ export default function LibraryPage() {
                 <div className="flex items-center justify-between p-6 pb-4 shrink-0">
                   <div className="flex items-center gap-4">
                     {/* Heart Like Button */}
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      whileHover={{ scale: 1.08 }}
                       onClick={handleToggleLike}
-                      className="flex items-center gap-1.5 text-zinc-650 hover:text-black dark:text-zinc-400 dark:hover:text-white hover:scale-110 active:scale-95 transition-all duration-200"
+                      className="flex items-center gap-1.5 text-zinc-650 hover:text-black dark:text-zinc-400 dark:hover:text-white transition-all duration-200 cursor-pointer"
                       title="Like"
                     >
-                      <Heart className={`h-6 w-6 transition-all ${isLiked ? "fill-red-500 text-red-500 scale-110" : ""}`} />
-                      <span className="text-sm font-semibold">{likesCount}</span>
-                    </button>
+                      <motion.div
+                        animate={{ scale: isLiked ? [1, 1.45, 1.15] : 1 }}
+                        transition={{ type: "spring", stiffness: 600, damping: 15 }}
+                      >
+                        <Heart className={`h-6 w-6 transition-all ${isLiked ? "fill-red-500 text-red-500" : ""}`} />
+                      </motion.div>
+                      <span className="text-sm font-semibold select-none">{likesCount}</span>
+                    </motion.button>
                     
                     {/* Comment Icon (focuses comment box) */}
                     <button
