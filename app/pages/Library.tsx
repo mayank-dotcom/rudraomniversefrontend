@@ -389,6 +389,10 @@ export default function LibraryPage() {
   const [isRecording, setIsRecording] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
+  const [isEditingMode, setIsEditingMode] = useState(false)
+  const [editImages, setEditImages] = useState<{ id: string; dataUrl: string; name: string }[]>([])
+  const [showImagePicker, setShowImagePicker] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [generatedAssetId, setGeneratedAssetId] = useState<string | null>(null)
@@ -996,6 +1000,31 @@ export default function LibraryPage() {
     }
   };
 
+  // Handle image upload from device for editing
+  const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string
+        setEditImages((prev) => [...prev, { id: `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`, dataUrl, name: file.name }])
+      }
+      reader.readAsDataURL(file)
+    })
+    // Reset input so same file can be re-selected
+    e.target.value = ''
+  }
+
+  const handleRemoveEditImage = (id: string) => {
+    setEditImages((prev) => prev.filter((img) => img.id !== id))
+  }
+
+  const handlePickFromLibrary = (asset: LibraryAsset) => {
+    setEditImages((prev) => [...prev, { id: asset.id, dataUrl: getAssetImageUrl(asset), name: asset.prompt || asset.id }])
+    setShowImagePicker(false)
+  }
+
   // Handle AI Image Generation
   const handleGenerateImage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -1009,39 +1038,55 @@ export default function LibraryPage() {
       localStorage.setItem("image_gen_timestamp", String(Date.now()))
     }
     setActiveCategory("all")
-    const toastId = toast.loading("Generating your image...")
+    const toastId = toast.loading(isEditingMode ? "Editing image..." : "Generating your image...")
 
     try {
       console.log(`[Library] Requesting image generation for prompt: "${generatePrompt}"`)
-      
+
+      // Build content array: text instruction + optional reference images
+      let contentPayload: any
+      if (isEditingMode && editImages.length > 0) {
+        contentPayload = [
+          { type: "text" as const, text: generatePrompt },
+          ...editImages.map((img) => ({
+            type: "image_url" as const,
+            image_url: { url: img.dataUrl }
+          }))
+        ]
+      } else {
+        contentPayload = generatePrompt
+      }
+
       const payload = {
         endpoint: "/features/image/generate",
-        messages: [{ role: "user" as const, content: generatePrompt }],
+        messages: [{ role: "user" as const, content: contentPayload }],
         modality: "image_gen"
       }
-      
+
       const res: any = await sendAiRequest(payload)
-      
+
       if (res && res.response) {
-        toast.success("Image generated and saved to library!", { id: toastId })
+        toast.success(isEditingMode ? "Image edited and saved to library!" : "Image generated and saved to library!", { id: toastId })
         setGeneratePrompt("")
+        setEditImages([])
+        setIsEditingMode(false)
         setGenerationStatus("completed")
         setHasNewGeneration(true)
         if (typeof window !== "undefined") {
           localStorage.setItem("image_gen_status", "completed")
           localStorage.setItem("image_gen_timestamp", String(Date.now()))
         }
-        
+
         // Refresh local assets to show the new image
         await fetchAssets()
-        
+
         // Get the newly created asset ID from response
         const newAssetId = res?.asset_id || (assets.length > 0 ? assets[0].id : null)
         if (newAssetId) {
           setGeneratedAssetId(newAssetId)
           setShowCategoryModal(true)
         }
-        
+
         // Switch to "all" (My Private Gallery) to show the new asset immediately
         setActiveCategory("all")
       } else {
@@ -3274,12 +3319,47 @@ export default function LibraryPage() {
 
         {/* ================= FIXED BOTTOM IMAGE GENERATOR BAR ================= */}
         <div
-          className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl rounded-2xl px-5 py-2.5 flex items-start gap-3 transition-all duration-300 max-h-[40vh] overflow-y-auto ${
+          className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl rounded-2xl px-5 py-2.5 flex flex-col gap-2 transition-all duration-300 ${
             isDarkMode
               ? "bg-[#222120] border border-white/5 shadow-2xl"
               : "bg-[#f2f1f0] border border-black/5 shadow-2xl"
           }`}
         >
+          {/* Hidden file input for uploading images */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleEditImageUpload}
+            className="hidden"
+          />
+
+          {/* Attached images preview */}
+          {editImages.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {editImages.map((img) => (
+                <div key={img.id} className="relative group/img">
+                  <img
+                    src={img.dataUrl}
+                    alt={img.name}
+                    className="h-10 w-10 rounded-lg object-cover border border-white/10"
+                  />
+                  <button
+                    onClick={() => handleRemoveEditImage(img.id)}
+                    className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity text-[10px] font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <span className={`text-[10px] font-medium ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                {editImages.length} image{editImages.length > 1 ? "s" : ""} attached
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-start gap-3">
             <textarea
               id="walkthrough-input-area"
               value={generatePrompt}
@@ -3299,7 +3379,7 @@ export default function LibraryPage() {
                 e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
               }}
               disabled={isGenerating}
-              placeholder={typedPlaceholder}
+              placeholder={isEditingMode ? "Describe the edit you want..." : typedPlaceholder}
               rows={1}
               className={`flex-1 min-w-0 bg-transparent resize-none no-scrollbar font-sans ${
                 isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"
@@ -3308,6 +3388,52 @@ export default function LibraryPage() {
             />
 
             <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Edit Mode Toggle */}
+              <motion.button
+                type="button"
+                onClick={() => { setIsEditingMode(!isEditingMode); if (!isEditingMode) setEditImages([]) }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 rounded-full transition-all duration-200 ${
+                  isEditingMode
+                    ? "bg-blue-500/20 text-blue-400"
+                    : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5")
+                }`}
+                title={isEditingMode ? "Switch to Generate mode" : "Switch to Edit mode"}
+              >
+                <ImageIcon className="h-5 w-5" />
+              </motion.button>
+
+              {/* Upload Image (only in edit mode) */}
+              {isEditingMode && (
+                <>
+                  <motion.button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className={`p-2 rounded-full transition-all duration-200 ${
+                      isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
+                    }`}
+                    title="Upload image from device"
+                  >
+                    <Upload className="h-5 w-5" />
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    onClick={() => setShowImagePicker(true)}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className={`p-2 rounded-full transition-all duration-200 ${
+                      isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
+                    }`}
+                    title="Pick from library"
+                  >
+                    <FolderOpen className="h-5 w-5" />
+                  </motion.button>
+                </>
+              )}
+
               {/* Voice Input (Microphone) */}
               <motion.button
                 type="button"
@@ -3340,13 +3466,61 @@ export default function LibraryPage() {
                       ? (isDarkMode ? "bg-white text-black hover:bg-white/90 cursor-pointer" : "bg-black text-white hover:bg-black/90 cursor-pointer")
                       : (isDarkMode ? "bg-white/10 text-white/30 cursor-not-allowed" : "bg-black/10 text-black/30 cursor-not-allowed")
                   }`}
-                  title="Generate Image"
+                  title={isEditingMode ? "Apply Edit" : "Generate Image"}
                 >
-                  <ArrowUp className="h-5 w-5 stroke-[2.5]" />
+                  {isEditingMode ? <Zap className="h-5 w-5 stroke-[2.5]" /> : <ArrowUp className="h-5 w-5 stroke-[2.5]" />}
                 </motion.button>
               )}
             </div>
           </div>
+        </div>
+
+      {/* Image Picker Modal */}
+      <AnimatePresence>
+        {showImagePicker && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowImagePicker(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className={`relative w-full max-w-lg max-h-[70vh] rounded-2xl p-5 border ${
+                isDarkMode ? "bg-[#1a1a1a] border-white/10" : "bg-white border-black/10"
+              }`}
+            >
+              <h3 className={`text-base font-semibold mb-3 ${isDarkMode ? "text-white" : "text-black"}`}>
+                Select an image from your library
+              </h3>
+              <div className="grid grid-cols-3 gap-2 overflow-y-auto max-h-[50vh]">
+                {[...assets, ...uploadedAssets, ...publicAssets].slice(0, 30).map((asset) => (
+                  <button
+                    key={asset.id}
+                    onClick={() => handlePickFromLibrary(asset)}
+                    className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-blue-500/50 transition-all cursor-pointer"
+                  >
+                    <img
+                      src={getAssetImageUrl(asset)}
+                      alt={asset.prompt || "Asset"}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+                {assets.length === 0 && uploadedAssets.length === 0 && (
+                  <p className={`col-span-3 text-sm text-center py-8 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                    No images in your library yet. Upload or generate some first!
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       </div>
 
       {/* Move to Folder Modal */}
