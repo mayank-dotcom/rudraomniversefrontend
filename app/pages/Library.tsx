@@ -28,6 +28,7 @@ import {
   markNotificationAsRead,
   getSingleAsset,
   updateAssetCategory,
+  copyAssetToLibrary,
   type LibraryAsset,
   type LibraryGallery,
   type SocialNotification
@@ -68,6 +69,7 @@ import {
   Search,
   X,
   ChevronRight,
+  ChevronDown,
   Folder,
   Globe,
   Lock,
@@ -233,6 +235,18 @@ export default function LibraryPage() {
   const [generatedAssetId, setGeneratedAssetId] = useState<string | null>(null)
   const [pendingCategory, setPendingCategory] = useState<string | null>(null)
   const [customCategory, setCustomCategory] = useState("")
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false)
+  const [categorySearch, setCategorySearch] = useState("")
+  const [customCategoryList, setCustomCategoryList] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("library_custom_categories")
+        return stored ? JSON.parse(stored) : []
+      } catch { return [] }
+    }
+    return []
+  })
+  const categoryDropdownRef = useRef<HTMLDivElement>(null)
   
   // Custom Real Database-backed Galleries States
   const [galleries, setGalleries] = useState<LibraryGallery[]>([])
@@ -346,6 +360,21 @@ export default function LibraryPage() {
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [showNotificationPanel])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setShowCategoryDropdown(false)
+        setCategorySearch("")
+      }
+    }
+    if (showCategoryDropdown) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showCategoryDropdown])
 
   // Generic infinite scroll logic is moved below activeAssets definition.
 
@@ -887,6 +916,21 @@ export default function LibraryPage() {
     }
   }
 
+  // Copy another user's asset to personal library
+  const handleCopyToLibrary = async (asset: LibraryAsset) => {
+    try {
+      const res = await copyAssetToLibrary(asset.id, asset.asset_type, asset.asset_url, asset.prompt || "")
+      if (res.saved) {
+        // Featured asset was bookmarked
+        setSavedIds((prev) => prev.includes(asset.id) ? prev : [...prev, asset.id])
+      }
+      toast.success("Saved to your library!")
+      await fetchAssets()
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save to library")
+    }
+  }
+
   // Download image to device
   const handleDownloadImage = async (url: string, filename = "image") => {
     try {
@@ -939,12 +983,6 @@ export default function LibraryPage() {
     setSourceFilter(options[nextIndex])
   }
 
-  const handleCycleCategoryFilter = () => {
-    const options = ["all", ...ASSET_CATEGORIES]
-    const nextIndex = (options.indexOf(categoryFilter) + 1) % options.length
-    setCategoryFilter(options[nextIndex])
-  }
-
   const handleCategoryAssign = async () => {
     const finalCategory = pendingCategory || customCategory.trim()
     if (!generatedAssetId || !finalCategory) return
@@ -956,6 +994,18 @@ export default function LibraryPage() {
       setCustomCategory("")
       await fetchAssets()
       toast.success(`Image categorized as "${finalCategory}"`)
+
+      // If custom category (not in preset list), save to localStorage for filter dropdown
+      if (!ASSET_CATEGORIES.includes(finalCategory)) {
+        setCustomCategoryList((prev) => {
+          if (prev.includes(finalCategory)) return prev
+          const updated = [...prev, finalCategory]
+          if (typeof window !== "undefined") {
+            localStorage.setItem("library_custom_categories", JSON.stringify(updated))
+          }
+          return updated
+        })
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to assign category")
     }
@@ -1350,11 +1400,16 @@ export default function LibraryPage() {
                   {getCreatorHandle(asset.id)}
                 </span>
               </div>
+            </div>
 
-              {/* Likes */}
-              <div className="flex items-center gap-1 px-2 py-1 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 text-white/80 pointer-events-auto cursor-pointer" onClick={(e) => { e.preventDefault(); toggleSaved(asset); }}>
-                <Heart className={`h-3 w-3 ${savedIds.includes(asset.id) ? "fill-white text-white" : ""}`} />
-                <span className="text-[9px] font-bold select-none">
+            {/* Top-left Like/Save button (visible on hover) */}
+            <div className="absolute top-3 left-3 z-30 opacity-0 group-hover/card:opacity-100 transition-all duration-300 translate-y-1 group-hover/card:translate-y-0 pointer-events-auto">
+              <div
+                className="flex items-center gap-1 px-2 py-1 bg-black/50 backdrop-blur-md rounded-lg border border-white/10 text-white/80 cursor-pointer hover:bg-black/70 transition-all"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSaved(asset); }}
+              >
+                <Heart className={`h-3.5 w-3.5 ${savedIds.includes(asset.id) ? "fill-red-500 text-red-500" : ""}`} />
+                <span className="text-[10px] font-bold select-none">
                   {getLikesCount(asset.id)}
                 </span>
               </div>
@@ -1389,6 +1444,13 @@ export default function LibraryPage() {
                     title="Download"
                   >
                     <Download className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); handleCopyToLibrary(asset); }}
+                    className="text-white/60 hover:text-emerald-400 transition-colors cursor-pointer"
+                    title="Save to My Library"
+                  >
+                    <FolderPlus className="h-4 w-4" />
                   </button>
                   {!asset.id.startsWith("feat-") && (
                     <button
@@ -2326,18 +2388,67 @@ export default function LibraryPage() {
                 <span>Source: {sourceFilter === "all" ? "All" : sourceFilter === "personal" ? "Personal" : "Community"}</span>
               </button>
 
-              {/* Category filter */}
-              <button
-                onClick={handleCycleCategoryFilter}
-                className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
-                  isDarkMode
-                    ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
-                    : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
-                }`}
-              >
-                <Tag className="h-3.5 w-3.5" />
-                <span>Category: {categoryFilter === "all" ? "All" : categoryFilter}</span>
-              </button>
+              {/* Category filter dropdown */}
+              <div className="relative" ref={categoryDropdownRef}>
+                <button
+                  onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                  className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+                    isDarkMode
+                      ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                      : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                  }`}
+                >
+                  <Tag className="h-3.5 w-3.5" />
+                  <span>Category: {categoryFilter === "all" ? "All" : categoryFilter}</span>
+                  <ChevronDown className={`h-3 w-3 transition-transform ${showCategoryDropdown ? "rotate-180" : ""}`} />
+                </button>
+
+                {showCategoryDropdown && (
+                  <div className={`absolute top-full left-0 mt-2 w-56 rounded-xl border shadow-lg z-50 overflow-hidden ${
+                    isDarkMode ? "bg-[#1a1a1a] border-white/10" : "bg-white border-black/10"
+                  }`}>
+                    <div className="p-2">
+                      <input
+                        type="text"
+                        placeholder="Search categories..."
+                        value={categorySearch}
+                        onChange={(e) => setCategorySearch(e.target.value)}
+                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs outline-none transition-all ${
+                          isDarkMode
+                            ? "bg-white/10 text-white placeholder-white/30 focus:bg-white/15"
+                            : "bg-black/5 text-black placeholder-black/30 focus:bg-black/10"
+                        }`}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {["all", ...ASSET_CATEGORIES, ...customCategoryList]
+                        .filter((cat) => cat === "all" || cat.toLowerCase().includes(categorySearch.toLowerCase()))
+                        .map((cat) => (
+                          <button
+                            key={cat}
+                            onClick={() => { setCategoryFilter(cat); setShowCategoryDropdown(false); setCategorySearch("") }}
+                            className={`w-full text-left px-3 py-2 text-xs font-medium transition-all flex items-center gap-2 ${
+                              categoryFilter === cat
+                                ? isDarkMode
+                                  ? "bg-white/10 text-white"
+                                  : "bg-black/10 text-black"
+                                : isDarkMode
+                                  ? "text-white/60 hover:bg-white/5 hover:text-white"
+                                  : "text-black/60 hover:bg-black/5 hover:text-black"
+                            }`}
+                          >
+                            {cat === "all" ? (
+                              <span>All Categories</span>
+                            ) : (
+                              <span>{cat}</span>
+                            )}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Explore tab toggler (only in featured view) */}
               {activeCategory === "featured" && (
@@ -2929,6 +3040,15 @@ export default function LibraryPage() {
                       title={savedIds.includes(expandedAsset.id) ? "Unsave" : "Save to Personal Folder"}
                     >
                       <Bookmark className={`h-6 w-6 transition-all ${savedIds.includes(expandedAsset.id) ? "fill-blue-500" : ""}`} />
+                    </button>
+
+                    {/* Copy to My Library */}
+                    <button
+                      onClick={() => handleCopyToLibrary(expandedAsset)}
+                      className="text-zinc-650 hover:text-black dark:text-zinc-400 dark:hover:text-white hover:scale-110 active:scale-95 transition-all duration-200"
+                      title="Add to My Library"
+                    >
+                      <FolderPlus className="h-6 w-6" />
                     </button>
                   </div>
                 </div>

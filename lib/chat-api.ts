@@ -2940,6 +2940,22 @@ export async function unsaveAsset(assetId: string) {
   return data
 }
 
+export async function copyAssetToLibrary(assetId: string, assetType: string, assetUrl: string, prompt: string) {
+  const res = await fetch(`${API_BASE}/library/assets/${assetId}/copy-to-library`, {
+    method: "POST",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ asset_type: assetType, asset_url: assetUrl, prompt }),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; new_asset_id?: string; saved?: boolean; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to copy asset.")
+  }
+  return data
+}
+
 // ── Asset Likes & Comments (Social) ──────────────────────────────────────
 
 export interface AssetComment {
