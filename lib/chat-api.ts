@@ -2692,6 +2692,8 @@ export interface LibraryAsset {
   created_at: string
   gallery_id?: string | null
   category?: string | null
+  likes_count?: number
+  is_liked?: boolean
 }
 
 export interface AssetComment {

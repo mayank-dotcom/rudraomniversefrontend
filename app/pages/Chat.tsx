@@ -13,6 +13,7 @@ import {
     PanelLeftOpen, PanelLeftClose, MessageSquarePlus, ListOrdered, Car, MicOff
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
 import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole, getSchoolName, getEnterpriseName, removeUserRole, removeSchoolName, removeEnterpriseName, getProfilePicture } from "@/lib/auth";
 import { useTheme } from "@/lib/theme-context";
@@ -34,6 +35,9 @@ import {
     getSubscriptionStatus,
     getPlanFeatures,
     getFeatureIdForEngine,
+    getNotifications,
+    markNotificationAsRead,
+    type SocialNotification,
     discontinueAccount
 } from "@/lib/chat-api";
 import { processFile, ProcessedFile } from "@/lib/file-processor";
@@ -233,6 +237,7 @@ const LAB_IMAGES_COL_3 = [
 
 const Chat = () => {
     const { t, i18n } = useTranslation();
+    const router = useRouter();
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
@@ -247,6 +252,7 @@ const Chat = () => {
     const [authed, setAuthed] = useState<boolean | null>(null);
     const [showWalkthrough, setShowWalkthrough] = useState(false);
     const [imageGenStatus, setImageGenStatus] = useState<"idle" | "generating" | "completed">("idle");
+    const [notifications, setNotifications] = useState<SocialNotification[]>([]);
     const [showNotificationPanel, setShowNotificationPanel] = useState(false);
     const notificationPanelRef = useRef<HTMLDivElement>(null);
     const [userName, setUserName] = useState<string>("");
@@ -977,6 +983,45 @@ const Chat = () => {
         const interval = setInterval(checkStatus, 1000);
         return () => clearInterval(interval);
     }, []);
+
+    // Load and poll social notifications
+    useEffect(() => {
+        if (!isAuthenticated()) return;
+
+        const fetchNotifs = () => {
+            getNotifications()
+                .then((res) => {
+                    if (res.success && res.notifications) {
+                        setNotifications(res.notifications);
+                    }
+                })
+                .catch((err) => {
+                    console.error("Failed to fetch notifications:", err);
+                });
+        };
+
+        fetchNotifs();
+        const interval = setInterval(fetchNotifs, 15000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleNotificationClick = async (notif: SocialNotification) => {
+        try {
+            setShowNotificationPanel(false);
+            if (!notif.is_read) {
+                await markNotificationAsRead(notif.id);
+                setNotifications(prev =>
+                    prev.map(n => (n.id === notif.id ? { ...n, is_read: true } : n))
+                );
+            }
+            if (typeof window !== "undefined") {
+                localStorage.setItem("expand_asset_id", notif.asset_id);
+                router.push("/library");
+            }
+        } catch (err: any) {
+            console.error("Failed to click notification:", err);
+        }
+    };
 
     // Click outside to close notification panel
     useEffect(() => {
@@ -3230,7 +3275,7 @@ STRICT RULES:
                             </motion.button>
                         )}
 
-                        {/* Notification Bell for Image Generation */}
+                        {/* Notification Bell for Image Generation & Social Notifications */}
                         <div className="relative" ref={notificationPanelRef}>
                                 <motion.button
                                     onClick={() => setShowNotificationPanel(prev => !prev)}
@@ -3240,12 +3285,12 @@ STRICT RULES:
                                             ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
                                             : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
                                         }`}
-                                    title="Image Generation Status"
+                                    title="Notifications"
                                 >
-                                    <Bell className={`h-4 w-4 ${imageGenStatus === "idle" ? "opacity-50" : ""}`} />
-                                    {imageGenStatus !== "idle" && (
+                                    <Bell className="h-4 w-4" />
+                                    {(imageGenStatus === "generating" || notifications.some(n => !n.is_read)) && (
                                         <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0d0d0c] ${
-                                            imageGenStatus === "generating" ? "bg-yellow-400" : "bg-green-500"
+                                            imageGenStatus === "generating" ? "bg-yellow-400" : "bg-red-500"
                                         }`} />
                                     )}
                                 </motion.button>
@@ -3264,33 +3309,88 @@ STRICT RULES:
                                     >
                                         <div className="p-3 space-y-2">
                                             <div className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                Image Generation
+                                                Notifications
                                             </div>
                                             <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                                            {/* Social Notifications */}
+                                            {notifications.length > 0 && (
+                                                <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+                                                    {notifications.map((notif) => (
+                                                        <button
+                                                            key={notif.id}
+                                                            onClick={() => handleNotificationClick(notif)}
+                                                            className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors text-xs relative ${
+                                                                notif.is_read
+                                                                    ? (isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5")
+                                                                    : (isDarkMode ? "bg-white/[0.03] hover:bg-white/5 font-medium" : "bg-black/[0.03] hover:bg-black/5 font-medium")
+                                                            }`}
+                                                        >
+                                                            <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px] text-zinc-650 dark:text-zinc-350">
+                                                                {notif.sender_avatar ? (
+                                                                    <img src={notif.sender_avatar} className="h-full w-full object-cover" alt="" />
+                                                                ) : (
+                                                                    notif.sender_name.slice(0, 2).toUpperCase()
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0 pr-2">
+                                                                <p className="leading-tight text-zinc-900 dark:text-zinc-100">
+                                                                    <span className="font-bold mr-1">{notif.sender_name}</span>
+                                                                    {notif.type === 'like' ? 'liked your image.' : notif.type === 'reply' ? 'replied to your comment.' : notif.type === 'message' ? 'sent you a message.' : (notif.type === 'creation' || notif.type === 'created') ? 'created a new image.' : 'commented on your image.'}
+                                                                </p>
+                                                                {notif.type !== 'like' && notif.content && (
+                                                                    <p className={`text-[10px] truncate mt-1 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                                                                        "{notif.content}"
+                                                                    </p>
+                                                                )}
+                                                                <span className={`text-[9px] block mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                                    {new Date(notif.created_at).toLocaleDateString()}
+                                                                </span>
+                                                            </div>
+                                                            {!notif.is_read && (
+                                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#00DDDD]" />
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+
                                             {imageGenStatus === "generating" && (
-                                                <div className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs">
+                                                <button
+                                                    onClick={() => { setShowNotificationPanel(false); router.push("/library"); }}
+                                                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-xs ${
+                                                        isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
+                                                    }`}
+                                                >
                                                     <Loader2 className="h-4 w-4 animate-spin shrink-0 text-yellow-400" />
                                                     <div className="min-w-0">
                                                         <div className="font-medium truncate">Generating image...</div>
                                                         <div className={`text-[10px] mt-0.5 truncate ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                            <a href="/library" className="underline">Go to Image Library</a>
+                                                            Click to view progress
                                                         </div>
                                                     </div>
-                                                </div>
+                                                </button>
                                             )}
                                             {imageGenStatus === "completed" && (
-                                                <a
-                                                    href="/library"
-                                                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                                                <button
+                                                    onClick={() => { setShowNotificationPanel(false); setImageGenStatus("idle"); if (typeof window !== "undefined") { localStorage.setItem("image_gen_status", "idle"); localStorage.setItem("image_gen_timestamp", String(Date.now())); } router.push("/library"); }}
+                                                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-xs ${
+                                                        isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
+                                                    }`}
                                                 >
                                                     <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />
                                                     <div className="min-w-0">
                                                         <div className="font-medium truncate">Image created!</div>
                                                         <div className={`text-[10px] mt-0.5 truncate ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                            Click to view
+                                                            Click to view in My Gallery
                                                         </div>
                                                     </div>
-                                                </a>
+                                                </button>
+                                            )}
+                                            {imageGenStatus === "idle" && notifications.length === 0 && (
+                                                <div className={`px-3 py-6 text-center text-xs ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                    No notifications
+                                                </div>
                                             )}
                                         </div>
                                     </motion.div>

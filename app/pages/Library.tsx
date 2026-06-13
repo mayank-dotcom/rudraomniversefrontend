@@ -324,6 +324,24 @@ export default function LibraryPage() {
   }, [isPersonalizationModalOpen])
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const expandAssetId = localStorage.getItem("expand_asset_id");
+      if (expandAssetId) {
+        localStorage.removeItem("expand_asset_id");
+        getSingleAsset(expandAssetId)
+          .then((res) => {
+            if (res.success && res.asset) {
+              setExpandedAsset(res.asset);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to expand asset from notification:", err);
+          });
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     setIsSubscriptionLoading(true)
     getSubscriptionStatus()
       .then((res) => {
@@ -684,6 +702,30 @@ export default function LibraryPage() {
     return () => clearInterval(interval)
   }, [])
 
+  // Poll for image generation status from Chat
+  useEffect(() => {
+    const checkStatus = () => {
+      if (typeof window === "undefined") return;
+      const status = localStorage.getItem("image_gen_status");
+      const timestamp = localStorage.getItem("image_gen_timestamp");
+      if (status && timestamp) {
+        const age = Date.now() - Number(timestamp);
+        if (age < 30000) {
+          setGenerationStatus(status as "idle" | "generating" | "completed");
+          if (status === "completed") {
+            setHasNewGeneration(true);
+            fetchAssets();
+          }
+        } else {
+          setGenerationStatus("idle");
+        }
+      }
+    };
+    checkStatus();
+    const interval = setInterval(checkStatus, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleNotificationClick = async (notif: SocialNotification) => {
     try {
       setShowNotificationPanel(false)
@@ -898,18 +940,21 @@ export default function LibraryPage() {
     const id = asset.id
     if (savedIds.includes(id)) {
       try {
-        await unsaveAsset(id)
+        await unlikeAsset(id)
         setSavedIds((prev) => prev.filter((sId) => sId !== id))
+        setAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: Math.max(0, (a.likes_count || 0) - 1), is_liked: false } : a))
+        setPublicAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: Math.max(0, (a.likes_count || 0) - 1), is_liked: false } : a))
         toast.success("Removed from Saved.")
       } catch {
         toast.error("Failed to unsave.")
       }
     } else {
       try {
-        await saveAsset(id, asset.asset_type, asset.asset_url, asset.prompt || "")
+        await likeAsset(id, asset.asset_type, asset.asset_url, asset.prompt || "")
         setSavedIds((prev) => [...prev, id])
+        setAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: (a.likes_count || 0) + 1, is_liked: true } : a))
+        setPublicAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: (a.likes_count || 0) + 1, is_liked: true } : a))
         toast.success("Saved!")
-        if (asset.asset_url) handleDownloadImage(getAssetImageUrl(asset), `saved-${id}`)
       } catch {
         toast.error("Failed to save.")
       }
@@ -1106,7 +1151,12 @@ export default function LibraryPage() {
       const galleriesData = await getLibraryGalleries()
       setGalleries(galleriesData.galleries)
 
-      toast.success(galleryId ? "Image added to gallery folder." : "Image removed from gallery folder.")
+      const isNewSave = !assets.some((a) => a.id === assetId)
+      if (isNewSave) {
+        toast.success("Image saved to gallery.")
+      } else {
+        toast.success(galleryId ? "Image added to gallery folder." : "Image removed from gallery folder.")
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to move image.")
     }
@@ -1225,7 +1275,7 @@ export default function LibraryPage() {
 
     // Apply Personal/Community filter
     if (sourceFilter === "personal") {
-      pool = pool.filter((asset) => !asset.id.startsWith("feat-") && !asset.is_public);
+      pool = pool.filter((asset) => !asset.id.startsWith("feat-") && (isCreatedByMe(asset) || !asset.is_public));
     } else if (sourceFilter === "community") {
       pool = pool.filter((asset) => asset.id.startsWith("feat-") || asset.is_public);
     }
@@ -1326,7 +1376,11 @@ export default function LibraryPage() {
   }
 
   // Likes count mock generator
-  const getLikesCount = (assetId: string) => {
+  const getLikesCount = (asset: LibraryAsset | string) => {
+    const assetId = typeof asset === "string" ? asset : asset.id;
+    if (typeof asset !== "string" && asset.likes_count !== undefined) {
+      return String(asset.likes_count);
+    }
     if (assetId.startsWith("feat-1")) return "261"
     if (assetId.startsWith("feat-2")) return "184"
     if (assetId.startsWith("feat-3")) return "92"
@@ -1468,7 +1522,7 @@ export default function LibraryPage() {
                 >
                   <Heart className={`h-3.5 w-3.5 transition-all ${savedIds.includes(asset.id) ? "fill-red-500 text-red-500 scale-110" : ""}`} />
                   <span className="text-[10px] font-bold select-none">
-                    {getLikesCount(asset.id)}
+                    {getLikesCount(asset)}
                   </span>
                 </button>
               </div>
@@ -2117,11 +2171,13 @@ export default function LibraryPage() {
                               <div className="flex-1 min-w-0 pr-2">
                                 <p className="leading-tight text-zinc-900 dark:text-zinc-100">
                                   <span className="font-bold mr-1">{notif.sender_name}</span>
-                                  commented on your image.
+                                  {notif.type === 'like' ? 'liked your image.' : notif.type === 'reply' ? 'replied to your comment.' : notif.type === 'message' ? 'sent you a message.' : (notif.type === 'creation' || notif.type === 'created') ? 'created a new image.' : 'commented on your image.'}
                                 </p>
-                                <p className={`text-[10px] truncate mt-1 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-                                  "{notif.content}"
-                                </p>
+                                {notif.type !== 'like' && notif.content && (
+                                  <p className={`text-[10px] truncate mt-1 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                                    "{notif.content}"
+                                  </p>
+                                )}
                                 <span className={`text-[9px] block mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
                                   {new Date(notif.created_at).toLocaleDateString()}
                                 </span>
