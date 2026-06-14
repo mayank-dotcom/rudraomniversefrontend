@@ -1633,6 +1633,7 @@ const Chat = () => {
             setEditorColor(selectedNote.page_color || "#ffffff");
             setEditorLined(selectedNote.is_lined || false);
             if (noteEditorRef.current) {
+                document.execCommand("defaultParagraphSeparator", false, "div");
                 noteEditorRef.current.innerHTML = selectedNote.content || "";
                 void renderNoteMath(selectedNote.content || "").then((rendered) => {
                     if (noteEditorRef.current) {
@@ -5478,17 +5479,17 @@ STRICT RULES:
                     <style dangerouslySetInnerHTML={{__html: `
                         .notes-ruled-light {
                             background-image: linear-gradient(rgba(0, 0, 0, 0) 95%, rgba(33, 150, 243, 0.15) 95%) !important;
-                            background-size: 100% 28px !important;
+                            background-size: 100% 1.8em !important;
                             background-repeat: repeat !important;
                             background-position: 0 0 !important;
-                            line-height: 28px !important;
+                            line-height: 1.8 !important;
                         }
                         .notes-ruled-dark {
                             background-image: linear-gradient(rgba(0, 0, 0, 0) 95%, rgba(255, 255, 255, 0.08) 95%) !important;
-                            background-size: 100% 28px !important;
+                            background-size: 100% 1.8em !important;
                             background-repeat: repeat !important;
                             background-position: 0 0 !important;
-                            line-height: 28px !important;
+                            line-height: 1.8 !important;
                         }
                         .notes-ruled-light img, .notes-ruled-dark img {
                             line-height: normal !important;
@@ -5501,14 +5502,25 @@ STRICT RULES:
                         .note-resize-handle-right, .note-resize-handle-left { width: 6px; }
                         .note-resize-handle-top, .note-resize-handle-bottom { height: 6px; }
                         .note-editor-hr {
-                            border: none;
-                            border-top: 1px solid rgba(255,255,255,0.2);
-                            margin: 8px 0;
+                            border: none !important;
+                            border-top: 1px solid rgba(255,255,255,0.2) !important;
+                            margin: 12px 0 !important;
+                            display: block !important;
+                            height: auto !important;
                         }
                         .note-editor-hr-dotted {
-                            border: none;
-                            border-top: 1px dashed rgba(255,255,255,0.3);
-                            margin: 8px 0;
+                            border: none !important;
+                            border-top: 1px dashed rgba(255,255,255,0.3) !important;
+                            margin: 12px 0 !important;
+                            display: block !important;
+                            height: auto !important;
+                        }
+                        .note-content ul, .note-content ol {
+                            padding-left: 24px !important;
+                            margin: 4px 0 !important;
+                        }
+                        .note-content li {
+                            margin: 2px 0 !important;
                         }
                     `}} />
 
@@ -5715,7 +5727,10 @@ STRICT RULES:
 
                             {/* Ordered List */}
                             <button
-                                onClick={() => document.execCommand("insertOrderedList")}
+                                onClick={() => {
+                                    noteEditorRef.current?.focus();
+                                    document.execCommand("insertOrderedList");
+                                }}
                                 className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
                                 title="Numbered List"
                             >
@@ -5724,7 +5739,10 @@ STRICT RULES:
 
                             {/* Unordered List */}
                             <button
-                                onClick={() => document.execCommand("insertUnorderedList")}
+                                onClick={() => {
+                                    noteEditorRef.current?.focus();
+                                    document.execCommand("insertUnorderedList");
+                                }}
                                 className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
                                 title="Bullet List"
                             >
@@ -5792,10 +5810,9 @@ STRICT RULES:
                             {/* Insert Table */}
                             <button
                                 onClick={() => {
-                                    const selection = window.getSelection();
-                                    if (!selection) return;
-                                    const tableHtml = '<table style="width:100%;border-collapse:collapse;border:1px solid #555"><thead><tr><th style="border:1px solid #555;padding:4px">Header 1</th><th style="border:1px solid #555;padding:4px">Header 2</th></tr></thead><tbody><tr><td style="border:1px solid #555;padding:4px">Cell 1</td><td style="border:1px solid #555;padding:4px">Cell 2</td></tr></tbody></table><br>';
-                                    document.execCommand("insertHTML", false, tableHtml);
+                                    if (!noteEditorRef.current) return;
+                                    noteEditorRef.current.focus();
+                                    document.execCommand("insertHTML", false, '<table style="width:100%;border-collapse:collapse;border:1px solid #555;margin:6px 0"><thead><tr><th style="border:1px solid #555;padding:4px">Header 1</th><th style="border:1px solid #555;padding:4px">Header 2</th></tr></thead><tbody><tr><td style="border:1px solid #555;padding:4px">Cell 1</td><td style="border:1px solid #555;padding:4px">Cell 2</td></tr></tbody></table><br>');
                                 }}
                                 className="flex items-center gap-1 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 title="Insert Table"
@@ -5806,8 +5823,9 @@ STRICT RULES:
                             {/* Insert Horizontal Rule / Line */}
                             <button
                                 onClick={() => {
-                                    const hrHtml = '<hr class="note-editor-hr" />';
-                                    document.execCommand("insertHTML", false, hrHtml);
+                                    if (!noteEditorRef.current) return;
+                                    noteEditorRef.current.focus();
+                                    document.execCommand("insertHTML", false, '<hr class="note-editor-hr" /><br>');
                                 }}
                                 className="flex items-center gap-1 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 title="Insert regular line"
@@ -5816,8 +5834,9 @@ STRICT RULES:
                             </button>
                             <button
                                 onClick={() => {
-                                    const hrHtml = '<hr class="note-editor-hr-dotted" />';
-                                    document.execCommand("insertHTML", false, hrHtml);
+                                    if (!noteEditorRef.current) return;
+                                    noteEditorRef.current.focus();
+                                    document.execCommand("insertHTML", false, '<hr class="note-editor-hr-dotted" /><br>');
                                 }}
                                 className="flex items-center gap-1 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 title="Insert dotted line"
@@ -6121,6 +6140,11 @@ STRICT RULES:
                                                             }
                                                         }
                                                         if (noteEditorRef.current) {
+                                                            void renderNoteMath(noteEditorRef.current.innerHTML).then((rendered) => {
+                                                                if (noteEditorRef.current) {
+                                                                    noteEditorRef.current.innerHTML = rendered;
+                                                                }
+                                                            });
                                                             void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
                                                         }
                                                         toast.success("Text rewritten!");
@@ -6199,7 +6223,7 @@ STRICT RULES:
                                         fontFamily: "Poppins, Roboto, sans-serif",
                                         minHeight: "100%",
                                     }}
-                                    className={`p-6 outline-none text-xs pb-24 font-normal ${
+                                    className={`note-content p-6 outline-none text-xs pb-24 font-normal ${
                                         editorLined
                                             ? editorColor === "#1a1a1a" || editorColor === "#201b2b"
                                                 ? "notes-ruled-dark"
@@ -6333,7 +6357,7 @@ STRICT RULES:
                                         ],
                                         modality: "image_gen"
                                     });
-                                    const imageResponse = (res as any)?.response || "";
+                                    const imageResponse = (res as any)?.response || (res as any)?.data?.[0]?.message?.content || (res as any)?.data?.[0]?.text || "";
                                     if (imageResponse && noteEditorRef.current && selectedNote) {
                                         const urlMatch = imageResponse.match(/https?:\/\/[^\s\)\]]+/);
                                         const finalUrl = urlMatch ? urlMatch[0] : imageResponse;
@@ -6350,7 +6374,7 @@ STRICT RULES:
                                             }
                                         } catch {}
                                     } else {
-                                        toast.error("No image generated. Try a different prompt.");
+                                        toast.error("No image generated. Response format: " + JSON.stringify(res).substring(0, 200));
                                     }
                                 } catch (err) {
                                     console.error(err);
