@@ -924,6 +924,8 @@ export default function LibraryPage() {
     }
   }
 
+  const notificationsInitialFetchRef = useRef(true)
+
   // Load and poll notifications
   useEffect(() => {
     if (!isAuthenticated()) return
@@ -932,7 +934,18 @@ export default function LibraryPage() {
       getNotifications()
         .then((res) => {
           if (res.success && res.notifications) {
-            setNotifications(res.notifications)
+            setNotifications((prev) => {
+              const prevIds = prev.map((n) => n.id)
+              const hasNew = res.notifications.some((n: any) => !prevIds.includes(n.id))
+              if (hasNew && !notificationsInitialFetchRef.current) {
+                const audio = new Audio("/noti.mp3")
+                audio.play().catch((err) => console.log("Notification sound autoplay blocked or failed:", err))
+              }
+              return res.notifications
+            })
+            if (notificationsInitialFetchRef.current) {
+              notificationsInitialFetchRef.current = false
+            }
           }
         })
         .catch((err) => {

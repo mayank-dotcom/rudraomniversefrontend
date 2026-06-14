@@ -260,8 +260,7 @@ function ArenaContent() {
         }
     }, []);
 
-    const playSoundRef = useRef(playSwordSound);
-    playSoundRef.current = playSwordSound;
+
 
     useEffect(() => {
         if (phase === "active" && questions.length > 0) {
@@ -272,10 +271,13 @@ function ArenaContent() {
 
     useEffect(() => {
         if (phase === "finished") {
-            const timer = setTimeout(() => playSwordSound(), 300);
+            const timer = setTimeout(() => {
+                const audio = new Audio("/battle_arena_final.mp3");
+                audio.play().catch((err) => console.log("Final sound autoplay blocked:", err));
+            }, 300);
             return () => clearTimeout(timer);
         }
-    }, [phase, playSwordSound]);
+    }, [phase]);
 
     const userNameRef = useRef<string>(userName);
     useEffect(() => {
@@ -396,7 +398,8 @@ function ArenaContent() {
         socket.on("arena_finished", (data) => {
             setLeaderboard(data.leaderboard);
             setPhase("finished");
-            playSoundRef.current();
+            const audio = new Audio("/battle_arena_final.mp3");
+            audio.play().catch((err) => console.log("Final sound autoplay blocked:", err));
         });
 
         socket.on("error", (data) => {

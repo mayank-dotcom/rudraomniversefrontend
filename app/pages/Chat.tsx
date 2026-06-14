@@ -984,6 +984,8 @@ const Chat = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const chatNotificationsInitialFetchRef = useRef(true);
+
     // Load and poll social notifications
     useEffect(() => {
         if (!isAuthenticated()) return;
@@ -992,7 +994,18 @@ const Chat = () => {
             getNotifications()
                 .then((res) => {
                     if (res.success && res.notifications) {
-                        setNotifications(res.notifications);
+                        setNotifications((prev) => {
+                            const prevIds = prev.map((n) => n.id);
+                            const hasNew = res.notifications.some((n: any) => !prevIds.includes(n.id));
+                            if (hasNew && !chatNotificationsInitialFetchRef.current) {
+                                const audio = new Audio("/noti.mp3");
+                                audio.play().catch((err) => console.log("Notification sound autoplay blocked or failed:", err));
+                            }
+                            return res.notifications;
+                        });
+                        if (chatNotificationsInitialFetchRef.current) {
+                            chatNotificationsInitialFetchRef.current = false;
+                        }
                     }
                 })
                 .catch((err) => {
