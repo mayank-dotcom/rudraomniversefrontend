@@ -309,8 +309,8 @@ function EnterpriseAdminPageInner() {
 
   if (isAuthenticated === null) {
     return (
-      <div className={`min-h-screen flex items-center justify-center font-mono transition-colors duration-300 ${
-        isDarkMode ? "bg-[#060606] text-white" : "bg-[#FFF5EA] text-black"
+      <div className={`admin-portal-page ${isDarkMode ? "dark-mode" : "light-mode"} min-h-screen flex items-center justify-center font-mono transition-colors duration-300 ${
+        isDarkMode ? "bg-[#0d0d0c] text-white" : "bg-[#ebeae7] text-black"
       }`}>
         <div className="flex flex-col items-center gap-4">
           <RefreshCw className="h-8 w-8 text-orange-500 animate-spin" />
@@ -321,8 +321,8 @@ function EnterpriseAdminPageInner() {
   }
 
   return (
-    <div className={`min-h-screen font-sans selection:bg-orange-500 selection:text-black relative overflow-x-hidden pb-12 transition-colors duration-300 ${
-      isDarkMode ? "bg-[#060606] text-white" : "bg-[#FFF5EA] text-black"
+    <div className={`admin-portal-page ${isDarkMode ? "dark-mode" : "light-mode"} min-h-screen font-sans selection:bg-orange-500 selection:text-black relative overflow-x-hidden pb-12 transition-colors duration-300 ${
+      isDarkMode ? "bg-[#0d0d0c] text-white" : "bg-[#ebeae7] text-black"
     }`}>
       <div className={`absolute inset-0 pointer-events-none transition-colors duration-300 ${
         isDarkMode ? "bg-[radial-gradient(ellipse_at_top_right,rgba(249,115,22,0.03),transparent_50%)]" : ""

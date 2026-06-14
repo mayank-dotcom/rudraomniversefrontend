@@ -8,8 +8,11 @@ import { removeApiKey } from "@/lib/auth"
 import { createSchoolFaculty, getSchoolFaculty, getSchoolStats, getSchoolStudents, SchoolFacultyMember, SchoolStudent, deleteSchoolFaculty, deleteSchoolStudent, freezeUser, getFrozenUsers, unfreezeUser } from "@/lib/chat-api"
 import { toast } from "sonner"
 
-const StatCard = ({ title, value, icon: Icon, color, subtext, isDarkMode }: { title: string, value: any, icon: any, color: string, subtext?: string, isDarkMode: boolean }) => (
-    <div className={`relative border rounded-[2.5rem] p-8 overflow-hidden group ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/30" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"}`}>
+const StatCard = ({ title, value, icon: Icon, color, subtext, isDarkMode, onClick }: { title: string, value: any, icon: any, color: string, subtext?: string, isDarkMode: boolean, onClick?: () => void }) => (
+    <div 
+        onClick={onClick}
+        className={`relative border rounded-[2.5rem] p-8 overflow-hidden group ${onClick ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : ''} transition-all duration-300 ${isDarkMode ? "bg-gradient-to-br from-zinc-900 via-black to-zinc-900 border-white/30" : "bg-gradient-to-br from-zinc-100 via-white to-zinc-100 border-zinc-800/50"}`}
+    >
         <div className={`absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.03)_55%,transparent_100%)] pointer-events-none`} />
         <div className="absolute inset-0 -translate-y-full group-hover:translate-y-full transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none" />
         <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${isDarkMode ? "opacity-40 text-white" : "opacity-60 text-black"}`}>{title}</span>
@@ -270,7 +273,7 @@ export default function SchoolAdminPage() {
     const sectioned = sectionFilter ? combined.filter(item => item.type !== "Student" || item.codeOrClass === sectionFilter) : combined
     const q = query.trim().toLowerCase()
     const filtered = !q ? sectioned : sectioned.filter(item =>
-      [item.name, item.contact, item.codeOrClass, item.type].some(v => v.toLowerCase().includes(q))
+      [item.name || "", item.contact || "", item.codeOrClass || "", item.type || ""].some(v => (v || "").toLowerCase().includes(q))
     )
     return filtered.sort((a, b) => {
       const cmp = a.name.localeCompare(b.name)
@@ -283,14 +286,14 @@ export default function SchoolAdminPage() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a]" : "bg-white"} flex items-center justify-center`}>
+      <div className={`admin-portal-page ${isDarkMode ? "dark-mode" : "light-mode"} min-h-screen ${isDarkMode ? "bg-[#0d0d0c]" : "bg-[#ebeae7]"} flex items-center justify-center`}>
         <div className="h-8 w-8 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className={`h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} font-sans selection:bg-white selection:text-black overflow-hidden flex flex-col transition-colors duration-500`}>
+    <div className={`admin-portal-page ${isDarkMode ? "dark-mode" : "light-mode"} h-screen w-full ${isDarkMode ? "bg-[#0d0d0c] text-white" : "bg-[#ebeae7] text-black"} font-sans selection:bg-white selection:text-black overflow-hidden flex flex-col transition-colors duration-500`}>
       <div className={`absolute inset-0 noise opacity-[0.03] pointer-events-none ${isDarkMode ? "" : "invert"}`} />
 
       {/* Top Navigation */}
@@ -308,13 +311,25 @@ export default function SchoolAdminPage() {
 
           <div className={`flex items-center gap-1 p-1 rounded-2xl border ${isDarkMode ? "border-white/30 bg-white/5" : "border-black/10 bg-black/5"}`}>
             <button
-              onClick={() => { setDisplayMode('dashboard'); setCurrentPage(1) }}
-              className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${displayMode === 'dashboard' ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold") : "opacity-40 hover:opacity-100"}`}
+              onClick={() => { setDisplayMode('dashboard'); setView('overview'); setCurrentPage(1); setQuery("") }}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${displayMode === 'dashboard' && view === 'overview' ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold") : "opacity-40 hover:opacity-100"}`}
             >
               <LayoutDashboard className="h-3.5 w-3.5 inline-block mr-1.5 -mt-0.5" /> Dashboard
             </button>
             <button
-              onClick={() => { setDisplayMode('table'); setCurrentPage(1) }}
+              onClick={() => { setDisplayMode('dashboard'); setView('faculty'); setCurrentPage(1); setQuery("") }}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${displayMode === 'dashboard' && view === 'faculty' ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold") : "opacity-40 hover:opacity-100"}`}
+            >
+              <Users className="h-3.5 w-3.5 inline-block mr-1.5 -mt-0.5" /> Faculty
+            </button>
+            <button
+              onClick={() => { setDisplayMode('dashboard'); setView('students'); setCurrentPage(1); setQuery("") }}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${displayMode === 'dashboard' && view === 'students' ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold") : "opacity-40 hover:opacity-100"}`}
+            >
+              <GraduationCap className="h-3.5 w-3.5 inline-block mr-1.5 -mt-0.5" /> Students
+            </button>
+            <button
+              onClick={() => { setDisplayMode('table'); setCurrentPage(1); setQuery("") }}
               className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-[0.2em] transition-all ${displayMode === 'table' ? (isDarkMode ? "bg-white text-black font-bold" : "bg-black text-white font-bold") : "opacity-40 hover:opacity-100"}`}
             >
               <Database className="h-3.5 w-3.5 inline-block mr-1.5 -mt-0.5" /> Table
@@ -396,14 +411,20 @@ export default function SchoolAdminPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <div className={`flex items-center justify-between p-4 rounded-2xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                    <div 
+                      onClick={() => { setDisplayMode('dashboard'); setView('students'); setCurrentPage(1); setQuery("") }}
+                      className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}
+                    >
                       <div className="flex items-center gap-3">
                         <GraduationCap className="h-4 w-4 text-blue-400" />
                         <span className="text-[10px] font-mono uppercase tracking-widest opacity-60">Students</span>
                       </div>
                       <span className="text-lg font-display font-black">{stats.total_students}</span>
                     </div>
-                    <div className={`flex items-center justify-between p-4 rounded-2xl ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                    <div 
+                      onClick={() => { setDisplayMode('dashboard'); setView('faculty'); setCurrentPage(1); setQuery("") }}
+                      className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}
+                    >
                       <div className="flex items-center gap-3">
                         <Users className="h-4 w-4 text-emerald-400" />
                         <span className="text-[10px] font-mono uppercase tracking-widest opacity-60">Faculty</span>
@@ -455,8 +476,22 @@ export default function SchoolAdminPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <StatCard title="Total Students" value={stats.total_students} icon={GraduationCap} color="#3b82f6" isDarkMode={isDarkMode} />
-                    <StatCard title="Total Faculty" value={stats.total_faculty} icon={Users} color="#10b981" isDarkMode={isDarkMode} />
+                    <StatCard 
+                      title="Total Students" 
+                      value={stats.total_students} 
+                      icon={GraduationCap} 
+                      color="#3b82f6" 
+                      isDarkMode={isDarkMode} 
+                      onClick={() => { setDisplayMode('dashboard'); setView('students'); setCurrentPage(1); setQuery("") }}
+                    />
+                    <StatCard 
+                      title="Total Faculty" 
+                      value={stats.total_faculty} 
+                      icon={Users} 
+                      color="#10b981" 
+                      isDarkMode={isDarkMode} 
+                      onClick={() => { setDisplayMode('dashboard'); setView('faculty'); setCurrentPage(1); setQuery("") }}
+                    />
                     <StatCard title="Active Chats" value={stats.leaderboard.reduce((sum, l) => sum + (l.daily_chats || 0), 0)} icon={MessageSquare} color="#f59e0b" isDarkMode={isDarkMode} />
                     <StatCard title="Top Student" value={stats.leaderboard[0]?.name || "N/A"} icon={TrendingUp} color="#8b5cf6" isDarkMode={isDarkMode} />
                   </div>

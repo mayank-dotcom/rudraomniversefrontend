@@ -237,14 +237,14 @@ export default function SchoolFacultyAdminPage() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a]" : "bg-white"} flex items-center justify-center`}>
+      <div className={`admin-portal-page ${isDarkMode ? "dark-mode" : "light-mode"} min-h-screen ${isDarkMode ? "bg-[#0d0d0c]" : "bg-[#ebeae7]"} flex items-center justify-center`}>
         <div className="h-8 w-8 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className={`h-screen w-full ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"} font-sans selection:bg-white selection:text-black overflow-hidden flex flex-col transition-colors duration-500`}>
+    <div className={`admin-portal-page ${isDarkMode ? "dark-mode" : "light-mode"} h-screen w-full ${isDarkMode ? "bg-[#0d0d0c] text-white" : "bg-[#ebeae7] text-black"} font-sans selection:bg-white selection:text-black overflow-hidden flex flex-col transition-colors duration-500`}>
       <div className={`absolute inset-0 noise opacity-[0.03] pointer-events-none ${isDarkMode ? "" : "invert"}`} />
 
       {/* Top Navigation */}

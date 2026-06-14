@@ -723,3 +723,140 @@ body {
   background-color: transparent !important;
   background: transparent !important;
 }
+
+/* ==========================================================================
+   ADMIN PORTALS THEME STYLING OVERRIDES (LIGHT & DARK MODE)
+   ========================================================================== */
+
+/* 1. Global / Root overrides */
+.admin-portal-page.light-mode {
+  background-color: #ebeae7 !important;
+  color: #1a1a19 !important;
+}
+.admin-portal-page.dark-mode {
+  background-color: #0d0d0c !important;
+  color: #f5f5f4 !important;
+}
+
+/* 2. Nav & Header */
+.admin-portal-page.light-mode nav {
+  background-color: rgba(251, 250, 248, 0.8) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+  color: #1a1a19 !important;
+}
+.admin-portal-page.dark-mode nav {
+  background-color: rgba(22, 22, 21, 0.8) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+  color: #f5f5f4 !important;
+}
+
+/* 3. Cards & Box Containers */
+.admin-portal-page.light-mode div.rounded-\[2\.5rem\],
+.admin-portal-page.light-mode div.rounded-\[3rem\],
+.admin-portal-page.light-mode div.rounded-3xl,
+.admin-portal-page.light-mode div.rounded-2xl,
+.admin-portal-page.light-mode main .border {
+  background-color: #fbfaf8 !important;
+  background-image: none !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #1a1a19 !important;
+}
+.admin-portal-page.dark-mode div.rounded-\[2\.5rem\],
+.admin-portal-page.dark-mode div.rounded-\[3rem\],
+.admin-portal-page.dark-mode div.rounded-3xl,
+.admin-portal-page.dark-mode div.rounded-2xl,
+.admin-portal-page.dark-mode main .border {
+  background-color: #161615 !important;
+  background-image: none !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #f5f5f4 !important;
+}
+
+/* 4. Form Modals and overlays */
+.admin-portal-page.light-mode .bg-zinc-950,
+.admin-portal-page.light-mode .bg-black\/50,
+.admin-portal-page.light-mode .bg-black\/80 {
+  background-color: rgba(0, 0, 0, 0.45) !important;
+}
+.admin-portal-page.light-mode div.fixed div.bg-zinc-950,
+.admin-portal-page.light-mode div.fixed div.bg-zinc-900,
+.admin-portal-page.light-mode div.fixed div.bg-black {
+  background-color: #fbfaf8 !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: #1a1a19 !important;
+}
+
+/* 5. Inputs, selects, textareas in Light Mode */
+.admin-portal-page.light-mode input,
+.admin-portal-page.light-mode select,
+.admin-portal-page.light-mode textarea {
+  background-color: #ffffff !important;
+  color: #1a1a19 !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+.admin-portal-page.light-mode input::placeholder,
+.admin-portal-page.light-mode textarea::placeholder {
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
+/* 6. Contrast correction in Light Mode */
+.admin-portal-page.light-mode .text-white:not(button):not(a):not(.btn),
+.admin-portal-page.light-mode h1,
+.admin-portal-page.light-mode h2,
+.admin-portal-page.light-mode h3,
+.admin-portal-page.light-mode h4,
+.admin-portal-page.light-mode h5,
+.admin-portal-page.light-mode h6,
+.admin-portal-page.light-mode th,
+.admin-portal-page.light-mode td,
+.admin-portal-page.light-mode span:not(button):not(a):not(.btn),
+.admin-portal-page.light-mode p:not(button):not(a):not(.btn),
+.admin-portal-page.light-mode label {
+  color: #1a1a19 !important;
+}
+
+.admin-portal-page.light-mode .text-white\/90:not(button):not(a):not(.btn) { color: rgba(26, 26, 25, 0.9) !important; }
+.admin-portal-page.light-mode .text-white\/80:not(button):not(a):not(.btn) { color: rgba(26, 26, 25, 0.8) !important; }
+.admin-portal-page.light-mode .text-white\/70:not(button):not(a):not(.btn) { color: rgba(26, 26, 25, 0.7) !important; }
+.admin-portal-page.light-mode .text-white\/60:not(button):not(a):not(.btn) { color: rgba(26, 26, 25, 0.6) !important; }
+.admin-portal-page.light-mode .text-white\/50:not(button):not(a):not(.btn) { color: rgba(26, 26, 25, 0.5) !important; }
+.admin-portal-page.light-mode .text-white\/45:not(button):not(a):not(.btn) { color: rgba(26, 26, 25, 0.45) !important; }
+.admin-portal-page.light-mode .text-white\/40:not(button):not(a):not(.btn) { color: rgba(26, 26, 25, 0.4) !important; }
+.admin-portal-page.light-mode .text-white\/30:not(button):not(a):not(.btn) { color: rgba(26, 26, 25, 0.3) !important; }
+.admin-portal-page.light-mode .text-white\/20:not(button):not(a):not(.btn) { color: rgba(26, 26, 25, 0.2) !important; }
+.admin-portal-page.light-mode .text-white\/10:not(button):not(a):not(.btn) { color: rgba(26, 26, 25, 0.1) !important; }
+
+.admin-portal-page.light-mode .text-zinc-400 { color: #555552 !important; }
+.admin-portal-page.light-mode .text-zinc-500 { color: #666663 !important; }
+.admin-portal-page.light-mode .text-gray-400 { color: #555552 !important; }
+
+/* 7. Tables */
+.admin-portal-page.light-mode table {
+  color: #1a1a19 !important;
+}
+.admin-portal-page.light-mode tr:hover {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+.admin-portal-page.light-mode th {
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+.admin-portal-page.light-mode td {
+  border-bottom-color: rgba(0, 0, 0, 0.05) !important;
+  color: #1a1a19 !important;
+}
+
+.admin-portal-page.dark-mode table {
+  color: #f5f5f4 !important;
+}
+.admin-portal-page.dark-mode tr:hover {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+.admin-portal-page.dark-mode th {
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+.admin-portal-page.dark-mode td {
+  border-bottom-color: rgba(255, 255, 255, 0.05) !important;
+  color: #f5f5f4 !important;
+}
