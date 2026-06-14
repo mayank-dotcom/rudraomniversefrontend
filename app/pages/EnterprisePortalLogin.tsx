@@ -4,7 +4,7 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { Building2, Lock, User, Briefcase, Users, Shield, KeyRound, Smartphone } from "lucide-react"
-import Navbar from "@/components/ui/Navbar"
+import Navbar from "@/components/Navbar"
 import { loginEnterprise, loginByAdminCode } from "@/lib/chat-api"
 import { setApiKey, setUserInfo, setUserRole, setEnterpriseName, setSchoolName } from "@/lib/auth"
 import { useTheme } from "@/lib/theme-context"
@@ -98,7 +98,7 @@ export default function EnterprisePortalLogin() {
         }`}>
             <div className="absolute inset-0 noise opacity-[0.02] pointer-events-none" />
 
-            <Navbar onAuthClick={() => window.location.href = "/"} />
+            <Navbar visible={true} />
 
             <div className="pt-40 pb-20 px-6 md:px-20 flex items-center justify-center">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="w-full max-w-md">

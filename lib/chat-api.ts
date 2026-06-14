@@ -3107,4 +3107,93 @@ export async function getLikesCounts() {
   return data
 }
 
+export interface Note {
+  id: string
+  user_id: string
+  title: string
+  content: string
+  drawing_data: string
+  page_color: string
+  is_lined: boolean
+  created_at: string
+  updated_at: string
+}
 
+export interface NotesResponse {
+  success: boolean
+  notes?: Note[]
+  note?: Note
+  error?: string
+}
+
+export async function getNotes() {
+  const res = await fetch(`${API_BASE}/notes`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<NotesResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch notes.")
+  }
+  return data
+}
+
+export async function createNote(payload: Partial<Note>) {
+  const res = await fetch(`${API_BASE}/notes`, {
+    method: "POST",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<NotesResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to create note.")
+  }
+  return data
+}
+
+export async function updateNote(id: string, payload: Partial<Note>) {
+  const res = await fetch(`${API_BASE}/notes/${id}`, {
+    method: "PUT",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<NotesResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to update note.")
+  }
+  return data
+}
+
+export async function deleteNote(id: string) {
+  const res = await fetch(`${API_BASE}/notes/${id}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; message?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to delete note.")
+  }
+  return data
+}
+
+export async function aiRewriteNote(text: string, instruction: string) {
+  const res = await fetch(`${API_BASE}/notes/ai-rewrite`, {
+    method: "POST",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ text, instruction }),
+  })
+  const data = await parseJson<{ success: boolean; rewrittenText?: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to rewrite note text.")
+  }
+  return data
+}

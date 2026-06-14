@@ -38,7 +38,13 @@ import {
     getNotifications,
     markNotificationAsRead,
     type SocialNotification,
-    discontinueAccount
+    discontinueAccount,
+    getNotes,
+    createNote,
+    updateNote,
+    deleteNote,
+    aiRewriteNote,
+    type Note
 } from "@/lib/chat-api";
 import { processFile, ProcessedFile } from "@/lib/file-processor";
 import { toast } from "sonner";
@@ -313,7 +319,27 @@ const Chat = () => {
     const [sidebarTab, setSidebarTab] = useState<"history" | "modes">("history");
     const [rightSidebarTab, setRightSidebarTab] = useState<"usage" | "gmail" | "wallet">("usage");
     const [isEnterpriseMode, setIsEnterpriseMode] = useState(false);
-    const [sidebarView, setSidebarView] = useState<"chat" | "mail">("chat");
+    const [sidebarView, setSidebarView] = useState<"chat" | "mail" | "notes">("chat");
+    const [notes, setNotes] = useState<Note[]>([]);
+    const [loadingNotes, setLoadingNotes] = useState(false);
+    const [searchNoteQuery, setSearchNoteQuery] = useState("");
+    const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+    const [isNoteEditorOpen, setIsNoteEditorOpen] = useState(false);
+    const [isNotePopup, setIsNotePopup] = useState(false);
+    const [isNoteMaximized, setIsNoteMaximized] = useState(false);
+    const [notePopupPosition, setNotePopupPosition] = useState({ x: 100, y: 100 });
+    const [notePopupSize, setNotePopupSize] = useState({ width: 600, height: 500 });
+    const [editorTitle, setEditorTitle] = useState("");
+    const [editorColor, setEditorColor] = useState("#ffffff");
+    const [editorLined, setEditorLined] = useState(false);
+    const [showWhiteboard, setShowWhiteboard] = useState(false);
+    const [showAiRewrite, setShowAiRewrite] = useState(false);
+    const [aiRewriteInstruction, setAiRewriteInstruction] = useState("");
+    const [aiRewriting, setAiRewriting] = useState(false);
+    const [isDraggingNote, setIsDraggingNote] = useState(false);
+    const [noteDragOffset, setNoteDragOffset] = useState({ x: 0, y: 0 });
+    const [isResizingNote, setIsResizingNote] = useState(false);
+    const [noteResizeOffset, setNoteResizeOffset] = useState({ startX: 0, startY: 0, startW: 0, startH: 0 });
     const [gmailConnected, setGmailConnected] = useState(false);
     const [gmailEmail, setGmailEmail] = useState("");
     const [gmailEmails, setGmailEmails] = useState<any[]>([]);
@@ -353,6 +379,7 @@ const Chat = () => {
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState("");
     const editingInputRef = useRef<HTMLInputElement>(null);
+    const noteEditorRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [showScrollToBottom, setShowScrollToBottom] = useState(false);
     const mainScrollRef = useRef<HTMLElement>(null);
@@ -1301,6 +1328,198 @@ const Chat = () => {
     const handleCancelEditing = () => {
         setEditingChatId(null);
         setEditingTitle("");
+    };
+
+    const fetchNotes = useCallback(async () => {
+        setLoadingNotes(true);
+        try {
+            const res = await getNotes();
+            if (res.success && res.notes) {
+                setNotes(res.notes);
+            }
+        } catch (error) {
+            console.error("Failed to load notes:", error);
+            toast.error("Failed to load notes.");
+        } finally {
+            setLoadingNotes(false);
+        }
+    }, []);
+
+    const handleCreateNote = async () => {
+        try {
+            const res = await createNote({
+                title: "New Note",
+                content: "",
+                drawing_data: "",
+                page_color: "#ffffff",
+                is_lined: false,
+            });
+            if (res.success && res.note) {
+                setNotes((prev) => [res.note!, ...prev]);
+                setSelectedNote(res.note);
+                setIsNoteEditorOpen(true);
+                toast.success("Note created!");
+            }
+        } catch (error) {
+            console.error("Failed to create note:", error);
+            toast.error("Failed to create note.");
+        }
+    };
+
+    const handleUpdateNote = async (id: string, updates: Partial<Note>) => {
+        try {
+            const res = await updateNote(id, updates);
+            if (res.success && res.note) {
+                setNotes((prev) =>
+                    prev.map((n) => (n.id === id ? { ...n, ...updates } : n))
+                );
+                if (selectedNote && selectedNote.id === id) {
+                    setSelectedNote((prev) => (prev ? { ...prev, ...updates } : null));
+                }
+            }
+        } catch (error) {
+            console.error("Failed to update note:", error);
+        }
+    };
+
+    const handleDeleteNote = async (id: string) => {
+        if (!window.confirm("Are you sure you want to delete this note?")) return;
+        try {
+            const res = await deleteNote(id);
+            if (res.success) {
+                setNotes((prev) => prev.filter((n) => n.id !== id));
+                if (selectedNote && selectedNote.id === id) {
+                    setSelectedNote(null);
+                    setIsNoteEditorOpen(false);
+                }
+                toast.success("Note deleted!");
+            }
+        } catch (error) {
+            console.error("Failed to delete note:", error);
+            toast.error("Failed to delete note.");
+        }
+    };
+
+    useEffect(() => {
+        if (sidebarView === "notes" && !isEnterpriseModeActive) {
+            void fetchNotes();
+        }
+    }, [sidebarView, isEnterpriseModeActive, fetchNotes]);
+
+    useEffect(() => {
+        const handlePointerMove = (e: PointerEvent) => {
+            if (isDraggingNote) {
+                setNotePopupPosition({
+                    x: e.clientX - noteDragOffset.x,
+                    y: e.clientY - noteDragOffset.y,
+                });
+            } else if (isResizingNote) {
+                const deltaX = e.clientX - noteResizeOffset.startX;
+                const deltaY = e.clientY - noteResizeOffset.startY;
+                setNotePopupSize({
+                    width: Math.max(300, noteResizeOffset.startW + deltaX),
+                    height: Math.max(300, noteResizeOffset.startH + deltaY),
+                });
+            }
+        };
+
+        const handlePointerUp = () => {
+            setIsDraggingNote(false);
+            setIsResizingNote(false);
+        };
+
+        if (isDraggingNote || isResizingNote) {
+            document.addEventListener("pointermove", handlePointerMove);
+            document.addEventListener("pointerup", handlePointerUp);
+        }
+
+        return () => {
+            document.removeEventListener("pointermove", handlePointerMove);
+            document.removeEventListener("pointerup", handlePointerUp);
+        };
+    }, [isDraggingNote, isResizingNote, noteDragOffset, noteResizeOffset]);
+
+    useEffect(() => {
+        if (selectedNote) {
+            setEditorTitle(selectedNote.title || "Untitled Note");
+            setEditorColor(selectedNote.page_color || "#ffffff");
+            setEditorLined(selectedNote.is_lined || false);
+        }
+    }, [selectedNote]);
+
+    const exportAsTxt = () => {
+        if (!selectedNote) return;
+        const text = noteEditorRef.current?.innerText || "";
+        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${editorTitle || "Untitled Note"}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    const exportAsPdf = () => {
+        if (!selectedNote) return;
+        const title = editorTitle || "Untitled Note";
+        const content = noteEditorRef.current?.innerHTML || "";
+        const pageColor = editorColor || "#ffffff";
+        const isLined = editorLined;
+        
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+            toast.error("Popup blocked! Please allow popups to export PDF.");
+            return;
+        }
+        
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>\${title}</title>
+                <style>
+                    body {
+                        font-family: 'Poppins', 'Roboto', sans-serif;
+                        padding: 40px;
+                        color: \${pageColor === "#1a1a1a" || pageColor === "#201b2b" ? "#f5f5f4" : "#1a1a19"};
+                        background-color: \${pageColor};
+                        margin: 0;
+                    }
+                    h1 {
+                        font-size: 24px;
+                        margin-bottom: 20px;
+                        border-bottom: 2px solid \${pageColor === "#1a1a1a" || pageColor === "#201b2b" ? "#333" : "#eee"};
+                        padding-bottom: 10px;
+                    }
+                    .lined-paper {
+                        background: linear-gradient(rgba(0, 0, 0, 0) 95%, rgba(33, 150, 243, 0.15) 95%) 0 0 / 100% 28px repeat;
+                        line-height: 28px;
+                    }
+                    img {
+                        max-width: 100%;
+                        height: auto;
+                        border-radius: 8px;
+                        margin: 15px 0;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="\${isLined ? 'lined-paper' : ''}">
+                    <h1>\${title}</h1>
+                    <div style="font-size: 14px; line-height: 1.6;">\${content}</div>
+                </div>
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        window.close();
+                    };
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
     };
 
     const handleRenameChat = async () => {
@@ -2773,7 +2992,7 @@ STRICT RULES:
                         </div>
 
                         {/* Enterprise Mail/Chat Toggle */}
-                        {isEnterpriseModeActive && (
+                        {isEnterpriseModeActive ? (
                             <div className={`px-4 pt-3 pb-1 flex items-center gap-1 border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
                                 <button
                                     onClick={() => setSidebarView("chat")}
@@ -2799,10 +3018,33 @@ STRICT RULES:
                                     Mail
                                 </button>
                             </div>
+                        ) : (
+                            <div className={`px-4 pt-3 pb-1 flex items-center gap-1 border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                <button
+                                    onClick={() => setSidebarView("chat")}
+                                    className={`flex-1 py-2 text-[10px] font-mono uppercase tracking-[0.15em] rounded-lg transition-all ${sidebarView === "chat" || sidebarView === "mail"
+                                        ? (isDarkMode ? "bg-white/10 text-white font-bold" : "bg-black/10 text-black font-bold")
+                                        : (isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black")
+                                    }`}
+                                >
+                                    <MessageSquare className="h-3.5 w-3.5 inline mr-1.5" />
+                                    Chats
+                                </button>
+                                <button
+                                    onClick={() => setSidebarView("notes")}
+                                    className={`flex-1 py-2 text-[10px] font-mono uppercase tracking-[0.15em] rounded-lg transition-all ${sidebarView === "notes"
+                                        ? (isDarkMode ? "bg-white/10 text-white font-bold" : "bg-black/10 text-black font-bold")
+                                        : (isDarkMode ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black")
+                                    }`}
+                                >
+                                    <FileIcon className="h-3.5 w-3.5 inline mr-1.5" />
+                                    Notes
+                                </button>
+                            </div>
                         )}
 
                         {/* Chat View */}
-                        {sidebarView !== "mail" && (
+                        {sidebarView === "chat" && (
                         <>
                         <div className="px-4 pt-4 pb-2 space-y-2">
                             {/* New Chat Button */}
@@ -2961,6 +3203,96 @@ STRICT RULES:
                             </div>
                         )}
                         </>)}
+
+                        {/* Notes View */}
+                        {sidebarView === "notes" && !isEnterpriseModeActive && (
+                            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                                <div className="px-4 pt-4 pb-2 space-y-2 shrink-0">
+                                    {/* New Note Button */}
+                                    <motion.button
+                                        onClick={handleCreateNote}
+                                        whileHover={{ scale: 1.03 }}
+                                        whileTap={{ scale: 0.97 }}
+                                        className={`w-full flex items-center justify-center gap-2 py-2 px-3 text-xs border rounded-xl font-sans font-medium transition-all duration-200 ${isDarkMode
+                                                ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                                                : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                                            }`}
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        <span>New Note</span>
+                                    </motion.button>
+
+                                    {/* Search Notes Bar */}
+                                    <div className="relative flex items-center">
+                                        <Search className={`absolute left-3 h-3.5 w-3.5 ${isDarkMode ? "text-white/30" : "text-black/50"}`} />
+                                        <input
+                                            type="text"
+                                            value={searchNoteQuery}
+                                            onChange={(e) => setSearchNoteQuery(e.target.value)}
+                                            placeholder="Search notes..."
+                                            className={`w-full pl-9 pr-4 py-2 text-[11px] font-sans rounded-xl border outline-none transition-all ${isDarkMode
+                                                    ? "bg-white/5 border-white/10 text-white placeholder-white/30 focus:border-white/20 focus:bg-white/10"
+                                                    : "bg-black/5 border-black/10 text-black placeholder-black/40 focus:border-black/20 focus:bg-black/10"
+                                                }`}
+                                        />
+                                        {searchNoteQuery && (
+                                            <button
+                                                onClick={() => setSearchNoteQuery("")}
+                                                className="absolute right-3 p-0.5 rounded-full hover:bg-white/10 text-white/50 hover:text-white"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Notes List */}
+                                <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 min-h-0">
+                                    {loadingNotes && notes.length === 0 ? (
+                                        <div className="flex items-center justify-center py-8">
+                                            <Loader2 className="w-5 h-5 animate-spin text-white/40" />
+                                        </div>
+                                    ) : notes.filter(n => n.title.toLowerCase().includes(searchNoteQuery.toLowerCase()) || n.content.toLowerCase().includes(searchNoteQuery.toLowerCase())).length === 0 ? (
+                                        <div className={`text-center py-8 text-xs font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                            No notes found.
+                                        </div>
+                                    ) : (
+                                        notes
+                                            .filter(n => n.title.toLowerCase().includes(searchNoteQuery.toLowerCase()) || n.content.toLowerCase().includes(searchNoteQuery.toLowerCase()))
+                                            .map((note) => (
+                                                <div
+                                                    key={note.id}
+                                                    onClick={() => {
+                                                        setSelectedNote(note);
+                                                        setIsNoteEditorOpen(true);
+                                                    }}
+                                                    className={`group relative flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                                                        isDarkMode
+                                                            ? "border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/10 text-white"
+                                                            : "border-black/5 bg-black/5 hover:bg-black/10 hover:border-black/10 text-black"
+                                                    }`}
+                                                >
+                                                    <div className="flex flex-col min-w-0 pr-6">
+                                                        <span className="text-xs font-sans font-medium truncate">{note.title || "Untitled Note"}</span>
+                                                        <span className={`text-[10px] font-sans truncate ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                            {note.content ? note.content.replace(/<[^>]*>/g, '').substring(0, 45) : "Empty note"}
+                                                        </span>
+                                                    </div>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            void handleDeleteNote(note.id);
+                                                        }}
+                                                        className="absolute right-2 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-opacity hover:bg-red-500/10 text-red-500"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Mail View */}
                         {sidebarView === "mail" && isEnterpriseModeActive && (
@@ -4827,6 +5159,542 @@ STRICT RULES:
                 isDarkMode={isDarkMode}
             />
 
+            {/* Note Editor Modal / Popup */}
+            {isNoteEditorOpen && selectedNote && (
+                <div
+                    style={
+                        isNotePopup && !isNoteMaximized
+                            ? {
+                                  position: "fixed",
+                                  left: `${notePopupPosition.x}px`,
+                                  top: `${notePopupPosition.y}px`,
+                                  width: `${notePopupSize.width}px`,
+                                  height: `${notePopupSize.height}px`,
+                                  zIndex: 100,
+                              }
+                            : undefined
+                    }
+                    className={
+                        isNoteMaximized
+                            ? "fixed inset-0 z-[100] flex flex-col bg-[#0d0d0c] text-white"
+                            : isNotePopup
+                            ? `flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${
+                                  isDarkMode
+                                      ? "bg-[#161615] border-white/10 text-white"
+                                      : "bg-[#fbfaf8] border-black/10 text-black"
+                              }`
+                            : "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                    }
+                >
+                    {/* Styles for Notebook ruling lines */}
+                    <style dangerouslySetInnerHTML={{__html: `
+                        .notes-ruled-light {
+                            background: linear-gradient(rgba(0, 0, 0, 0) 95%, rgba(33, 150, 243, 0.15) 95%) 0 0 / 100% 28px repeat !important;
+                            line-height: 28px !important;
+                        }
+                        .notes-ruled-dark {
+                            background: linear-gradient(rgba(0, 0, 0, 0) 95%, rgba(255, 255, 255, 0.08) 95%) 0 0 / 100% 28px repeat !important;
+                            line-height: 28px !important;
+                        }
+                        .notes-ruled-light img, .notes-ruled-dark img {
+                            line-height: normal !important;
+                        }
+                    `}} />
+
+                    {/* Modal container wrapper for non-popup mode */}
+                    <div
+                        className={
+                            isNoteMaximized || isNotePopup
+                                ? "flex-1 flex flex-col min-h-0 h-full w-full"
+                                : `w-full max-w-4xl h-[85vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${
+                                      isDarkMode
+                                          ? "bg-[#161615] border-white/10 text-white"
+                                          : "bg-[#fbfaf8] border-black/10 text-black"
+                                  }`
+                        }
+                    >
+                        {/* Header bar (Draggable if popped out) */}
+                        <div
+                            onPointerDown={(e) => {
+                                if (isNotePopup && !isNoteMaximized) {
+                                    if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("input") || (e.target as HTMLElement).closest("select")) return;
+                                    setIsDraggingNote(true);
+                                    setNoteDragOffset({
+                                        x: e.clientX - notePopupPosition.x,
+                                        y: e.clientY - notePopupPosition.y,
+                                    });
+                                }
+                            }}
+                            className={`flex items-center justify-between px-4 py-3 border-b select-none shrink-0 ${
+                                isNotePopup && !isNoteMaximized ? "cursor-move" : ""
+                            } ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}
+                        >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <FileIcon className="w-4 h-4 text-blue-500 shrink-0" />
+                                <input
+                                    type="text"
+                                    value={editorTitle}
+                                    onChange={(e) => {
+                                        setEditorTitle(e.target.value);
+                                        void handleUpdateNote(selectedNote.id, { title: e.target.value });
+                                    }}
+                                    className={`bg-transparent text-xs font-sans font-semibold focus:outline-none border-b border-transparent hover:border-zinc-500 focus:border-blue-500 w-full truncate ${isDarkMode ? "text-white" : "text-black"}`}
+                                    placeholder="Note Title"
+                                />
+                            </div>
+                            
+                            <div className="flex items-center gap-1.5 ml-4 shrink-0">
+                                {/* Popup / Dock Toggle */}
+                                <button
+                                    onClick={() => setIsNotePopup(!isNotePopup)}
+                                    className={`p-1.5 rounded-lg transition-colors ${
+                                        isDarkMode ? "hover:bg-white/10 text-white/70" : "hover:bg-black/10 text-black/70"
+                                    }`}
+                                    title={isNotePopup ? "Dock window" : "Pop out window"}
+                                >
+                                    {isNotePopup ? (
+                                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 17h6" /></svg>
+                                    ) : (
+                                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M21 15v6h-6M21 21L14 14" /></svg>
+                                    )}
+                                </button>
+
+                                {/* Maximize Toggle */}
+                                <button
+                                    onClick={() => setIsNoteMaximized(!isNoteMaximized)}
+                                    className={`p-1.5 rounded-lg transition-colors ${
+                                        isDarkMode ? "hover:bg-white/10 text-white/70" : "hover:bg-black/10 text-black/70"
+                                    }`}
+                                    title={isNoteMaximized ? "Restore screen size" : "Maximize screen size"}
+                                >
+                                    {isNoteMaximized ? (
+                                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" /></svg>
+                                    ) : (
+                                        <Maximize2 className="w-3.5 h-3.5" />
+                                    )}
+                                </button>
+
+                                {/* Close Button */}
+                                <button
+                                    onClick={() => {
+                                        setIsNoteEditorOpen(false);
+                                        setSelectedNote(null);
+                                    }}
+                                    className={`p-1.5 rounded-lg transition-colors ${
+                                        isDarkMode ? "hover:bg-white/10 text-white/70 hover:text-red-500" : "hover:bg-black/10 text-black/70 hover:text-red-500"
+                                    }`}
+                                    title="Close note"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Rich Formatting Toolbar */}
+                        <div className={`flex flex-wrap items-center gap-1.5 px-4 py-2 border-b shrink-0 ${isDarkMode ? "border-white/10 bg-zinc-900" : "border-black/10 bg-zinc-100"}`}>
+                            {/* Font Family Selection */}
+                            <select
+                                onChange={(e) => {
+                                    document.execCommand("fontName", false, e.target.value);
+                                }}
+                                className={`text-[10px] rounded border p-1 outline-none ${isDarkMode ? "bg-zinc-800 border-white/10 text-white" : "bg-white border-black/15 text-black"}`}
+                                title="Font Family"
+                            >
+                                <option value="Poppins, sans-serif">Poppins (Heading)</option>
+                                <option value="Roboto, sans-serif">Roboto (Body)</option>
+                                <option value="Space Grotesk, sans-serif">Space Grotesk (Accent)</option>
+                                <option value="sans-serif">System Sans</option>
+                                <option value="serif">System Serif</option>
+                                <option value="monospace">System Monospace</option>
+                            </select>
+
+                            {/* Font Size Selector */}
+                            <select
+                                onChange={(e) => {
+                                    document.execCommand("fontSize", false, e.target.value);
+                                }}
+                                className={`text-[10px] rounded border p-1 outline-none ${isDarkMode ? "bg-zinc-800 border-white/10 text-white" : "bg-white border-black/15 text-black"}`}
+                                title="Font Size"
+                            >
+                                <option value="1">Small</option>
+                                <option value="3" selected>Normal</option>
+                                <option value="5">Large</option>
+                                <option value="7">Extra Large</option>
+                            </select>
+
+                            <div className="w-px h-5 bg-zinc-700 mx-0.5" />
+
+                            {/* Bold */}
+                            <button
+                                onClick={() => document.execCommand("bold")}
+                                className={`p-1 text-xs font-bold rounded ${isDarkMode ? "text-white hover:bg-white/10" : "text-black hover:bg-black/10"}`}
+                                title="Bold"
+                            >
+                                B
+                            </button>
+
+                            {/* Italic */}
+                            <button
+                                onClick={() => document.execCommand("italic")}
+                                className={`p-1 text-xs italic rounded ${isDarkMode ? "text-white hover:bg-white/10" : "text-black hover:bg-black/10"}`}
+                                title="Italic"
+                            >
+                                I
+                            </button>
+
+                            {/* Underline */}
+                            <button
+                                onClick={() => document.execCommand("underline")}
+                                className={`p-1 text-xs underline rounded ${isDarkMode ? "text-white hover:bg-white/10" : "text-black hover:bg-black/10"}`}
+                                title="Underline"
+                            >
+                                U
+                            </button>
+
+                            <div className="w-px h-5 bg-zinc-700 mx-0.5" />
+
+                            {/* Text Color Picker */}
+                            <div className="flex items-center">
+                                <Palette className="w-3.5 h-3.5 mr-1 text-zinc-400" />
+                                <input
+                                    type="color"
+                                    onChange={(e) => document.execCommand("foreColor", false, e.target.value)}
+                                    className="w-4 h-4 border border-zinc-500 rounded cursor-pointer"
+                                    title="Text Color"
+                                />
+                            </div>
+
+                            <div className="w-px h-5 bg-zinc-700 mx-0.5" />
+
+                            {/* Draw Diagram Whiteboard Toggle */}
+                            <button
+                                onClick={() => setShowWhiteboard(!showWhiteboard)}
+                                className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
+                                    showWhiteboard
+                                        ? "bg-blue-500 text-white"
+                                        : isDarkMode
+                                        ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                        : "bg-black/5 border border-black/10 text-black hover:bg-black/10"
+                                }`}
+                                title="Draw whiteboard diagram sketch"
+                            >
+                                <Pencil className="w-3 h-3" />
+                                <span>Draw Diagram</span>
+                            </button>
+
+                            {/* Image Upload Button */}
+                            <label
+                                className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all cursor-pointer ${
+                                    isDarkMode
+                                        ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                        : "bg-black/5 border border-black/10 text-black hover:bg-black/10"
+                                }`}
+                                title="Upload local image"
+                            >
+                                <ImageIcon className="w-3 h-3" />
+                                <span>Upload Image</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            reader.onload = () => {
+                                                if (reader.result && typeof reader.result === "string") {
+                                                    if (noteEditorRef.current) {
+                                                        noteEditorRef.current.focus();
+                                                        document.execCommand("insertImage", false, reader.result);
+                                                        void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                                                    }
+                                                }
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }}
+                                />
+                            </label>
+
+                            {/* AI Rewrite Panel Toggle */}
+                            <button
+                                onClick={() => setShowAiRewrite(!showAiRewrite)}
+                                className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
+                                    showAiRewrite
+                                        ? "bg-blue-500 text-white"
+                                        : isDarkMode
+                                        ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                        : "bg-black/5 border border-black/10 text-black hover:bg-black/10"
+                                }`}
+                                title="AI rewriting suggestions panel"
+                            >
+                                <Sparkles className="w-3 h-3" />
+                                <span>AI Rewrite</span>
+                            </button>
+
+                            <div className="w-px h-5 bg-zinc-700 mx-0.5" />
+
+                            {/* Page Color Picker */}
+                            <div className="flex items-center gap-1">
+                                <span className="text-[9px] text-zinc-400">BG:</span>
+                                {[
+                                    { l: "White", c: "#ffffff" },
+                                    { l: "Ivory", c: "#faf8f5" },
+                                    { l: "Cream", c: "#f5f0eb" },
+                                    { l: "Mint", c: "#f0fbf0" },
+                                    { l: "Charcoal", c: "#1a1a1a" },
+                                    { l: "Deep slate", c: "#201b2b" },
+                                ].map((bg) => (
+                                    <button
+                                        key={bg.c}
+                                        onClick={() => {
+                                            setEditorColor(bg.c);
+                                            void handleUpdateNote(selectedNote.id, { page_color: bg.c });
+                                        }}
+                                        style={{ backgroundColor: bg.c }}
+                                        title={bg.l}
+                                        className={`w-3 h-3 rounded-full border ${
+                                            editorColor === bg.c ? "border-zinc-400 scale-110" : "border-transparent"
+                                        }`}
+                                    />
+                                ))}
+                            </div>
+
+                            {/* Notebook Ruled Lines Toggle */}
+                            <button
+                                onClick={() => {
+                                    const nextLined = !editorLined;
+                                    setEditorLined(nextLined);
+                                    void handleUpdateNote(selectedNote.id, { is_lined: nextLined });
+                                }}
+                                className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
+                                    editorLined
+                                        ? "bg-blue-500 text-white"
+                                        : isDarkMode
+                                        ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                        : "bg-black/5 border border-black/10 text-black hover:bg-black/10"
+                                }`}
+                                title="Toggle notebook ruled lines"
+                            >
+                                <ListOrdered className="w-3 h-3" />
+                                <span>Lined Paper</span>
+                            </button>
+
+                            <div className="w-px h-5 bg-zinc-700 mx-0.5" />
+
+                            {/* Exports Dropdown buttons */}
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => {
+                                        if (noteEditorRef.current) {
+                                            exportAsTxt();
+                                        }
+                                    }}
+                                    className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
+                                        isDarkMode
+                                            ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                            : "bg-black/5 border border-black/10 text-black hover:bg-black/10"
+                                    }`}
+                                    title="Export note as raw .txt file"
+                                >
+                                    <FileIcon className="w-3 h-3" />
+                                    <span>TXT</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (noteEditorRef.current) {
+                                            exportAsPdf();
+                                        }
+                                    }}
+                                    className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
+                                        isDarkMode
+                                            ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                            : "bg-black/5 border border-black/10 text-black hover:bg-black/10"
+                                    }`}
+                                    title="Export note as formatted PDF file"
+                                >
+                                    <FileDown className="w-3.5 h-3.5" />
+                                    <span>PDF</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Editor body container */}
+                        <div className="flex-1 flex flex-col min-h-0 relative">
+                            {/* AI Rewrite Panel */}
+                            {showAiRewrite && (
+                                <div className={`p-4 border-b flex flex-col gap-2 shrink-0 ${isDarkMode ? "bg-zinc-900/95 border-white/10" : "bg-zinc-100/95 border-black/10"}`}>
+                                    <div className="flex items-center justify-between w-full">
+                                        <span className="text-[10px] font-bold font-sans uppercase tracking-wider flex items-center gap-1 text-blue-500">
+                                            <Sparkles className="w-3.5 h-3.5" />
+                                            AI Note Rewrite Helper
+                                        </span>
+                                        <button onClick={() => setShowAiRewrite(false)} className={`text-[10px] ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/50 hover:text-black"}`}>
+                                            Close
+                                        </button>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={aiRewriteInstruction}
+                                            onChange={(e) => setAiRewriteInstruction(e.target.value)}
+                                            placeholder="Enter instructions (e.g. summarize this, fix grammar, rewrite in simple Hindi...)"
+                                            className={`flex-1 px-3 py-1.5 text-[11px] rounded-lg border focus:outline-none ${
+                                                isDarkMode
+                                                    ? "bg-zinc-800 border-white/10 text-white placeholder-white/30 focus:border-zinc-700"
+                                                    : "bg-white border-black/15 text-black placeholder-black/40 focus:border-zinc-300"
+                                            }`}
+                                        />
+                                        <button
+                                            disabled={aiRewriting}
+                                            onClick={async () => {
+                                                if (!aiRewriteInstruction.trim()) {
+                                                    toast.error("Please enter a rewrite instruction.");
+                                                    return;
+                                                }
+                                                let textToRewrite = "";
+                                                let isSelection = false;
+                                                const selection = window.getSelection();
+                                                if (selection && selection.toString().trim().length > 0) {
+                                                    textToRewrite = selection.toString();
+                                                    isSelection = true;
+                                                } else {
+                                                    textToRewrite = noteEditorRef.current?.innerText || "";
+                                                }
+
+                                                setAiRewriting(true);
+                                                try {
+                                                    const res = await aiRewriteNote(textToRewrite, aiRewriteInstruction);
+                                                    if (res.success && res.rewrittenText) {
+                                                        if (isSelection && selection) {
+                                                            const range = selection.getRangeAt(0);
+                                                            range.deleteContents();
+                                                            const textNode = document.createTextNode(res.rewrittenText);
+                                                            range.insertNode(textNode);
+                                                        } else {
+                                                            if (noteEditorRef.current) {
+                                                                noteEditorRef.current.innerHTML = res.rewrittenText;
+                                                            }
+                                                        }
+                                                        if (noteEditorRef.current) {
+                                                            void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                                                        }
+                                                        toast.success("Text rewritten!");
+                                                    }
+                                                } catch (err) {
+                                                    console.error(err);
+                                                    toast.error("AI Rewrite failed.");
+                                                } finally {
+                                                    setAiRewriting(false);
+                                                }
+                                            }}
+                                            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5"
+                                        >
+                                            {aiRewriting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Rewrite"}
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        <span className="text-[9px] text-zinc-400 mr-2 flex items-center">Quick options:</span>
+                                        {["Summarize", "Fix Grammar", "Simplify", "Make it Professional", "Elongate", "Translate to Hindi"].map((opt) => (
+                                            <button
+                                                key={opt}
+                                                onClick={() => setAiRewriteInstruction(opt)}
+                                                className={`text-[9px] px-2 py-0.5 rounded-full border ${
+                                                    isDarkMode
+                                                        ? "bg-zinc-800 border-white/10 hover:bg-zinc-700 text-zinc-300"
+                                                        : "bg-white border-black/15 hover:bg-zinc-100 text-zinc-600"
+                                                }`}
+                                            >
+                                                {opt}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Whiteboard Drawing Canvas overlay */}
+                            {showWhiteboard && (
+                                <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
+                                    <WhiteboardCanvas
+                                        initialData=""
+                                        onClose={() => setShowWhiteboard(false)}
+                                        isDarkMode={isDarkMode}
+                                        onSave={(drawingUrl) => {
+                                            if (noteEditorRef.current) {
+                                                noteEditorRef.current.focus();
+                                                document.execCommand("insertImage", false, drawingUrl);
+                                                void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                                            }
+                                            setShowWhiteboard(false);
+                                            toast.success("Drawing inserted!");
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Main Editable note canvas */}
+                            <div className="flex-1 overflow-y-auto relative w-full h-full">
+                                <div
+                                    ref={noteEditorRef}
+                                    contentEditable
+                                    suppressContentEditableWarning
+                                    onBlur={() => {
+                                        if (noteEditorRef.current) {
+                                            void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                                        }
+                                    }}
+                                    onInput={() => {
+                                        if (noteEditorRef.current) {
+                                            const html = noteEditorRef.current.innerHTML;
+                                            setNotes((prev) =>
+                                                prev.map((n) => (n.id === selectedNote.id ? { ...n, content: html } : n))
+                                            );
+                                        }
+                                    }}
+                                    style={{
+                                        backgroundColor: editorColor,
+                                        color: editorColor === "#1a1a1a" || editorColor === "#201b2b" ? "#f5f5f4" : "#1a1a19",
+                                        fontFamily: "Poppins, Roboto, sans-serif",
+                                        minHeight: "100%",
+                                    }}
+                                    className={`p-6 outline-none text-xs pb-24 font-normal ${
+                                        editorLined
+                                            ? editorColor === "#1a1a1a" || editorColor === "#201b2b"
+                                                ? "notes-ruled-dark"
+                                                : "notes-ruled-light"
+                                            : ""
+                                    }`}
+                                    dangerouslySetInnerHTML={{ __html: selectedNote.content || "" }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Resize handle */}
+                        {isNotePopup && !isNoteMaximized && (
+                            <div
+                                onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setIsResizingNote(true);
+                                    setNoteResizeOffset({
+                                        startX: e.clientX,
+                                        startY: e.clientY,
+                                        startW: notePopupSize.width,
+                                        startH: notePopupSize.height,
+                                    });
+                                }}
+                                className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize flex items-end justify-end p-0.5 z-40"
+                            >
+                                <svg className="w-2.5 h-2.5 opacity-40 hover:opacity-100 text-zinc-500" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                    <line x1="10" y1="0" x2="0" y2="10" />
+                                    <line x1="10" y1="4" x2="4" y2="10" />
+                                </svg>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Settings Modal */}
             <SettingsModal
                 isOpen={isSettingsModalOpen}
@@ -5272,3 +6140,174 @@ STRICT RULES:
 };
 
 export default Chat;
+
+const WhiteboardCanvas = ({
+    initialData,
+    onSave,
+    onClose,
+    isDarkMode,
+}: {
+    initialData: string;
+    onSave: (dataUrl: string) => void;
+    onClose: () => void;
+    isDarkMode: boolean;
+}) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [color, setColor] = useState(isDarkMode ? "#ffffff" : "#000000");
+    const [lineWidth, setLineWidth] = useState(3);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const prevPos = useRef({ x: 0, y: 0 });
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        // Draw initial image if exists
+        if (initialData) {
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = initialData;
+        } else {
+            // Fill background
+            ctx.fillStyle = isDarkMode ? "#1e1e1e" : "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    }, [initialData, isDarkMode]);
+
+    const getCoordinates = (e: React.PointerEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return { x: 0, y: 0 };
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return {
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY,
+        };
+    };
+
+    const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+        const pos = getCoordinates(e);
+        prevPos.current = pos;
+        setIsDrawing(true);
+        
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, lineWidth / 2, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+    };
+
+    const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+        if (!isDrawing) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const currentPos = getCoordinates(e);
+
+        ctx.beginPath();
+        ctx.moveTo(prevPos.current.x, prevPos.current.y);
+        ctx.lineTo(currentPos.x, currentPos.y);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.stroke();
+
+        prevPos.current = currentPos;
+    };
+
+    const handlePointerUp = () => {
+        setIsDrawing(false);
+    };
+
+    const handleClear = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.fillStyle = isDarkMode ? "#1e1e1e" : "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    };
+
+    return (
+        <div className={`p-4 rounded-xl border flex flex-col items-center gap-3 ${isDarkMode ? "bg-zinc-900 border-white/10" : "bg-zinc-50 border-black/10"}`}>
+            <div className="flex items-center justify-between w-full">
+                <span className="text-xs font-sans font-semibold">Whiteboard Drawing Pad</span>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleClear}
+                        className="py-1 px-2 text-[10px] rounded hover:bg-red-500/10 text-red-500 font-medium"
+                    >
+                        Clear
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className={`py-1 px-2 text-[10px] rounded hover:bg-black/10 ${isDarkMode ? "hover:bg-white/10 text-white" : "text-black"}`}
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+            <div className="relative border rounded overflow-hidden">
+                <canvas
+                    ref={canvasRef}
+                    width={500}
+                    height={350}
+                    className="touch-none cursor-crosshair max-w-full"
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerLeave={handlePointerUp}
+                />
+            </div>
+            <div className="flex flex-wrap items-center justify-between w-full gap-2 mt-1">
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-zinc-400">Brush Color:</span>
+                    {["#000000", "#ffffff", "#ea4335", "#34a853", "#4285f4", "#fbbc05", "#ff00ff"].map((c) => (
+                        <button
+                            key={c}
+                            onClick={() => setColor(c)}
+                            style={{ backgroundColor: c }}
+                            className={`w-4 h-4 rounded-full border ${color === c ? "border-zinc-400 scale-125" : "border-transparent"}`}
+                        />
+                    ))}
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-zinc-400">Width:</span>
+                        <input
+                            type="range"
+                            min="1"
+                            max="20"
+                            value={lineWidth}
+                            onChange={(e) => setLineWidth(Number(e.target.value))}
+                            className="w-16 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <span className="text-[10px] font-mono">{lineWidth}px</span>
+                    </div>
+                    <button
+                        onClick={() => {
+                            const canvas = canvasRef.current;
+                            if (canvas) {
+                                onSave(canvas.toDataURL("image/png"));
+                            }
+                        }}
+                        className="py-1 px-3 bg-blue-500 hover:bg-blue-600 text-white rounded text-[10px] font-semibold"
+                    >
+                        Insert Drawing
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
