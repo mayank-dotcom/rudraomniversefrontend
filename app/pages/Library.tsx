@@ -346,6 +346,56 @@ const ReplyItem = ({
   );
 };
 
+const mergeImagesSideBySide = (img1DataUrl: string, img2DataUrl: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img1 = new Image()
+    const img2 = new Image()
+    
+    img1.crossOrigin = "anonymous"
+    img2.crossOrigin = "anonymous"
+    
+    let loadedCount = 0
+    const onLoad = () => {
+      loadedCount++
+      if (loadedCount === 2) {
+        const canvas = document.createElement("canvas")
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          reject(new Error("Could not get 2D context"))
+          return
+        }
+        
+        // Target a reasonable height to preserve details and avoid oversized payloads
+        const targetHeight = Math.min(800, Math.max(img1.naturalHeight, img2.naturalHeight))
+        const scale1 = targetHeight / img1.naturalHeight
+        const scale2 = targetHeight / img2.naturalHeight
+        
+        const width1 = img1.naturalWidth * scale1
+        const width2 = img2.naturalWidth * scale2
+        
+        canvas.width = width1 + width2
+        canvas.height = targetHeight
+        
+        // Draw image 1
+        ctx.drawImage(img1, 0, 0, width1, targetHeight)
+        // Draw image 2
+        ctx.drawImage(img2, width1, 0, width2, targetHeight)
+        
+        // Convert to base64
+        resolve(canvas.toDataURL("image/png"))
+      }
+    }
+    
+    img1.onload = onLoad
+    img2.onload = onLoad
+    img1.onerror = () => reject(new Error("Failed to load first image"))
+    img2.onerror = () => reject(new Error("Failed to load second image"))
+    
+    img1.src = img1DataUrl
+    img2.src = img2DataUrl
+  })
+}
+
 export default function LibraryPage() {
   const router = useRouter()
   const { isDarkMode, toggleTheme } = useTheme()
@@ -1010,11 +1060,21 @@ export default function LibraryPage() {
   const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
+    
+    if (editImages.length + files.length > 2) {
+      toast.error("You can upload a maximum of 2 reference images.")
+      return
+    }
+
+    setIsEditingMode(true)
     Array.from(files).forEach((file) => {
       const reader = new FileReader()
       reader.onload = (ev) => {
         const dataUrl = ev.target?.result as string
-        setEditImages((prev) => [...prev, { id: `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`, dataUrl, name: file.name }])
+        setEditImages((prev) => {
+          if (prev.length >= 2) return prev
+          return [...prev, { id: `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`, dataUrl, name: file.name }]
+        })
       }
       reader.readAsDataURL(file)
     })
@@ -1023,10 +1083,21 @@ export default function LibraryPage() {
   }
 
   const handleRemoveEditImage = (id: string) => {
-    setEditImages((prev) => prev.filter((img) => img.id !== id))
+    setEditImages((prev) => {
+      const filtered = prev.filter((img) => img.id !== id)
+      if (filtered.length === 0) {
+        setIsEditingMode(false)
+      }
+      return filtered
+    })
   }
 
   const handlePickFromLibrary = (asset: LibraryAsset) => {
+    if (editImages.length >= 2) {
+      toast.error("You can select a maximum of 2 reference images.")
+      return
+    }
+    setIsEditingMode(true)
     setEditImages((prev) => [...prev, { id: asset.id, dataUrl: getAssetImageUrl(asset), name: asset.prompt || asset.id }])
     setShowImagePicker(false)
   }
@@ -1052,13 +1123,38 @@ export default function LibraryPage() {
       // Build content array: text instruction + optional reference images
       let contentPayload: any
       if (isEditingMode && editImages.length > 0) {
-        contentPayload = [
-          { type: "text" as const, text: generatePrompt },
-          ...editImages.map((img) => ({
-            type: "image_url" as const,
-            image_url: { url: img.dataUrl }
-          }))
-        ]
+        if (editImages.length === 2) {
+          toast.loading("Blending reference images...", { id: toastId })
+          try {
+            const mergedBase64 = await mergeImagesSideBySide(editImages[0].dataUrl, editImages[1].dataUrl)
+            contentPayload = [
+              { type: "text" as const, text: generatePrompt },
+              {
+                type: "image_url" as const,
+                image_url: { url: mergedBase64 }
+              }
+            ]
+            toast.loading("Generating combined image...", { id: toastId })
+          } catch (mergeErr) {
+            console.error("Failed to merge images side-by-side:", mergeErr)
+            toast.error("Failed to blend images. Sending first image instead.", { id: toastId })
+            contentPayload = [
+              { type: "text" as const, text: generatePrompt },
+              {
+                type: "image_url" as const,
+                image_url: { url: editImages[0].dataUrl }
+              }
+            ]
+          }
+        } else {
+          contentPayload = [
+            { type: "text" as const, text: generatePrompt },
+            {
+              type: "image_url" as const,
+              image_url: { url: editImages[0].dataUrl }
+            }
+          ]
+        }
       } else {
         contentPayload = generatePrompt
       }
@@ -3416,35 +3512,31 @@ export default function LibraryPage() {
                 <ImageIcon className="h-5 w-5" />
               </motion.button>
 
-              {/* Upload Image (only in edit mode) */}
-              {isEditingMode && (
-                <>
-                  <motion.button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className={`p-2 rounded-full transition-all duration-200 ${
-                      isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
-                    }`}
-                    title="Upload image from device"
-                  >
-                    <Upload className="h-5 w-5" />
-                  </motion.button>
-                  <motion.button
-                    type="button"
-                    onClick={() => setShowImagePicker(true)}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className={`p-2 rounded-full transition-all duration-200 ${
-                      isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
-                    }`}
-                    title="Pick from library"
-                  >
-                    <FolderOpen className="h-5 w-5" />
-                  </motion.button>
-                </>
-              )}
+              {/* Upload Image */}
+              <motion.button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 rounded-full transition-all duration-200 ${
+                  isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
+                }`}
+                title="Upload image from device"
+              >
+                <Upload className="h-5 w-5" />
+              </motion.button>
+              <motion.button
+                type="button"
+                onClick={() => setShowImagePicker(true)}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 rounded-full transition-all duration-200 ${
+                  isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
+                }`}
+                title="Pick from library"
+              >
+                <FolderOpen className="h-5 w-5" />
+              </motion.button>
 
               {/* Voice Input (Microphone) */}
               <motion.button
@@ -4102,7 +4194,6 @@ export default function LibraryPage() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={() => { setShowCategoryModal(false); setPendingCategory(null); setGeneratedAssetId(null) }}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -4121,8 +4212,8 @@ export default function LibraryPage() {
                 Categorize your generated image to find it easily later.
               </p>
 
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {ASSET_CATEGORIES.map((cat) => (
+              <div className="grid grid-cols-2 gap-2 mb-4 max-h-[220px] overflow-y-auto pr-1">
+                {Array.from(new Set([...ASSET_CATEGORIES, ...customCategoryList])).map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setPendingCategory(cat)}
@@ -4157,16 +4248,6 @@ export default function LibraryPage() {
               </div>
 
               <div className="flex gap-3 justify-end">
-                <button
-                  onClick={() => { setShowCategoryModal(false); setPendingCategory(null); setGeneratedAssetId(null); setCustomCategory("") }}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-                    isDarkMode
-                      ? "bg-white/10 text-white/70 hover:bg-white/15"
-                      : "bg-black/10 text-black/70 hover:bg-black/15"
-                  }`}
-                >
-                  Skip
-                </button>
                 <button
                   onClick={handleCategoryAssign}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${
