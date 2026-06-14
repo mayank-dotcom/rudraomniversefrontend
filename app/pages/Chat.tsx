@@ -1891,6 +1891,7 @@ const Chat = () => {
         const pageColor = editorColor || "#ffffff";
         const isLined = editorLined;
         const lineSpacing = noteLineSpacing;
+        const isDark = pageColor === "#1a1a1a" || pageColor === "#201b2b";
         
         const printWindow = window.open("", "_blank");
         if (!printWindow) {
@@ -1909,22 +1910,38 @@ const Chat = () => {
                 <style>
                     body {
                         font-family: 'Poppins', 'Roboto', sans-serif;
-                        padding: 40px;
-                        color: ${pageColor === "#1a1a1a" || pageColor === "#201b2b" ? "#f5f5f4" : "#1a1a19"};
-                        background-color: ${pageColor};
                         margin: 0;
+                        padding: 0;
+                        color: ${isDark ? "#f5f5f4" : "#1a1a19"} !important;
+                        background-color: ${pageColor} !important;
                         font-size: ${noteFontSize}px;
-                        line-height: ${lineSpacing};
+                        print-color-adjust: exact !important;
+                        -webkit-print-color-adjust: exact !important;
                     }
-                    h1 {
-                        font-size: 24px;
-                        margin-bottom: 20px;
-                        border-bottom: 2px solid ${pageColor === "#1a1a1a" || pageColor === "#201b2b" ? "#333" : "#eee"};
-                        padding-bottom: 10px;
+                    .page-wrapper {
+                        min-height: 100vh;
+                        padding: 40px;
+                        box-sizing: border-box;
+                        background-color: ${pageColor} !important;
+                        print-color-adjust: exact !important;
+                        -webkit-print-color-adjust: exact !important;
                     }
                     .lined-paper {
-                        background: linear-gradient(rgba(0, 0, 0, 0) calc(100% - 1px), rgba(33, 150, 243, 0.15) calc(100% - 1px)) 0 0 / 100% ${lineSpacing}em repeat;
-                        line-height: ${lineSpacing};
+                        background-image: linear-gradient(rgba(0, 0, 0, 0) calc(100% - 1px), ${
+                            isDark ? "rgba(255, 255, 255, 0.25)" : "rgba(33, 150, 243, 0.35)"
+                        } calc(100% - 1px)) !important;
+                        background-size: 100% ${lineSpacing * 16}px !important;
+                        background-repeat: repeat !important;
+                        background-position: 0 0 !important;
+                        background-origin: content-box !important;
+                        print-color-adjust: exact !important;
+                        -webkit-print-color-adjust: exact !important;
+                    }
+                    .lined-paper, .lined-paper * {
+                        line-height: ${lineSpacing * 16}px !important;
+                    }
+                    .lined-paper img {
+                        line-height: normal !important;
                     }
                     img {
                         max-width: 100%;
@@ -1932,18 +1949,40 @@ const Chat = () => {
                         border-radius: 8px;
                         margin: 15px 0;
                     }
-                    font[size="1"] { font-size: 10px; }
-                    font[size="2"] { font-size: 13px; }
-                    font[size="3"] { font-size: 16px; }
-                    font[size="4"] { font-size: 18px; }
-                    font[size="5"] { font-size: 24px; }
-                    font[size="6"] { font-size: 32px; }
-                    font[size="7"] { font-size: 48px; }
+                    .lined-paper font[size="1"], font[size="1"] { font-size: 10px; line-height: normal !important; }
+                    .lined-paper font[size="2"], font[size="2"] { font-size: 13px; line-height: normal !important; }
+                    .lined-paper font[size="3"], font[size="3"] { font-size: 16px; line-height: normal !important; }
+                    .lined-paper font[size="4"], font[size="4"] { font-size: 18px; line-height: normal !important; }
+                    .lined-paper font[size="5"], font[size="5"] { font-size: 24px; line-height: 1.4 !important; }
+                    .lined-paper font[size="6"], font[size="6"] { font-size: 32px; line-height: 1.3 !important; }
+                    .lined-paper font[size="7"], font[size="7"] { font-size: 48px; line-height: 1.2 !important; }
+                    
+                    @media print {
+                        html, body {
+                            background-color: ${pageColor} !important;
+                            color: ${isDark ? "#f5f5f4" : "#1a1a19"} !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        .page-wrapper {
+                            background-color: ${pageColor} !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        .lined-paper {
+                            background-image: linear-gradient(rgba(0, 0, 0, 0) calc(100% - 1px), ${
+                                isDark ? "rgba(255, 255, 255, 0.25)" : "rgba(33, 150, 243, 0.35)"
+                            } calc(100% - 1px)) !important;
+                            background-size: 100% ${lineSpacing * 16}px !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                    }
                 </style>
             </head>
             <body>
-                <div class="${isLined ? 'lined-paper' : ''}">
-                    <h1>${title}</h1>
+                <div class="page-wrapper ${isLined ? 'lined-paper' : ''}">
+                    <h1 style="margin-top: 0; font-size: 24px; border-bottom: 2px solid ${isDark ? '#333' : '#eee'}; padding-bottom: 10px;">${title}</h1>
                     <div style="font-size: inherit; line-height: inherit;">${content}</div>
                 </div>
                 <script>
@@ -1951,7 +1990,7 @@ const Chat = () => {
                         window.print();
                         window.close();
                     };
-                <\/script>
+                </script>
             </body>
             </html>
         `);
@@ -5724,18 +5763,32 @@ STRICT RULES:
                     <style dangerouslySetInnerHTML={{__html: `
                         .notes-ruled-light {
                             background-image: linear-gradient(rgba(0, 0, 0, 0) calc(100% - 1px), rgba(33, 150, 243, 0.15) calc(100% - 1px)) !important;
-                            background-size: 100% ${noteLineSpacing}em !important;
+                            background-size: 100% ${noteLineSpacing * 16}px !important;
                             background-repeat: repeat !important;
                             background-position: 0 0 !important;
-                            line-height: ${noteLineSpacing} !important;
+                            background-origin: content-box !important;
+                        }
+                        .notes-ruled-light, .notes-ruled-light * {
+                            line-height: ${noteLineSpacing * 16}px !important;
                         }
                         .notes-ruled-dark {
                             background-image: linear-gradient(rgba(0, 0, 0, 0) calc(100% - 1px), rgba(255, 255, 255, 0.08) calc(100% - 1px)) !important;
-                            background-size: 100% ${noteLineSpacing}em !important;
+                            background-size: 100% ${noteLineSpacing * 16}px !important;
                             background-repeat: repeat !important;
                             background-position: 0 0 !important;
-                            line-height: ${noteLineSpacing} !important;
+                            background-origin: content-box !important;
                         }
+                        .notes-ruled-dark, .notes-ruled-dark * {
+                            line-height: ${noteLineSpacing * 16}px !important;
+                        }
+                        .notes-ruled-light font[size="1"], .notes-ruled-dark font[size="1"], .note-content font[size="1"] { font-size: 10px; line-height: normal !important; }
+                        .notes-ruled-light font[size="2"], .notes-ruled-dark font[size="2"], .note-content font[size="2"] { font-size: 13px; line-height: normal !important; }
+                        .notes-ruled-light font[size="3"], .notes-ruled-dark font[size="3"], .note-content font[size="3"] { font-size: 16px; line-height: normal !important; }
+                        .notes-ruled-light font[size="4"], .notes-ruled-dark font[size="4"], .note-content font[size="4"] { font-size: 18px; line-height: normal !important; }
+                        .notes-ruled-light font[size="5"], .notes-ruled-dark font[size="5"], .note-content font[size="5"] { font-size: 24px; line-height: 1.4 !important; }
+                        .notes-ruled-light font[size="6"], .notes-ruled-dark font[size="6"], .note-content font[size="6"] { font-size: 32px; line-height: 1.3 !important; }
+                        .notes-ruled-light font[size="7"], .notes-ruled-dark font[size="7"], .note-content font[size="7"] { font-size: 48px; line-height: 1.2 !important; }
+
                         .notes-ruled-light img, .notes-ruled-dark img {
                             line-height: normal !important;
                         }
@@ -5832,11 +5885,12 @@ STRICT RULES:
                                 </button>
 
                                 {/* Close Button */}
-                                <button
-                                    onClick={() => {
-                                        setIsNoteEditorOpen(false);
-                                        setSelectedNote(null);
-                                    }}
+                                 <button
+                                     onClick={() => {
+                                         setIsNoteEditorOpen(false);
+                                         setSelectedNote(null);
+                                         stopAllAudio();
+                                     }}
                                     className="p-1.5 rounded-lg transition-colors hover:bg-white/10 text-white/70 hover:text-red-500"
                                     title="Close note"
                                 >
@@ -5876,28 +5930,51 @@ STRICT RULES:
                                 <option value="7">Extra Large</option>
                             </select>
 
-                            {/* Font Size Increase / Decrease (scales entire editor) */}
+                            {/* Font Size Increase / Decrease (Selected Text Only) */}
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
-                                    setNoteFontSize((prev) => Math.min(prev + 2, 32));
+                                    let currentSize = 3; // default normal
+                                    try {
+                                        const val = document.queryCommandValue("fontSize");
+                                        if (val) {
+                                            currentSize = parseInt(val, 10) || 3;
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
+                                    const newSize = Math.min(currentSize + 1, 7);
+                                    document.execCommand("fontSize", false, String(newSize));
                                 }}
                                 className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
-                                title="Increase font size"
+                                title="Increase font size of selected text"
                             >
                                 A+
                             </button>
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
-                                    setNoteFontSize((prev) => Math.max(prev - 2, 10));
+                                    let currentSize = 3; // default normal
+                                    try {
+                                        const val = document.queryCommandValue("fontSize");
+                                        if (val) {
+                                            currentSize = parseInt(val, 10) || 3;
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
+                                    const newSize = Math.max(currentSize - 1, 1);
+                                    document.execCommand("fontSize", false, String(newSize));
                                 }}
                                 className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
-                                title="Decrease font size"
+                                title="Decrease font size of selected text"
                             >
                                 A-
                             </button>
 
                             {/* Line Spacing Increase / Decrease */}
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
                                     setNoteLineSpacing((prev) => Math.round((prev + 0.2) * 10) / 10);
                                 }}
@@ -5907,6 +5984,7 @@ STRICT RULES:
                                 <span style={{lineHeight:1}}>⊞</span>
                             </button>
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
                                     setNoteLineSpacing((prev) => Math.max(Math.round((prev - 0.2) * 10) / 10, 1.0));
                                 }}
@@ -5918,6 +5996,7 @@ STRICT RULES:
 
                             {/* Bold */}
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => document.execCommand("bold")}
                                 className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
                                 title="Bold (Ctrl+B)"
@@ -5927,6 +6006,7 @@ STRICT RULES:
 
                             {/* Italic */}
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => document.execCommand("italic")}
                                 className="px-2 py-1 text-xs italic rounded text-white hover:bg-white/10"
                                 title="Italic (Ctrl+I)"
@@ -5936,6 +6016,7 @@ STRICT RULES:
 
                             {/* Underline */}
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => document.execCommand("underline")}
                                 className="px-2 py-1 text-xs underline rounded text-white hover:bg-white/10"
                                 title="Underline (Ctrl+U)"
@@ -5945,6 +6026,7 @@ STRICT RULES:
 
                             {/* Strikethrough */}
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => document.execCommand("strikeThrough")}
                                 className="px-2 py-1 text-xs rounded text-white hover:bg-white/10"
                                 title="Strikethrough"
@@ -5956,8 +6038,8 @@ STRICT RULES:
 
                             {/* Ordered List */}
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
-                                    noteEditorRef.current?.focus();
                                     document.execCommand("insertOrderedList");
                                 }}
                                 className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
@@ -5968,8 +6050,8 @@ STRICT RULES:
 
                             {/* Unordered List */}
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
-                                    noteEditorRef.current?.focus();
                                     document.execCommand("insertUnorderedList");
                                 }}
                                 className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
@@ -5980,6 +6062,7 @@ STRICT RULES:
 
                             {/* Indent */}
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => document.execCommand("indent")}
                                 className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
                                 title="Increase Indent"
@@ -5989,6 +6072,7 @@ STRICT RULES:
 
                             {/* Outdent */}
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => document.execCommand("outdent")}
                                 className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
                                 title="Decrease Indent"
@@ -6000,6 +6084,7 @@ STRICT RULES:
 
                             {/* Alignment buttons */}
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => document.execCommand("justifyLeft")}
                                 className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
                                 title="Align Left"
@@ -6007,6 +6092,7 @@ STRICT RULES:
                                 ═╌
                             </button>
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => document.execCommand("justifyCenter")}
                                 className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
                                 title="Align Center"
@@ -6014,6 +6100,7 @@ STRICT RULES:
                                 ═══
                             </button>
                             <button
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => document.execCommand("justifyRight")}
                                 className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
                                 title="Align Right"
