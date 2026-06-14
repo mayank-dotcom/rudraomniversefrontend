@@ -354,6 +354,8 @@ const Chat = () => {
     const noteMediaRecorderRef = useRef<MediaRecorder | null>(null);
     const [noteStream, setNoteStream] = useState<MediaStream | null>(null);
     const noteAudioRef = useRef<HTMLAudioElement | null>(null);
+    const [isNotePodcastPaused, setIsNotePodcastPaused] = useState(false);
+    const [noteFontSize, setNoteFontSize] = useState(16);
     const [gmailConnected, setGmailConnected] = useState(false);
     const [gmailEmail, setGmailEmail] = useState("");
     const [gmailEmails, setGmailEmails] = useState<any[]>([]);
@@ -1500,6 +1502,7 @@ const Chat = () => {
 
     const [isNoteTTSPlaying, setIsNoteTTSPlaying] = useState(false);
     const [noteTTSProvider, setNoteTTSProvider] = useState<"sarvam" | "browser" | null>(null);
+    const [notePodcastText, setNotePodcastText] = useState("");
 
     const stopNoteTTS = () => {
         if (noteAudioRef.current) {
@@ -1508,19 +1511,46 @@ const Chat = () => {
         }
         window.speechSynthesis?.cancel();
         setIsNoteTTSPlaying(false);
+        setIsNotePodcastPaused(false);
+        setNoteTTSProvider(null);
     };
 
-    const playNoteTTS = async () => {
-        if (isNoteTTSPlaying) {
-            stopNoteTTS();
+    const pauseNotePodcast = () => {
+        if (noteAudioRef.current) {
+            noteAudioRef.current.pause();
+            setIsNotePodcastPaused(true);
+        }
+        window.speechSynthesis?.pause();
+        setIsNotePodcastPaused(true);
+    };
+
+    const resumeNotePodcast = () => {
+        if (noteAudioRef.current && noteAudioRef.current.paused) {
+            noteAudioRef.current.play();
+            setIsNotePodcastPaused(false);
             return;
         }
-        const text = noteEditorRef.current?.innerText || "";
+        if (window.speechSynthesis?.speaking && window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+            setIsNotePodcastPaused(false);
+            return;
+        }
+        // If nothing to resume, start fresh
+        setIsNotePodcastPaused(false);
+        setIsNoteTTSPlaying(false);
+        setNotePodcastText("");
+        playNotePodcast();
+    };
+
+    const playNotePodcast = async (textOverride?: string) => {
+        const text = textOverride || noteEditorRef.current?.innerText || "";
         if (!text.trim()) {
             toast.error("No text to read.");
             return;
         }
+        setNotePodcastText(text);
         setIsNoteTTSPlaying(true);
+        setIsNotePodcastPaused(false);
         try {
             const { generateTTSAudio } = await import("@/lib/chat-api");
             const audioBlob = await generateTTSAudio(text, "hi-IN");
@@ -1532,12 +1562,16 @@ const Chat = () => {
                 URL.revokeObjectURL(audioUrl);
                 noteAudioRef.current = null;
                 setIsNoteTTSPlaying(false);
+                setIsNotePodcastPaused(false);
+                setNotePodcastText("");
             };
             audio.onerror = () => {
                 URL.revokeObjectURL(audioUrl);
                 noteAudioRef.current = null;
                 setIsNoteTTSPlaying(false);
+                setIsNotePodcastPaused(false);
                 setNoteTTSProvider(null);
+                setNotePodcastText("");
             };
             await audio.play();
         } catch {
@@ -1550,23 +1584,41 @@ const Chat = () => {
                     utterance.pitch = 1;
                     utterance.onend = () => {
                         setIsNoteTTSPlaying(false);
+                        setIsNotePodcastPaused(false);
                         setNoteTTSProvider(null);
+                        setNotePodcastText("");
                     };
                     utterance.onerror = () => {
                         setIsNoteTTSPlaying(false);
+                        setIsNotePodcastPaused(false);
                         setNoteTTSProvider(null);
+                        setNotePodcastText("");
                     };
                     window.speechSynthesis.speak(utterance);
                 } else {
                     toast.error("TTS not available.");
                     setIsNoteTTSPlaying(false);
+                    setIsNotePodcastPaused(false);
                     setNoteTTSProvider(null);
+                    setNotePodcastText("");
                 }
             } catch {
                 toast.error("TTS failed.");
                 setIsNoteTTSPlaying(false);
+                setIsNotePodcastPaused(false);
                 setNoteTTSProvider(null);
+                setNotePodcastText("");
             }
+        }
+    };
+
+    const toggleNotePodcast = () => {
+        if (isNoteTTSPlaying && !isNotePodcastPaused) {
+            pauseNotePodcast();
+        } else if (isNoteTTSPlaying && isNotePodcastPaused) {
+            resumeNotePodcast();
+        } else {
+            playNotePodcast();
         }
     };
 
@@ -1684,24 +1736,29 @@ const Chat = () => {
             <!DOCTYPE html>
             <html>
             <head>
-                <title>\${title}</title>
+                <title>${title}</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Edu+NSW+ACT+Foundation:wght@400;700&family=Poppins:wght@400;600;700&family=Roboto:wght@400;700&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
                 <style>
                     body {
                         font-family: 'Poppins', 'Roboto', sans-serif;
                         padding: 40px;
-                        color: \${pageColor === "#1a1a1a" || pageColor === "#201b2b" ? "#f5f5f4" : "#1a1a19"};
-                        background-color: \${pageColor};
+                        color: ${pageColor === "#1a1a1a" || pageColor === "#201b2b" ? "#f5f5f4" : "#1a1a19"};
+                        background-color: ${pageColor};
                         margin: 0;
+                        font-size: ${noteFontSize}px;
+                        line-height: 1.8;
                     }
                     h1 {
                         font-size: 24px;
                         margin-bottom: 20px;
-                        border-bottom: 2px solid \${pageColor === "#1a1a1a" || pageColor === "#201b2b" ? "#333" : "#eee"};
+                        border-bottom: 2px solid ${pageColor === "#1a1a1a" || pageColor === "#201b2b" ? "#333" : "#eee"};
                         padding-bottom: 10px;
                     }
                     .lined-paper {
-                        background: linear-gradient(rgba(0, 0, 0, 0) 95%, rgba(33, 150, 243, 0.15) 95%) 0 0 / 100% 28px repeat;
-                        line-height: 28px;
+                        background: linear-gradient(rgba(0, 0, 0, 0) 95%, rgba(33, 150, 243, 0.15) 95%) 0 0 / 100% 1.8em repeat;
+                        line-height: 1.8;
                     }
                     img {
                         max-width: 100%;
@@ -1709,19 +1766,26 @@ const Chat = () => {
                         border-radius: 8px;
                         margin: 15px 0;
                     }
+                    font[size="1"] { font-size: 10px; }
+                    font[size="2"] { font-size: 13px; }
+                    font[size="3"] { font-size: 16px; }
+                    font[size="4"] { font-size: 18px; }
+                    font[size="5"] { font-size: 24px; }
+                    font[size="6"] { font-size: 32px; }
+                    font[size="7"] { font-size: 48px; }
                 </style>
             </head>
             <body>
-                <div class="\${isLined ? 'lined-paper' : ''}">
-                    <h1>\${title}</h1>
-                    <div style="font-size: 14px; line-height: 1.6;">\${content}</div>
+                <div class="${isLined ? 'lined-paper' : ''}">
+                    <h1>${title}</h1>
+                    <div style="font-size: inherit; line-height: inherit;">${content}</div>
                 </div>
                 <script>
                     window.onload = function() {
                         window.print();
                         window.close();
                     };
-                </script>
+                <\/script>
             </body>
             </html>
         `);
@@ -2257,6 +2321,21 @@ STRICT RULES:
                         firstText.text = hindiInstruction + firstText.text;
                     }
                 }
+            }
+
+            // ── Podcast mode: auto-pause & inject note context ──
+            if (isNoteTTSPlaying && notePodcastText) {
+                pauseNotePodcast();
+                const noteCtx = `[Podcast Context — the user was listening to the following note via podcast:\n\n${notePodcastText.slice(0, 4000)}\n\n]\n\n`;
+                if (typeof userContent === "string") {
+                    userContent = noteCtx + userContent;
+                } else if (Array.isArray(userContent)) {
+                    const firstText = userContent.find((item: any) => item.type === "text");
+                    if (firstText) {
+                        firstText.text = noteCtx + firstText.text;
+                    }
+                }
+                toast.info("Podcast paused — ask your question.");
             }
 
             const userMessage: Message = {
@@ -5505,13 +5584,11 @@ STRICT RULES:
                             padding-left: 24px !important;
                             margin: 4px 0 !important;
                             list-style-type: disc !important;
-                            color: rgba(255,255,255,0.9) !important;
                         }
                         .note-content ol {
                             padding-left: 24px !important;
                             margin: 4px 0 !important;
                             list-style-type: decimal !important;
-                            color: rgba(255,255,255,0.9) !important;
                         }
                         .note-content li {
                             margin: 2px 0 !important;
@@ -5633,13 +5710,10 @@ STRICT RULES:
                                 <option value="7">Extra Large</option>
                             </select>
 
-                            {/* Font Size Increase / Decrease */}
+                            {/* Font Size Increase / Decrease (scales entire editor) */}
                             <button
                                 onClick={() => {
-                                    const sizes = ["1","2","3","4","5","6","7"];
-                                    const current = document.queryCommandValue("fontSize") || "3";
-                                    const idx = sizes.indexOf(current);
-                                    document.execCommand("fontSize", false, sizes[Math.min(idx + 1 >= 0 ? idx + 1 : 1, 6)]);
+                                    setNoteFontSize((prev) => Math.min(prev + 2, 32));
                                 }}
                                 className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
                                 title="Increase font size"
@@ -5648,10 +5722,7 @@ STRICT RULES:
                             </button>
                             <button
                                 onClick={() => {
-                                    const sizes = ["1","2","3","4","5","6","7"];
-                                    const current = document.queryCommandValue("fontSize") || "3";
-                                    const idx = sizes.indexOf(current);
-                                    document.execCommand("fontSize", false, sizes[Math.max(idx - 1 >= 0 ? idx - 1 : 0, 0)]);
+                                    setNoteFontSize((prev) => Math.max(prev - 2, 10));
                                 }}
                                 className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
                                 title="Decrease font size"
@@ -5835,23 +5906,42 @@ STRICT RULES:
                                 <span>{isNoteRecording ? "Recording..." : "STT"}</span>
                             </button>
 
-                            {/* Text-to-Speech Headphone Button */}
+                            {/* Podcast Play/Pause/Resume Button */}
                             <button
-                                onClick={playNoteTTS}
+                                onClick={toggleNotePodcast}
                                 className={`flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all ${
                                     isNoteTTSPlaying
-                                        ? "bg-emerald-500 text-white animate-pulse"
+                                        ? "bg-emerald-500 text-white"
                                         : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                                }`}
-                                title={isNoteTTSPlaying ? "Click to stop" : "Read note aloud (TTS)"}
+                                } ${isNoteTTSPlaying && !isNotePodcastPaused ? "animate-pulse" : ""}`}
+                                title={
+                                    isNoteTTSPlaying && !isNotePodcastPaused
+                                        ? "Pause podcast"
+                                        : isNoteTTSPlaying && isNotePodcastPaused
+                                        ? "Resume podcast"
+                                        : "Play note as podcast"
+                                }
                             >
                                 <Headphones className="w-3.5 h-3.5" />
                                 <span>
-                                    {isNoteTTSPlaying
-                                        ? `Playing${noteTTSProvider === "sarvam" ? " (AI)" : " (Browser)"}...`
-                                        : "TTS"}
+                                    {isNoteTTSPlaying && !isNotePodcastPaused
+                                        ? `Podcast${noteTTSProvider === "sarvam" ? "" : " (Browser)"}...`
+                                        : isNoteTTSPlaying && isNotePodcastPaused
+                                        ? "Paused"
+                                        : "Podcast"}
                                 </span>
                             </button>
+                            {/* Stop button when podcast is active */}
+                            {isNoteTTSPlaying && (
+                                <button
+                                    onClick={stopNoteTTS}
+                                    className="flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-red-400 hover:bg-white/10"
+                                    title="Stop podcast"
+                                >
+                                    <X className="w-3 h-3" />
+                                    <span>Stop</span>
+                                </button>
+                            )}
 
                             {/* Draw Diagram Whiteboard Toggle */}
                             <button
@@ -6225,8 +6315,9 @@ STRICT RULES:
                                         color: editorColor === "#1a1a1a" || editorColor === "#201b2b" ? "#f5f5f4" : "#1a1a19",
                                         fontFamily: "Poppins, Roboto, sans-serif",
                                         minHeight: "100%",
+                                        fontSize: noteFontSize,
                                     }}
-                                    className={`note-content p-6 outline-none text-xs pb-24 font-normal ${
+                                    className={`note-content p-6 outline-none pb-24 font-normal ${
                                         editorLined
                                             ? editorColor === "#1a1a1a" || editorColor === "#201b2b"
                                                 ? "notes-ruled-dark"
