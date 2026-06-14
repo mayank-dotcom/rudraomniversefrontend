@@ -5659,33 +5659,6 @@ STRICT RULES:
                                 A-
                             </button>
 
-                            <div className="w-px h-5 bg-zinc-700 mx-0.5" />
-
-                            {/* Heading quick buttons */}
-                            <button
-                                onClick={() => document.execCommand("formatBlock", false, "<h1>")}
-                                className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
-                                title="Heading 1"
-                            >
-                                H1
-                            </button>
-                            <button
-                                onClick={() => document.execCommand("formatBlock", false, "<h2>")}
-                                className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
-                                title="Heading 2"
-                            >
-                                H2
-                            </button>
-                            <button
-                                onClick={() => document.execCommand("formatBlock", false, "<h3>")}
-                                className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
-                                title="Heading 3"
-                            >
-                                H3
-                            </button>
-
-                            <div className="w-px h-5 bg-zinc-700 mx-0.5" />
-
                             {/* Bold */}
                             <button
                                 onClick={() => document.execCommand("bold")}
