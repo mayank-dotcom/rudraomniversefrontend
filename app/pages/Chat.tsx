@@ -10,7 +10,7 @@ import {
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles, Pencil,
     Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2, LayoutDashboard, Share, Loader2,
     Settings, Bell, Key, ChevronDown, Compass, Palette, Globe, Maximize2, ArrowUp,
-    PanelLeftOpen, PanelLeftClose, MessageSquarePlus, ListOrdered, Car, MicOff, Headphones, Upload, FolderOpen
+    PanelLeftOpen, PanelLeftClose, MessageSquarePlus, ListOrdered, Car, MicOff, Headphones, Upload, FolderOpen, Play, Square
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -1421,18 +1421,18 @@ const Chat = () => {
     const pausePodcastForAsk = () => {
         if (noteAudioRef.current) {
             noteAudioRef.current.pause();
-            noteAudioRef.current = null;
         }
         if (podcastAskAudioRef.current) {
             podcastAskAudioRef.current.pause();
             podcastAskAudioRef.current = null;
         }
-        window.speechSynthesis?.cancel();
+        if (noteTTSProvider === "browser") {
+            window.speechSynthesis?.pause();
+        }
         setIsNoteTTSPlaying(false);
         setIsPodcastAnswering(false);
         setIsPodcastGenerating(false);
-        setNoteTTSProvider(null);
-        // Keep podcastChunks, podcastChunkIndex, notePodcastText intact for resume
+        // Keep podcastChunks, podcastChunkIndex, notePodcastText, and noteTTSProvider intact for resume
     };
 
     const startNoteRecording = async () => {
@@ -1440,7 +1440,7 @@ const Chat = () => {
             // If podcast is playing or AI is answering, pause and switch to ask mode
             if (isNoteTTSPlaying || isPodcastAnswering) {
                 pausePodcastForAsk();
-                setPendingResumePodcast(false);
+                setPendingResumePodcast(true);
             }
             const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             setNoteStream(mediaStream);
@@ -1704,6 +1704,46 @@ const Chat = () => {
         setPodcastChunks(chunks);
         setPodcastChunkIndex(0);
         await podcastPlayChunk(0, chunks);
+    };
+
+    const pauseNotePodcast = () => {
+        if (noteAudioRef.current) {
+            noteAudioRef.current.pause();
+        }
+        if (noteTTSProvider === "browser") {
+            window.speechSynthesis?.pause();
+        }
+        setIsNoteTTSPlaying(false);
+        setPendingResumePodcast(true);
+        toast.success("Podcast paused");
+    };
+
+    const resumeNotePodcast = async () => {
+        if (noteTTSProvider === "browser") {
+            setPendingResumePodcast(false);
+            setIsNoteTTSPlaying(true);
+            window.speechSynthesis?.resume();
+            return;
+        }
+        if (noteAudioRef.current && noteAudioRef.current.paused) {
+            setPendingResumePodcast(false);
+            setIsNoteTTSPlaying(true);
+            try {
+                await noteAudioRef.current.play();
+            } catch (err) {
+                console.error("Failed to resume noteAudioRef:", err);
+                await podcastPlayChunk(podcastChunkIndex, podcastChunks);
+            }
+            return;
+        }
+        // Fallback or if starting/resuming chunks from API
+        if (podcastChunks.length > 0) {
+            setPendingResumePodcast(false);
+            await podcastPlayChunk(podcastChunkIndex, podcastChunks);
+        } else {
+            // No chunks exist, start fresh
+            await playNotePodcast();
+        }
     };
 
     const speakAiResponse = async (text: string) => {
@@ -6197,45 +6237,67 @@ STRICT RULES:
                                 </span>
                             </button>
 
-                            {/* Podcast Play / Stop / Resume Button */}
-                            <button
-                                onClick={() => {
-                                    if (pendingResumePodcast && !isPodcastAnswering) {
-                                        setPendingResumePodcast(false);
-                                        playNotePodcast();
-                                    } else {
-                                        playNotePodcast();
-                                    }
-                                }}
-                                className={`flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all ${
-                                    isPodcastGenerating
-                                        ? "bg-emerald-500 text-white"
-                                        : isPodcastAnswering
-                                        ? "bg-amber-500 text-white"
-                                        : isNoteTTSPlaying
-                                        ? "bg-emerald-500 text-white animate-pulse"
-                                        : pendingResumePodcast
-                                        ? "bg-emerald-500 text-white"
-                                        : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                                }`}
-                                title={
-                                    isPodcastGenerating ? "Generating audio..." :
-                                    isPodcastAnswering ? "Click to stop answer" :
-                                    isNoteTTSPlaying ? "Stop podcast" :
-                                    pendingResumePodcast ? "Resume podcast" :
-                                    "Play note as podcast"
-                                }
-                                disabled={isPodcastGenerating}
-                            >
-                                {isPodcastGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
-                                 <Headphones className="w-3.5 h-3.5" />}
-                                <span>
-                                    {isPodcastGenerating ? "Generating..." :
-                                     isPodcastAnswering ? "Answering..." :
-                                     isNoteTTSPlaying ? `Podcast...` :
-                                     pendingResumePodcast ? "Resume" : "Podcast"}
-                                </span>
-                            </button>
+                            {/* Podcast Play / Stop / Resume Controls */}
+                            <div className="flex items-center gap-1 bg-zinc-800 border border-white/10 rounded-md p-0.5 select-none">
+                                {/* Play / Resume Button */}
+                                <button
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => {
+                                        if (pendingResumePodcast) {
+                                            void resumeNotePodcast();
+                                        } else {
+                                            void playNotePodcast();
+                                        }
+                                    }}
+                                    className={`flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all ${
+                                        isNoteTTSPlaying
+                                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                            : "bg-emerald-600 text-white hover:bg-emerald-500"
+                                    }`}
+                                    title={pendingResumePodcast ? "Resume podcast" : "Play note as podcast"}
+                                    disabled={isPodcastGenerating || isNoteTTSPlaying}
+                                >
+                                    {isPodcastGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
+                                     <Play className="w-3.5 h-3.5" />}
+                                    <span>
+                                        {isPodcastGenerating ? "Generating..." :
+                                         pendingResumePodcast ? "Resume" : "Podcast"}
+                                    </span>
+                                </button>
+
+                                {/* Pause Button */}
+                                <button
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => {
+                                        pauseNotePodcast();
+                                    }}
+                                    className={`flex items-center justify-center p-1.5 text-white rounded hover:bg-white/10 ${
+                                        !isNoteTTSPlaying ? "opacity-30 pointer-events-none" : ""
+                                    }`}
+                                    title="Pause podcast"
+                                    disabled={!isNoteTTSPlaying}
+                                >
+                                    <Pause className="w-3.5 h-3.5" />
+                                </button>
+
+                                {/* Stop / Reset Button */}
+                                <button
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => {
+                                        stopAllAudio();
+                                        toast.success("Podcast stopped");
+                                    }}
+                                    className={`flex items-center justify-center p-1.5 text-white rounded hover:bg-white/10 ${
+                                        !(isNoteTTSPlaying || pendingResumePodcast || isPodcastAnswering)
+                                            ? "opacity-30 pointer-events-none"
+                                            : ""
+                                    }`}
+                                    title="Stop podcast"
+                                    disabled={!(isNoteTTSPlaying || pendingResumePodcast || isPodcastAnswering)}
+                                >
+                                    <Square className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
 
                             {/* Draw Diagram Whiteboard Toggle */}
                             <button
