@@ -592,6 +592,186 @@ function ArenaContent() {
         return Math.round((correctCount / totalAnswers) * 100);
     }, [answers, correctCount]);
 
+    const renderLeaderboard = () => (
+        <div>
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 opacity-60" />
+                    <h3 className="text-base font-black uppercase tracking-tight">Global Leaderboard</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setLeaderboardViewMode("table")} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all ${leaderboardViewMode === "table" ? (isDarkMode ? "bg-white/10 border-white/20 text-white" : "bg-black/10 border-black/20 text-black") : (isDarkMode ? "border-white/5 text-white/40 hover:text-white" : "border-black/5 text-black/40 hover:text-black")}`}><BarChart3 className="h-3.5 w-3.5 inline mr-1" />Table</button>
+                    <button onClick={() => setLeaderboardViewMode("graph")} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all ${leaderboardViewMode === "graph" ? (isDarkMode ? "bg-white/10 border-white/20 text-white" : "bg-black/10 border-black/20 text-black") : (isDarkMode ? "border-white/5 text-white/40 hover:text-white" : "border-black/5 text-black/40 hover:text-black")}`}><LineChart className="h-3.5 w-3.5 inline mr-1" />Graph</button>
+                </div>
+            </div>
+            {globalLeaderboard.length === 0 ? (
+                <p className="text-sm opacity-50 text-center py-10">No leaderboard data available.</p>
+            ) : leaderboardViewMode === "graph" ? (
+                <div className="h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={globalLeaderboard.slice(0, 20)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
+                            <XAxis dataKey="name" tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 10 }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fill: isDarkMode ? "#ffffff60" : "#00000060", fontSize: 10 }} axisLine={false} tickLine={false} />
+                            <Tooltip contentStyle={{ backgroundColor: isDarkMode ? "#161615" : "#ffffff", border: isDarkMode ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)", borderRadius: "12px", fontSize: "12px" }} />
+                            <Bar dataKey="score" radius={[4, 4, 0, 0]} fill={isDarkMode ? "#ffffff" : "#000000"} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            ) : (
+                <>
+                    <div className="relative mb-4">
+                        <input value={leaderboardSearch} onChange={e => { setLeaderboardSearch(e.target.value); setLeaderboardPage(1) }} placeholder="Search by name..." className={`w-full px-4 py-2.5 border rounded-xl text-xs bg-transparent pl-10 ${isDarkMode ? "border-white/10 text-white placeholder:text-white/30" : "border-black/10 text-black placeholder:text-black/40"}`} />
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
+                    </div>
+                    {(() => {
+                        const filtered = globalLeaderboard.filter(e => e.name.toLowerCase().includes(leaderboardSearch.toLowerCase()));
+                        const totalPages = Math.ceil(filtered.length / itemsPerPage);
+                        const paged = filtered.slice((leaderboardPage - 1) * itemsPerPage, leaderboardPage * itemsPerPage);
+                        return (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs">
+                                    <thead>
+                                        <tr className={`border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                            <th className="text-left py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Rank</th>
+                                            <th className="text-left py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Player</th>
+                                            <th className="text-right py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Score</th>
+                                            <th className="text-right py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Wins</th>
+                                            <th className="text-right py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Activities</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {paged.map((entry) => (
+                                            <tr key={entry.rank} className={`border-b ${isDarkMode ? "border-white/5" : "border-black/5"} ${isDarkMode ? "hover:bg-white/[0.02]" : "hover:bg-black/[0.02]"} transition-colors`}>
+                                                <td className="py-3 px-2">
+                                                    <div className="relative h-8 w-8 flex items-center justify-center">
+                                                        {entry.rank === 1 ? <img src="/1 medal.svg" alt="1st" className="h-full w-full object-contain" />
+                                                        : entry.rank === 2 ? <img src="/2medal.svg" alt="2nd" className="h-full w-full object-contain" />
+                                                        : entry.rank === 3 ? <img src="/3medal.svg" alt="3rd" className="h-full w-full object-contain" />
+                                                        : <><img src="/badge.svg" alt="" className="h-full w-full object-contain absolute" /><span className="absolute text-[8px] font-black text-white">{entry.rank}</span></>}
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-2 font-semibold">{entry.name}</td>
+                                                <td className="py-3 px-2 text-right font-bold">{entry.score}</td>
+                                                <td className="py-3 px-2 text-right">{entry.arena_wins ?? 0}</td>
+                                                <td className="py-3 px-2 text-right opacity-60">{entry.activities ?? 0}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-center gap-2 mt-4">
+                                        <button onClick={() => setLeaderboardPage(Math.max(1, leaderboardPage - 1))} disabled={leaderboardPage === 1} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all disabled:opacity-30 ${isDarkMode ? "border-white/10 text-white/60" : "border-black/10 text-black/60"}`}>Prev</button>
+                                        <span className="text-[10px] opacity-50">{leaderboardPage} / {totalPages}</span>
+                                        <button onClick={() => setLeaderboardPage(Math.min(totalPages, leaderboardPage + 1))} disabled={leaderboardPage === totalPages} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all disabled:opacity-30 ${isDarkMode ? "border-white/10 text-white/60" : "border-black/10 text-black/60"}`}>Next</button>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
+                </>
+            )}
+        </div>
+    );
+
+    const renderHistory = () => (
+        <div>
+            <div className="flex items-center gap-2 mb-6">
+                <RefreshCw className="h-5 w-5 opacity-60" />
+                <h3 className="text-base font-black uppercase tracking-tight">Arena History</h3>
+            </div>
+            {arenaHistory.length === 0 ? (
+                <p className="text-sm opacity-50 text-center py-10">No arena history available.</p>
+            ) : (
+                <>
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className={`p-4 border rounded-2xl text-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                            <span className="text-xl font-black">{arenaHistory.length}</span>
+                            <span className="text-[8px] uppercase tracking-wider opacity-40 block mt-1">Total Battles</span>
+                        </div>
+                        <div className={`p-4 border rounded-2xl text-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                            <span className="text-xl font-black">{arenaHistory.filter(h => h.status === "completed").length}</span>
+                            <span className="text-[8px] uppercase tracking-wider opacity-40 block mt-1">Completed</span>
+                        </div>
+                        <div className={`p-4 border rounded-2xl text-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                            <span className="text-xl font-black">{new Set(arenaHistory.map(h => h.topic)).size}</span>
+                            <span className="text-[8px] uppercase tracking-wider opacity-40 block mt-1">Topics</span>
+                        </div>
+                        <div className={`p-4 border rounded-2xl text-center ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                            <span className="text-xl font-black">{arenaHistory.reduce((a, h) => a + (h.leaderboard?.length ?? 0), 0)}</span>
+                            <span className="text-[8px] uppercase tracking-wider opacity-40 block mt-1">Total Players</span>
+                        </div>
+                    </div>
+                    {/* Difficulty Distribution Chart */}
+                    <div className={`p-4 border rounded-2xl mb-6 ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                        <h4 className="text-[9px] font-bold uppercase tracking-wider opacity-50 mb-3">Difficulty Distribution</h4>
+                        <div className="h-40">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={(() => {
+                                        const counts: Record<string, number> = {};
+                                        arenaHistory.forEach(h => { counts[h.difficulty] = (counts[h.difficulty] || 0) + 1; });
+                                        return Object.entries(counts).map(([name, value]) => ({ name, value }));
+                                    })()} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}>
+                                        {["#22c55e", "#eab308", "#ef4444"].map((color, i) => <Cell key={i} fill={color} />)}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                    {/* History Table */}
+                    <div className="overflow-x-auto">
+                        {(() => {
+                            const totalPages = Math.ceil(arenaHistory.length / itemsPerPage);
+                            const paged = arenaHistory.slice((historyPage - 1) * itemsPerPage, historyPage * itemsPerPage);
+                            return (
+                                <>
+                                    <table className="w-full text-xs">
+                                        <thead>
+                                            <tr className={`border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
+                                                <th className="text-left py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Topic</th>
+                                                <th className="text-left py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Difficulty</th>
+                                                <th className="text-center py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Questions</th>
+                                                <th className="text-center py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Players</th>
+                                                <th className="text-center py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Status</th>
+                                                <th className="text-right py-3 px-2 font-semibold opacity-50 uppercase tracking-wider">Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {paged.map((item) => (
+                                                <tr key={item.id} className={`border-b ${isDarkMode ? "border-white/5" : "border-black/5"} ${isDarkMode ? "hover:bg-white/[0.02]" : "hover:bg-black/[0.02]"} transition-colors`}>
+                                                    <td className="py-3 px-2 font-semibold">{item.topic}</td>
+                                                    <td className="py-3 px-2">
+                                                        <span className={`text-[9px] px-2 py-0.5 rounded uppercase font-bold ${isDarkMode ? "bg-white/5 text-white/70" : "bg-black/5 text-black/70"}`}>{item.difficulty}</span>
+                                                    </td>
+                                                    <td className="py-3 px-2 text-center">{item.question_count}</td>
+                                                    <td className="py-3 px-2 text-center">{item.participant_count ?? 0}</td>
+                                                    <td className="py-3 px-2 text-center">
+                                                        <span className={`text-[9px] px-2 py-0.5 rounded uppercase font-bold ${item.status === "completed" ? "text-emerald-500 bg-emerald-500/10" : "text-amber-500 bg-amber-500/10"}`}>{item.status}</span>
+                                                    </td>
+                                                    <td className="py-3 px-2 text-right opacity-60">{new Date(item.created_at).toLocaleDateString()}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {totalPages > 1 && (
+                                        <div className="flex items-center justify-center gap-2 mt-4">
+                                            <button onClick={() => setHistoryPage(Math.max(1, historyPage - 1))} disabled={historyPage === 1} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all disabled:opacity-30 ${isDarkMode ? "border-white/10 text-white/60" : "border-black/10 text-black/60"}`}>Prev</button>
+                                            <span className="text-[10px] opacity-50">{historyPage} / {totalPages}</span>
+                                            <button onClick={() => setHistoryPage(Math.min(totalPages, historyPage + 1))} disabled={historyPage === totalPages} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all disabled:opacity-30 ${isDarkMode ? "border-white/10 text-white/60" : "border-black/10 text-black/60"}`}>Next</button>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+
 
     return (
         <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} font-sans min-h-screen w-full ${
@@ -839,7 +1019,6 @@ function ArenaContent() {
                             { label: "Results", value: "results" as const, icon: Trophy },
                             { label: "Leaderboard", value: "leaderboard" as const, icon: TrendingUp },
                             { label: "My Attempts", value: "history" as const, icon: RefreshCw },
-                            { label: "Analytics", value: "stats" as const, icon: LineChart },
                         ].map((item) => {
                             const Icon = item.icon;
                             const isActive = activeTab === item.value;
@@ -863,7 +1042,6 @@ function ArenaContent() {
                             { label: "Quizzes", icon: Trophy, active: true, lobbyView: "lobby" as "lobby" },
                             { label: "Leaderboard", icon: TrendingUp, lobbyView: "leaderboard" as "leaderboard" },
                             { label: "Arena History", icon: RefreshCw, lobbyView: "history" as "history" },
-                            { label: "My Stats", icon: LineChart, lobbyView: "stats" as "stats" },
                         ].map((item, idx) => {
                             const Icon = item.icon;
                             const lv = (item as any).lobbyView as typeof lobbyView | undefined;
@@ -1438,8 +1616,14 @@ function ArenaContent() {
 
                     {phase === "finished" && (
                         <div className="w-full mx-auto space-y-10">
-                            {/* Party Popper Confetti Canvas Effect */}
-                            <PartyPopperEffect />
+                            {tabLoading ? (
+                                <div className="flex items-center justify-center py-20">
+                                    <RefreshCw className="h-6 w-6 animate-spin opacity-50" />
+                                </div>
+                            ) : activeTab === "results" ? (
+                                <>
+                                    {/* Party Popper Confetti Canvas Effect */}
+                                    <PartyPopperEffect />
 
                             {/* Section 1: Leaderboard Standings Grid */}
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
@@ -1786,6 +1970,16 @@ function ArenaContent() {
                                     ))}
                                 </div>
                             </div>
+                                </>
+                            ) : activeTab === "leaderboard" ? (
+                                <motion.div key="leaderboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`border p-6 sm:p-8 rounded-[2rem] ${isDarkMode ? "border-white/5 bg-[#161615]" : "border-black/5 bg-[#fbfaf8] shadow-md"}`}>
+                                    {renderLeaderboard()}
+                                </motion.div>
+                            ) : activeTab === "history" ? (
+                                <motion.div key="history" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`border p-6 sm:p-8 rounded-[2rem] ${isDarkMode ? "border-white/5 bg-[#161615]" : "border-black/5 bg-[#fbfaf8] shadow-md"}`}>
+                                    {renderHistory()}
+                                </motion.div>
+                            ) : null}
                         </div>
                     )}
                 </main>
