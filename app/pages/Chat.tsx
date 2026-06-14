@@ -10,7 +10,7 @@ import {
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles, Pencil,
     Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2, LayoutDashboard, Share, Loader2,
     Settings, Bell, Key, ChevronDown, Compass, Palette, Globe, Maximize2, ArrowUp,
-    PanelLeftOpen, PanelLeftClose, MessageSquarePlus, ListOrdered, Car, MicOff
+    PanelLeftOpen, PanelLeftClose, MessageSquarePlus, ListOrdered, Car, MicOff, Headphones
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -342,6 +342,16 @@ const Chat = () => {
     const [noteDragOffset, setNoteDragOffset] = useState({ x: 0, y: 0 });
     const [isResizingNote, setIsResizingNote] = useState(false);
     const [noteResizeOffset, setNoteResizeOffset] = useState({ startX: 0, startY: 0, startW: 0, startH: 0 });
+    const [showImageInsertOptions, setShowImageInsertOptions] = useState(false);
+    const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+    const [libraryAssets, setLibraryAssets] = useState<any[]>([]);
+    const [showImageGenerate, setShowImageGenerate] = useState(false);
+    const [imageGeneratePrompt, setImageGeneratePrompt] = useState("");
+    const [imageGenerating, setImageGenerating] = useState(false);
+    const deviceFileInputRef = useRef<HTMLInputElement>(null);
+    const [isNoteRecording, setIsNoteRecording] = useState(false);
+    const noteMediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const [noteStream, setNoteStream] = useState<MediaStream | null>(null);
     const [gmailConnected, setGmailConnected] = useState(false);
     const [gmailEmail, setGmailEmail] = useState("");
     const [gmailEmails, setGmailEmails] = useState<any[]>([]);
@@ -1400,6 +1410,113 @@ const Chat = () => {
         } catch (error) {
             console.error("Failed to delete note:", error);
             toast.error("Failed to delete note.");
+        }
+    };
+
+    const startNoteRecording = async () => {
+        try {
+            const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            setNoteStream(mediaStream);
+            const mediaRecorder = new MediaRecorder(mediaStream);
+            noteMediaRecorderRef.current = mediaRecorder;
+            const chunks: Blob[] = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+                if (audioBlob.size < 1000) {
+                    toast.error("Recording too short.");
+                    return;
+                }
+                try {
+                    toast.promise(
+                        (async () => {
+                            const { transcribeSpeech } = await import("@/lib/chat-api");
+                            const transcript = await transcribeSpeech(audioBlob);
+                            if (transcript && noteEditorRef.current) {
+                                noteEditorRef.current.focus();
+                                document.execCommand("insertText", false, transcript + " ");
+                                void handleUpdateNote(selectedNote!.id, { content: noteEditorRef.current.innerHTML });
+                                return "Speech converted to text";
+                            }
+                            throw new Error("No transcript received");
+                        })(),
+                        {
+                            loading: 'Transcribing speech...',
+                            success: (data) => data,
+                            error: (err) => `STT Error: ${err.message}`,
+                        }
+                    );
+                } catch (err: any) {
+                    console.error("Note STT Error:", err);
+                }
+            };
+
+            mediaRecorder.start();
+            setIsNoteRecording(true);
+        } catch (err) {
+            console.error("Note recording error:", err);
+            toast.error("Could not access microphone");
+        }
+    };
+
+    const stopNoteRecording = () => {
+        if (noteMediaRecorderRef.current && isNoteRecording) {
+            noteMediaRecorderRef.current.stop();
+            setIsNoteRecording(false);
+            if (noteStream) {
+                noteStream.getTracks().forEach(track => track.stop());
+                setNoteStream(null);
+            }
+        }
+    };
+
+    const [isNoteTTSPlaying, setIsNoteTTSPlaying] = useState(false);
+
+    const playNoteTTS = async () => {
+        if (isNoteTTSPlaying) return;
+        const text = noteEditorRef.current?.innerText || "";
+        if (!text.trim()) {
+            toast.error("No text to read.");
+            return;
+        }
+        setIsNoteTTSPlaying(true);
+        try {
+            const { generateTTSAudio } = await import("@/lib/chat-api");
+            const audioBlob = await generateTTSAudio(text, "hi-IN");
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                setIsNoteTTSPlaying(false);
+            };
+            audio.onerror = () => {
+                URL.revokeObjectURL(audioUrl);
+                setIsNoteTTSPlaying(false);
+                toast.error("TTS playback failed.");
+            };
+            await audio.play();
+        } catch {
+            // Fallback: browser speech synthesis
+            try {
+                if ("speechSynthesis" in window) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1;
+                    utterance.onend = () => setIsNoteTTSPlaying(false);
+                    utterance.onerror = () => setIsNoteTTSPlaying(false);
+                    window.speechSynthesis.speak(utterance);
+                } else {
+                    toast.error("TTS not available.");
+                    setIsNoteTTSPlaying(false);
+                }
+            } catch {
+                toast.error("TTS failed.");
+                setIsNoteTTSPlaying(false);
+            }
         }
     };
 
@@ -2847,6 +2964,38 @@ STRICT RULES:
                                 <MessageSquarePlus className="w-5 h-5" />
                             </motion.button>
 
+                            {/* Notes icon (student) / Mail icon (employee) */}
+                            {!isEnterpriseModeActive ? (
+                                <motion.button
+                                    onClick={() => { setIsSidebarCollapsed(false); setSidebarView("notes"); }}
+                                    whileHover={{ scale: 1.15 }}
+                                    whileTap={{ scale: 0.85 }}
+                                    className={`p-2 rounded-lg transition-colors cursor-pointer ${isDarkMode
+                                            ? "text-white/60 hover:text-white hover:bg-white/5"
+                                            : "text-black/60 hover:text-black hover:bg-black/5"
+                                        }`}
+                                    title="Notes"
+                                >
+                                    <FileIcon className="w-5 h-5" />
+                                </motion.button>
+                            ) : (
+                                <motion.button
+                                    onClick={() => { setIsSidebarCollapsed(false); setSidebarView("mail"); }}
+                                    whileHover={{ scale: 1.15 }}
+                                    whileTap={{ scale: 0.85 }}
+                                    className={`p-2 rounded-lg transition-colors cursor-pointer ${isDarkMode
+                                            ? "text-white/60 hover:text-white hover:bg-white/5"
+                                            : "text-black/60 hover:text-black hover:bg-black/5"
+                                        }`}
+                                    title="Mail"
+                                >
+                                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                                        <rect x="2" y="4" width="20" height="16" rx="2" fill="currentColor" />
+                                        <path d="M22 6l-10 7L2 6" fill="none" stroke={isDarkMode ? "#0d0d0c" : "#f4f3f2"} strokeWidth="2" strokeLinecap="round" />
+                                    </svg>
+                                </motion.button>
+                            )}
+
                             {!isEnterpriseModeActive && (
                                 <motion.div
                                     whileHover={{ scale: 1.15 }}
@@ -3280,7 +3429,7 @@ STRICT RULES:
                                                             : "border-black/5 bg-black/5 hover:bg-black/10 hover:border-black/10 text-black"
                                                     }`}
                                                 >
-                                                    <div className="flex flex-col min-w-0 pr-6 flex-1">
+                                                    <div className="flex flex-col min-w-0 pr-2 flex-1">
                                                         {editingNoteTitleId === note.id ? (
                                                             <input
                                                                 ref={noteInlineTitleRef}
@@ -3309,17 +3458,31 @@ STRICT RULES:
                                                                 autoFocus
                                                             />
                                                         ) : (
-                                                            <span
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setEditingNoteTitleId(note.id);
-                                                                    setEditingNoteTitleValue(note.title || "");
-                                                                    setTimeout(() => noteInlineTitleRef.current?.focus(), 0);
-                                                                }}
-                                                                className="text-xs font-sans font-medium truncate hover:text-blue-400 transition-colors cursor-text"
-                                                            >
-                                                                {note.title || "Untitled Note"}
-                                                            </span>
+                                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                                <FileIcon className="w-3.5 h-3.5 shrink-0 text-blue-400/70" />
+                                                                <span
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedNote(note);
+                                                                        setIsNoteEditorOpen(true);
+                                                                    }}
+                                                                    className="text-xs font-sans font-medium truncate cursor-pointer"
+                                                                >
+                                                                    {note.title || "Untitled Note"}
+                                                                </span>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setEditingNoteTitleId(note.id);
+                                                                        setEditingNoteTitleValue(note.title || "");
+                                                                        setTimeout(() => noteInlineTitleRef.current?.focus(), 0);
+                                                                    }}
+                                                                    className="shrink-0 p-0.5 rounded hover:bg-white/10 text-zinc-400 hover:text-blue-400 transition-colors"
+                                                                    title="Rename note"
+                                                                >
+                                                                    <Edit3 className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
                                                         )}
                                                         <span className={`text-[10px] font-sans truncate mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                                             {note.content ? note.content.replace(/<[^>]*>/g, '').substring(0, 45) : "Empty note"}
@@ -3330,7 +3493,7 @@ STRICT RULES:
                                                             e.stopPropagation();
                                                             void handleDeleteNote(note.id);
                                                         }}
-                                                        className="shrink-0 ml-2 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-opacity hover:bg-red-500/10 text-red-500"
+                                                        className="shrink-0 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-opacity hover:bg-red-500/10 text-red-500"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -5232,11 +5395,17 @@ STRICT RULES:
                     {/* Styles for Notebook ruling lines */}
                     <style dangerouslySetInnerHTML={{__html: `
                         .notes-ruled-light {
-                            background: linear-gradient(rgba(0, 0, 0, 0) 95%, rgba(33, 150, 243, 0.15) 95%) 0 0 / 100% 28px repeat !important;
+                            background-image: linear-gradient(rgba(0, 0, 0, 0) 95%, rgba(33, 150, 243, 0.15) 95%) !important;
+                            background-size: 100% 28px !important;
+                            background-repeat: repeat !important;
+                            background-position: 0 0 !important;
                             line-height: 28px !important;
                         }
                         .notes-ruled-dark {
-                            background: linear-gradient(rgba(0, 0, 0, 0) 95%, rgba(255, 255, 255, 0.08) 95%) 0 0 / 100% 28px repeat !important;
+                            background-image: linear-gradient(rgba(0, 0, 0, 0) 95%, rgba(255, 255, 255, 0.08) 95%) !important;
+                            background-size: 100% 28px !important;
+                            background-repeat: repeat !important;
+                            background-position: 0 0 !important;
                             line-height: 28px !important;
                         }
                         .notes-ruled-light img, .notes-ruled-dark img {
@@ -5249,6 +5418,16 @@ STRICT RULES:
                         .note-resize-handle:hover { opacity: 0.8; }
                         .note-resize-handle-right, .note-resize-handle-left { width: 6px; }
                         .note-resize-handle-top, .note-resize-handle-bottom { height: 6px; }
+                        .note-editor-hr {
+                            border: none;
+                            border-top: 1px solid rgba(255,255,255,0.2);
+                            margin: 8px 0;
+                        }
+                        .note-editor-hr-dotted {
+                            border: none;
+                            border-top: 1px dashed rgba(255,255,255,0.3);
+                            margin: 8px 0;
+                        }
                     `}} />
 
                     {/* Modal container wrapper for non-popup mode */}
@@ -5331,21 +5510,33 @@ STRICT RULES:
                         </div>
 
                         {/* Rich Formatting Toolbar */}
-                        <div className="flex flex-wrap items-center gap-1.5 px-4 py-2 border-b shrink-0 border-white/10 bg-zinc-900">
+                        <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-b shrink-0 border-white/10 bg-zinc-900">
                             {/* Font Family Selection */}
                             <select
                                 onChange={(e) => {
-                                    document.execCommand("fontName", false, e.target.value);
+                                    const val = e.target.value;
+                                    if (val.startsWith("h1/")) {
+                                        document.execCommand("formatBlock", false, `<${val.replace("h1/", "")}>`);
+                                    } else {
+                                        document.execCommand("fontName", false, val);
+                                    }
                                 }}
-                                className="text-[10px] rounded border p-1 outline-none bg-zinc-800 border-white/10 text-white"
-                                title="Font Family"
+                                className="text-[11px] rounded border px-1.5 py-1 outline-none bg-zinc-800 border-white/10 text-white"
+                                title="Font Family / Heading"
                             >
-                                <option value="Poppins, sans-serif">Poppins (Heading)</option>
-                                <option value="Roboto, sans-serif">Roboto (Body)</option>
-                                <option value="Space Grotesk, sans-serif">Space Grotesk (Accent)</option>
-                                <option value="sans-serif">System Sans</option>
-                                <option value="serif">System Serif</option>
-                                <option value="monospace">System Monospace</option>
+                                <optgroup label="Headings">
+                                    <option value="h1/h1">H1 Heading</option>
+                                    <option value="h1/h2">H2 Heading</option>
+                                    <option value="h1/h3">H3 Heading</option>
+                                </optgroup>
+                                <optgroup label="Fonts">
+                                    <option value="Poppins, sans-serif">Poppins (Heading)</option>
+                                    <option value="Roboto, sans-serif">Roboto (Body)</option>
+                                    <option value="Space Grotesk, sans-serif">Space Grotesk (Accent)</option>
+                                    <option value="sans-serif">System Sans</option>
+                                    <option value="serif">System Serif</option>
+                                    <option value="monospace">System Monospace</option>
+                                </optgroup>
                             </select>
 
                             {/* Font Size Selector */}
@@ -5353,7 +5544,7 @@ STRICT RULES:
                                 onChange={(e) => {
                                     document.execCommand("fontSize", false, e.target.value);
                                 }}
-                                className="text-[10px] rounded border p-1 outline-none bg-zinc-800 border-white/10 text-white"
+                                className="text-[11px] rounded border px-1.5 py-1 outline-none bg-zinc-800 border-white/10 text-white"
                                 title="Font Size"
                             >
                                 <option value="1">Small</option>
@@ -5362,33 +5553,156 @@ STRICT RULES:
                                 <option value="7">Extra Large</option>
                             </select>
 
+                            {/* Font Size Increase / Decrease */}
+                            <button
+                                onClick={() => {
+                                    const sizes = ["1","2","3","4","5","6","7"];
+                                    const current = document.queryCommandValue("fontSize") || "3";
+                                    const idx = sizes.indexOf(current);
+                                    document.execCommand("fontSize", false, sizes[Math.min(idx + 1 >= 0 ? idx + 1 : 1, 6)]);
+                                }}
+                                className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
+                                title="Increase font size"
+                            >
+                                A+
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const sizes = ["1","2","3","4","5","6","7"];
+                                    const current = document.queryCommandValue("fontSize") || "3";
+                                    const idx = sizes.indexOf(current);
+                                    document.execCommand("fontSize", false, sizes[Math.max(idx - 1 >= 0 ? idx - 1 : 0, 0)]);
+                                }}
+                                className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
+                                title="Decrease font size"
+                            >
+                                A-
+                            </button>
+
+                            <div className="w-px h-5 bg-zinc-700 mx-0.5" />
+
+                            {/* Heading quick buttons */}
+                            <button
+                                onClick={() => document.execCommand("formatBlock", false, "<h1>")}
+                                className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
+                                title="Heading 1"
+                            >
+                                H1
+                            </button>
+                            <button
+                                onClick={() => document.execCommand("formatBlock", false, "<h2>")}
+                                className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
+                                title="Heading 2"
+                            >
+                                H2
+                            </button>
+                            <button
+                                onClick={() => document.execCommand("formatBlock", false, "<h3>")}
+                                className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
+                                title="Heading 3"
+                            >
+                                H3
+                            </button>
+
                             <div className="w-px h-5 bg-zinc-700 mx-0.5" />
 
                             {/* Bold */}
                             <button
                                 onClick={() => document.execCommand("bold")}
-                                className="p-1 text-xs font-bold rounded text-white hover:bg-white/10"
-                                title="Bold"
+                                className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
+                                title="Bold (Ctrl+B)"
                             >
-                                B
+                                <b>B</b>
                             </button>
 
                             {/* Italic */}
                             <button
                                 onClick={() => document.execCommand("italic")}
-                                className="p-1 text-xs italic rounded text-white hover:bg-white/10"
-                                title="Italic"
+                                className="px-2 py-1 text-xs italic rounded text-white hover:bg-white/10"
+                                title="Italic (Ctrl+I)"
                             >
-                                I
+                                <i>I</i>
                             </button>
 
                             {/* Underline */}
                             <button
                                 onClick={() => document.execCommand("underline")}
-                                className="p-1 text-xs underline rounded text-white hover:bg-white/10"
-                                title="Underline"
+                                className="px-2 py-1 text-xs underline rounded text-white hover:bg-white/10"
+                                title="Underline (Ctrl+U)"
                             >
-                                U
+                                <u>U</u>
+                            </button>
+
+                            {/* Strikethrough */}
+                            <button
+                                onClick={() => document.execCommand("strikeThrough")}
+                                className="px-2 py-1 text-xs rounded text-white hover:bg-white/10"
+                                title="Strikethrough"
+                            >
+                                <s>S</s>
+                            </button>
+
+                            <div className="w-px h-5 bg-zinc-700 mx-0.5" />
+
+                            {/* Ordered List */}
+                            <button
+                                onClick={() => document.execCommand("insertOrderedList")}
+                                className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
+                                title="Numbered List"
+                            >
+                                1.
+                            </button>
+
+                            {/* Unordered List */}
+                            <button
+                                onClick={() => document.execCommand("insertUnorderedList")}
+                                className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
+                                title="Bullet List"
+                            >
+                                •
+                            </button>
+
+                            {/* Indent */}
+                            <button
+                                onClick={() => document.execCommand("indent")}
+                                className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
+                                title="Increase Indent"
+                            >
+                                <span className="text-xs">→</span>
+                            </button>
+
+                            {/* Outdent */}
+                            <button
+                                onClick={() => document.execCommand("outdent")}
+                                className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
+                                title="Decrease Indent"
+                            >
+                                <span className="text-xs">←</span>
+                            </button>
+
+                            <div className="w-px h-5 bg-zinc-700 mx-0.5" />
+
+                            {/* Alignment buttons */}
+                            <button
+                                onClick={() => document.execCommand("justifyLeft")}
+                                className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
+                                title="Align Left"
+                            >
+                                ═╌
+                            </button>
+                            <button
+                                onClick={() => document.execCommand("justifyCenter")}
+                                className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
+                                title="Align Center"
+                            >
+                                ═══
+                            </button>
+                            <button
+                                onClick={() => document.execCommand("justifyRight")}
+                                className="px-2 py-1 text-[11px] rounded text-white hover:bg-white/10"
+                                title="Align Right"
+                            >
+                                ═╌
                             </button>
 
                             <div className="w-px h-5 bg-zinc-700 mx-0.5" />
@@ -5406,61 +5720,184 @@ STRICT RULES:
 
                             <div className="w-px h-5 bg-zinc-700 mx-0.5" />
 
+                            {/* Insert Table */}
+                            <button
+                                onClick={() => {
+                                    const selection = window.getSelection();
+                                    if (!selection) return;
+                                    const tableHtml = '<table style="width:100%;border-collapse:collapse;border:1px solid #555"><thead><tr><th style="border:1px solid #555;padding:4px">Header 1</th><th style="border:1px solid #555;padding:4px">Header 2</th></tr></thead><tbody><tr><td style="border:1px solid #555;padding:4px">Cell 1</td><td style="border:1px solid #555;padding:4px">Cell 2</td></tr></tbody></table><br>';
+                                    document.execCommand("insertHTML", false, tableHtml);
+                                }}
+                                className="flex items-center gap-1 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                title="Insert Table"
+                            >
+                                ▦ <span>Table</span>
+                            </button>
+
+                            {/* Insert Horizontal Rule / Line */}
+                            <button
+                                onClick={() => {
+                                    const hrHtml = '<hr class="note-editor-hr" />';
+                                    document.execCommand("insertHTML", false, hrHtml);
+                                }}
+                                className="flex items-center gap-1 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                title="Insert regular line"
+                            >
+                                ─ <span>Line</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const hrHtml = '<hr class="note-editor-hr-dotted" />';
+                                    document.execCommand("insertHTML", false, hrHtml);
+                                }}
+                                className="flex items-center gap-1 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                title="Insert dotted line"
+                            >
+                                ┈ <span>Dotted</span>
+                            </button>
+
+                            <div className="w-px h-5 bg-zinc-700 mx-0.5" />
+
+                            {/* Speech-to-Text Mic Button */}
+                            <button
+                                onClick={isNoteRecording ? stopNoteRecording : startNoteRecording}
+                                className={`flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all ${
+                                    isNoteRecording
+                                        ? "bg-red-500 text-white animate-pulse"
+                                        : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                }`}
+                                title={isNoteRecording ? "Stop recording" : "Voice input (STT)"}
+                            >
+                                {isNoteRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                                <span>{isNoteRecording ? "Recording..." : "STT"}</span>
+                            </button>
+
+                            {/* Text-to-Speech Headphone Button */}
+                            <button
+                                onClick={playNoteTTS}
+                                disabled={isNoteTTSPlaying}
+                                className={`flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all ${
+                                    isNoteTTSPlaying
+                                        ? "bg-emerald-500 text-white animate-pulse"
+                                        : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                }`}
+                                title="Read note aloud (TTS)"
+                            >
+                                <Headphones className="w-3.5 h-3.5" />
+                                <span>{isNoteTTSPlaying ? "Playing..." : "TTS"}</span>
+                            </button>
+
                             {/* Draw Diagram Whiteboard Toggle */}
                             <button
                                 onClick={() => setShowWhiteboard(!showWhiteboard)}
-                                className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
+                                className={`flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all ${
                                     showWhiteboard
                                         ? "bg-blue-500 text-white"
                                         : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 }`}
                                 title="Draw whiteboard diagram sketch"
                             >
-                                <Pencil className="w-3 h-3" />
-                                <span>Draw Diagram</span>
+                                <Pencil className="w-3.5 h-3.5" />
+                                <span>Draw</span>
                             </button>
 
-                            {/* Image Upload Button */}
-                            <label
-                                className="flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all cursor-pointer bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                                title="Upload local image"
-                            >
-                                <ImageIcon className="w-3 h-3" />
-                                <span>Upload Image</span>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            const reader = new FileReader();
-                                            reader.onload = () => {
-                                                if (reader.result && typeof reader.result === "string") {
-                                                    if (noteEditorRef.current) {
-                                                        noteEditorRef.current.focus();
-                                                        document.execCommand("insertImage", false, reader.result);
-                                                        void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                            {/* Image Insert Button with dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowImageInsertOptions(!showImageInsertOptions)}
+                                    className={`flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all ${
+                                        showImageInsertOptions
+                                            ? "bg-blue-500 text-white"
+                                            : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                    }`}
+                                    title="Insert Image"
+                                >
+                                    <ImageIcon className="w-3.5 h-3.5" />
+                                    <span>Image</span>
+                                </button>
+                                {showImageInsertOptions && (
+                                    <div className="absolute top-full left-0 mt-1 w-44 rounded-lg border border-white/10 bg-zinc-800 shadow-2xl z-50 overflow-hidden">
+                                        <button
+                                            onClick={() => {
+                                                setShowImageInsertOptions(false);
+                                                deviceFileInputRef.current?.click();
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-left text-white hover:bg-white/10 transition-colors"
+                                        >
+                                            <span>📁</span>
+                                            <span>Upload from Device</span>
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                setShowImageInsertOptions(false);
+                                                try {
+                                                    const { getLibraryAssets } = await import("@/lib/chat-api");
+                                                    const res = await getLibraryAssets();
+                                                    if (res.success && res.assets) {
+                                                        setLibraryAssets(res.assets || []);
+                                                        setShowLibraryPicker(true);
+                                                    } else {
+                                                        toast.error("No images in your library.");
                                                     }
+                                                } catch {
+                                                    toast.error("Failed to load image library.");
                                                 }
-                                            };
-                                            reader.readAsDataURL(file);
-                                        }
-                                    }}
-                                />
-                            </label>
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-left text-white hover:bg-white/10 transition-colors"
+                                        >
+                                            <span>🖼️</span>
+                                            <span>Image Library</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowImageInsertOptions(false);
+                                                setShowImageGenerate(true);
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-left text-white hover:bg-white/10 transition-colors"
+                                        >
+                                            <span>✨</span>
+                                            <span>Generate AI Image</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Hidden device file input */}
+                            <input
+                                ref={deviceFileInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        const reader = new FileReader();
+                                        reader.onload = () => {
+                                            if (reader.result && typeof reader.result === "string") {
+                                                if (noteEditorRef.current) {
+                                                    noteEditorRef.current.focus();
+                                                    document.execCommand("insertImage", false, reader.result);
+                                                    void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                                                }
+                                            }
+                                        };
+                                        reader.readAsDataURL(file);
+                                    }
+                                    e.target.value = "";
+                                }}
+                            />
 
                             {/* AI Rewrite Panel Toggle */}
                             <button
                                 onClick={() => setShowAiRewrite(!showAiRewrite)}
-                                className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
+                                className={`flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all ${
                                     showAiRewrite
                                         ? "bg-blue-500 text-white"
                                         : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 }`}
                                 title="AI rewriting suggestions panel"
                             >
-                                <Sparkles className="w-3 h-3" />
+                                <Sparkles className="w-3.5 h-3.5" />
                                 <span>AI Rewrite</span>
                             </button>
 
@@ -5468,7 +5905,7 @@ STRICT RULES:
 
                             {/* Page Color Picker */}
                             <div className="flex items-center gap-1">
-                                <span className="text-[9px] text-zinc-400">BG:</span>
+                                <span className="text-[10px] text-zinc-400">BG:</span>
                                 {[
                                     { l: "White", c: "#ffffff" },
                                     { l: "Ivory", c: "#faf8f5" },
@@ -5485,7 +5922,7 @@ STRICT RULES:
                                         }}
                                         style={{ backgroundColor: bg.c }}
                                         title={bg.l}
-                                        className={`w-3 h-3 rounded-full border-2 ${
+                                        className={`w-4 h-4 rounded-full border-2 ${
                                             editorColor === bg.c ? "border-blue-400 scale-110" : "border-white/30"
                                         }`}
                                     />
@@ -5499,15 +5936,15 @@ STRICT RULES:
                                     setEditorLined(nextLined);
                                     void handleUpdateNote(selectedNote.id, { is_lined: nextLined });
                                 }}
-                                className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
+                                className={`flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all ${
                                     editorLined
                                         ? "bg-blue-500 text-white"
                                         : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 }`}
                                 title="Toggle notebook ruled lines"
                             >
-                                <ListOrdered className="w-3 h-3" />
-                                <span>Lined Paper</span>
+                                <ListOrdered className="w-3.5 h-3.5" />
+                                <span>Lined</span>
                             </button>
 
                             <div className="w-px h-5 bg-zinc-700 mx-0.5" />
@@ -5520,10 +5957,10 @@ STRICT RULES:
                                             exportAsTxt();
                                         }
                                     }}
-                                    className="flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                    className="flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                     title="Export note as raw .txt file"
                                 >
-                                    <FileIcon className="w-3 h-3" />
+                                    <FileIcon className="w-3.5 h-3.5" />
                                     <span>TXT</span>
                                 </button>
                                 <button
@@ -5532,7 +5969,7 @@ STRICT RULES:
                                             exportAsPdf();
                                         }
                                     }}
-                                    className="flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                    className="flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                     title="Export note as formatted PDF file"
                                 >
                                     <FileDown className="w-3.5 h-3.5" />
@@ -5572,32 +6009,46 @@ STRICT RULES:
                                                 }
                                                 let textToRewrite = "";
                                                 let isSelection = false;
+                                                let rangeToRestore: Range | null = null;
                                                 const selection = window.getSelection();
                                                 if (selection && selection.toString().trim().length > 0) {
-                                                    textToRewrite = selection.toString();
+                                                    const range = selection.getRangeAt(0);
+                                                    rangeToRestore = range;
+                                                    const fragment = range.cloneContents();
+                                                    const tempDiv = document.createElement("div");
+                                                    tempDiv.appendChild(fragment.cloneNode(true));
+                                                    textToRewrite = tempDiv.innerHTML;
                                                     isSelection = true;
                                                 } else {
-                                                    textToRewrite = noteEditorRef.current?.innerText || "";
+                                                    textToRewrite = noteEditorRef.current?.innerHTML || "";
                                                 }
 
                                                 setAiRewriting(true);
                                                 try {
-                                                    const res = await aiRewriteNote(textToRewrite, aiRewriteInstruction);
-                                                    if (res.success && res.rewrittenText) {
-                                                        if (isSelection && selection) {
-                                                            const range = selection.getRangeAt(0);
-                                                            range.deleteContents();
-                                                            const textNode = document.createTextNode(res.rewrittenText);
-                                                            range.insertNode(textNode);
+                                                    const { sendChatCompletion } = await import("@/lib/chat-api");
+                                                    const res = await sendChatCompletion({
+                                                        messages: [
+                                                            { role: "system", content: `You are an expert HTML editor. Rewrite the following HTML content according to this instruction: "${aiRewriteInstruction}". Return ONLY the rewritten HTML. Preserve ALL formatting: headings, bold, italic, lists, tables, horizontal rules, math formulas ($$...$$, $...$), spacing, and indentation. Do NOT wrap in markdown code fences. Do NOT add explanations or greetings.` },
+                                                            { role: "user", content: textToRewrite }
+                                                        ]
+                                                    });
+                                                    const rewrittenText = (res as any)?.response || (res as any)?.data?.[0]?.message?.content || "";
+                                                    if (rewrittenText) {
+                                                        if (isSelection && selection && rangeToRestore) {
+                                                            selection.removeAllRanges();
+                                                            selection.addRange(rangeToRestore);
+                                                            document.execCommand("insertHTML", false, rewrittenText);
                                                         } else {
                                                             if (noteEditorRef.current) {
-                                                                noteEditorRef.current.innerHTML = res.rewrittenText;
+                                                                noteEditorRef.current.innerHTML = rewrittenText;
                                                             }
                                                         }
                                                         if (noteEditorRef.current) {
                                                             void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
                                                         }
                                                         toast.success("Text rewritten!");
+                                                    } else {
+                                                        toast.error("AI Rewrite returned no text.");
                                                     }
                                                 } catch (err) {
                                                     console.error(err);
@@ -5738,6 +6189,101 @@ STRICT RULES:
                                 />
                             </>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Library Image Picker Modal */}
+            {showLibraryPicker && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowLibraryPicker(false)}>
+                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-xl border border-white/10 bg-zinc-900 shadow-2xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-sans font-semibold text-white">Select Image from Library</h3>
+                            <button onClick={() => setShowLibraryPicker(false)} className="text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 overflow-y-auto max-h-[50vh]">
+                            {libraryAssets.length > 0 ? libraryAssets.slice(0, 30).map((asset: any) => (
+                                <button
+                                    key={asset.id}
+                                    onClick={() => {
+                                        const imgUrl = asset.asset_url;
+                                        if (noteEditorRef.current && imgUrl && selectedNote) {
+                                            noteEditorRef.current.focus();
+                                            document.execCommand("insertImage", false, imgUrl);
+                                            void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                                        }
+                                        setShowLibraryPicker(false);
+                                        toast.success("Image inserted!");
+                                    }}
+                                    className="aspect-video rounded-lg overflow-hidden border border-white/10 hover:border-blue-500 transition-all"
+                                >
+                                    <img src={asset.asset_url} alt={asset.prompt || "Library image"} className="w-full h-full object-cover" />
+                                </button>
+                            )) : (
+                                <div className="col-span-3 text-center py-8 text-white/40 text-xs">No images in your library.</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* AI Image Generation Modal */}
+            {showImageGenerate && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowImageGenerate(false)}>
+                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-xl border border-white/10 bg-zinc-900 shadow-2xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-sans font-semibold text-white">Generate AI Image</h3>
+                            <button onClick={() => setShowImageGenerate(false)} className="text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
+                        </div>
+                        <textarea
+                            value={imageGeneratePrompt}
+                            onChange={(e) => setImageGeneratePrompt(e.target.value)}
+                            placeholder="Describe the image you want to generate..."
+                            rows={3}
+                            className="w-full px-3 py-2 text-xs rounded-lg border border-white/10 bg-zinc-800 text-white placeholder-white/30 focus:outline-none focus:border-blue-500 resize-none"
+                        />
+                        <button
+                            disabled={imageGenerating || !imageGeneratePrompt.trim()}
+                            onClick={async () => {
+                                if (!imageGeneratePrompt.trim()) return;
+                                setImageGenerating(true);
+                                try {
+                                    const { sendAiRequest } = await import("@/lib/chat-api");
+                                    const res = await sendAiRequest({
+                                        endpoint: "/chat",
+                                        messages: [
+                                            { role: "system", content: "You are an AI image generator. Generate a detailed image based on the prompt. Return ONLY the image URL or markdown image syntax." },
+                                            { role: "user", content: imageGeneratePrompt }
+                                        ],
+                                        modality: "image"
+                                    });
+                                    const imageUrl = (res as any)?.response || (res as any)?.data?.[0]?.message?.content || "";
+                                    if (imageUrl && noteEditorRef.current && selectedNote) {
+                                        const urlMatch = imageUrl.match(/https?:\/\/[^\s\)\]]+/);
+                                        const finalUrl = urlMatch ? urlMatch[0] : imageUrl;
+                                        noteEditorRef.current.focus();
+                                        document.execCommand("insertImage", false, finalUrl);
+                                        void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                                        toast.success("Image inserted!");
+                                        setShowImageGenerate(false);
+                                    } else {
+                                        toast.error("No image generated. Try a different prompt.");
+                                    }
+                                } catch (err) {
+                                    console.error(err);
+                                    toast.error("Image generation failed.");
+                                } finally {
+                                    setImageGenerating(false);
+                                }
+                            }}
+                            className="w-full mt-2 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-2"
+                        >
+                            {imageGenerating ? (
+                                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                            ) : (
+                                <><Sparkles className="w-3.5 h-3.5" /> Generate Image</>
+                            )}
+                        </button>
                     </div>
                 </div>
             )}
