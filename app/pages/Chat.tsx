@@ -3893,33 +3893,36 @@ STRICT RULES:
                                                                 >
                                                                     {note.title || "Untitled Note"}
                                                                 </span>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setEditingNoteTitleId(note.id);
-                                                                        setEditingNoteTitleValue(note.title || "");
-                                                                        setTimeout(() => noteInlineTitleRef.current?.focus(), 0);
-                                                                    }}
-                                                                    className="shrink-0 p-0.5 rounded hover:bg-white/10 text-zinc-400 hover:text-blue-400 transition-colors"
-                                                                    title="Rename note"
-                                                                >
-                                                                    <Edit3 className="w-3 h-3" />
-                                                                </button>
                                                             </div>
                                                         )}
                                                         <span className={`text-[10px] font-sans truncate mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                                             {note.content ? note.content.replace(/<[^>]*>/g, '').substring(0, 45) : "Empty note"}
                                                         </span>
                                                     </div>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            void handleDeleteNote(note.id);
-                                                        }}
-                                                        className="shrink-0 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-opacity hover:bg-red-500/10 text-red-500"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
+                                                    <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setEditingNoteTitleId(note.id);
+                                                                setEditingNoteTitleValue(note.title || "");
+                                                                setTimeout(() => noteInlineTitleRef.current?.focus(), 0);
+                                                            }}
+                                                            className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-blue-400 transition-colors"
+                                                            title="Rename note"
+                                                        >
+                                                            <Edit3 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                void handleDeleteNote(note.id);
+                                                            }}
+                                                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors"
+                                                            title="Delete note"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             ))
                                     )}
@@ -6680,51 +6683,55 @@ Do NOT wrap the output in markdown code fences. Do NOT add explanations or greet
                             )}
 
                             {/* Main Editable note canvas */}
-                            <div className="flex-1 overflow-y-auto relative w-full h-full">
-                                <div
-                                    ref={noteEditorRef}
-                                    contentEditable
-                                    suppressContentEditableWarning
-                                    onBlur={() => {
-                                        if (noteEditorRef.current) {
-                                            void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
-                                        }
-                                    }}
-                                    onInput={() => {
-                                        if (noteEditorRef.current) {
-                                            const html = getNoteContent();
-                                            setSelectedNote((prev) => prev ? { ...prev, content: html } : null);
-                                            setNotes((prev) =>
-                                                prev.map((n) => (n.id === selectedNote.id ? { ...n, content: html } : n))
-                                            );
-                                        }
-                                    }}
-                                    style={{
-                                        backgroundColor: editorColor,
-                                        color: editorColor === "#1a1a1a" || editorColor === "#201b2b" ? "#f5f5f4" : "#1a1a19",
-                                        fontFamily: "Poppins, Roboto, sans-serif",
-                                        minHeight: "100%",
-                                        fontSize: noteFontSize,
-                                        lineHeight: noteLineSpacing,
-                                    }}
-                                    className={`note-content p-6 outline-none pb-24 font-normal ${
-                                        editorLined
-                                            ? editorColor === "#1a1a1a" || editorColor === "#201b2b"
-                                                ? "notes-ruled-dark"
-                                                : "notes-ruled-light"
-                                            : ""
-                                    }`}
-                                />
+                            <div className="flex-1 overflow-y-auto w-full h-full">
+                                <div className="relative min-h-full w-full">
+                                    <div
+                                        ref={noteEditorRef}
+                                        contentEditable
+                                        suppressContentEditableWarning
+                                        onBlur={() => {
+                                            if (noteEditorRef.current) {
+                                                void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
+                                            }
+                                        }}
+                                        onInput={() => {
+                                            if (noteEditorRef.current) {
+                                                const html = getNoteContent();
+                                                setSelectedNote((prev) => prev ? { ...prev, content: html } : null);
+                                                setNotes((prev) =>
+                                                    prev.map((n) => (n.id === selectedNote.id ? { ...n, content: html } : n))
+                                                );
+                                            }
+                                        }}
+                                        style={{
+                                            backgroundColor: editorColor,
+                                            color: editorColor === "#1a1a1a" || editorColor === "#201b2b" ? "#f5f5f4" : "#1a1a19",
+                                            fontFamily: "Poppins, Roboto, sans-serif",
+                                            minHeight: "100%",
+                                            fontSize: noteFontSize,
+                                            lineHeight: noteLineSpacing,
+                                        }}
+                                        className={`note-content p-6 outline-none pb-24 font-normal ${
+                                            editorLined
+                                                ? editorColor === "#1a1a1a" || editorColor === "#201b2b"
+                                                    ? "notes-ruled-dark"
+                                                    : "notes-ruled-light"
+                                                : ""
+                                        }`}
+                                    />
 
-                                {aiRewriting && (
-                                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[4px] select-none pointer-events-auto">
-                                        <div className="flex flex-col items-center justify-center p-6 rounded-2xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl animate-pulse max-w-sm text-center mx-4">
-                                            <Sparkles className="w-10 h-10 text-blue-400 mb-3 animate-spin" style={{ animationDuration: '3s' }} />
-                                            <h3 className="text-sm font-semibold text-white mb-1">Rewriting Note Content...</h3>
-                                            <p className="text-[11px] text-zinc-400">Please wait while our AI assistant processes and optimizes your notes text according to instructions.</p>
+                                    {aiRewriting && (
+                                        <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[4px] select-none pointer-events-auto">
+                                            <div className="sticky top-1/2 -translate-y-1/2 flex items-center justify-center w-full">
+                                                <div className="flex flex-col items-center justify-center p-6 rounded-2xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl animate-pulse max-w-sm text-center mx-4">
+                                                    <Sparkles className="w-10 h-10 text-blue-400 mb-3 animate-spin" style={{ animationDuration: '3s' }} />
+                                                    <h3 className="text-sm font-semibold text-white mb-1">Rewriting Note Content...</h3>
+                                                    <p className="text-[11px] text-zinc-400">Please wait while our AI assistant processes and optimizes your notes text according to instructions.</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         </div>
 
