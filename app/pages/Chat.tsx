@@ -1474,6 +1474,11 @@ const Chat = () => {
                     transcript = await transcribeSpeech(audioBlob);
                 } catch (err: any) {
                     console.error("Note STT Error:", err);
+                    const errMsg = err?.message || "";
+                    const isLimit = errMsg.includes("Limit") || errMsg.includes("Exceeded") || errMsg.includes("plan") || errMsg.includes("balance") || errMsg.includes("Credit");
+                    if (isLimit) {
+                        toast.error(errMsg);
+                    }
                     try {
                         const { transcribeSpeechFallback } = await import("@/lib/chat-api");
                         const fallbackResult = await transcribeSpeechFallback("hi-IN");
@@ -1593,7 +1598,13 @@ const Chat = () => {
                 const { generateTTSAudio } = await import("@/lib/chat-api");
                 audioBlob = await generateTTSAudio(chunkText, "hi-IN");
                 break;
-            } catch {
+            } catch (err: any) {
+                const errMsg = err?.message || "";
+                const isLimit = errMsg.includes("Limit") || errMsg.includes("Exceeded") || errMsg.includes("plan") || errMsg.includes("balance") || errMsg.includes("Credit");
+                if (isLimit) {
+                    toast.error(`TTS Limit: ${errMsg}. Using browser fallback speech.`);
+                    attempt = 2; // skip retries
+                }
                 if (attempt < 2) {
                     await new Promise(r => setTimeout(r, 500));
                     continue;
@@ -1768,7 +1779,12 @@ const Chat = () => {
                 setPendingResumePodcast(true);
             };
             await audio.play();
-        } catch {
+        } catch (err: any) {
+            const errMsg = err?.message || "";
+            const isLimit = errMsg.includes("Limit") || errMsg.includes("Exceeded") || errMsg.includes("plan") || errMsg.includes("balance") || errMsg.includes("Credit");
+            if (isLimit) {
+                toast.error(`TTS Limit: ${errMsg}. Using browser fallback speech.`);
+            }
             try {
                 if ("speechSynthesis" in window) {
                     const utterance = new SpeechSynthesisUtterance(text);
@@ -6571,10 +6587,27 @@ STRICT RULES:
                                                 setAiRewriting(true);
                                                 try {
                                                     const { sendChatCompletion } = await import("@/lib/chat-api");
+                                                    const fullNoteContext = noteEditorRef.current?.innerText || "";
+                                                    const systemPrompt = isSelection
+                                                        ? `You are an expert HTML editor. The user wants you to rewrite a selected HTML segment according to this instruction: "${aiRewriteInstruction}".
+Below is the full note's current plain text content for background reference and context (to understand the names, tone, subject matter, facts, and language of the note):
+--- NOTE CONTEXT START ---
+${fullNoteContext}
+--- NOTE CONTEXT END ---
+
+Rewrite ONLY the target HTML segment. Return ONLY the rewritten target HTML segment.
+Preserve ALL formatting inside the target HTML segment: headings, bold, italic, lists, tables, horizontal rules, math formulas ($$...$$, $...$), spacing, and indentation.
+Do NOT wrap the output in markdown code fences. Do NOT add explanations or greetings.`
+                                                        : `You are an expert HTML editor. Rewrite the following HTML content according to this instruction: "${aiRewriteInstruction}". Return ONLY the rewritten HTML. Preserve ALL formatting: headings, bold, italic, lists, tables, horizontal rules, math formulas ($$...$$, $...$), spacing, and indentation. Do NOT wrap in markdown code fences. Do NOT add explanations or greetings.`;
+
+                                                    const userPrompt = isSelection
+                                                        ? `Target HTML Segment to Rewrite:\n${textToRewrite}`
+                                                        : textToRewrite;
+
                                                     const res = await sendChatCompletion({
                                                         messages: [
-                                                            { role: "system", content: `You are an expert HTML editor. Rewrite the following HTML content according to this instruction: "${aiRewriteInstruction}". Return ONLY the rewritten HTML. Preserve ALL formatting: headings, bold, italic, lists, tables, horizontal rules, math formulas ($$...$$, $...$), spacing, and indentation. Do NOT wrap in markdown code fences. Do NOT add explanations or greetings.` },
-                                                            { role: "user", content: textToRewrite }
+                                                            { role: "system", content: systemPrompt },
+                                                            { role: "user", content: userPrompt }
                                                         ]
                                                     });
                                                     const rewrittenText = (res as any)?.response || (res as any)?.data?.[0]?.message?.content || "";
@@ -6682,6 +6715,16 @@ STRICT RULES:
                                             : ""
                                     }`}
                                 />
+
+                                {aiRewriting && (
+                                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[4px] select-none pointer-events-auto">
+                                        <div className="flex flex-col items-center justify-center p-6 rounded-2xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl animate-pulse max-w-sm text-center mx-4">
+                                            <Sparkles className="w-10 h-10 text-blue-400 mb-3 animate-spin" style={{ animationDuration: '3s' }} />
+                                            <h3 className="text-sm font-semibold text-white mb-1">Rewriting Note Content...</h3>
+                                            <p className="text-[11px] text-zinc-400">Please wait while our AI assistant processes and optimizes your notes text according to instructions.</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

@@ -2092,7 +2092,7 @@ export async function generateTTSAudio(text: string, language: string = 'hi-IN')
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      throw new Error(data.error || "Unable to generate speech.")
+      throw new Error(data.message || data.error || "Unable to generate speech.")
     }
 
     const data = await res.json()
