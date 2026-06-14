@@ -423,8 +423,8 @@ const Chat = () => {
 
     const employeeRestrictedEngines = ["Explore Mode", "Interview Prep", "Mock Paper Generator", "Battle Arena"];
     const visibleEngines = showEmployeeView
-        ? engines.filter(e => !employeeRestrictedEngines.includes(e.name) && e.name !== "Persona Mode")
-        : engines.filter(e => e.name !== "Assistant Mode" && e.name !== "Persona Mode");
+        ? engines.filter(e => !employeeRestrictedEngines.includes(e.name) && e.name !== "Persona Mode" && e.name !== "AI Image Lab")
+        : engines.filter(e => e.name !== "Assistant Mode" && e.name !== "Persona Mode" && e.name !== "AI Image Lab");
 
     // Set default engine based on user role
     useEffect(() => {
