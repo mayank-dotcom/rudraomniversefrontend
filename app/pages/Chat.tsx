@@ -10,7 +10,7 @@ import {
     Paperclip, X, ImageIcon, FileDown, FileText as FileIcon, Sparkles, Pencil,
     Swords, CheckCircle, XCircle, Code, Zap, Pause, BookOpen, Wallet, Building2, LayoutDashboard, Share, Loader2,
     Settings, Bell, Key, ChevronDown, Compass, Palette, Globe, Maximize2, ArrowUp,
-    PanelLeftOpen, PanelLeftClose, MessageSquarePlus, ListOrdered, Car, MicOff, Headphones
+    PanelLeftOpen, PanelLeftClose, MessageSquarePlus, ListOrdered, Car, MicOff, Headphones, Upload, FolderOpen
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -52,6 +52,7 @@ import { toast } from "sonner";
 import DotsLoader from "@/components/ui/DotsLoader";
 import { MultiStepLoader } from "@/components/ui/multi-step-loader";
 import MarkdownRenderer from "@/components/ui/MarkdownRenderer";
+import "katex/dist/katex.min.css";
 import InterviewPrepModal from "@/components/InterviewPrepModal";
 import MockPaperModal, { MockPaperConfig } from "@/components/MockPaperModal";
 import MockPaperView from "@/components/MockPaperView";
@@ -352,6 +353,7 @@ const Chat = () => {
     const [isNoteRecording, setIsNoteRecording] = useState(false);
     const noteMediaRecorderRef = useRef<MediaRecorder | null>(null);
     const [noteStream, setNoteStream] = useState<MediaStream | null>(null);
+    const noteAudioRef = useRef<HTMLAudioElement | null>(null);
     const [gmailConnected, setGmailConnected] = useState(false);
     const [gmailEmail, setGmailEmail] = useState("");
     const [gmailEmails, setGmailEmails] = useState<any[]>([]);
@@ -1417,7 +1419,15 @@ const Chat = () => {
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             setNoteStream(mediaStream);
-            const mediaRecorder = new MediaRecorder(mediaStream);
+            let mimeType = 'audio/webm;codecs=opus';
+            if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                mimeType = 'audio/mp4';
+            } else if (MediaRecorder.isTypeSupported('audio/mpeg')) {
+                mimeType = 'audio/mpeg';
+            } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                mimeType = 'audio/webm;codecs=opus';
+            }
+            const mediaRecorder = new MediaRecorder(mediaStream, { mimeType });
             noteMediaRecorderRef.current = mediaRecorder;
             const chunks: Blob[] = [];
 
@@ -1426,7 +1436,7 @@ const Chat = () => {
             };
 
             mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+                const audioBlob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
                 if (audioBlob.size < 1000) {
                     toast.error("Recording too short.");
                     return;
@@ -1439,7 +1449,7 @@ const Chat = () => {
                             if (transcript && noteEditorRef.current) {
                                 noteEditorRef.current.focus();
                                 document.execCommand("insertText", false, transcript + " ");
-                                void handleUpdateNote(selectedNote!.id, { content: noteEditorRef.current.innerHTML });
+                                void handleUpdateNote(selectedNote!.id, { content: getNoteContent() });
                                 return "Speech converted to text";
                             }
                             throw new Error("No transcript received");
@@ -1452,6 +1462,20 @@ const Chat = () => {
                     );
                 } catch (err: any) {
                     console.error("Note STT Error:", err);
+                    // Fallback: browser SpeechRecognition API
+                    try {
+                        const { transcribeSpeechFallback } = await import("@/lib/chat-api");
+                        const fallbackResult = await transcribeSpeechFallback("hi-IN");
+                        if (fallbackResult.success && fallbackResult.text && noteEditorRef.current) {
+                            noteEditorRef.current.focus();
+                            document.execCommand("insertText", false, fallbackResult.text + " ");
+                            void handleUpdateNote(selectedNote!.id, { content: getNoteContent() });
+                            toast.success("Speech converted via browser STT");
+                        }
+                    } catch (fallbackErr) {
+                        console.error("Note STT fallback also failed:", fallbackErr);
+                        toast.error("STT failed on both API and browser fallback.");
+                    }
                 }
             };
 
@@ -1475,9 +1499,22 @@ const Chat = () => {
     };
 
     const [isNoteTTSPlaying, setIsNoteTTSPlaying] = useState(false);
+    const [noteTTSProvider, setNoteTTSProvider] = useState<"sarvam" | "browser" | null>(null);
+
+    const stopNoteTTS = () => {
+        if (noteAudioRef.current) {
+            noteAudioRef.current.pause();
+            noteAudioRef.current = null;
+        }
+        window.speechSynthesis?.cancel();
+        setIsNoteTTSPlaying(false);
+    };
 
     const playNoteTTS = async () => {
-        if (isNoteTTSPlaying) return;
+        if (isNoteTTSPlaying) {
+            stopNoteTTS();
+            return;
+        }
         const text = noteEditorRef.current?.innerText || "";
         if (!text.trim()) {
             toast.error("No text to read.");
@@ -1489,33 +1526,46 @@ const Chat = () => {
             const audioBlob = await generateTTSAudio(text, "hi-IN");
             const audioUrl = URL.createObjectURL(audioBlob);
             const audio = new Audio(audioUrl);
+            noteAudioRef.current = audio;
+            setNoteTTSProvider("sarvam");
             audio.onended = () => {
                 URL.revokeObjectURL(audioUrl);
+                noteAudioRef.current = null;
                 setIsNoteTTSPlaying(false);
             };
             audio.onerror = () => {
                 URL.revokeObjectURL(audioUrl);
+                noteAudioRef.current = null;
                 setIsNoteTTSPlaying(false);
-                toast.error("TTS playback failed.");
+                setNoteTTSProvider(null);
             };
             await audio.play();
         } catch {
             // Fallback: browser speech synthesis
             try {
                 if ("speechSynthesis" in window) {
+                    setNoteTTSProvider("browser");
                     const utterance = new SpeechSynthesisUtterance(text);
                     utterance.rate = 0.9;
                     utterance.pitch = 1;
-                    utterance.onend = () => setIsNoteTTSPlaying(false);
-                    utterance.onerror = () => setIsNoteTTSPlaying(false);
+                    utterance.onend = () => {
+                        setIsNoteTTSPlaying(false);
+                        setNoteTTSProvider(null);
+                    };
+                    utterance.onerror = () => {
+                        setIsNoteTTSPlaying(false);
+                        setNoteTTSProvider(null);
+                    };
                     window.speechSynthesis.speak(utterance);
                 } else {
                     toast.error("TTS not available.");
                     setIsNoteTTSPlaying(false);
+                    setNoteTTSProvider(null);
                 }
             } catch {
                 toast.error("TTS failed.");
                 setIsNoteTTSPlaying(false);
+                setNoteTTSProvider(null);
             }
         }
     };
@@ -1559,6 +1609,24 @@ const Chat = () => {
         };
     }, [isDraggingNote, isResizingNote, noteDragOffset, noteResizeOffset]);
 
+    const renderNoteMath = async (html: string) => {
+        try {
+            const katex = await import("katex");
+            const renderKatex = (katex as any).default.renderToString || (katex as any).renderToString;
+            if (typeof renderKatex !== "function") return html;
+            return html.replace(/\$\$([\s\S]*?)\$\$/g, (_m: string, latex: string) => {
+                try {
+                    const rendered = renderKatex(latex.trim(), { displayMode: true, throwOnError: false });
+                    return `<span class="math-block" contenteditable="false" data-latex="${encodeURIComponent(latex.trim())}">${rendered}</span>`;
+                } catch {
+                    return `<span class="math-block" contenteditable="false" style="background:rgba(255,255,255,0.05);padding:8px 12px;border-radius:6px;display:block;font-family:monospace;margin:8px 0;">$${latex}$$</span>`;
+                }
+            });
+        } catch {
+            return html;
+        }
+    };
+
     useEffect(() => {
         if (selectedNote) {
             setEditorTitle(selectedNote.title || "Untitled Note");
@@ -1566,9 +1634,23 @@ const Chat = () => {
             setEditorLined(selectedNote.is_lined || false);
             if (noteEditorRef.current) {
                 noteEditorRef.current.innerHTML = selectedNote.content || "";
+                void renderNoteMath(selectedNote.content || "").then((rendered) => {
+                    if (noteEditorRef.current) {
+                        noteEditorRef.current.innerHTML = rendered;
+                    }
+                });
             }
         }
     }, [selectedNote?.id]);
+
+    const getNoteContent = () => {
+        if (!noteEditorRef.current) return "";
+        let html = noteEditorRef.current.innerHTML;
+        html = html.replace(/<span[^>]*data-latex="([^"]*)"[^>]*>[\s\S]*?<\/span>/g, (_m: string, encoded: string) => {
+            return `$$${decodeURIComponent(encoded)}$$`;
+        });
+        return html;
+    };
 
     const exportAsTxt = () => {
         if (!selectedNote) return;
@@ -5513,30 +5595,17 @@ STRICT RULES:
                         <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-b shrink-0 border-white/10 bg-zinc-900">
                             {/* Font Family Selection */}
                             <select
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val.startsWith("h1/")) {
-                                        document.execCommand("formatBlock", false, `<${val.replace("h1/", "")}>`);
-                                    } else {
-                                        document.execCommand("fontName", false, val);
-                                    }
-                                }}
+                                onChange={(e) => document.execCommand("fontName", false, e.target.value)}
                                 className="text-[11px] rounded border px-1.5 py-1 outline-none bg-zinc-800 border-white/10 text-white"
-                                title="Font Family / Heading"
+                                title="Font Family"
                             >
-                                <optgroup label="Headings">
-                                    <option value="h1/h1">H1 Heading</option>
-                                    <option value="h1/h2">H2 Heading</option>
-                                    <option value="h1/h3">H3 Heading</option>
-                                </optgroup>
-                                <optgroup label="Fonts">
-                                    <option value="Poppins, sans-serif">Poppins (Heading)</option>
-                                    <option value="Roboto, sans-serif">Roboto (Body)</option>
-                                    <option value="Space Grotesk, sans-serif">Space Grotesk (Accent)</option>
-                                    <option value="sans-serif">System Sans</option>
-                                    <option value="serif">System Serif</option>
-                                    <option value="monospace">System Monospace</option>
-                                </optgroup>
+                                <option value="Edu NSW ACT Cursive, cursive">Edu NSW ACT Cursive (Chat Headings)</option>
+                                <option value="Poppins, sans-serif">Poppins (Heading)</option>
+                                <option value="Roboto, sans-serif">Roboto (Body)</option>
+                                <option value="Space Grotesk, sans-serif">Space Grotesk (Accent)</option>
+                                <option value="sans-serif">System Sans</option>
+                                <option value="serif">System Serif</option>
+                                <option value="monospace">System Monospace</option>
                             </select>
 
                             {/* Font Size Selector */}
@@ -5775,16 +5844,19 @@ STRICT RULES:
                             {/* Text-to-Speech Headphone Button */}
                             <button
                                 onClick={playNoteTTS}
-                                disabled={isNoteTTSPlaying}
                                 className={`flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all ${
                                     isNoteTTSPlaying
                                         ? "bg-emerald-500 text-white animate-pulse"
                                         : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 }`}
-                                title="Read note aloud (TTS)"
+                                title={isNoteTTSPlaying ? "Click to stop" : "Read note aloud (TTS)"}
                             >
                                 <Headphones className="w-3.5 h-3.5" />
-                                <span>{isNoteTTSPlaying ? "Playing..." : "TTS"}</span>
+                                <span>
+                                    {isNoteTTSPlaying
+                                        ? `Playing${noteTTSProvider === "sarvam" ? " (AI)" : " (Browser)"}...`
+                                        : "TTS"}
+                                </span>
                             </button>
 
                             {/* Draw Diagram Whiteboard Toggle */}
@@ -5824,7 +5896,7 @@ STRICT RULES:
                                             }}
                                             className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-left text-white hover:bg-white/10 transition-colors"
                                         >
-                                            <span>📁</span>
+                                            <Upload className="w-3.5 h-3.5" />
                                             <span>Upload from Device</span>
                                         </button>
                                         <button
@@ -5834,7 +5906,12 @@ STRICT RULES:
                                                     const { getLibraryAssets } = await import("@/lib/chat-api");
                                                     const res = await getLibraryAssets();
                                                     if (res.success && res.assets) {
-                                                        setLibraryAssets(res.assets || []);
+                                                        const images = res.assets.filter((a: any) => a.asset_type === "image");
+                                                        if (images.length === 0) {
+                                                            toast.error("No images in your library.");
+                                                            return;
+                                                        }
+                                                        setLibraryAssets(images);
                                                         setShowLibraryPicker(true);
                                                     } else {
                                                         toast.error("No images in your library.");
@@ -5845,7 +5922,7 @@ STRICT RULES:
                                             }}
                                             className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-left text-white hover:bg-white/10 transition-colors"
                                         >
-                                            <span>🖼️</span>
+                                            <FolderOpen className="w-3.5 h-3.5" />
                                             <span>Image Library</span>
                                         </button>
                                         <button
@@ -5855,7 +5932,7 @@ STRICT RULES:
                                             }}
                                             className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-left text-white hover:bg-white/10 transition-colors"
                                         >
-                                            <span>✨</span>
+                                            <Sparkles className="w-3.5 h-3.5" />
                                             <span>Generate AI Image</span>
                                         </button>
                                     </div>
@@ -5877,7 +5954,7 @@ STRICT RULES:
                                                 if (noteEditorRef.current) {
                                                     noteEditorRef.current.focus();
                                                     document.execCommand("insertImage", false, reader.result);
-                                                    void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                                                    void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
                                                 }
                                             }
                                         };
@@ -6044,7 +6121,7 @@ STRICT RULES:
                                                             }
                                                         }
                                                         if (noteEditorRef.current) {
-                                                            void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                                                            void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
                                                         }
                                                         toast.success("Text rewritten!");
                                                     } else {
@@ -6087,7 +6164,7 @@ STRICT RULES:
                                             if (noteEditorRef.current) {
                                                 noteEditorRef.current.focus();
                                                 document.execCommand("insertImage", false, drawingUrl);
-                                                void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                                                void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
                                             }
                                             setShowWhiteboard(false);
                                             toast.success("Drawing inserted!");
@@ -6104,12 +6181,12 @@ STRICT RULES:
                                     suppressContentEditableWarning
                                     onBlur={() => {
                                         if (noteEditorRef.current) {
-                                            void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                                            void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
                                         }
                                     }}
                                     onInput={() => {
                                         if (noteEditorRef.current) {
-                                            const html = noteEditorRef.current.innerHTML;
+                                            const html = getNoteContent();
                                             setSelectedNote((prev) => prev ? { ...prev, content: html } : null);
                                             setNotes((prev) =>
                                                 prev.map((n) => (n.id === selectedNote.id ? { ...n, content: html } : n))
@@ -6210,7 +6287,7 @@ STRICT RULES:
                                         if (noteEditorRef.current && imgUrl && selectedNote) {
                                             noteEditorRef.current.focus();
                                             document.execCommand("insertImage", false, imgUrl);
-                                            void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
+                                            void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
                                         }
                                         setShowLibraryPicker(false);
                                         toast.success("Image inserted!");
@@ -6248,24 +6325,30 @@ STRICT RULES:
                                 if (!imageGeneratePrompt.trim()) return;
                                 setImageGenerating(true);
                                 try {
-                                    const { sendAiRequest } = await import("@/lib/chat-api");
+                                    const { sendAiRequest, getLibraryAssets } = await import("@/lib/chat-api");
                                     const res = await sendAiRequest({
-                                        endpoint: "/chat",
+                                        endpoint: "/features/image/generate",
                                         messages: [
-                                            { role: "system", content: "You are an AI image generator. Generate a detailed image based on the prompt. Return ONLY the image URL or markdown image syntax." },
                                             { role: "user", content: imageGeneratePrompt }
                                         ],
-                                        modality: "image"
+                                        modality: "image_gen"
                                     });
-                                    const imageUrl = (res as any)?.response || (res as any)?.data?.[0]?.message?.content || "";
-                                    if (imageUrl && noteEditorRef.current && selectedNote) {
-                                        const urlMatch = imageUrl.match(/https?:\/\/[^\s\)\]]+/);
-                                        const finalUrl = urlMatch ? urlMatch[0] : imageUrl;
+                                    const imageResponse = (res as any)?.response || "";
+                                    if (imageResponse && noteEditorRef.current && selectedNote) {
+                                        const urlMatch = imageResponse.match(/https?:\/\/[^\s\)\]]+/);
+                                        const finalUrl = urlMatch ? urlMatch[0] : imageResponse;
                                         noteEditorRef.current.focus();
                                         document.execCommand("insertImage", false, finalUrl);
-                                        void handleUpdateNote(selectedNote.id, { content: noteEditorRef.current.innerHTML });
-                                        toast.success("Image inserted!");
+                                        void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
+                                        toast.success("Image generated & inserted!");
                                         setShowImageGenerate(false);
+                                        // Refresh library assets so the new image shows up in picker
+                                        try {
+                                            const libRes = await getLibraryAssets();
+                                            if (libRes.success && libRes.assets) {
+                                                setLibraryAssets(libRes.assets.filter((a: any) => a.asset_type === "image"));
+                                            }
+                                        } catch {}
                                     } else {
                                         toast.error("No image generated. Try a different prompt.");
                                     }
