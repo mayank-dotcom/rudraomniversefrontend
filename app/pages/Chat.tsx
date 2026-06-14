@@ -356,6 +356,7 @@ const Chat = () => {
     const noteAudioRef = useRef<HTMLAudioElement | null>(null);
 
     const [noteFontSize, setNoteFontSize] = useState(16);
+    const [noteLineSpacing, setNoteLineSpacing] = useState(1.8);
     const [gmailConnected, setGmailConnected] = useState(false);
     const [gmailEmail, setGmailEmail] = useState("");
     const [gmailEmails, setGmailEmails] = useState<any[]>([]);
@@ -1417,11 +1418,28 @@ const Chat = () => {
         }
     };
 
+    const pausePodcastForAsk = () => {
+        if (noteAudioRef.current) {
+            noteAudioRef.current.pause();
+            noteAudioRef.current = null;
+        }
+        if (podcastAskAudioRef.current) {
+            podcastAskAudioRef.current.pause();
+            podcastAskAudioRef.current = null;
+        }
+        window.speechSynthesis?.cancel();
+        setIsNoteTTSPlaying(false);
+        setIsPodcastAnswering(false);
+        setIsPodcastGenerating(false);
+        setNoteTTSProvider(null);
+        // Keep podcastChunks, podcastChunkIndex, notePodcastText intact for resume
+    };
+
     const startNoteRecording = async () => {
         try {
-            // If podcast is playing or AI is answering, stop all audio and switch to ask mode
+            // If podcast is playing or AI is answering, pause and switch to ask mode
             if (isNoteTTSPlaying || isPodcastAnswering) {
-                stopAllAudio();
+                pausePodcastForAsk();
                 setPendingResumePodcast(false);
             }
             const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1512,7 +1530,29 @@ const Chat = () => {
     const [isPodcastGenerating, setIsPodcastGenerating] = useState(false);
     const [isNoteTranscribing, setIsNoteTranscribing] = useState(false);
     const [pendingResumePodcast, setPendingResumePodcast] = useState(false);
+    const [podcastChunks, setPodcastChunks] = useState<string[]>([]);
+    const [podcastChunkIndex, setPodcastChunkIndex] = useState(0);
+    const [podcastAskHistory, setPodcastAskHistory] = useState<{q:string,a:string}[]>([]);
     const podcastAskAudioRef = useRef<HTMLAudioElement | null>(null);
+
+    const splitNoteIntoChunks = (text: string): string[] => {
+        const chunks: string[] = [];
+        const paragraphs = text.split(/\n\s*\n/);
+        let current = "";
+        for (const p of paragraphs) {
+            const trimmed = p.trim();
+            if (!trimmed) continue;
+            if (current.length + trimmed.length > 700) {
+                if (current) chunks.push(current.trim());
+                current = trimmed;
+            } else {
+                current += (current ? "\n\n" : "") + trimmed;
+            }
+        }
+        if (current.trim()) chunks.push(current.trim());
+        if (chunks.length === 0 && text.trim()) chunks.push(text.trim());
+        return chunks;
+    };
 
     const stopAllAudio = () => {
         if (noteAudioRef.current) {
@@ -1529,30 +1569,29 @@ const Chat = () => {
         setIsPodcastGenerating(false);
         setNoteTTSProvider(null);
         setNotePodcastText("");
+        setPodcastChunks([]);
+        setPodcastChunkIndex(0);
+        setPendingResumePodcast(false);
     };
 
-    const playNotePodcast = async () => {
-        if (isNoteTTSPlaying || isPodcastAnswering) {
-            stopAllAudio();
-            setPendingResumePodcast(false);
+    const podcastPlayChunk = async (chunkIdx: number) => {
+        const chunks = podcastChunks;
+        if (!chunks.length || chunkIdx >= chunks.length) {
+            setIsNoteTTSPlaying(false);
+            setNoteTTSProvider(null);
+            setNotePodcastText("");
+            setPodcastChunks([]);
+            setPodcastChunkIndex(0);
             return;
         }
-        if (pendingResumePodcast) {
-            setPendingResumePodcast(false);
-        }
-        const text = noteEditorRef.current?.innerText || "";
-        if (!text.trim()) {
-            toast.error("No text to read.");
-            return;
-        }
-        setNotePodcastText(text);
+        const chunkText = chunks[chunkIdx];
         setIsPodcastGenerating(true);
-        // Separate audio fetch from playback
+        setPodcastChunkIndex(chunkIdx);
         let audioBlob: Blob | null = null;
         for (let attempt = 0; attempt <= 2; attempt++) {
             try {
                 const { generateTTSAudio } = await import("@/lib/chat-api");
-                audioBlob = await generateTTSAudio(text, "hi-IN");
+                audioBlob = await generateTTSAudio(chunkText, "hi-IN");
                 break;
             } catch {
                 if (attempt < 2) {
@@ -1568,56 +1607,103 @@ const Chat = () => {
             setNoteTTSProvider("sarvam");
             setIsNoteTTSPlaying(true);
             setIsPodcastGenerating(false);
+            const nextIdx = chunkIdx + 1;
             audio.onended = () => {
                 URL.revokeObjectURL(audioUrl);
                 noteAudioRef.current = null;
-                setIsNoteTTSPlaying(false);
-                setNoteTTSProvider(null);
-                setNotePodcastText("");
+                if (nextIdx < chunks.length) {
+                    podcastPlayChunk(nextIdx);
+                } else {
+                    setIsNoteTTSPlaying(false);
+                    setNoteTTSProvider(null);
+                    setNotePodcastText("");
+                    setPodcastChunks([]);
+                    setPodcastChunkIndex(0);
+                }
             };
             audio.onerror = () => {
                 URL.revokeObjectURL(audioUrl);
                 noteAudioRef.current = null;
-                setIsNoteTTSPlaying(false);
-                setNoteTTSProvider(null);
-                setNotePodcastText("");
+                if (nextIdx < chunks.length) {
+                    podcastPlayChunk(nextIdx);
+                } else {
+                    setIsNoteTTSPlaying(false);
+                    setNoteTTSProvider(null);
+                    setNotePodcastText("");
+                    setPodcastChunks([]);
+                    setPodcastChunkIndex(0);
+                }
             };
             try {
                 await audio.play();
             } catch {
-                // Autoplay blocked — try once more with user gesture fallback
                 try { await audio.play(); } catch {}
             }
         } else {
-            // Fallback: browser speech synthesis
+            // Single-chunk fallback: browser speech synthesis for the full remaining text
             setIsPodcastGenerating(false);
+            const remainingText = chunks.slice(chunkIdx).join("\n\n");
             try {
                 if ("speechSynthesis" in window) {
                     setNoteTTSProvider("browser");
                     setIsNoteTTSPlaying(true);
-                    const utterance = new SpeechSynthesisUtterance(text);
+                    const utterance = new SpeechSynthesisUtterance(remainingText);
                     utterance.rate = 0.9;
                     utterance.pitch = 1;
                     utterance.onend = () => {
                         setIsNoteTTSPlaying(false);
                         setNoteTTSProvider(null);
                         setNotePodcastText("");
+                        setPodcastChunks([]);
+                        setPodcastChunkIndex(0);
                     };
                     utterance.onerror = () => {
                         setIsNoteTTSPlaying(false);
                         setNoteTTSProvider(null);
                         setNotePodcastText("");
+                        setPodcastChunks([]);
+                        setPodcastChunkIndex(0);
                     };
                     window.speechSynthesis.speak(utterance);
                 } else {
                     toast.error("TTS not available.");
+                    setIsNoteTTSPlaying(false);
                     setNotePodcastText("");
+                    setPodcastChunks([]);
+                    setPodcastChunkIndex(0);
                 }
             } catch {
                 toast.error("TTS failed.");
+                setIsNoteTTSPlaying(false);
                 setNotePodcastText("");
+                setPodcastChunks([]);
+                setPodcastChunkIndex(0);
             }
         }
+    };
+
+    const playNotePodcast = async () => {
+        if (isNoteTTSPlaying || isPodcastAnswering) {
+            stopAllAudio();
+            return;
+        }
+        // Resume from saved position if chunks exist
+        if (pendingResumePodcast && podcastChunks.length > 0) {
+            setPendingResumePodcast(false);
+            const resumeIdx = podcastChunkIndex;
+            await podcastPlayChunk(resumeIdx);
+            return;
+        }
+        const text = noteEditorRef.current?.innerText || "";
+        if (!text.trim()) {
+            toast.error("No text to read.");
+            return;
+        }
+        setNotePodcastText(text);
+        const chunks = splitNoteIntoChunks(text);
+        setPodcastChunks(chunks);
+        setPodcastChunkIndex(0);
+        await podcastPlayChunk(0);
     };
 
     const speakAiResponse = async (text: string) => {
@@ -1674,7 +1760,12 @@ const Chat = () => {
         try {
             const { sendChatCompletion } = await import("@/lib/chat-api");
             const noteContext = notePodcastText || noteEditorRef.current?.innerText || "";
-            const systemMsg = `You are a helpful tutor. The user was listening to the following note via podcast:\n\n${noteContext.slice(0, 4000)}\n\nAnswer the user's question based on this content. Keep your answer concise and spoken-word friendly (2-4 sentences).`;
+            // Build previous Q&A context
+            const qaHistory = podcastAskHistory.slice(-3).map(
+                (qa, i) => `Q${i + 1}: ${qa.q}\nA${i + 1}: ${qa.a}`
+            ).join("\n");
+            const qaBlock = qaHistory ? `\n\nPrevious Q&A:\n${qaHistory}` : "";
+            const systemMsg = `You are a helpful tutor. The user was listening to the following note via podcast:\n\n${noteContext.slice(0, 4000)}${qaBlock}\n\nAnswer the user's question based on the note content and previous Q&A. Keep your answer concise and spoken-word friendly (2-4 sentences). If the question is a follow-up, use the previous context.`;
             const res = await sendChatCompletion({
                 messages: [
                     { role: "system", content: systemMsg },
@@ -1683,6 +1774,7 @@ const Chat = () => {
             });
             const answer = (res as any)?.response || res.data?.[0]?.message?.content || "";
             if (answer) {
+                setPodcastAskHistory(prev => [...prev, { q: transcript, a: answer }]);
                 setIsPodcastAsking(false);
                 await speakAiResponse(answer);
             } else {
@@ -1798,6 +1890,7 @@ const Chat = () => {
         const content = noteEditorRef.current?.innerHTML || "";
         const pageColor = editorColor || "#ffffff";
         const isLined = editorLined;
+        const lineSpacing = noteLineSpacing;
         
         const printWindow = window.open("", "_blank");
         if (!printWindow) {
@@ -1821,7 +1914,7 @@ const Chat = () => {
                         background-color: ${pageColor};
                         margin: 0;
                         font-size: ${noteFontSize}px;
-                        line-height: 1.8;
+                        line-height: ${lineSpacing};
                     }
                     h1 {
                         font-size: 24px;
@@ -1830,8 +1923,8 @@ const Chat = () => {
                         padding-bottom: 10px;
                     }
                     .lined-paper {
-                        background: linear-gradient(rgba(0, 0, 0, 0) 95%, rgba(33, 150, 243, 0.15) 95%) 0 0 / 100% 1.8em repeat;
-                        line-height: 1.8;
+                        background: linear-gradient(rgba(0, 0, 0, 0) calc(100% - 1px), rgba(33, 150, 243, 0.15) calc(100% - 1px)) 0 0 / 100% ${lineSpacing}em repeat;
+                        line-height: ${lineSpacing};
                     }
                     img {
                         max-width: 100%;
@@ -2398,7 +2491,7 @@ STRICT RULES:
 
             // ── Podcast mode: auto-pause & inject note context ──
             if (isNoteTTSPlaying && notePodcastText) {
-                stopAllAudio();
+                pausePodcastForAsk();
                 const noteCtx = `[Podcast Context — the user was listening to the following note via podcast:\n\n${notePodcastText.slice(0, 4000)}\n\n]\n\n`;
                 if (typeof userContent === "string") {
                     userContent = noteCtx + userContent;
@@ -5631,17 +5724,17 @@ STRICT RULES:
                     <style dangerouslySetInnerHTML={{__html: `
                         .notes-ruled-light {
                             background-image: linear-gradient(rgba(0, 0, 0, 0) calc(100% - 1px), rgba(33, 150, 243, 0.15) calc(100% - 1px)) !important;
-                            background-size: 100% 1.8em !important;
+                            background-size: 100% ${noteLineSpacing}em !important;
                             background-repeat: repeat !important;
                             background-position: 0 0 !important;
-                            line-height: 1.8 !important;
+                            line-height: ${noteLineSpacing} !important;
                         }
                         .notes-ruled-dark {
                             background-image: linear-gradient(rgba(0, 0, 0, 0) calc(100% - 1px), rgba(255, 255, 255, 0.08) calc(100% - 1px)) !important;
-                            background-size: 100% 1.8em !important;
+                            background-size: 100% ${noteLineSpacing}em !important;
                             background-repeat: repeat !important;
                             background-position: 0 0 !important;
-                            line-height: 1.8 !important;
+                            line-height: ${noteLineSpacing} !important;
                         }
                         .notes-ruled-light img, .notes-ruled-dark img {
                             line-height: normal !important;
@@ -5801,6 +5894,26 @@ STRICT RULES:
                                 title="Decrease font size"
                             >
                                 A-
+                            </button>
+
+                            {/* Line Spacing Increase / Decrease */}
+                            <button
+                                onClick={() => {
+                                    setNoteLineSpacing((prev) => Math.round((prev + 0.2) * 10) / 10);
+                                }}
+                                className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
+                                title="Increase line spacing"
+                            >
+                                <span style={{lineHeight:1}}>⊞</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setNoteLineSpacing((prev) => Math.max(Math.round((prev - 0.2) * 10) / 10, 1.0));
+                                }}
+                                className="px-2 py-1 text-xs font-bold rounded text-white hover:bg-white/10"
+                                title="Decrease line spacing"
+                            >
+                                <span style={{lineHeight:1}}>⊟</span>
                             </button>
 
                             {/* Bold */}
@@ -6410,6 +6523,7 @@ STRICT RULES:
                                         fontFamily: "Poppins, Roboto, sans-serif",
                                         minHeight: "100%",
                                         fontSize: noteFontSize,
+                                        lineHeight: noteLineSpacing,
                                     }}
                                     className={`note-content p-6 outline-none pb-24 font-normal ${
                                         editorLined
