@@ -324,6 +324,8 @@ const Chat = () => {
     const [loadingNotes, setLoadingNotes] = useState(false);
     const [searchNoteQuery, setSearchNoteQuery] = useState("");
     const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+    const [editingNoteTitleId, setEditingNoteTitleId] = useState<string | null>(null);
+    const [editingNoteTitleValue, setEditingNoteTitleValue] = useState("");
     const [isNoteEditorOpen, setIsNoteEditorOpen] = useState(false);
     const [isNotePopup, setIsNotePopup] = useState(false);
     const [isNoteMaximized, setIsNoteMaximized] = useState(false);
@@ -380,6 +382,7 @@ const Chat = () => {
     const [editingTitle, setEditingTitle] = useState("");
     const editingInputRef = useRef<HTMLInputElement>(null);
     const noteEditorRef = useRef<HTMLDivElement>(null);
+    const noteInlineTitleRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [showScrollToBottom, setShowScrollToBottom] = useState(false);
     const mainScrollRef = useRef<HTMLElement>(null);
@@ -1444,8 +1447,11 @@ const Chat = () => {
             setEditorTitle(selectedNote.title || "Untitled Note");
             setEditorColor(selectedNote.page_color || "#ffffff");
             setEditorLined(selectedNote.is_lined || false);
+            if (noteEditorRef.current) {
+                noteEditorRef.current.innerHTML = selectedNote.content || "";
+            }
         }
-    }, [selectedNote]);
+    }, [selectedNote?.id]);
 
     const exportAsTxt = () => {
         if (!selectedNote) return;
@@ -3238,7 +3244,7 @@ STRICT RULES:
                                         {searchNoteQuery && (
                                             <button
                                                 onClick={() => setSearchNoteQuery("")}
-                                                className="absolute right-3 p-0.5 rounded-full hover:bg-white/10 text-white/50 hover:text-white"
+                                                className={`absolute right-3 p-0.5 rounded-full hover:bg-white/10 ${isDarkMode ? "text-white/50 hover:text-white" : "text-black/60 hover:text-black"}`}
                                             >
                                                 <X className="w-3 h-3" />
                                             </button>
@@ -3250,7 +3256,7 @@ STRICT RULES:
                                 <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 min-h-0">
                                     {loadingNotes && notes.length === 0 ? (
                                         <div className="flex items-center justify-center py-8">
-                                            <Loader2 className="w-5 h-5 animate-spin text-white/40" />
+                                            <Loader2 className={`w-5 h-5 animate-spin ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
                                         </div>
                                     ) : notes.filter(n => n.title.toLowerCase().includes(searchNoteQuery.toLowerCase()) || n.content.toLowerCase().includes(searchNoteQuery.toLowerCase())).length === 0 ? (
                                         <div className={`text-center py-8 text-xs font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
@@ -3263,8 +3269,10 @@ STRICT RULES:
                                                 <div
                                                     key={note.id}
                                                     onClick={() => {
-                                                        setSelectedNote(note);
-                                                        setIsNoteEditorOpen(true);
+                                                        if (editingNoteTitleId !== note.id) {
+                                                            setSelectedNote(note);
+                                                            setIsNoteEditorOpen(true);
+                                                        }
                                                     }}
                                                     className={`group relative flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
                                                         isDarkMode
@@ -3272,9 +3280,48 @@ STRICT RULES:
                                                             : "border-black/5 bg-black/5 hover:bg-black/10 hover:border-black/10 text-black"
                                                     }`}
                                                 >
-                                                    <div className="flex flex-col min-w-0 pr-6">
-                                                        <span className="text-xs font-sans font-medium truncate">{note.title || "Untitled Note"}</span>
-                                                        <span className={`text-[10px] font-sans truncate ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                    <div className="flex flex-col min-w-0 pr-6 flex-1">
+                                                        {editingNoteTitleId === note.id ? (
+                                                            <input
+                                                                ref={noteInlineTitleRef}
+                                                                type="text"
+                                                                value={editingNoteTitleValue}
+                                                                onChange={(e) => setEditingNoteTitleValue(e.target.value)}
+                                                                onBlur={() => {
+                                                                    const trimmed = editingNoteTitleValue.trim();
+                                                                    if (trimmed && trimmed !== note.title) {
+                                                                        void handleUpdateNote(note.id, { title: trimmed });
+                                                                    }
+                                                                    setEditingNoteTitleId(null);
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === "Enter") {
+                                                                        (e.target as HTMLInputElement).blur();
+                                                                    } else if (e.key === "Escape") {
+                                                                        setEditingNoteTitleId(null);
+                                                                    }
+                                                                    e.stopPropagation();
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className={`text-xs font-sans font-medium w-full bg-transparent border-b border-blue-500 outline-none px-0 py-0 ${
+                                                                    isDarkMode ? "text-white" : "text-black"
+                                                                }`}
+                                                                autoFocus
+                                                            />
+                                                        ) : (
+                                                            <span
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setEditingNoteTitleId(note.id);
+                                                                    setEditingNoteTitleValue(note.title || "");
+                                                                    setTimeout(() => noteInlineTitleRef.current?.focus(), 0);
+                                                                }}
+                                                                className="text-xs font-sans font-medium truncate hover:text-blue-400 transition-colors cursor-text"
+                                                            >
+                                                                {note.title || "Untitled Note"}
+                                                            </span>
+                                                        )}
+                                                        <span className={`text-[10px] font-sans truncate mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
                                                             {note.content ? note.content.replace(/<[^>]*>/g, '').substring(0, 45) : "Empty note"}
                                                         </span>
                                                     </div>
@@ -3283,7 +3330,7 @@ STRICT RULES:
                                                             e.stopPropagation();
                                                             void handleDeleteNote(note.id);
                                                         }}
-                                                        className="absolute right-2 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-opacity hover:bg-red-500/10 text-red-500"
+                                                        className="shrink-0 ml-2 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-opacity hover:bg-red-500/10 text-red-500"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -5178,11 +5225,7 @@ STRICT RULES:
                         isNoteMaximized
                             ? "fixed inset-0 z-[100] flex flex-col bg-[#0d0d0c] text-white"
                             : isNotePopup
-                            ? `flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${
-                                  isDarkMode
-                                      ? "bg-[#161615] border-white/10 text-white"
-                                      : "bg-[#fbfaf8] border-black/10 text-black"
-                              }`
+                            ? "flex flex-col rounded-2xl border shadow-2xl overflow-hidden bg-[#161615] border-white/10 text-white"
                             : "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
                     }
                 >
@@ -5199,6 +5242,13 @@ STRICT RULES:
                         .notes-ruled-light img, .notes-ruled-dark img {
                             line-height: normal !important;
                         }
+                        .note-bg-swatch-white { border: 1px solid rgba(255,255,255,0.3) !important; }
+                        .note-bg-swatch-light { border: 1px solid rgba(0,0,0,0.15) !important; }
+                        .note-bg-swatch-dark { border: 1px solid rgba(255,255,255,0.3) !important; }
+                        .note-resize-handle { opacity: 0.3; }
+                        .note-resize-handle:hover { opacity: 0.8; }
+                        .note-resize-handle-right, .note-resize-handle-left { width: 6px; }
+                        .note-resize-handle-top, .note-resize-handle-bottom { height: 6px; }
                     `}} />
 
                     {/* Modal container wrapper for non-popup mode */}
@@ -5206,11 +5256,7 @@ STRICT RULES:
                         className={
                             isNoteMaximized || isNotePopup
                                 ? "flex-1 flex flex-col min-h-0 h-full w-full"
-                                : `w-full max-w-4xl h-[85vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${
-                                      isDarkMode
-                                          ? "bg-[#161615] border-white/10 text-white"
-                                          : "bg-[#fbfaf8] border-black/10 text-black"
-                                  }`
+                                : "w-full max-w-4xl h-[85vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden bg-[#161615] border-white/10 text-white"
                         }
                     >
                         {/* Header bar (Draggable if popped out) */}
@@ -5227,7 +5273,7 @@ STRICT RULES:
                             }}
                             className={`flex items-center justify-between px-4 py-3 border-b select-none shrink-0 ${
                                 isNotePopup && !isNoteMaximized ? "cursor-move" : ""
-                            } ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}
+                            } border-white/10 bg-white/5`}
                         >
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <FileIcon className="w-4 h-4 text-blue-500 shrink-0" />
@@ -5238,7 +5284,7 @@ STRICT RULES:
                                         setEditorTitle(e.target.value);
                                         void handleUpdateNote(selectedNote.id, { title: e.target.value });
                                     }}
-                                    className={`bg-transparent text-xs font-sans font-semibold focus:outline-none border-b border-transparent hover:border-zinc-500 focus:border-blue-500 w-full truncate ${isDarkMode ? "text-white" : "text-black"}`}
+                                    className="bg-transparent text-xs font-sans font-semibold focus:outline-none border-b border-transparent hover:border-zinc-500 focus:border-blue-500 w-full truncate text-white"
                                     placeholder="Note Title"
                                 />
                             </div>
@@ -5247,9 +5293,7 @@ STRICT RULES:
                                 {/* Popup / Dock Toggle */}
                                 <button
                                     onClick={() => setIsNotePopup(!isNotePopup)}
-                                    className={`p-1.5 rounded-lg transition-colors ${
-                                        isDarkMode ? "hover:bg-white/10 text-white/70" : "hover:bg-black/10 text-black/70"
-                                    }`}
+                                    className="p-1.5 rounded-lg transition-colors hover:bg-white/10 text-white/70"
                                     title={isNotePopup ? "Dock window" : "Pop out window"}
                                 >
                                     {isNotePopup ? (
@@ -5262,9 +5306,7 @@ STRICT RULES:
                                 {/* Maximize Toggle */}
                                 <button
                                     onClick={() => setIsNoteMaximized(!isNoteMaximized)}
-                                    className={`p-1.5 rounded-lg transition-colors ${
-                                        isDarkMode ? "hover:bg-white/10 text-white/70" : "hover:bg-black/10 text-black/70"
-                                    }`}
+                                    className="p-1.5 rounded-lg transition-colors hover:bg-white/10 text-white/70"
                                     title={isNoteMaximized ? "Restore screen size" : "Maximize screen size"}
                                 >
                                     {isNoteMaximized ? (
@@ -5280,9 +5322,7 @@ STRICT RULES:
                                         setIsNoteEditorOpen(false);
                                         setSelectedNote(null);
                                     }}
-                                    className={`p-1.5 rounded-lg transition-colors ${
-                                        isDarkMode ? "hover:bg-white/10 text-white/70 hover:text-red-500" : "hover:bg-black/10 text-black/70 hover:text-red-500"
-                                    }`}
+                                    className="p-1.5 rounded-lg transition-colors hover:bg-white/10 text-white/70 hover:text-red-500"
                                     title="Close note"
                                 >
                                     <X className="w-3.5 h-3.5" />
@@ -5291,13 +5331,13 @@ STRICT RULES:
                         </div>
 
                         {/* Rich Formatting Toolbar */}
-                        <div className={`flex flex-wrap items-center gap-1.5 px-4 py-2 border-b shrink-0 ${isDarkMode ? "border-white/10 bg-zinc-900" : "border-black/10 bg-zinc-100"}`}>
+                        <div className="flex flex-wrap items-center gap-1.5 px-4 py-2 border-b shrink-0 border-white/10 bg-zinc-900">
                             {/* Font Family Selection */}
                             <select
                                 onChange={(e) => {
                                     document.execCommand("fontName", false, e.target.value);
                                 }}
-                                className={`text-[10px] rounded border p-1 outline-none ${isDarkMode ? "bg-zinc-800 border-white/10 text-white" : "bg-white border-black/15 text-black"}`}
+                                className="text-[10px] rounded border p-1 outline-none bg-zinc-800 border-white/10 text-white"
                                 title="Font Family"
                             >
                                 <option value="Poppins, sans-serif">Poppins (Heading)</option>
@@ -5313,7 +5353,7 @@ STRICT RULES:
                                 onChange={(e) => {
                                     document.execCommand("fontSize", false, e.target.value);
                                 }}
-                                className={`text-[10px] rounded border p-1 outline-none ${isDarkMode ? "bg-zinc-800 border-white/10 text-white" : "bg-white border-black/15 text-black"}`}
+                                className="text-[10px] rounded border p-1 outline-none bg-zinc-800 border-white/10 text-white"
                                 title="Font Size"
                             >
                                 <option value="1">Small</option>
@@ -5327,7 +5367,7 @@ STRICT RULES:
                             {/* Bold */}
                             <button
                                 onClick={() => document.execCommand("bold")}
-                                className={`p-1 text-xs font-bold rounded ${isDarkMode ? "text-white hover:bg-white/10" : "text-black hover:bg-black/10"}`}
+                                className="p-1 text-xs font-bold rounded text-white hover:bg-white/10"
                                 title="Bold"
                             >
                                 B
@@ -5336,7 +5376,7 @@ STRICT RULES:
                             {/* Italic */}
                             <button
                                 onClick={() => document.execCommand("italic")}
-                                className={`p-1 text-xs italic rounded ${isDarkMode ? "text-white hover:bg-white/10" : "text-black hover:bg-black/10"}`}
+                                className="p-1 text-xs italic rounded text-white hover:bg-white/10"
                                 title="Italic"
                             >
                                 I
@@ -5345,7 +5385,7 @@ STRICT RULES:
                             {/* Underline */}
                             <button
                                 onClick={() => document.execCommand("underline")}
-                                className={`p-1 text-xs underline rounded ${isDarkMode ? "text-white hover:bg-white/10" : "text-black hover:bg-black/10"}`}
+                                className="p-1 text-xs underline rounded text-white hover:bg-white/10"
                                 title="Underline"
                             >
                                 U
@@ -5372,9 +5412,7 @@ STRICT RULES:
                                 className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
                                     showWhiteboard
                                         ? "bg-blue-500 text-white"
-                                        : isDarkMode
-                                        ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                                        : "bg-black/5 border border-black/10 text-black hover:bg-black/10"
+                                        : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 }`}
                                 title="Draw whiteboard diagram sketch"
                             >
@@ -5384,11 +5422,7 @@ STRICT RULES:
 
                             {/* Image Upload Button */}
                             <label
-                                className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all cursor-pointer ${
-                                    isDarkMode
-                                        ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                                        : "bg-black/5 border border-black/10 text-black hover:bg-black/10"
-                                }`}
+                                className="flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all cursor-pointer bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 title="Upload local image"
                             >
                                 <ImageIcon className="w-3 h-3" />
@@ -5422,9 +5456,7 @@ STRICT RULES:
                                 className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
                                     showAiRewrite
                                         ? "bg-blue-500 text-white"
-                                        : isDarkMode
-                                        ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                                        : "bg-black/5 border border-black/10 text-black hover:bg-black/10"
+                                        : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 }`}
                                 title="AI rewriting suggestions panel"
                             >
@@ -5453,8 +5485,8 @@ STRICT RULES:
                                         }}
                                         style={{ backgroundColor: bg.c }}
                                         title={bg.l}
-                                        className={`w-3 h-3 rounded-full border ${
-                                            editorColor === bg.c ? "border-zinc-400 scale-110" : "border-transparent"
+                                        className={`w-3 h-3 rounded-full border-2 ${
+                                            editorColor === bg.c ? "border-blue-400 scale-110" : "border-white/30"
                                         }`}
                                     />
                                 ))}
@@ -5470,9 +5502,7 @@ STRICT RULES:
                                 className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
                                     editorLined
                                         ? "bg-blue-500 text-white"
-                                        : isDarkMode
-                                        ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                                        : "bg-black/5 border border-black/10 text-black hover:bg-black/10"
+                                        : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 }`}
                                 title="Toggle notebook ruled lines"
                             >
@@ -5490,11 +5520,7 @@ STRICT RULES:
                                             exportAsTxt();
                                         }
                                     }}
-                                    className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
-                                        isDarkMode
-                                            ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                                            : "bg-black/5 border border-black/10 text-black hover:bg-black/10"
-                                    }`}
+                                    className="flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                     title="Export note as raw .txt file"
                                 >
                                     <FileIcon className="w-3 h-3" />
@@ -5506,11 +5532,7 @@ STRICT RULES:
                                             exportAsPdf();
                                         }
                                     }}
-                                    className={`flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all ${
-                                        isDarkMode
-                                            ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                                            : "bg-black/5 border border-black/10 text-black hover:bg-black/10"
-                                    }`}
+                                    className="flex items-center gap-1 py-1 px-1.5 text-[9px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                     title="Export note as formatted PDF file"
                                 >
                                     <FileDown className="w-3.5 h-3.5" />
@@ -5523,13 +5545,13 @@ STRICT RULES:
                         <div className="flex-1 flex flex-col min-h-0 relative">
                             {/* AI Rewrite Panel */}
                             {showAiRewrite && (
-                                <div className={`p-4 border-b flex flex-col gap-2 shrink-0 ${isDarkMode ? "bg-zinc-900/95 border-white/10" : "bg-zinc-100/95 border-black/10"}`}>
+                                <div className="p-4 border-b flex flex-col gap-2 shrink-0 bg-zinc-900/95 border-white/10">
                                     <div className="flex items-center justify-between w-full">
                                         <span className="text-[10px] font-bold font-sans uppercase tracking-wider flex items-center gap-1 text-blue-500">
                                             <Sparkles className="w-3.5 h-3.5" />
                                             AI Note Rewrite Helper
                                         </span>
-                                        <button onClick={() => setShowAiRewrite(false)} className={`text-[10px] ${isDarkMode ? "text-white/40 hover:text-white" : "text-black/50 hover:text-black"}`}>
+                                        <button onClick={() => setShowAiRewrite(false)} className="text-[10px] text-white/40 hover:text-white">
                                             Close
                                         </button>
                                     </div>
@@ -5539,11 +5561,7 @@ STRICT RULES:
                                             value={aiRewriteInstruction}
                                             onChange={(e) => setAiRewriteInstruction(e.target.value)}
                                             placeholder="Enter instructions (e.g. summarize this, fix grammar, rewrite in simple Hindi...)"
-                                            className={`flex-1 px-3 py-1.5 text-[11px] rounded-lg border focus:outline-none ${
-                                                isDarkMode
-                                                    ? "bg-zinc-800 border-white/10 text-white placeholder-white/30 focus:border-zinc-700"
-                                                    : "bg-white border-black/15 text-black placeholder-black/40 focus:border-zinc-300"
-                                            }`}
+                                            className="flex-1 px-3 py-1.5 text-[11px] rounded-lg border focus:outline-none bg-zinc-800 border-white/10 text-white placeholder-white/30 focus:border-zinc-700"
                                         />
                                         <button
                                             disabled={aiRewriting}
@@ -5599,11 +5617,7 @@ STRICT RULES:
                                             <button
                                                 key={opt}
                                                 onClick={() => setAiRewriteInstruction(opt)}
-                                                className={`text-[9px] px-2 py-0.5 rounded-full border ${
-                                                    isDarkMode
-                                                        ? "bg-zinc-800 border-white/10 hover:bg-zinc-700 text-zinc-300"
-                                                        : "bg-white border-black/15 hover:bg-zinc-100 text-zinc-600"
-                                                }`}
+                                                className="text-[9px] px-2 py-0.5 rounded-full border bg-zinc-800 border-white/10 hover:bg-zinc-700 text-zinc-300"
                                             >
                                                 {opt}
                                             </button>
@@ -5618,7 +5632,6 @@ STRICT RULES:
                                     <WhiteboardCanvas
                                         initialData=""
                                         onClose={() => setShowWhiteboard(false)}
-                                        isDarkMode={isDarkMode}
                                         onSave={(drawingUrl) => {
                                             if (noteEditorRef.current) {
                                                 noteEditorRef.current.focus();
@@ -5646,6 +5659,7 @@ STRICT RULES:
                                     onInput={() => {
                                         if (noteEditorRef.current) {
                                             const html = noteEditorRef.current.innerHTML;
+                                            setSelectedNote((prev) => prev ? { ...prev, content: html } : null);
                                             setNotes((prev) =>
                                                 prev.map((n) => (n.id === selectedNote.id ? { ...n, content: html } : n))
                                             );
@@ -5664,32 +5678,65 @@ STRICT RULES:
                                                 : "notes-ruled-light"
                                             : ""
                                     }`}
-                                    dangerouslySetInnerHTML={{ __html: selectedNote.content || "" }}
                                 />
                             </div>
                         </div>
 
-                        {/* Resize handle */}
+                        {/* Resize handles (popup mode only) */}
                         {isNotePopup && !isNoteMaximized && (
-                            <div
-                                onPointerDown={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setIsResizingNote(true);
-                                    setNoteResizeOffset({
-                                        startX: e.clientX,
-                                        startY: e.clientY,
-                                        startW: notePopupSize.width,
-                                        startH: notePopupSize.height,
-                                    });
-                                }}
-                                className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize flex items-end justify-end p-0.5 z-40"
-                            >
-                                <svg className="w-2.5 h-2.5 opacity-40 hover:opacity-100 text-zinc-500" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                    <line x1="10" y1="0" x2="0" y2="10" />
-                                    <line x1="10" y1="4" x2="4" y2="10" />
-                                </svg>
-                            </div>
+                            <>
+                                {/* Bottom-right corner */}
+                                <div
+                                    onPointerDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setIsResizingNote(true);
+                                        setNoteResizeOffset({
+                                            startX: e.clientX,
+                                            startY: e.clientY,
+                                            startW: notePopupSize.width,
+                                            startH: notePopupSize.height,
+                                        });
+                                    }}
+                                    className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize z-50 flex items-end justify-end pb-0.5 pr-0.5 note-resize-handle"
+                                >
+                                    <svg className="w-3 h-3 text-zinc-400" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                        <line x1="10" y1="0" x2="0" y2="10" />
+                                        <line x1="10" y1="4" x2="4" y2="10" />
+                                        <line x1="10" y1="8" x2="8" y2="10" />
+                                    </svg>
+                                </div>
+                                {/* Right edge */}
+                                <div
+                                    onPointerDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setIsResizingNote(true);
+                                        setNoteResizeOffset({
+                                            startX: e.clientX,
+                                            startY: e.clientY,
+                                            startW: notePopupSize.width,
+                                            startH: notePopupSize.height,
+                                        });
+                                    }}
+                                    className="absolute top-0 right-0 w-1.5 h-full cursor-e-resize z-50 note-resize-handle opacity-0 hover:opacity-100 bg-transparent hover:bg-blue-500/20"
+                                />
+                                {/* Bottom edge */}
+                                <div
+                                    onPointerDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setIsResizingNote(true);
+                                        setNoteResizeOffset({
+                                            startX: e.clientX,
+                                            startY: e.clientY,
+                                            startW: notePopupSize.width,
+                                            startH: notePopupSize.height,
+                                        });
+                                    }}
+                                    className="absolute bottom-0 left-0 w-full h-1.5 cursor-s-resize z-50 note-resize-handle opacity-0 hover:opacity-100 bg-transparent hover:bg-blue-500/20"
+                                />
+                            </>
                         )}
                     </div>
                 </div>
@@ -6145,18 +6192,19 @@ const WhiteboardCanvas = ({
     initialData,
     onSave,
     onClose,
-    isDarkMode,
 }: {
     initialData: string;
     onSave: (dataUrl: string) => void;
     onClose: () => void;
-    isDarkMode: boolean;
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [color, setColor] = useState(isDarkMode ? "#ffffff" : "#000000");
+    const [color, setColor] = useState("#ffffff");
     const [lineWidth, setLineWidth] = useState(3);
     const [isDrawing, setIsDrawing] = useState(false);
+    const [tool, setTool] = useState<"freehand" | "rectangle" | "circle" | "line" | "arrow">("freehand");
     const prevPos = useRef({ x: 0, y: 0 });
+    const startPos = useRef({ x: 0, y: 0 });
+    const savedData = useRef<ImageData | null>(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -6164,7 +6212,6 @@ const WhiteboardCanvas = ({
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        // Draw initial image if exists
         if (initialData) {
             const img = new Image();
             img.onload = () => {
@@ -6172,11 +6219,28 @@ const WhiteboardCanvas = ({
             };
             img.src = initialData;
         } else {
-            // Fill background
-            ctx.fillStyle = isDarkMode ? "#1e1e1e" : "#ffffff";
+            ctx.fillStyle = "#1e1e1e";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
-    }, [initialData, isDarkMode]);
+    }, [initialData]);
+
+    const saveState = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        savedData.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    };
+
+    const restoreState = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        if (savedData.current) {
+            ctx.putImageData(savedData.current, 0, 0);
+        }
+    };
 
     const getCoordinates = (e: React.PointerEvent<HTMLCanvasElement>) => {
         const canvas = canvasRef.current;
@@ -6190,43 +6254,109 @@ const WhiteboardCanvas = ({
         };
     };
 
-    const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-        const pos = getCoordinates(e);
-        prevPos.current = pos;
-        setIsDrawing(true);
-        
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, lineWidth / 2, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.fill();
-    };
-
-    const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-        if (!isDrawing) return;
+    const drawShape = (fromX: number, fromY: number, toX: number, toY: number) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        const currentPos = getCoordinates(e);
-
+        restoreState();
         ctx.beginPath();
-        ctx.moveTo(prevPos.current.x, prevPos.current.y);
-        ctx.lineTo(currentPos.x, currentPos.y);
         ctx.strokeStyle = color;
         ctx.lineWidth = lineWidth;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        ctx.stroke();
 
-        prevPos.current = currentPos;
+        switch (tool) {
+            case "freehand":
+                ctx.moveTo(fromX, fromY);
+                ctx.lineTo(toX, toY);
+                ctx.stroke();
+                break;
+            case "rectangle":
+                ctx.strokeRect(
+                    Math.min(fromX, toX),
+                    Math.min(fromY, toY),
+                    Math.abs(toX - fromX),
+                    Math.abs(toY - fromY)
+                );
+                break;
+            case "circle": {
+                const cx = (fromX + toX) / 2;
+                const cy = (fromY + toY) / 2;
+                const rx = Math.abs(toX - fromX) / 2;
+                const ry = Math.abs(toY - fromY) / 2;
+                ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                break;
+            }
+            case "line":
+                ctx.moveTo(fromX, fromY);
+                ctx.lineTo(toX, toY);
+                ctx.stroke();
+                break;
+            case "arrow": {
+                const headLen = Math.min(20, Math.hypot(toX - fromX, toY - fromY) * 0.3);
+                const angle = Math.atan2(toY - fromY, toX - fromX);
+                ctx.moveTo(fromX, fromY);
+                ctx.lineTo(toX, toY);
+                ctx.moveTo(toX, toY);
+                ctx.lineTo(toX - headLen * Math.cos(angle - Math.PI / 6), toY - headLen * Math.sin(angle - Math.PI / 6));
+                ctx.moveTo(toX, toY);
+                ctx.lineTo(toX - headLen * Math.cos(angle + Math.PI / 6), toY - headLen * Math.sin(angle + Math.PI / 6));
+                ctx.stroke();
+                break;
+            }
+        }
+    };
+
+    const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+        const pos = getCoordinates(e);
+        prevPos.current = pos;
+        startPos.current = pos;
+        setIsDrawing(true);
+
+        if (tool === "freehand") {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, lineWidth / 2, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+        } else {
+            saveState();
+        }
+    };
+
+    const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+        if (!isDrawing) return;
+        const currentPos = getCoordinates(e);
+
+        if (tool === "freehand") {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
+            ctx.beginPath();
+            ctx.moveTo(prevPos.current.x, prevPos.current.y);
+            ctx.lineTo(currentPos.x, currentPos.y);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.stroke();
+            prevPos.current = currentPos;
+        } else {
+            drawShape(startPos.current.x, startPos.current.y, currentPos.x, currentPos.y);
+        }
     };
 
     const handlePointerUp = () => {
+        if (isDrawing && tool !== "freehand") {
+            saveState();
+        }
         setIsDrawing(false);
     };
 
@@ -6235,14 +6365,23 @@ const WhiteboardCanvas = ({
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
-        ctx.fillStyle = isDarkMode ? "#1e1e1e" : "#ffffff";
+        ctx.fillStyle = "#1e1e1e";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        savedData.current = null;
     };
 
+    const tools: { id: typeof tool; label: string; icon: string }[] = [
+        { id: "freehand", label: "Pen", icon: "✏️" },
+        { id: "rectangle", label: "Rect", icon: "▭" },
+        { id: "circle", label: "Circle", icon: "○" },
+        { id: "line", label: "Line", icon: "╱" },
+        { id: "arrow", label: "Arrow", icon: "→" },
+    ];
+
     return (
-        <div className={`p-4 rounded-xl border flex flex-col items-center gap-3 ${isDarkMode ? "bg-zinc-900 border-white/10" : "bg-zinc-50 border-black/10"}`}>
+        <div className="p-4 rounded-xl border flex flex-col items-center gap-3 bg-zinc-900 border-white/10">
             <div className="flex items-center justify-between w-full">
-                <span className="text-xs font-sans font-semibold">Whiteboard Drawing Pad</span>
+                <span className="text-xs font-sans font-semibold text-white">Whiteboard Drawing Pad</span>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={handleClear}
@@ -6252,13 +6391,31 @@ const WhiteboardCanvas = ({
                     </button>
                     <button
                         onClick={onClose}
-                        className={`py-1 px-2 text-[10px] rounded hover:bg-black/10 ${isDarkMode ? "hover:bg-white/10 text-white" : "text-black"}`}
+                        className="py-1 px-2 text-[10px] rounded hover:bg-white/10 text-white"
                     >
                         Cancel
                     </button>
                 </div>
             </div>
-            <div className="relative border rounded overflow-hidden">
+
+            {/* Shape Tool Selector */}
+            <div className="flex items-center gap-1.5 w-full justify-center">
+                {tools.map((t) => (
+                    <button
+                        key={t.id}
+                        onClick={() => setTool(t.id)}
+                        className={`px-2.5 py-1 text-[10px] font-sans rounded transition-all ${
+                            tool === t.id
+                                ? "bg-blue-500 text-white"
+                                : "bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10"
+                        }`}
+                    >
+                        {t.icon} {t.label}
+                    </button>
+                ))}
+            </div>
+
+            <div className="relative border rounded overflow-hidden border-white/10">
                 <canvas
                     ref={canvasRef}
                     width={500}
@@ -6272,13 +6429,13 @@ const WhiteboardCanvas = ({
             </div>
             <div className="flex flex-wrap items-center justify-between w-full gap-2 mt-1">
                 <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-zinc-400">Brush Color:</span>
+                    <span className="text-[10px] text-zinc-400">Color:</span>
                     {["#000000", "#ffffff", "#ea4335", "#34a853", "#4285f4", "#fbbc05", "#ff00ff"].map((c) => (
                         <button
                             key={c}
                             onClick={() => setColor(c)}
                             style={{ backgroundColor: c }}
-                            className={`w-4 h-4 rounded-full border ${color === c ? "border-zinc-400 scale-125" : "border-transparent"}`}
+                            className={`w-4 h-4 rounded-full border-2 ${color === c ? "border-blue-400 scale-125" : "border-white/30"}`}
                         />
                     ))}
                 </div>
@@ -6293,7 +6450,7 @@ const WhiteboardCanvas = ({
                             onChange={(e) => setLineWidth(Number(e.target.value))}
                             className="w-16 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
                         />
-                        <span className="text-[10px] font-mono">{lineWidth}px</span>
+                        <span className="text-[10px] font-mono text-zinc-300">{lineWidth}px</span>
                     </div>
                     <button
                         onClick={() => {
