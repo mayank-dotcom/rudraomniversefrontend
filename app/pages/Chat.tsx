@@ -5501,27 +5501,26 @@ STRICT RULES:
                         .note-resize-handle:hover { opacity: 0.8; }
                         .note-resize-handle-right, .note-resize-handle-left { width: 6px; }
                         .note-resize-handle-top, .note-resize-handle-bottom { height: 6px; }
-                        .note-editor-hr {
-                            border: none !important;
-                            border-top: 1px solid rgba(255,255,255,0.2) !important;
-                            margin: 12px 0 !important;
-                            display: block !important;
-                            height: auto !important;
-                        }
-                        .note-editor-hr-dotted {
-                            border: none !important;
-                            border-top: 1px dashed rgba(255,255,255,0.3) !important;
-                            margin: 12px 0 !important;
-                            display: block !important;
-                            height: auto !important;
-                        }
-                        .note-content ul, .note-content ol {
+                        .note-content ul {
                             padding-left: 24px !important;
                             margin: 4px 0 !important;
+                            list-style-type: disc !important;
+                            color: rgba(255,255,255,0.9) !important;
+                        }
+                        .note-content ol {
+                            padding-left: 24px !important;
+                            margin: 4px 0 !important;
+                            list-style-type: decimal !important;
+                            color: rgba(255,255,255,0.9) !important;
                         }
                         .note-content li {
                             margin: 2px 0 !important;
+                            list-style-position: outside !important;
                         }
+                        .note-content ul ul { list-style-type: circle !important; }
+                        .note-content ul ul ul { list-style-type: square !important; }
+                        .note-content ol ol { list-style-type: lower-alpha !important; }
+                        .note-content ol ol ol { list-style-type: lower-roman !important; }
                     `}} />
 
                     {/* Modal container wrapper for non-popup mode */}
@@ -5825,7 +5824,10 @@ STRICT RULES:
                                 onClick={() => {
                                     if (!noteEditorRef.current) return;
                                     noteEditorRef.current.focus();
-                                    document.execCommand("insertHTML", false, '<hr class="note-editor-hr" /><br>');
+                                    const sep = document.createElement("div");
+                                    sep.style.cssText = "border-top:1px solid rgba(255,255,255,0.2);margin:12px 0;height:0;pointer-events:none";
+                                    sep.contentEditable = "false";
+                                    document.execCommand("insertHTML", false, sep.outerHTML + "<br>");
                                 }}
                                 className="flex items-center gap-1 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 title="Insert regular line"
@@ -5836,7 +5838,7 @@ STRICT RULES:
                                 onClick={() => {
                                     if (!noteEditorRef.current) return;
                                     noteEditorRef.current.focus();
-                                    document.execCommand("insertHTML", false, '<hr class="note-editor-hr-dotted" /><br>');
+                                    document.execCommand("insertHTML", false, '<div style="border-top:1px dashed rgba(255,255,255,0.3);margin:12px 0;height:0;pointer-events:none" contenteditable="false"></div><br>');
                                 }}
                                 className="flex items-center gap-1 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 title="Insert dotted line"
@@ -5958,23 +5960,51 @@ STRICT RULES:
                                 )}
                             </div>
 
-                            {/* Hidden device file input */}
+                            {/* Hidden device file input (images, text, PDFs) */}
                             <input
                                 ref={deviceFileInputRef}
                                 type="file"
-                                accept="image/*"
+                                accept="image/*,.txt,.md,.pdf"
                                 className="hidden"
-                                onChange={(e) => {
+                                onChange={async (e) => {
                                     const file = e.target.files?.[0];
-                                    if (file) {
+                                    if (!file) { e.target.value = ""; return; }
+                                    if (!noteEditorRef.current) { e.target.value = ""; return; }
+                                    noteEditorRef.current.focus();
+
+                                    const isTextFile = file.type.startsWith("text/") || /\.(txt|md)$/i.test(file.name);
+                                    const isPdfFile = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+
+                                    if (isPdfFile) {
+                                        try {
+                                            const { processFile } = await import("@/lib/file-processor");
+                                            const result = await processFile(file);
+                                            const text = result.content;
+                                            if (text) {
+                                                const html = text.split("\n").filter(Boolean).map(line => `<p>${line.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</p>`).join("");
+                                                document.execCommand("insertHTML", false, html);
+                                            } else {
+                                                toast.error("This PDF contains no extractable text (scanned document). Try uploading it to the chat instead.");
+                                            }
+                                        } catch {
+                                            toast.error("Failed to extract text from PDF.");
+                                        }
+                                    } else if (isTextFile) {
                                         const reader = new FileReader();
                                         reader.onload = () => {
-                                            if (reader.result && typeof reader.result === "string") {
-                                                if (noteEditorRef.current) {
-                                                    noteEditorRef.current.focus();
-                                                    document.execCommand("insertImage", false, reader.result);
-                                                    void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
-                                                }
+                                            if (typeof reader.result === "string") {
+                                                const html = reader.result.split("\n").filter(Boolean).map(line => `<p>${line.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</p>`).join("");
+                                                document.execCommand("insertHTML", false, html);
+                                                void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
+                                            }
+                                        };
+                                        reader.readAsText(file);
+                                    } else {
+                                        const reader = new FileReader();
+                                        reader.onload = () => {
+                                            if (typeof reader.result === "string") {
+                                                document.execCommand("insertImage", false, reader.result);
+                                                void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
                                             }
                                         };
                                         reader.readAsDataURL(file);
