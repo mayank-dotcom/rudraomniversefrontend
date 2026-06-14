@@ -1419,9 +1419,9 @@ const Chat = () => {
 
     const startNoteRecording = async () => {
         try {
-            // If podcast is playing, stop it and switch to ask mode
-            if (isNoteTTSPlaying) {
-                stopNotePodcast();
+            // If podcast is playing or AI is answering, stop all audio and switch to ask mode
+            if (isNoteTTSPlaying || isPodcastAnswering) {
+                stopAllAudio();
                 setPendingResumePodcast(false);
             }
             const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1437,7 +1437,6 @@ const Chat = () => {
             const mediaRecorder = new MediaRecorder(mediaStream, { mimeType });
             noteMediaRecorderRef.current = mediaRecorder;
             const chunks: Blob[] = [];
-            const wasPodcastActive = isNoteTTSPlaying || !!notePodcastText;
 
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) chunks.push(e.data);
@@ -1450,6 +1449,7 @@ const Chat = () => {
                     return;
                 }
                 // Transcribe
+                setIsNoteTranscribing(true);
                 let transcript = "";
                 try {
                     const { transcribeSpeech } = await import("@/lib/chat-api");
@@ -1466,6 +1466,7 @@ const Chat = () => {
                         console.error("Note STT fallback also failed:", fallbackErr);
                     }
                 }
+                setIsNoteTranscribing(false);
                 if (!transcript) {
                     toast.error("Could not transcribe speech.");
                     return;
@@ -1508,24 +1509,36 @@ const Chat = () => {
     const [notePodcastText, setNotePodcastText] = useState("");
     const [isPodcastAsking, setIsPodcastAsking] = useState(false);
     const [isPodcastAnswering, setIsPodcastAnswering] = useState(false);
+    const [isPodcastGenerating, setIsPodcastGenerating] = useState(false);
+    const [isNoteTranscribing, setIsNoteTranscribing] = useState(false);
     const [pendingResumePodcast, setPendingResumePodcast] = useState(false);
     const podcastAskAudioRef = useRef<HTMLAudioElement | null>(null);
 
-    const stopNotePodcast = () => {
+    const stopAllAudio = () => {
         if (noteAudioRef.current) {
             noteAudioRef.current.pause();
             noteAudioRef.current = null;
         }
+        if (podcastAskAudioRef.current) {
+            podcastAskAudioRef.current.pause();
+            podcastAskAudioRef.current = null;
+        }
         window.speechSynthesis?.cancel();
         setIsNoteTTSPlaying(false);
+        setIsPodcastAnswering(false);
+        setIsPodcastGenerating(false);
         setNoteTTSProvider(null);
         setNotePodcastText("");
     };
 
-    const playNotePodcast = async (maxRetries = 2) => {
-        if (isNoteTTSPlaying) {
-            stopNotePodcast();
+    const playNotePodcast = async () => {
+        if (isNoteTTSPlaying || isPodcastAnswering) {
+            stopAllAudio();
+            setPendingResumePodcast(false);
             return;
+        }
+        if (pendingResumePodcast) {
+            setPendingResumePodcast(false);
         }
         const text = noteEditorRef.current?.innerText || "";
         if (!text.trim()) {
@@ -1533,64 +1546,77 @@ const Chat = () => {
             return;
         }
         setNotePodcastText(text);
-        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        setIsPodcastGenerating(true);
+        // Separate audio fetch from playback
+        let audioBlob: Blob | null = null;
+        for (let attempt = 0; attempt <= 2; attempt++) {
             try {
                 const { generateTTSAudio } = await import("@/lib/chat-api");
-                const audioBlob = await generateTTSAudio(text, "hi-IN");
-                const audioUrl = URL.createObjectURL(audioBlob);
-                const audio = new Audio(audioUrl);
-                noteAudioRef.current = audio;
-                setNoteTTSProvider("sarvam");
-                setIsNoteTTSPlaying(true);
-                audio.onended = () => {
-                    URL.revokeObjectURL(audioUrl);
-                    noteAudioRef.current = null;
-                    setIsNoteTTSPlaying(false);
-                    setNoteTTSProvider(null);
-                    setNotePodcastText("");
-                };
-                audio.onerror = () => {
-                    URL.revokeObjectURL(audioUrl);
-                    noteAudioRef.current = null;
-                    setIsNoteTTSPlaying(false);
-                    setNoteTTSProvider(null);
-                    setNotePodcastText("");
-                };
-                await audio.play();
-                return;
+                audioBlob = await generateTTSAudio(text, "hi-IN");
+                break;
             } catch {
-                if (attempt < maxRetries) {
+                if (attempt < 2) {
                     await new Promise(r => setTimeout(r, 500));
                     continue;
                 }
             }
         }
-        // Fallback: browser speech synthesis
-        try {
-            if ("speechSynthesis" in window) {
-                setNoteTTSProvider("browser");
-                setIsNoteTTSPlaying(true);
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = 0.9;
-                utterance.pitch = 1;
-                utterance.onend = () => {
-                    setIsNoteTTSPlaying(false);
-                    setNoteTTSProvider(null);
+        if (audioBlob) {
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            noteAudioRef.current = audio;
+            setNoteTTSProvider("sarvam");
+            setIsNoteTTSPlaying(true);
+            setIsPodcastGenerating(false);
+            audio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                noteAudioRef.current = null;
+                setIsNoteTTSPlaying(false);
+                setNoteTTSProvider(null);
+                setNotePodcastText("");
+            };
+            audio.onerror = () => {
+                URL.revokeObjectURL(audioUrl);
+                noteAudioRef.current = null;
+                setIsNoteTTSPlaying(false);
+                setNoteTTSProvider(null);
+                setNotePodcastText("");
+            };
+            try {
+                await audio.play();
+            } catch {
+                // Autoplay blocked — try once more with user gesture fallback
+                try { await audio.play(); } catch {}
+            }
+        } else {
+            // Fallback: browser speech synthesis
+            setIsPodcastGenerating(false);
+            try {
+                if ("speechSynthesis" in window) {
+                    setNoteTTSProvider("browser");
+                    setIsNoteTTSPlaying(true);
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1;
+                    utterance.onend = () => {
+                        setIsNoteTTSPlaying(false);
+                        setNoteTTSProvider(null);
+                        setNotePodcastText("");
+                    };
+                    utterance.onerror = () => {
+                        setIsNoteTTSPlaying(false);
+                        setNoteTTSProvider(null);
+                        setNotePodcastText("");
+                    };
+                    window.speechSynthesis.speak(utterance);
+                } else {
+                    toast.error("TTS not available.");
                     setNotePodcastText("");
-                };
-                utterance.onerror = () => {
-                    setIsNoteTTSPlaying(false);
-                    setNoteTTSProvider(null);
-                    setNotePodcastText("");
-                };
-                window.speechSynthesis.speak(utterance);
-            } else {
-                toast.error("TTS not available.");
+                }
+            } catch {
+                toast.error("TTS failed.");
                 setNotePodcastText("");
             }
-        } catch {
-            toast.error("TTS failed.");
-            setNotePodcastText("");
         }
     };
 
@@ -2372,7 +2398,7 @@ STRICT RULES:
 
             // ── Podcast mode: auto-pause & inject note context ──
             if (isNoteTTSPlaying && notePodcastText) {
-                stopNotePodcast();
+                stopAllAudio();
                 const noteCtx = `[Podcast Context — the user was listening to the following note via podcast:\n\n${notePodcastText.slice(0, 4000)}\n\n]\n\n`;
                 if (typeof userContent === "string") {
                     userContent = noteCtx + userContent;
@@ -5943,23 +5969,28 @@ STRICT RULES:
                             <button
                                 onClick={isNoteRecording ? stopNoteRecording : startNoteRecording}
                                 className={`flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all ${
-                                    isNoteRecording
+                                    isNoteTranscribing
+                                        ? "bg-blue-500 text-white"
+                                        : isNoteRecording
                                         ? "bg-red-500 text-white animate-pulse"
-                                        : isNoteTTSPlaying
+                                        : isNoteTTSPlaying || isPodcastAnswering
                                         ? "bg-blue-500 text-white border border-blue-400"
                                         : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 }`}
                                 title={
-                                    isNoteRecording
-                                        ? "Stop recording"
-                                        : isNoteTTSPlaying
-                                        ? "Ask a question (interrupt podcast)"
-                                        : "Voice input (STT)"
+                                    isNoteTranscribing ? "Transcribing..." :
+                                    isNoteRecording ? "Stop recording" :
+                                    isNoteTTSPlaying || isPodcastAnswering ? "Ask a question" :
+                                    "Voice input (STT)"
                                 }
+                                disabled={isNoteTranscribing}
                             >
-                                {isNoteRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                                {isNoteTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
+                                 isNoteRecording ? <MicOff className="w-3.5 h-3.5" /> :
+                                 <Mic className="w-3.5 h-3.5" />}
                                 <span>
-                                    {isPodcastAnswering ? "Answering..." :
+                                    {isNoteTranscribing ? "Transcribing..." :
+                                     isPodcastAnswering ? "Answering..." :
                                      isPodcastAsking ? "Asking..." :
                                      isNoteRecording ? "Recording..." :
                                      isNoteTTSPlaying ? "Ask" : "STT"}
@@ -5969,7 +6000,7 @@ STRICT RULES:
                             {/* Podcast Play / Stop / Resume Button */}
                             <button
                                 onClick={() => {
-                                    if (pendingResumePodcast) {
+                                    if (pendingResumePodcast && !isPodcastAnswering) {
                                         setPendingResumePodcast(false);
                                         playNotePodcast();
                                     } else {
@@ -5977,7 +6008,9 @@ STRICT RULES:
                                     }
                                 }}
                                 className={`flex items-center gap-1.5 py-1.5 px-2 text-[11px] font-sans font-medium rounded transition-all ${
-                                    isPodcastAnswering
+                                    isPodcastGenerating
+                                        ? "bg-emerald-500 text-white"
+                                        : isPodcastAnswering
                                         ? "bg-amber-500 text-white"
                                         : isNoteTTSPlaying
                                         ? "bg-emerald-500 text-white animate-pulse"
@@ -5986,16 +6019,19 @@ STRICT RULES:
                                         : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                 }`}
                                 title={
-                                    isPodcastAnswering ? "AI is answering..." :
+                                    isPodcastGenerating ? "Generating audio..." :
+                                    isPodcastAnswering ? "Click to stop answer" :
                                     isNoteTTSPlaying ? "Stop podcast" :
                                     pendingResumePodcast ? "Resume podcast" :
                                     "Play note as podcast"
                                 }
-                                disabled={isPodcastAnswering || isPodcastAsking}
+                                disabled={isPodcastGenerating}
                             >
-                                <Headphones className="w-3.5 h-3.5" />
+                                {isPodcastGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
+                                 <Headphones className="w-3.5 h-3.5" />}
                                 <span>
-                                    {isPodcastAnswering ? "Answering..." :
+                                    {isPodcastGenerating ? "Generating..." :
+                                     isPodcastAnswering ? "Answering..." :
                                      isNoteTTSPlaying ? `Podcast...` :
                                      pendingResumePodcast ? "Resume" : "Podcast"}
                                 </span>
