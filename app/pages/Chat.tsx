@@ -1574,8 +1574,8 @@ const Chat = () => {
         setPendingResumePodcast(false);
     };
 
-    const podcastPlayChunk = async (chunkIdx: number) => {
-        const chunks = podcastChunks;
+    const podcastPlayChunk = async (chunkIdx: number, overrideChunks?: string[]) => {
+        const chunks = overrideChunks || podcastChunks;
         if (!chunks.length || chunkIdx >= chunks.length) {
             setIsNoteTTSPlaying(false);
             setNoteTTSProvider(null);
@@ -1612,7 +1612,7 @@ const Chat = () => {
                 URL.revokeObjectURL(audioUrl);
                 noteAudioRef.current = null;
                 if (nextIdx < chunks.length) {
-                    podcastPlayChunk(nextIdx);
+                    podcastPlayChunk(nextIdx, chunks);
                 } else {
                     setIsNoteTTSPlaying(false);
                     setNoteTTSProvider(null);
@@ -1625,7 +1625,7 @@ const Chat = () => {
                 URL.revokeObjectURL(audioUrl);
                 noteAudioRef.current = null;
                 if (nextIdx < chunks.length) {
-                    podcastPlayChunk(nextIdx);
+                    podcastPlayChunk(nextIdx, chunks);
                 } else {
                     setIsNoteTTSPlaying(false);
                     setNoteTTSProvider(null);
@@ -1691,7 +1691,7 @@ const Chat = () => {
         if (pendingResumePodcast && podcastChunks.length > 0) {
             setPendingResumePodcast(false);
             const resumeIdx = podcastChunkIndex;
-            await podcastPlayChunk(resumeIdx);
+            await podcastPlayChunk(resumeIdx, podcastChunks);
             return;
         }
         const text = noteEditorRef.current?.innerText || "";
@@ -1703,7 +1703,7 @@ const Chat = () => {
         const chunks = splitNoteIntoChunks(text);
         setPodcastChunks(chunks);
         setPodcastChunkIndex(0);
-        await podcastPlayChunk(0);
+        await podcastPlayChunk(0, chunks);
     };
 
     const speakAiResponse = async (text: string) => {
