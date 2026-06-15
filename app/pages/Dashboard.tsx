@@ -3270,7 +3270,22 @@ const Dashboard = () => {
                                                             const res = await updateSiteSetting(targetKey, targetValue);
                                                             if (res.success) {
                                                                 toast.success("Page updated successfully");
-                                                                fetchData();
+                                                                // Optimistically update local state
+                                                                setSiteSettings(prev => {
+                                                                    const updated = res.setting ? { key: res.setting.key, value: res.setting.value, updated_at: res.setting.updated_at } : { key: targetKey, value: targetValue, updated_at: new Date().toISOString() };
+                                                                    const existing_idx = prev.findIndex(s => s.key === updated.key);
+                                                                    if (existing_idx >= 0) {
+                                                                        const copy = [...prev];
+                                                                        copy[existing_idx] = updated;
+                                                                        return copy;
+                                                                    }
+                                                                    return [...prev, updated];
+                                                                });
+                                                                // Refresh just site settings (not full fetchData which can fail for unrelated reasons)
+                                                                try {
+                                                                    const settingsRes = await getSiteSettings();
+                                                                    if (settingsRes.success) setSiteSettings(settingsRes.settings || []);
+                                                                } catch { /* keep optimistic update */ }
                                                             } else throw new Error(res.error || "Failed to update");
                                                         } catch (err) {
                                                             toast.error("Error updating page: " + (err as Error).message);
