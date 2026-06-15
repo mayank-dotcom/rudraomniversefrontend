@@ -1901,7 +1901,7 @@ const Index = () => {
                 >
                   Start Free Trial
                 </button>
-                <button className="text-sm border border-white/10 text-white/70 px-8 py-3.5 rounded-lg font-medium hover:border-white/20 hover:text-white transition-all">
+                <button onClick={() => window.location.href = "/pricing"} className="text-sm border border-white/10 text-white/70 px-8 py-3.5 rounded-lg font-medium hover:border-white/20 hover:text-white transition-all">
                   View Pricing
                 </button>
               </div>

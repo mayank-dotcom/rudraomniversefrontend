@@ -123,7 +123,7 @@ export default function Footer() {
                     </div>
                     <span className="text-xs truncate">{footerData.email}</span>
                   </a>
-                  <div className={`flex items-center gap-3 text-sm ${isDarkMode ? "text-white" : "text-black"}`}>
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(footerData.location)}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-3 text-sm transition-colors group ${isDarkMode ? "text-white hover:text-white/80" : "text-black hover:text-black/80"}`}>
                     <div className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 transition-all duration-300 hover:scale-110 ${
                       isDarkMode 
                         ? "border-white/10 hover:bg-white hover:text-black" 
@@ -132,7 +132,7 @@ export default function Footer() {
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     </div>
                     <span className="text-xs">{footerData.location}</span>
-                  </div>
+                  </a>
                   <div className="flex flex-col gap-2">
                     <a href={`tel:${footerData.techSupportPhone.replace(/\s+/g, '')}`} className={`flex items-center gap-3 text-sm transition-colors group ${isDarkMode ? "text-white hover:text-white/80" : "text-black hover:text-black/80"}`}>
                       <div className={`w-9 h-9 rounded-lg border flex items-center justify-center transition-all duration-300 ${
