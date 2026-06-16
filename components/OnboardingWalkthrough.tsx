@@ -61,10 +61,10 @@ export default function OnboardingWalkthrough({
       {
         title: "Session History & Settings",
         description: isMobile
-          ? "Tap the message icon in the header to open the sidebar. Start a new chat, search sessions, and review your history."
+          ? "Tap the sidebar icon in the header to open the sidebar. Start a new chat, search sessions, and review your history."
           : "Collapse or expand this sidebar to view your chat sessions history, start a new chat, or search previous discussions.",
-        targetSelector: isMobile ? undefined : "#walkthrough-sidebar",
-        placement: isMobile ? "center" : "right",
+        targetSelector: isMobile ? "#walkthrough-sidebar-toggle" : "#walkthrough-sidebar",
+        placement: isMobile ? "bottom" : "right",
       },
       {
         title: "Message Input & Tools",
@@ -171,8 +171,8 @@ export default function OnboardingWalkthrough({
   useEffect(() => {
     const stepConfig = steps[currentStep];
     if (!stepConfig) return;
-    const cardWidth = 340;
-    const cardHeight = 260;
+    const cardWidth = isMobile ? Math.min(300, window.innerWidth - 32) : 340;
+    const cardHeight = isMobile ? 280 : 260;
 
     if (!rect || stepConfig.placement === "center") {
       setCoords({ x: window.innerWidth / 2 - cardWidth / 2, y: window.innerHeight / 2 - cardHeight / 2, placement: "center" });
@@ -312,7 +312,7 @@ export default function OnboardingWalkthrough({
               animate={{ opacity: 1, scale: 1, y: 0, x: coords.x, top: coords.y }}
               exit={{ opacity: 0, scale: 0.93 }}
               transition={{ type: "spring", stiffness: 200, damping: 22 }}
-              style={{ position: "fixed", top: 0, left: 0, width: "340px" }}
+              style={{ position: "fixed", top: 0, left: 0, width: isMobile ? `${Math.min(300, typeof window !== 'undefined' ? window.innerWidth - 32 : 300)}px` : "340px" }}
               className="pointer-events-auto select-none"
             >
               {/* Arrow: TOP (card is below target) */}

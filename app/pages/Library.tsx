@@ -2644,7 +2644,7 @@ export default function LibraryPage() {
                   }`}
                   title="Toggle Sidebar"
                 >
-                  <Menu className="h-4 w-4" />
+                  {isSidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
                 </motion.button>
               )}
               
@@ -2654,14 +2654,14 @@ export default function LibraryPage() {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${isDarkMode ? "text-white/50 hover:text-white" : "text-black/50 hover:text-black"}`}
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
-                  <span>Query Mode</span>
+                  {!isMobile && <span>Query Mode</span>}
                 </button>
                 <button
                   onClick={() => window.location.href = "/library"}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${isDarkMode ? "bg-white/10 text-white shadow-sm" : "bg-black/10 text-black shadow-sm"}`}
                 >
                   <ImageIcon className="w-3.5 h-3.5" />
-                  <span>Image Mode</span>
+                  {!isMobile && <span>Image Mode</span>}
                 </button>
               </div>
             </div>
@@ -3525,31 +3525,36 @@ export default function LibraryPage() {
                 <ImageIcon className="h-5 w-5" />
               </motion.button>
 
-              {/* Upload Image */}
-              <motion.button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className={`p-2 rounded-full transition-all duration-200 ${
-                  isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
-                }`}
-                title="Upload image from device"
-              >
-                <Upload className="h-5 w-5" />
-              </motion.button>
-              <motion.button
-                type="button"
-                onClick={() => setShowImagePicker(true)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className={`p-2 rounded-full transition-all duration-200 ${
-                  isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
-                }`}
-                title="Pick from library"
-              >
-                <FolderOpen className="h-5 w-5" />
-              </motion.button>
+              {/* Upload Image - visible only in edit mode */}
+              {isEditingMode && (
+                <motion.button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className={`p-2 rounded-full transition-all duration-200 ${
+                    isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
+                  }`}
+                  title="Upload image from device"
+                >
+                  <Upload className="h-5 w-5" />
+                </motion.button>
+              )}
+              {/* Pick from Library - visible only in edit mode */}
+              {isEditingMode && (
+                <motion.button
+                  type="button"
+                  onClick={() => setShowImagePicker(true)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className={`p-2 rounded-full transition-all duration-200 ${
+                    isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
+                  }`}
+                  title="Pick from library"
+                >
+                  <FolderOpen className="h-5 w-5" />
+                </motion.button>
+              )}
 
               {/* Voice Input (Microphone) */}
               <motion.button

@@ -3130,7 +3130,7 @@ STRICT RULES:
                             ) : (
                                 <Paperclip className="h-3.5 w-3.5" />
                             )}
-                            <span>{t("add_files")}</span>
+                            {!isMobile && <span>{t("add_files")}</span>}
                         </motion.label>
                         <input
                             type="file"
@@ -4188,6 +4188,7 @@ STRICT RULES:
                         {/* Mobile left-sidebar toggle button */}
                         {isMobile && (
                             <motion.button
+                                id="walkthrough-sidebar-toggle"
                                 onClick={() => {
                                     setIsSidebarCollapsed(!isSidebarCollapsed);
                                     setIsRightSidebarCollapsed(true);
@@ -4196,7 +4197,7 @@ STRICT RULES:
                                 whileTap={{ scale: 0.9 }}
                                 className={`p-2 border rounded-xl transition-all cursor-pointer ${isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"}`}
                             >
-                                <MessageSquare className="h-4 w-4" />
+                                <PanelLeftOpen className="h-4 w-4" />
                             </motion.button>
                         )}
 
@@ -4212,7 +4213,7 @@ STRICT RULES:
                                     }`}
                             >
                                 <MessageSquare className="w-3.5 h-3.5" />
-                                <span>Query Mode</span>
+                                {!isMobile && <span>Query Mode</span>}
                             </button>
                             <button
                                 onClick={() => window.location.href = "/library"}
@@ -4222,7 +4223,7 @@ STRICT RULES:
                                     }`}
                             >
                                 <ImageIcon className="w-3.5 h-3.5" />
-                                <span>Image Mode</span>
+                                {!isMobile && <span>Image Mode</span>}
                             </button>
                         </div>
                     </div>
@@ -4230,7 +4231,7 @@ STRICT RULES:
                     {/* Right Controls */}
                     <div className="flex items-center gap-3">
                         {/* Quick Tour Button */}
-                        {!showEmployeeView && !isMobile && (
+                        {!showEmployeeView && (
                             <motion.button
                                 onClick={() => setShowWalkthrough(true)}
                                 className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer overflow-hidden relative ${isDarkMode
