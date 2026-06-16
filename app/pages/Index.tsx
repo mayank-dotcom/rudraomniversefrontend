@@ -1606,7 +1606,7 @@ const Index = () => {
             </motion.div>
 
             <div className="grid lg:grid-cols-2 gap-16 items-center">
-              <div>
+              <div className="order-last lg:order-first">
                 <style>{`
                   @keyframes progressFill {
                     from { transform: scaleX(0); }
@@ -1649,7 +1649,7 @@ const Index = () => {
                         <div className="flex items-center gap-2">
                           {isActive ? (
                             <span className="flex items-center gap-1.5 text-[8px] font-mono tracking-wider text-cyan-400 bg-cyan-950/30 border border-cyan-500/20 px-2 py-0.5 rounded-full uppercase">
-                              <span className="w-1 h-1 rounded-full bg-cyan-400 animate-ping" /> Live Demo
+                              <span className="w-1 h-1 rounded-full bg-cyan-400 animate-ping" /> Live
                             </span>
                           ) : (
                             <span className="text-[8px] font-mono tracking-wider text-white/20 border border-white/5 px-2 py-0.5 rounded-full uppercase">
@@ -1674,7 +1674,7 @@ const Index = () => {
                 </div>
               </div>
 
-              <div className="relative h-[400px] md:h-[480px] w-full flex items-center justify-center overflow-visible">
+              <div className="relative h-[400px] md:h-[480px] w-full flex items-center justify-center overflow-visible order-first lg:order-last">
                 <CardSwap
                   width={420}
                   height={320}
@@ -1747,7 +1747,7 @@ const Index = () => {
             </motion.div>
 
             <div className="grid lg:grid-cols-2 gap-16 items-center">
-              <div className="order-first lg:order-last">
+              <div className="order-last lg:order-last">
                 <div className="flex justify-start max-w-lg ml-auto mb-6">
                   <span className="inline-flex items-center gap-2 text-xs font-bold text-black/60 uppercase tracking-[0.25em]">
                     <span className="w-1.5 h-1.5 rounded-full bg-black/20" /> Select a Service
@@ -1786,7 +1786,7 @@ const Index = () => {
                         <div className="flex items-center gap-2">
                           {isActive ? (
                             <span className="flex items-center gap-1.5 text-[8px] font-mono tracking-wider text-cyan-600 bg-cyan-50 border border-cyan-500/20 px-2 py-0.5 rounded-full uppercase">
-                              <span className="w-1 h-1 rounded-full bg-cyan-500 animate-ping" /> Live Demo
+                              <span className="w-1 h-1 rounded-full bg-cyan-500 animate-ping" /> Live
                             </span>
                           ) : (
                             <span className="text-[8px] font-mono tracking-wider text-black/35 border border-black/10 px-2 py-0.5 rounded-full uppercase">
@@ -1817,7 +1817,7 @@ const Index = () => {
                 </div>
               </div>
 
-              <div className="relative h-[400px] md:h-[480px] w-full flex items-center justify-center overflow-visible order-last lg:order-first">
+              <div className="relative h-[400px] md:h-[480px] w-full flex items-center justify-center overflow-visible order-first lg:order-first">
                 <CardSwap
                   width={420}
                   height={320}
@@ -1828,7 +1828,7 @@ const Index = () => {
                   activeIndex={activeEnterpriseCard}
                   onActiveIndexChange={setActiveEnterpriseCard}
                   invertStacking={true}
-                  className="left-0 md:left-20 transform translate-x-[12%] md:translate-x-[16%] -translate-y-[12vh] origin-bottom-left max-[768px]:translate-x-[5%] max-[768px]:translate-y-[5%] max-[768px]:scale-[0.75] max-[480px]:translate-x-[2%] max-[480px]:translate-y-[5%] max-[480px]:scale-[0.6]"
+                  className="left-0 md:left-20 transform translate-x-[12%] md:translate-x-[16%] -translate-y-[12vh] origin-bottom-left max-[768px]:translate-x-[10%] max-[768px]:translate-y-[0%] max-[768px]:scale-[0.75] max-[480px]:translate-x-[6%] max-[480px]:-translate-y-[2%] max-[480px]:scale-[0.6]"
                 >
                   {enterpriseTools.map((tool, idx) => {
                     const isActive = activeEnterpriseCard === idx;

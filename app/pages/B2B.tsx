@@ -5,13 +5,13 @@ import { motion, AnimatePresence } from "framer-motion"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/ui/Footer"
 import { Building2, ShieldCheck, Cpu, CheckCircle, ArrowLeft } from "lucide-react"
-import { useTheme } from "@/lib/theme-context"
+
 import { getPublicSiteSettings } from "@/lib/chat-api"
 
 const API_BASE = process.env.NEXT_PUBLIC_BASE_URL!
 
 export default function B2B() {
-  const { isDarkMode } = useTheme()
+  const isDarkMode = true
   const [enterpriseName, setEnterpriseName] = useState("")
   const [adminName, setAdminName] = useState("")
   const [adminEmail, setAdminEmail] = useState("")

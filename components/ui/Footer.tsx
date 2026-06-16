@@ -1,12 +1,11 @@
 "use client"
 
-import { useTheme } from "@/lib/theme-context";
 import { useState, useEffect } from "react";
 import { getPublicSiteSettings } from "@/lib/chat-api";
 import { Mail, MapPin, Phone, ArrowRight } from "lucide-react";
 
 export default function Footer() {
-    const { isDarkMode } = useTheme();
+    const isDarkMode = false;
     const [socialLinks, setSocialLinks] = useState({
         twitter: "#",
         linkedin: "#",

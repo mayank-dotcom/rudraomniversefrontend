@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/ui/Footer"
-import { useTheme } from "@/lib/theme-context"
+
 import { getPublicSiteSettings } from "@/lib/chat-api"
 import { MessageSquare, Mail, Clock, Send, CheckCircle, Bug } from "lucide-react"
 
@@ -25,7 +25,7 @@ const SUPPORT_CATEGORIES = [
 ]
 
 export default function Support() {
-    const { isDarkMode } = useTheme()
+    const isDarkMode = true
     const [pageTitle, setPageTitle] = useState(DEFAULT_TITLE)
     const [pageDesc, setPageDesc] = useState(DEFAULT_DESC)
     const [pageEmail, setPageEmail] = useState(DEFAULT_EMAIL)

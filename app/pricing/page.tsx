@@ -9,7 +9,7 @@ import { Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, Arrow
 import { getPlansList, Plan, getPlanStrikeOff, getPublicSiteSettings, createPaymentOrder, verifyPayment, getWalletProfile } from "@/lib/chat-api";
 import { getApiKey } from "@/lib/auth";
 import { toast } from "sonner";
-import { useTheme } from "@/lib/theme-context";
+
 
 declare global {
   interface Window {
@@ -18,7 +18,7 @@ declare global {
 }
 
 const PricingContent = () => {
-    const { isDarkMode } = useTheme();
+    const isDarkMode = true;
     const [plans, setPlans] = useState<Plan[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [walletBalance, setWalletBalance] = useState<number | null>(null);

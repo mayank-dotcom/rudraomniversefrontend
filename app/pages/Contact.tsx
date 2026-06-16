@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/ui/Footer";
-import { useTheme } from "@/lib/theme-context";
+
 import { getPublicSiteSettings } from "@/lib/chat-api";
 import { Mail, MessageSquare, Send, ArrowLeft } from "lucide-react";
 
@@ -30,7 +30,7 @@ function parseContact(value: string): ContactData {
 }
 
 export default function Contact() {
-    const { isDarkMode } = useTheme();
+    const isDarkMode = true;
     const [raw, setRaw] = useState("");
     const data = useMemo(() => parseContact(raw), [raw]);
     const [name, setName] = useState("");

@@ -4985,19 +4985,20 @@ const Dashboard = () => {
                                                                         setIsCreatingPlan(false);
                                                                     });
                                                             } else {
-                                                                 handleUpdatePlan(editingPlan.id?.toString() || '', {
-                                                                     plan_name: formData.get('plan_name') as string,
-                                                                     price_inr: Number(formData.get('price_inr')),
-                                                                     daily_image_limit: Number(formData.get('daily_image_limit')),
-                                                                     feature_extraction_limit: Number(formData.get('feature_extraction_limit')),
-                                                                     daily_vision_limit: Number(formData.get('daily_vision_limit')),
-                                                                     monthly_image_limit: Number(formData.get('monthly_image_limit')),
-                                                                     monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
-                                                                     daily_tts_limit: Number(formData.get('daily_tts_limit')),
-                                                                     daily_stt_limit: Number(formData.get('daily_stt_limit')),
-                                                                     monthly_tokens: Number(formData.get('monthly_tokens')),
-                                                                     strike_off_price: strikeOffEnabled ? strikeOffPrice : 0
-                                                                 });
+                                                            handleUpdatePlan(editingPlan.id?.toString() || '', {
+                                                                    plan_name: formData.get('plan_name') as string,
+                                                                    price_inr: Number(formData.get('price_inr')),
+                                                                    daily_image_limit: Number(formData.get('daily_image_limit')),
+                                                                    feature_extraction_limit: Number(formData.get('feature_extraction_limit')),
+                                                                    daily_vision_limit: Number(formData.get('daily_vision_limit')),
+                                                                    monthly_image_limit: Number(formData.get('monthly_image_limit')),
+                                                                    monthly_flux_limit: Number(formData.get('monthly_flux_limit')),
+                                                                    daily_tts_limit: Number(formData.get('daily_tts_limit')),
+                                                                    daily_stt_limit: Number(formData.get('daily_stt_limit')),
+                                                                    monthly_tokens: Number(formData.get('monthly_tokens')),
+                                                                    ocr_limit: Number(formData.get('ocr_limit')),
+                                                                    strike_off_price: strikeOffEnabled ? strikeOffPrice : 0
+                                                             });
                                                                 setPlanFeatures(editingPlan.id?.toString() || '', selectedFeatures);
                                                                 if (strikeOffEnabled && strikeOffPrice > 0) {
                                                                     setPlanStrikeOff(editingPlan.id?.toString() || '', { price_inr: strikeOffPrice })

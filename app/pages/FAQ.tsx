@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/ui/Footer"
-import { useTheme } from "@/lib/theme-context"
+
 import { getPublicSiteSettings } from "@/lib/chat-api"
 import { ChevronDown, Search } from "lucide-react"
 
@@ -57,7 +57,7 @@ const DEFAULT_CATEGORIES: { category: string; questions: { q: string; a: string 
 ]
 
 export default function FAQ() {
-    const { isDarkMode } = useTheme()
+    const isDarkMode = true
     const [openItems, setOpenItems] = useState<Set<string>>(new Set())
     const [searchQuery, setSearchQuery] = useState("")
     const [pageTitle, setPageTitle] = useState(DEFAULT_TITLE)
