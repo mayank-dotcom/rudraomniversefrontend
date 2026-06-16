@@ -2610,17 +2610,19 @@ export default function LibraryPage() {
                   >
                     <Settings className="h-3.5 w-3.5" />
                   </motion.button>
-                  <Link
-                    href="/pricing"
-                    className={`p-1.5 rounded-lg border transition-colors flex items-center gap-1 text-[10px] font-semibold cursor-pointer ${
-                      isDarkMode
-                        ? "border-white/10 text-white hover:bg-white/5"
-                        : "border-black/10 text-black hover:bg-black/5"
-                    }`}
-                  >
-                    <Zap className="h-3.5 w-3.5" />
-                    <span>Upgrade</span>
-                  </Link>
+                  {!userRole && (
+                    <Link
+                      href="/pricing"
+                      className={`p-1.5 rounded-lg border transition-colors flex items-center gap-1 text-[10px] font-semibold cursor-pointer ${
+                        isDarkMode
+                          ? "border-white/10 text-white hover:bg-white/5"
+                          : "border-black/10 text-black hover:bg-black/5"
+                      }`}
+                    >
+                      <Zap className="h-3.5 w-3.5" />
+                      <span>Upgrade</span>
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>

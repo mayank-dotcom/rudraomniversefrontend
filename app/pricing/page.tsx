@@ -7,7 +7,7 @@ import Footer from "@/components/ui/Footer";
 import { ThemeProvider } from "@/lib/theme-context";
 import { Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, ArrowRight, Volume2, Mic, Sparkles, X, Coins, Scan, Puzzle } from "lucide-react";
 import { getPlansList, Plan, getPlanStrikeOff, getPublicSiteSettings, createPaymentOrder, verifyPayment, getWalletProfile } from "@/lib/chat-api";
-import { getApiKey } from "@/lib/auth";
+import { getApiKey, getUserRole } from "@/lib/auth";
 import { toast } from "sonner";
 
 
@@ -28,6 +28,10 @@ const PricingContent = () => {
 
     const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
     const [useCoins, setUseCoins] = useState(false);
+
+    const [userRole] = useState<string | null>(() => getUserRole());
+
+    const cannotUpgrade = !!userRole;
 
     useEffect(() => {
         const apiKey = getApiKey();
@@ -102,6 +106,11 @@ const PricingContent = () => {
     }, [billingPeriod]);
 
     const handleSelectPlan = useCallback((plan: Plan) => {
+        const role = getUserRole();
+        if (role) {
+            toast.error("Your subscription is managed by your organization. Contact your admin for changes.");
+            return;
+        }
         const isAgency = plan.plan_name?.toLowerCase().includes('agenc') || 
                          plan.plan_name?.toLowerCase().includes('heavy duty') || 
                          plan.plan_name?.toLowerCase().includes('enterprise');
@@ -401,6 +410,17 @@ const PricingContent = () => {
                         </div>
                     </div>
 
+                    {cannotUpgrade && (
+                        <div className="mb-10 p-5 rounded-xl border border-yellow-500/30 bg-yellow-500/5 text-center">
+                            <p className="text-sm font-semibold text-yellow-400/90">
+                                Your subscription is managed by your organization.
+                            </p>
+                            <p className="text-xs text-yellow-400/60 mt-1">
+                                Contact your admin to change your plan.
+                            </p>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {plans.map((plan, i) => {
                             const Icon = getPlanIcon(plan.plan_name || '');
@@ -534,7 +554,7 @@ const PricingContent = () => {
                                     {/* Button — 14px Semi-Bold */}
                                     <button
                                         onClick={() => handleSelectPlan(plan)}
-                                        disabled={processingPlanId === String(plan.id) || plan.price_inr === 0}
+                                        disabled={cannotUpgrade || processingPlanId === String(plan.id) || plan.price_inr === 0}
                                         className={`w-full py-4 font-sans font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed relative z-10 ${
                                             plan.price_inr === 0
                                                 ? (isDarkMode ? "border border-white/10 text-white" : "border border-black/10 text-black")
@@ -542,7 +562,13 @@ const PricingContent = () => {
                                         }`}
                                         style={{ fontSize: "11px", letterSpacing: "0.2em" }}
                                     >
-                                        {processingPlanId === String(plan.id) ? "Processing..." : plan.price_inr === 0 ? "Current Plan" : "Select Plan"}
+                                        {processingPlanId === String(plan.id)
+                                            ? "Processing..."
+                                            : cannotUpgrade
+                                                ? "Locked"
+                                                : plan.price_inr === 0
+                                                    ? "Current Plan"
+                                                    : "Select Plan"}
                                     </button>
                                 </motion.div>
                             )
