@@ -476,6 +476,7 @@ export default function LibraryPage() {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false)
   const [moveAssetId, setMoveAssetId] = useState<string | null>(null)
   const [expandedAsset, setExpandedAsset] = useState<LibraryAsset | null>(null)
+  const [promptExpanded, setPromptExpanded] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(260)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
@@ -3737,7 +3738,7 @@ export default function LibraryPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto"
+            className="fixed inset-0 z-[100] flex items-start md:items-center justify-center p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto"
             onClick={() => setExpandedAsset(null)}
           >
             <motion.div
@@ -3745,13 +3746,13 @@ export default function LibraryPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.96, opacity: 0 }}
               transition={{ type: "spring", damping: 26, stiffness: 160 }}
-              className={`w-full max-w-5xl h-auto md:h-[80vh] flex flex-col md:flex-row rounded-3xl overflow-hidden border shadow-2xl transition-colors duration-300 ${
+              className={`w-full max-w-5xl max-h-[calc(100dvh-2rem)] md:h-[80vh] flex flex-col md:flex-row rounded-3xl overflow-hidden border shadow-2xl transition-colors duration-300 ${
                 isDarkMode ? "bg-[#0d0d0c] border-white/[0.06] text-white" : "bg-[#f4f3f2] border-black/[0.06] text-black"
               }`}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Left Column - Image Container */}
-              <div className="flex-1 md:w-1/2 flex items-center justify-center bg-black/10 dark:bg-black/40 relative min-h-[40vh] md:min-h-0">
+              <div className="flex-1 md:w-1/2 flex items-center justify-center bg-black/10 dark:bg-black/40 relative min-h-[40vh] md:min-h-0 shrink-0">
                 {/* Back Button */}
                 <button
                   onClick={() => setExpandedAsset(null)}
@@ -3800,9 +3801,9 @@ export default function LibraryPage() {
               </div>
 
               {/* Right Column - Details Pane */}
-              <div className="flex-1 md:w-1/2 flex flex-col h-full overflow-hidden border-t md:border-t-0 md:border-l border-zinc-100 dark:border-zinc-800/50">
+              <div className="flex-1 md:w-1/2 flex flex-col min-h-0 border-t md:border-t-0 md:border-l border-zinc-100 dark:border-zinc-800/50">
                 {/* Top Actions Row */}
-                <div className="flex items-center justify-between p-6 pb-4 shrink-0">
+                <div className="flex items-center justify-between p-4 md:p-6 pb-4 shrink-0">
                   <div className="flex items-center gap-4">
                     {/* Heart Like Button */}
                     <motion.button
@@ -3870,7 +3871,7 @@ export default function LibraryPage() {
                 </div>
 
                 {/* Middle Content Section - Scrollable */}
-                <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6">
+                <div className="flex-1 overflow-y-auto px-4 md:px-6 py-2 space-y-4 md:space-y-6">
                   {/* Creator Info & Variations/Parent Panel */}
                   <div className="flex flex-row items-center justify-between gap-3 bg-zinc-100/10 dark:bg-zinc-900/20 p-3 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/40">
                     <div className="flex items-center gap-3">
@@ -3926,20 +3927,30 @@ export default function LibraryPage() {
 
                   {/* Caption / Prompt Description */}
                   <div className="space-y-2">
-                    <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800/40">
+                    <div className={`text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/40 p-3 md:p-4 rounded-xl md:rounded-2xl border border-zinc-200 dark:border-zinc-800/40 break-words ${
+                      expandedAsset.prompt && !promptExpanded ? "max-h-[30vh] overflow-y-auto" : ""
+                    }`}>
                       {expandedAsset.prompt || "No prompt text provided."}
-                    </p>
+                    </div>
                     {expandedAsset.prompt && (
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(expandedAsset.prompt || "")
-                          toast.success("Prompt copied to clipboard!")
-                        }}
-                        className="flex items-center gap-1 text-[11px] font-semibold text-zinc-500 hover:text-black dark:text-zinc-400 dark:hover:text-white hover:scale-[1.03] active:scale-95 transition-all duration-200"
-                      >
-                        <Copy className="h-3 w-3" />
-                        Copy Prompt
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setPromptExpanded(!promptExpanded)}
+                          className="text-[11px] font-semibold text-zinc-500 hover:text-black dark:text-zinc-400 dark:hover:text-white hover:scale-[1.03] active:scale-95 transition-all duration-200"
+                        >
+                          {promptExpanded ? "Show less" : "Read more"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(expandedAsset.prompt || "")
+                            toast.success("Prompt copied to clipboard!")
+                          }}
+                          className="flex items-center gap-1 text-[11px] font-semibold text-zinc-500 hover:text-black dark:text-zinc-400 dark:hover:text-white hover:scale-[1.03] active:scale-95 transition-all duration-200"
+                        >
+                          <Copy className="h-3 w-3" />
+                          Copy Prompt
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -4041,7 +4052,7 @@ export default function LibraryPage() {
                 </div>
 
                 {/* Bottom - Add Comment Input */}
-                <div className="p-6 border-t border-zinc-100 dark:border-zinc-800/50 bg-[#0d0d0c]/5 dark:bg-[#0d0d0c]/30 backdrop-blur-md shrink-0">
+                <div className="p-4 md:p-6 border-t border-zinc-100 dark:border-zinc-800/50 bg-[#0d0d0c]/5 dark:bg-[#0d0d0c]/30 backdrop-blur-md shrink-0">
                   <form onSubmit={handleAddComment} className="flex items-center gap-3">
                     <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors duration-300 ${
                       isDarkMode 
