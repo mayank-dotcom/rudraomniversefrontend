@@ -7,8 +7,10 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/ui/Footer";
 import { isAuthenticated } from "@/lib/auth";
 import AuthModal from "@/components/ui/AuthModal";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const LapViewer = dynamic(() => import("@/components/LapViewer"), { ssr: false });
+const MobilePhoneViewer = dynamic(() => import("@/components/MobilePhoneViewer"), { ssr: false });
 const InfiniteMenu = dynamic(() => import("@/components/InfiniteMenu"), { ssr: false });
 const CardSwap = dynamic(() => import("@/components/CardSwap"), { ssr: false });
 import { Card } from "@/components/CardSwap";
@@ -1121,6 +1123,7 @@ const Index = () => {
   const [activeEnterpriseCard, setActiveEnterpriseCard] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     setIsLoggedIn(isAuthenticated());
@@ -1293,7 +1296,7 @@ const Index = () => {
       <Navbar visible={showNavbar} />
 
       <div className="fixed inset-0 z-0">
-        <LapViewer progress={progress} />
+        {isMobile ? <MobilePhoneViewer /> : <LapViewer progress={progress} />}
       </div>
 
 
@@ -1311,9 +1314,11 @@ const Index = () => {
                 transition={{ duration: 1.2, ease: "easeOut" }}
               />
             </h1>
-            <p className="text-lg md:text-xl text-white/40">
-              Scroll to explore
-            </p>
+            {!isMobile && (
+              <p className="text-lg md:text-xl text-white/40">
+                Scroll to explore
+              </p>
+            )}
           </div>
         </section>
 
