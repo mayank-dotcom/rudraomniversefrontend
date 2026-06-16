@@ -15,7 +15,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
-import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole, getSchoolName, getEnterpriseName, removeUserRole, removeSchoolName, removeEnterpriseName, getProfilePicture } from "@/lib/auth";
+import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole, isUpgradeRestricted, getSchoolName, getEnterpriseName, removeUserRole, removeSchoolName, removeEnterpriseName, getProfilePicture } from "@/lib/auth";
 import { useTheme } from "@/lib/theme-context";
 import { useTranslation } from "react-i18next";
 import Cookies from "js-cookie";
@@ -4156,7 +4156,7 @@ STRICT RULES:
                                     >
                                         <Settings className="h-4 w-4" />
                                     </motion.button>
-                                    {!userRole && (
+                                    {!isUpgradeRestricted(userRole) && (
                                         <motion.button
                                             onClick={() => window.location.href = "/pricing"}
                                             whileHover={{ scale: 1.05 }}
@@ -5149,7 +5149,7 @@ STRICT RULES:
                                             </div>
                                         </div>
 
-                                        {!userRole ? (
+                                        {!isUpgradeRestricted(userRole) ? (
                                             <Link href="/pricing" className={`block w-full ${isMobile ? "mt-24 mb-10" : "mt-12"}`}>
                                                 <button className="upgrade-btn hover:scale-105 hover:shadow-[0_0_30px_rgba(var(--brand-accent-rgb),0.5)] transition-all duration-300">
                                                     <div className="bubble-layer bubble-1"></div>
@@ -5439,7 +5439,7 @@ STRICT RULES:
                             </div>
 
                             {/* Upgrade Button right below Wallet/Mail */}
-                            {!userRole && (
+                            {!isUpgradeRestricted(userRole) && (
                                 <div className="w-full flex items-center justify-center px-2 pt-[21px] pb-4">
                                     <Link href="/pricing" title={t("upgrade_now")} className="block cursor-pointer">
                                         <button className={`upgrade-btn h-11 w-11 flex items-center justify-center rounded-none hover:scale-115 active:scale-95 transition-all duration-300 relative overflow-hidden border-2 ${isDarkMode ? "border-white" : "border-black"} shadow-md shadow-[rgba(var(--brand-accent-rgb),0.2)]`}>

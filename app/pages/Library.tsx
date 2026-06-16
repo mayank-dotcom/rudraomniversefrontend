@@ -43,6 +43,7 @@ import {
   removeEnterpriseName,
   getUserInfo,
   getUserRole,
+  isUpgradeRestricted,
   getProfilePicture
 } from "@/lib/auth"
 import { useTheme } from "@/lib/theme-context"
@@ -2610,7 +2611,7 @@ export default function LibraryPage() {
                   >
                     <Settings className="h-3.5 w-3.5" />
                   </motion.button>
-                  {!userRole && (
+                  {!isUpgradeRestricted(userRole) && (
                     <Link
                       href="/pricing"
                       className={`p-1.5 rounded-lg border transition-colors flex items-center gap-1 text-[10px] font-semibold cursor-pointer ${

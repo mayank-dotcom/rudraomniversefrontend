@@ -104,6 +104,18 @@ export function removeUserRole() {
   }
 }
 
+const UPGRADE_RESTRICTED_ROLES = new Set([
+  "global_admin",
+  "manager",
+  "faculty",
+  "student",
+  "employee",
+])
+
+export function isUpgradeRestricted(role: string | null): boolean {
+  return role !== null && UPGRADE_RESTRICTED_ROLES.has(role)
+}
+
 const SCHOOL_NAME_STORAGE = "rudranex_school_name"
 
 export function setSchoolName(name: string) {

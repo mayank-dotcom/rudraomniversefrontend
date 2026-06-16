@@ -7,7 +7,7 @@ import Footer from "@/components/ui/Footer";
 import { ThemeProvider } from "@/lib/theme-context";
 import { Zap, Code, Image as ImageIcon, GraduationCap, Building2, Loader2, ArrowRight, Volume2, Mic, Sparkles, X, Coins, Scan, Puzzle } from "lucide-react";
 import { getPlansList, Plan, getPlanStrikeOff, getPublicSiteSettings, createPaymentOrder, verifyPayment, getWalletProfile } from "@/lib/chat-api";
-import { getApiKey, getUserRole } from "@/lib/auth";
+import { getApiKey, getUserRole, isUpgradeRestricted } from "@/lib/auth";
 import { toast } from "sonner";
 
 
@@ -31,7 +31,7 @@ const PricingContent = () => {
 
     const [userRole] = useState<string | null>(() => getUserRole());
 
-    const cannotUpgrade = !!userRole;
+    const cannotUpgrade = isUpgradeRestricted(userRole);
 
     useEffect(() => {
         const apiKey = getApiKey();
@@ -107,7 +107,7 @@ const PricingContent = () => {
 
     const handleSelectPlan = useCallback((plan: Plan) => {
         const role = getUserRole();
-        if (role) {
+        if (isUpgradeRestricted(role)) {
             toast.error("Your subscription is managed by your organization. Contact your admin for changes.");
             return;
         }
