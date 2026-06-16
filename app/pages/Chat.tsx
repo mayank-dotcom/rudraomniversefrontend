@@ -15,7 +15,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
-import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole, isUpgradeRestricted, getSchoolName, getEnterpriseName, removeUserRole, removeSchoolName, removeEnterpriseName, getProfilePicture } from "@/lib/auth";
+import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole, isUpgradeRestricted, isRegularUser, getSchoolName, getEnterpriseName, removeUserRole, removeSchoolName, removeEnterpriseName, getProfilePicture } from "@/lib/auth";
 import { useTheme } from "@/lib/theme-context";
 import { useTranslation } from "react-i18next";
 import Cookies from "js-cookie";
@@ -3387,8 +3387,8 @@ STRICT RULES:
                                 <MessageSquarePlus className="w-5 h-5" />
                             </motion.button>
 
-                            {/* Notes icon (student) / Mail icon (employee) */}
-                            {!isEnterpriseModeActive ? (
+                            {/* Notes icon (school/non-enterprise) / Mail icon (enterprise) — hidden from regular users */}
+                            {!isRegularUser(userRole) && !isEnterpriseModeActive ? (
                                 <motion.button
                                     onClick={() => { setIsSidebarCollapsed(false); setSidebarView("notes"); }}
                                     whileHover={{ scale: 1.15 }}
@@ -3401,7 +3401,7 @@ STRICT RULES:
                                 >
                                     <FileIcon className="w-5 h-5" />
                                 </motion.button>
-                            ) : (
+                            ) : !isRegularUser(userRole) && isEnterpriseModeActive ? (
                                 <motion.button
                                     onClick={() => { setIsSidebarCollapsed(false); setSidebarView("mail"); }}
                                     whileHover={{ scale: 1.15 }}
@@ -3417,7 +3417,7 @@ STRICT RULES:
                                         <path d="M22 6l-10 7L2 6" fill="none" stroke={isDarkMode ? "#0d0d0c" : "#f4f3f2"} strokeWidth="2" strokeLinecap="round" />
                                     </svg>
                                 </motion.button>
-                            )}
+                            ) : null}
 
                             {!isEnterpriseModeActive && (
                                 <motion.div
@@ -3569,7 +3569,7 @@ STRICT RULES:
                             </motion.button>
                         </div>
 
-                        {/* Enterprise Mail/Chat Toggle */}
+                        {/* Enterprise Mail/Chat Toggle — hidden from regular users */}
                         {isEnterpriseModeActive ? (
                             <div className={`px-4 pt-3 pb-1 flex items-center gap-1 border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
                                 <button
@@ -3596,7 +3596,7 @@ STRICT RULES:
                                     Mail
                                 </button>
                             </div>
-                        ) : (
+                        ) : !isRegularUser(userRole) ? (
                             <div className={`px-4 pt-3 pb-1 flex items-center gap-1 border-b ${isDarkMode ? "border-white/5" : "border-black/5"}`}>
                                 <button
                                     onClick={() => setSidebarView("chat")}
@@ -3619,7 +3619,7 @@ STRICT RULES:
                                     Notes
                                 </button>
                             </div>
-                        )}
+                        ) : null}
 
                         {/* Chat View */}
                         {sidebarView === "chat" && (
@@ -3783,7 +3783,7 @@ STRICT RULES:
                         </>)}
 
                         {/* Notes View */}
-                        {sidebarView === "notes" && !isEnterpriseModeActive && (
+                        {sidebarView === "notes" && !isEnterpriseModeActive && !isRegularUser(userRole) && (
                             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                                 <div className="px-4 pt-4 pb-2 space-y-2 shrink-0">
                                     {/* New Note Button */}

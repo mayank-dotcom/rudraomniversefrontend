@@ -116,6 +116,10 @@ export function isUpgradeRestricted(role: string | null): boolean {
   return role !== null && UPGRADE_RESTRICTED_ROLES.has(role)
 }
 
+export function isRegularUser(role: string | null): boolean {
+  return role === null
+}
+
 const SCHOOL_NAME_STORAGE = "rudranex_school_name"
 
 export function setSchoolName(name: string) {
