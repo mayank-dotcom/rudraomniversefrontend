@@ -1123,6 +1123,7 @@ const Index = () => {
   const [activeEnterpriseCard, setActiveEnterpriseCard] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [heroStage, setHeroStage] = useState<"visible" | "exiting" | "hidden">("visible");
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -1283,13 +1284,21 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-    if (isMobile) {
-      setShowNavbar(window.scrollY > 50);
+    if (!isMobile) return;
+    const timer = setTimeout(() => {
+      setHeroStage("exiting");
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [isMobile]);
+
+  useEffect(() => {
+    const mb = typeof window !== "undefined" && window.innerWidth < 768;
+    if (mb) {
+      setShowNavbar(heroStage === "hidden" || window.scrollY > 50);
     } else {
       if (progress >= 1) setShowNavbar(true);
     }
-  }, [progress]);
+  }, [progress, heroStage]);
 
   return (
     <div className="relative bg-[#050308] min-h-screen w-full overflow-x-hidden">
@@ -1302,24 +1311,38 @@ const Index = () => {
 
 
       <div className="relative z-10">
-        <section id="hero" className="h-screen flex items-center justify-center">
-          <div className="text-center max-w-3xl px-4">
-            <h1 className="mb-6 flex justify-center">
-              <motion.img
-                src="/rudranex-removebg-preview.png"
-                alt="Rudranex"
-                className="h-20 md:h-32 w-auto object-contain"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1.2, ease: "easeOut" }}
-              />
-            </h1>
-            {!isMobile && (
-              <p className="text-lg md:text-xl text-white/40">
-                Scroll to explore
-              </p>
-            )}
-          </div>
+        <section id="hero" className="h-screen flex items-center justify-center overflow-hidden">
+          <motion.div
+            className="w-full"
+            initial={false}
+            animate={{
+              y: (isMobile && (heroStage === "exiting" || heroStage === "hidden")) ? "-100vh" : 0,
+            }}
+            transition={{ duration: 1, ease: "easeInOut" }}
+            onAnimationComplete={() => {
+              if (heroStage === "exiting") {
+                setHeroStage("hidden");
+              }
+            }}
+          >
+            <div className="text-center max-w-3xl mx-auto px-4">
+              <h1 className="mb-6 flex justify-center">
+                <motion.img
+                  src="/rudranex-removebg-preview.png"
+                  alt="Rudranex"
+                  className="h-20 md:h-32 w-auto object-contain"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 1.2, ease: "easeOut" }}
+                />
+              </h1>
+              {!isMobile && (
+                <p className="text-lg md:text-xl text-white/40">
+                  Scroll to explore
+                </p>
+              )}
+            </div>
+          </motion.div>
         </section>
 
         <div className="h-[100vh]" />

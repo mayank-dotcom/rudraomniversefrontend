@@ -4138,7 +4138,7 @@ STRICT RULES:
                                             className={`p-2 border rounded-lg transition-all text-[9px] font-mono ${isDarkMode ? "border-white/10 text-white/60 hover:text-white" : "border-black/10 text-black/60 hover:text-black"} ${isEnterpriseMode ? (selectedEngine === "AI Image Lab" ? "text-black" : "text-accent") : ""}`}
                                             title={isEnterpriseMode ? t("switch_regular") : t("switch_enterprise")}
                                         >
-                                            {isEnterpriseMode ? t("ent") : t("reg")}
+                                            {isEnterpriseMode ? t("ent") : "REG+STD"}
                                         </motion.button>
                                     )}
                                     <motion.button

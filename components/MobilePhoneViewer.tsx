@@ -28,7 +28,7 @@ function PhoneModel() {
     }
     const t = Math.min((state.clock.elapsedTime - startRef.current) / 1.5, 1);
     const e = 1 - Math.pow(1 - t, 3);
-    groupRef.current.position.x = 1.5 * (1 - e);
+    groupRef.current.position.x = 0;
     groupRef.current.rotation.x = (Math.PI / 18) * e;
     groupRef.current.rotation.y = (Math.PI / 2) * e;
     groupRef.current.rotation.z = (Math.PI / 2) * e;
