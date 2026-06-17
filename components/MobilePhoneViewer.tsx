@@ -5,6 +5,20 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { useGLTF, Center, Decal, useVideoTexture, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 
+function VideoDecal() {
+  const t = useVideoTexture("/phone_video.mp4", {
+    unsuspend: "canplay",
+    muted: true,
+    loop: true,
+    start: true,
+  });
+  t.center.set(0.5, 0.5);
+  t.rotation = Math.PI / 2;
+  return (
+    <Decal position={[0, 0.136, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[-0.88, 0.46, 1]} map={t} depthTest />
+  );
+}
+
 function PhoneModel() {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
@@ -25,15 +39,6 @@ function PhoneModel() {
       phoneMaterial = mat;
     }
   });
-
-  const screenTexture = useVideoTexture("/phone_video.mp4", {
-    unsuspend: "canplay",
-    muted: true,
-    loop: true,
-    start: true,
-  });
-  screenTexture.center.set(0.5, 0.5);
-  screenTexture.rotation = Math.PI / 2;
 
   const notchImage = useTexture("/image.png");
   const imgEl = notchImage.image as { width: number; height: number };
@@ -76,13 +81,9 @@ function PhoneModel() {
             geometry={phoneGeometry}
             material={phoneMaterial}
           >
-            <Decal
-              position={[0, 0.136, 0]}
-              rotation={[Math.PI / 2, 0, 0]}
-              scale={[-0.88, 0.46, 1]}
-              map={screenTexture}
-              depthTest
-            />
+            <Suspense fallback={null}>
+              <VideoDecal />
+            </Suspense>
           </mesh>
         )}
         <mesh position={[0.43, 0.142, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 2]}>
