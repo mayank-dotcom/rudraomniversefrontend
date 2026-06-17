@@ -453,16 +453,22 @@ export default function LibraryPage() {
   const [customCategory, setCustomCategory] = useState("")
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false)
   const [categorySearch, setCategorySearch] = useState("")
-  const [customCategoryList, setCustomCategoryList] = useState<string[]>(() => {
+  const [customCategoryList, setCustomCategoryList] = useState<string[]>([])
+  const categoryDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
     if (typeof window !== "undefined") {
       try {
         const stored = localStorage.getItem("library_custom_categories")
-        return stored ? JSON.parse(stored) : []
-      } catch { return [] }
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed)) {
+            setCustomCategoryList(parsed)
+          }
+        }
+      } catch {}
     }
-    return []
-  })
-  const categoryDropdownRef = useRef<HTMLDivElement>(null)
+  }, [])
   
   // Custom Real Database-backed Galleries States
   const [galleries, setGalleries] = useState<LibraryGallery[]>([])
@@ -707,6 +713,7 @@ export default function LibraryPage() {
       if (hasError) {
         toast.error("Some library data failed to load. Refresh to try again.")
       }
+      return data
     } catch (err: any) {
       const msg = err?.message?.toLowerCase() || ""
       if (msg.includes("auth") || msg.includes("unavail") || msg.includes("401") || msg.includes("unauthorized")) {
@@ -1201,12 +1208,29 @@ export default function LibraryPage() {
         }
 
         // Refresh local assets to show the new image
-        await fetchAssets()
+        const refreshedData = await fetchAssets()
 
         // Get the newly created asset ID from response
-        const newAssetId = res?.asset_id || (assets.length > 0 ? assets[0].id : null)
+        const newAssetId = res?.asset_id || refreshedData?.assets?.[0]?.id || null
         if (newAssetId) {
           setGeneratedAssetId(newAssetId)
+
+          // If backend auto-assigned a category, pre-select it in the modal
+          const resCategory = res?.category || null
+          if (resCategory) {
+            setPendingCategory(resCategory)
+            if (!ASSET_CATEGORIES.includes(resCategory)) {
+              setCustomCategoryList((prev) => {
+                if (prev.includes(resCategory)) return prev
+                const updated = [...prev, resCategory]
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("library_custom_categories", JSON.stringify(updated))
+                }
+                return updated
+              })
+            }
+          }
+
           setShowCategoryModal(true)
         }
 
