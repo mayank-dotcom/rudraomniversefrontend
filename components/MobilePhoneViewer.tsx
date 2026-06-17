@@ -1,25 +1,57 @@
 "use client";
 
-import { Suspense, useRef } from "react";
+import { Suspense, useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useGLTF, Center } from "@react-three/drei";
+import { useGLTF, Center, Decal, useVideoTexture, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 
 function PhoneModel() {
   const groupRef = useRef<THREE.Group>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
   const startRef = useRef<number | null>(null);
   const { scene } = useGLTF("/MOBILE_PHONE.glb");
   const model = scene.clone(true);
 
+  let phoneGeometry: THREE.BufferGeometry | null = null;
+  let phoneMaterial: THREE.MeshStandardMaterial | null = null;
+
   model.traverse((child) => {
-    if (child instanceof THREE.Mesh && child.material) {
+    if (child instanceof THREE.Mesh && child.material && !phoneGeometry) {
+      phoneGeometry = child.geometry;
       const mat = (child.material as THREE.MeshStandardMaterial).clone();
       mat.metalness = 0.9;
       mat.roughness = 0.1;
       mat.envMapIntensity = 3;
-      child.material = mat;
+      phoneMaterial = mat;
     }
   });
+
+  const screenTexture = useVideoTexture("/phone_video.mp4", {
+    unsuspend: "canplay",
+    muted: true,
+    loop: true,
+    start: true,
+  });
+  screenTexture.center.set(0.5, 0.5);
+  screenTexture.rotation = Math.PI / 2;
+
+  const notchImage = useTexture("/image.png");
+  const imgAspect = notchImage.image ? notchImage.image.width / notchImage.image.height : 1;
+
+  const barShape = useMemo(() => {
+    const hw = 0.045 / 2;
+    const hh = 0.45 / 2;
+    const r = 0.035;
+    const s = new THREE.Shape();
+    s.moveTo(hw, hh);
+    s.lineTo(-hw + r, hh);
+    s.quadraticCurveTo(-hw, hh, -hw, hh - r);
+    s.lineTo(-hw, -hh + r);
+    s.quadraticCurveTo(-hw, -hh, -hw + r, -hh);
+    s.lineTo(hw, -hh);
+    s.lineTo(hw, hh);
+    return s;
+  }, []);
 
   useFrame((state) => {
     if (!groupRef.current) return;
@@ -36,7 +68,33 @@ function PhoneModel() {
 
   return (
     <Center>
-      <primitive ref={groupRef} object={model} scale={3} />
+      <group ref={groupRef} scale={3}>
+        {phoneGeometry && phoneMaterial && (
+          <mesh
+            ref={meshRef}
+            geometry={phoneGeometry}
+            material={phoneMaterial}
+          >
+            <Decal
+              position={[0, 0.136, 0]}
+              rotation={[Math.PI / 2, 0, 0]}
+              scale={[-0.88, 0.46, 1]}
+              map={screenTexture}
+              depthTest
+              polygonOffset
+              polygonOffsetFactor={-1}
+            />
+          </mesh>
+        )}
+        <mesh position={[0.43, 0.142, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 2]}>
+          <planeGeometry args={[0.12, 0.12 / imgAspect]} />
+          <meshBasicMaterial map={notchImage} transparent />
+        </mesh>
+        <mesh position={[-0.44, 0.142, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <shapeGeometry args={[barShape]} />
+          <meshBasicMaterial color="#111111" side={THREE.DoubleSide} />
+        </mesh>
+      </group>
     </Center>
   );
 }
