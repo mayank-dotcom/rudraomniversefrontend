@@ -22,7 +22,6 @@ function VideoDecal() {
 function PhoneModel() {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
-  const startRef = useRef<number | null>(null);
   const { scene } = useGLTF("/MOBILE_PHONE.glb");
   const model = scene.clone(true);
 
@@ -59,17 +58,20 @@ function PhoneModel() {
     return s;
   }, []);
 
-  useFrame((state) => {
+  const targetRot = useMemo(() => ({
+    x: Math.PI / 18,
+    y: Math.PI / 2,
+    z: Math.PI / 2,
+  }), []);
+
+  useFrame((state, delta) => {
     if (!groupRef.current) return;
-    if (startRef.current === null) {
-      startRef.current = state.clock.elapsedTime;
-    }
-    const t = Math.min((state.clock.elapsedTime - startRef.current) / 1.5, 1);
-    const e = 1 - Math.pow(1 - t, 3);
+    const speed = 1.8;
+    const f = 1 - Math.exp(-speed * delta);
     groupRef.current.position.x = 0;
-    groupRef.current.rotation.x = (Math.PI / 18) * e;
-    groupRef.current.rotation.y = (Math.PI / 2) * e;
-    groupRef.current.rotation.z = (Math.PI / 2) * e;
+    groupRef.current.rotation.x += (targetRot.x - groupRef.current.rotation.x) * f;
+    groupRef.current.rotation.y += (targetRot.y - groupRef.current.rotation.y) * f;
+    groupRef.current.rotation.z += (targetRot.z - groupRef.current.rotation.z) * f;
   });
 
   return (
