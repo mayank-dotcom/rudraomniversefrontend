@@ -36,7 +36,8 @@ function PhoneModel() {
   screenTexture.rotation = Math.PI / 2;
 
   const notchImage = useTexture("/image.png");
-  const imgAspect = notchImage.image ? notchImage.image.width / notchImage.image.height : 1;
+  const imgEl = notchImage.image as { width: number; height: number };
+  const imgAspect = imgEl ? imgEl.width / imgEl.height : 1;
 
   const barShape = useMemo(() => {
     const hw = 0.045 / 2;
@@ -81,8 +82,6 @@ function PhoneModel() {
               scale={[-0.88, 0.46, 1]}
               map={screenTexture}
               depthTest
-              polygonOffset
-              polygonOffsetFactor={-1}
             />
           </mesh>
         )}
