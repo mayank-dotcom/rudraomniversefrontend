@@ -16,6 +16,20 @@ function getEditorScheme(): string {
   return new URLSearchParams(window.location.search).get("editor") || "vscode"
 }
 
+function getExtensionId(): string | null {
+  if (typeof window === "undefined") return null
+  return new URLSearchParams(window.location.search).get("extension_id") || null
+}
+
+function buildRedirectUrl(key: string): string {
+  const scheme = getEditorScheme()
+  const extId = getExtensionId()
+  if (extId) {
+    return `${scheme}://${extId}/auth?key=${encodeURIComponent(key)}`
+  }
+  return `${scheme}://rudraomniverse.rudranex-assistant/auth?key=${encodeURIComponent(key)}`
+}
+
 function getEditorDisplayName(scheme: string): string {
   const names: Record<string, string> = {
     "vscode": "VS Code",
@@ -35,19 +49,17 @@ export default function IDELogin() {
 
   useEffect(() => {
     if (initialKey) {
-      const scheme = getEditorScheme()
       const timer = setTimeout(() => {
-        window.location.href = scheme + "://rudraomniverse.rudranex-assistant/auth?key=" + encodeURIComponent(initialKey)
+        window.location.href = buildRedirectUrl(initialKey)
       }, 1500)
       return () => clearTimeout(timer)
     }
   }, [initialKey])
 
   const handleConnected = (key: string) => {
-    const scheme = getEditorScheme()
     setLoggedIn(true)
     setTimeout(() => {
-      window.location.href = scheme + "://rudraomniverse.rudranex-assistant/auth?key=" + encodeURIComponent(key)
+      window.location.href = buildRedirectUrl(key)
     }, 500)
   }
 
