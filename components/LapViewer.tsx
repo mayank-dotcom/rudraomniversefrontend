@@ -21,6 +21,7 @@ function LapModel({ progress }: { progress: number }) {
   screenTexture.magFilter = THREE.LinearFilter;
   screenTexture.colorSpace = THREE.SRGBColorSpace;
   screenTexture.generateMipmaps = false;
+  screenTexture.needsUpdate = true;
 
   // Use anisotropic filtering to keep the video sharp at oblique viewing angles
   screenTexture.anisotropy = 16;
@@ -94,10 +95,13 @@ function LapModel({ progress }: { progress: number }) {
       ) : (
         <meshStandardMaterial color="#C8C8D0" metalness={0.85} roughness={0.15} envMapIntensity={1.5} />
       )}
+      {/* Decal scale matches video's 16:9 aspect ratio (720x406 → ratio ~1.7734):
+           width = 3.2, height = 3.2 / 1.7734 ≈ 1.805
+           This ensures the video fits perfectly width-wise with no overflow/tearing. */}
       <Decal
         position={[0, 1.13, 0.02]}
         rotation={[Math.PI / 3, 0, 0]}
-        scale={[3.2, 2.1, 1]}
+        scale={[3.2, 1.805, 1]}
         map={screenTexture}
         depthTest
       />
