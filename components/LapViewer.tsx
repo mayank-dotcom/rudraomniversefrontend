@@ -25,15 +25,6 @@ function LapModel({ progress }: { progress: number }) {
   // Use anisotropic filtering to keep the video sharp at oblique viewing angles
   screenTexture.anisotropy = 16;
 
-  // Correct aspect ratio stretching (cover fit)
-  // Screen decal size: 3.2 x 2.1 (aspect ratio ~1.524)
-  // Video resolution: 720 x 406 (aspect ratio ~1.773)
-  // 1.5238 / 1.7734 = 0.859 repeat factor for width
-  screenTexture.wrapS = THREE.ClampToEdgeWrapping;
-  screenTexture.wrapT = THREE.ClampToEdgeWrapping;
-  screenTexture.repeat.set(0.859, 1);
-  screenTexture.offset.set((1 - 0.859) / 2, 0);
-
   // Center and scale the geometry in render phase so it's ready before Decal mounts
   if (geometry && !geometry.userData.isCenteredAndScaled) {
     geometry.computeVertexNormals();
