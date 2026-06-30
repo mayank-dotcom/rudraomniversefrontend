@@ -3197,3 +3197,40 @@ export async function aiRewriteNote(text: string, instruction: string) {
   }
   return data
 }
+
+// ─── X / Twitter OAuth APIs ──────────────────────────────────────────
+
+async function xFetch(url: string, options?: RequestInit) {
+  const res = await fetch(url, {
+    ...options,
+    headers: { "x-api-key": getApiKey() || "", ...options?.headers as Record<string, string> }
+  })
+  const text = await res.text()
+  let parsed: any
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    parsed = null
+  }
+  if (!res.ok) {
+    return { success: false as const, error: parsed?.error || parsed?.details || `Request failed with status ${res.status}` }
+  }
+  return parsed || { success: false as const, error: "Invalid response from server" }
+}
+
+export async function getXAuthUrl(redirectUri?: string) {
+  const query = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : ''
+  return xFetch(`${API_BASE}/x/auth-url${query}`) as Promise<{ success: boolean; url?: string; error?: string }>
+}
+
+export async function getXStatus() {
+  return xFetch(`${API_BASE}/x/status`) as Promise<{ success: boolean; connected?: boolean; xUserId?: string; xUsername?: string; connectedAt?: string; error?: string }>
+}
+
+export async function getXProfile() {
+  return xFetch(`${API_BASE}/x/profile`) as Promise<{ success: boolean; user?: { id: string; name: string; username: string }; error?: string }>
+}
+
+export async function disconnectX() {
+  return xFetch(`${API_BASE}/x/disconnect`, { method: "DELETE" }) as Promise<{ success: boolean; message?: string; error?: string }>
+}

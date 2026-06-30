@@ -3,11 +3,12 @@
 import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { GithubAuthProvider, GoogleAuthProvider, signInWithPopup } from "firebase/auth"
+
 import { getFirebaseAuth, sendFirebaseOTP, cleanupRecaptcha } from "@/lib/firebase"
 import { setApiKey, setUserInfo, getApiKey } from "@/lib/auth"
 import { googleLogin, githubLogin } from "@/lib/chat-api"
 import { useTheme } from "@/lib/theme-context"
-import { Code, Mail, GitBranch, Phone, KeyRound, Check, ChevronRight, Terminal, User } from "lucide-react"
+import { Code, Mail, GitBranch, Phone, KeyRound, Check, ChevronRight, Terminal, User, X } from "lucide-react"
 
 type PhoneStep = "phone" | "otp" | "details" | "success"
 
@@ -159,6 +160,32 @@ function LoginForm({ onSuccess, isDarkMode }: { onSuccess: (key: string) => void
     setLoading(false)
   }
 
+  const handleXLogin = async () => {
+    setLoading(true); setError("")
+    try {
+      const extId = getExtensionId()
+      const editorScheme = getEditorScheme()
+      const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/api\/v1\/?$/, '')
+      const params = new URLSearchParams({
+        redirect_uri: `${window.location.origin}/x-connected`,
+      })
+      if (extId) params.set('extension_id', extId)
+      if (editorScheme) params.set('editor', editorScheme)
+      const res = await fetch(`${baseUrl}/api/v1/x/auth-url/public?${params.toString()}`, {
+        method: 'GET',
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setError(data.error || "Failed to get X auth URL")
+      }
+    } catch (e: any) {
+      setError(e.message || "X sign-in failed")
+    }
+    setLoading(false)
+  }
+
   const handleGithubLogin = async () => {
     setLoading(true); setError("")
     try {
@@ -304,6 +331,13 @@ function LoginForm({ onSuccess, isDarkMode }: { onSuccess: (key: string) => void
           className="w-full py-3.5 rounded-2xl text-[10px] font-mono uppercase tracking-[0.15em] font-bold transition-all flex items-center justify-center gap-3 disabled:opacity-50 bg-[#24292e] text-white hover:bg-[#1b1f23] border border-[#24292e]"
         >
           <GitBranch className="h-4 w-4" /> Sign in with GitHub
+        </button>
+        <button
+          onClick={handleXLogin}
+          disabled={loading}
+          className="w-full py-3.5 rounded-2xl text-[10px] font-mono uppercase tracking-[0.15em] font-bold transition-all flex items-center justify-center gap-3 disabled:opacity-50 bg-black text-white hover:bg-[#1a1a1a] border border-white/20"
+        >
+          <X className="h-4 w-4" /> Sign in with X
         </button>
       </div>
 
