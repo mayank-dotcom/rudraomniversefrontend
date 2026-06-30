@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { Check, XCircle } from "lucide-react"
 import { setApiKey } from "@/lib/auth"
 
-export default function XConnectedPage() {
+function XConnectedContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
@@ -98,5 +98,17 @@ export default function XConnectedPage() {
         )}
       </motion.div>
     </div>
+  )
+}
+
+export default function XConnectedPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center p-4 bg-[#0a0a0a]">
+        <div className="h-1 w-48 rounded-full bg-blue-500" />
+      </div>
+    }>
+      <XConnectedContent />
+    </Suspense>
   )
 }
