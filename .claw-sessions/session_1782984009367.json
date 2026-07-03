@@ -1,0 +1,18 @@
+{
+  "sessionId": "session_1782984009367",
+  "messages": [
+    {
+      "role": "user",
+      "content": "hi",
+      "timestamp": 1782984012016
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! How can I assist you today?",
+      "timestamp": 1782984017770
+    }
+  ],
+  "inputTokens": 0,
+  "outputTokens": 0,
+  "savedAt": 1782984018746
+}

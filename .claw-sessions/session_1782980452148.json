@@ -1,0 +1,18 @@
+{
+  "sessionId": "session_1782980452148",
+  "messages": [
+    {
+      "role": "user",
+      "content": "hee haa",
+      "timestamp": 1782980458979
+    },
+    {
+      "role": "assistant",
+      "content": "It seems like you're just saying \"hee haa\" for fun. Let me know if you'd like me to perform any specific tasks or assist with something in your workspace!",
+      "timestamp": 1782980464264
+    }
+  ],
+  "inputTokens": 0,
+  "outputTokens": 0,
+  "savedAt": 1782980464291
+}

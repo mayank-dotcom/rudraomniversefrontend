@@ -1,0 +1,18 @@
+{
+  "sessionId": "session_1782979520316",
+  "messages": [
+    {
+      "role": "user",
+      "content": "yo",
+      "timestamp": 1782979529075
+    },
+    {
+      "role": "assistant",
+      "content": "It seems like you're looking to explore or perform actions in the workspace. Could you clarify what you'd like me to do? For example:\n\n- If you want to list files or directories, I can use `list_directory`.\n- If you're looking for specific files, I can use `glob_search` or `grep_search`.\n- If you need to read a file, I can use `read_file`.\n\nLet me know how I can assist!",
+      "timestamp": 1782979535093
+    }
+  ],
+  "inputTokens": 0,
+  "outputTokens": 0,
+  "savedAt": 1782979535094
+}
