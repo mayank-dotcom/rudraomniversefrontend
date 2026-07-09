@@ -281,6 +281,35 @@ export async function uploadProfilePicture(file: File) {
   return data
 }
 
+export interface CurrentUserProfile {
+  id: string
+  name: string
+  email: string
+  role: string
+  profile_picture: string | null
+  plan_name: string
+  tokens_remaining: number
+  dm_privacy?: "everyone" | "nobody"
+}
+
+export interface CurrentUserProfileResponse {
+  success: boolean
+  user: CurrentUserProfile
+  error?: string
+}
+
+export async function getCurrentUserProfile() {
+  const res = await fetch(`${API_BASE}/user/profile`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<CurrentUserProfileResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch user profile.")
+  }
+  return data
+}
+
 export interface BuyPlanResponse {
   success: boolean
   message: string
@@ -2697,6 +2726,9 @@ export interface LibraryAsset {
   likes_count?: number
   is_liked?: boolean
   parent_id?: string | null
+  owner_id?: string
+  owner_name?: string
+  owner_avatar?: string | null
 }
 
 export interface AssetComment {
@@ -2744,10 +2776,11 @@ export async function getLibraryAssets() {
   return data
 }
 
-export async function getPublicLibraryAssets(page?: number, limit?: number) {
+export async function getPublicLibraryAssets(page?: number, limit?: number, userId?: string) {
   const params = new URLSearchParams()
   if (page !== undefined) params.set("page", String(page))
   if (limit !== undefined) params.set("limit", String(limit))
+  if (userId !== undefined) params.set("user_id", userId)
   const query = params.toString() ? `?${params.toString()}` : ""
   const res = await fetch(`${API_BASE}/library/public-assets${query}`, {
     method: "GET",
@@ -2983,6 +3016,7 @@ export interface AssetSocialResponse {
   likes_count: number
   is_liked: boolean
   owner: {
+    id?: string
     name: string
     avatar: string | null
   }
@@ -3028,6 +3062,85 @@ export async function getAssetSocial(id: string) {
   const data = await parseJson<AssetSocialResponse>(res)
   if (!res.ok || !data.success) {
     throw new Error(data.error || "Failed to fetch asset social details.")
+  }
+  return data
+}
+
+export interface UserProfileResponse {
+  success: boolean
+  user: {
+    id: string
+    name: string
+    profile_picture: string | null
+    bio?: string | null
+    profession?: string | null
+    website?: string | null
+    dm_privacy?: "everyone" | "nobody"
+  }
+  posts_count: number
+  followers_count: number
+  following_count: number
+  is_following: boolean
+  is_current_user: boolean
+  error?: string
+}
+
+export async function getUserProfile(name: string) {
+  const res = await fetch(`${API_BASE}/library/profile/${encodeURIComponent(name)}`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<UserProfileResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch user profile.")
+  }
+  return data
+}
+
+export interface ToggleFollowResponse {
+  success: boolean
+  is_following: boolean
+  followers_count: number
+  error?: string
+}
+
+export async function toggleFollowUser(name: string) {
+  const res = await fetch(`${API_BASE}/library/profile/${encodeURIComponent(name)}/toggle-follow`, {
+    method: "POST",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+  })
+  const data = await parseJson<ToggleFollowResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to update follow status.")
+  }
+  return data
+}
+
+export async function updateUserBio(bio: string) {
+  const res = await fetch(`${API_BASE}/library/profile/bio`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ bio }),
+  })
+  const data = await parseJson<{ success: boolean; bio: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to update bio.")
+  }
+  return data
+}
+
+export async function updateUserProfile(payload: { name: string; bio: string; profession: string; website: string }) {
+  const res = await fetch(`${API_BASE}/library/profile/update`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson<{ success: boolean; name: string; bio: string; profession: string; website: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to update profile.")
   }
   return data
 }
@@ -3198,6 +3311,76 @@ export async function aiRewriteNote(text: string, instruction: string) {
   return data
 }
 
+// ─── Clipboard Sync APIs ──────────────────────────────────────────
+
+export interface ClipboardItem {
+  id: number
+  user_id: string
+  content: string
+  content_type: string
+  device_name: string
+  created_at: string
+}
+
+export interface ClipboardPushResponse {
+  success: boolean
+  item?: ClipboardItem
+  error?: string
+}
+
+export interface ClipboardPullResponse {
+  success: boolean
+  item?: ClipboardItem | null
+  message?: string
+  error?: string
+}
+
+export interface ClipboardHistoryResponse {
+  success: boolean
+  items?: ClipboardItem[]
+  error?: string
+}
+
+export async function pushClipboard(content: string, contentType = "text", deviceName = "Web Browser") {
+  const res = await fetch(`${API_BASE}/clipboard/push`, {
+    method: "POST",
+    headers: {
+      ...getHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ content, content_type: contentType, device_name: deviceName }),
+  })
+  const data = await parseJson<ClipboardPushResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to push to clipboard.")
+  }
+  return data
+}
+
+export async function pullClipboard() {
+  const res = await fetch(`${API_BASE}/clipboard/pull`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<ClipboardPullResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to pull clipboard.")
+  }
+  return data
+}
+
+export async function getClipboardHistory() {
+  const res = await fetch(`${API_BASE}/clipboard/history`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<ClipboardHistoryResponse>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch clipboard history.")
+  }
+  return data
+}
+
 // ─── X / Twitter OAuth APIs ──────────────────────────────────────────
 
 async function xFetch(url: string, options?: RequestInit) {
@@ -3227,10 +3410,102 @@ export async function getXStatus() {
   return xFetch(`${API_BASE}/x/status`) as Promise<{ success: boolean; connected?: boolean; xUserId?: string; xUsername?: string; connectedAt?: string; error?: string }>
 }
 
+export async function searchUsers(q: string) {
+  const res = await fetch(`${API_BASE}/users/search?q=${encodeURIComponent(q)}`, {
+    headers: { ...getHeaders() },
+  })
+  const data = await parseJson<{ success: boolean; users: { id: string; name: string; username: string; profile_picture?: string }[]; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to search users.")
+  }
+  return data
+}
+
 export async function getXProfile() {
   return xFetch(`${API_BASE}/x/profile`) as Promise<{ success: boolean; user?: { id: string; name: string; username: string }; error?: string }>
 }
 
 export async function disconnectX() {
   return xFetch(`${API_BASE}/x/disconnect`, { method: "DELETE" }) as Promise<{ success: boolean; message?: string; error?: string }>
+}
+
+// ─── DIRECT MESSAGES ─────────────────────────────────────────────────────
+
+export interface DirectMessage {
+  id: string
+  sender_id: string
+  receiver_id: string
+  content: string
+  is_read: boolean
+  created_at: string
+}
+
+export interface DMConversation {
+  user_id: string
+  user_name: string
+  username: string
+  profile_picture?: string
+  last_message: string
+  last_message_at: string
+  unread_count: number
+}
+
+export async function sendDM(receiver_id: string, content: string) {
+  const res = await fetch(`${API_BASE}/dm/send`, {
+    method: "POST",
+    headers: { ...getHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ receiver_id, content }),
+  })
+  const data = await parseJson<{ success: boolean; message: DirectMessage; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to send message.")
+  }
+  return data
+}
+
+export async function getDMConversations() {
+  const res = await fetch(`${API_BASE}/dm/conversations`, {
+    headers: { ...getHeaders() },
+  })
+  const data = await parseJson<{ success: boolean; conversations: DMConversation[]; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch conversations.")
+  }
+  return data
+}
+
+export async function getDMMessages(userId: string) {
+  const res = await fetch(`${API_BASE}/dm/messages/${userId}`, {
+    headers: { ...getHeaders() },
+  })
+  const data = await parseJson<{ success: boolean; messages: DirectMessage[]; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch messages.")
+  }
+  return data
+}
+
+export async function markDMRead(userId: string) {
+  const res = await fetch(`${API_BASE}/dm/read/${userId}`, {
+    method: "PUT",
+    headers: { ...getHeaders() },
+  })
+  const data = await parseJson<{ success: boolean; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to mark messages as read.")
+  }
+  return data
+}
+
+export async function updateDMPrivacy(dm_privacy: "everyone" | "nobody") {
+  const res = await fetch(`${API_BASE}/user/dm-privacy`, {
+    method: "PUT",
+    headers: { ...getHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ dm_privacy }),
+  })
+  const data = await parseJson<{ success: boolean; dm_privacy: string; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to update DM privacy.")
+  }
+  return data
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useRef } from "react";
+import { Suspense, useRef, useState, useEffect } from "react";
 import { Canvas, useFrame, useLoader } from "@react-three/fiber";
-import { useVideoTexture } from "@react-three/drei";
+import { Html, useVideoTexture } from "@react-three/drei";
+import ChatOnScreen from "./ChatOnScreen";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
 import * as THREE from "three";
 
@@ -20,13 +21,36 @@ const SCREEN_ROT: [number, number, number] = [Math.PI / 3, 0, 0];
 function LapModel({ progress }: { progress: number }) {
   const groupRef = useRef<THREE.Group>(null);
   const geometry = useLoader(STLLoader, "/Lap.stl");
+  const [videoEnded, setVideoEnded] = useState(false);
 
   const screenTexture = useVideoTexture("/video.mp4", {
     unsuspend: "canplay",
     muted: true,
-    loop: true,
+    loop: false,
     start: true,
   });
+
+  useEffect(() => {
+    const video = screenTexture?.image as HTMLVideoElement | undefined;
+    if (!video) return;
+
+    const timer = setTimeout(() => {
+      setVideoEnded(true);
+      video.pause();
+    }, 6000);
+
+    const handleEnded = () => {
+      setVideoEnded(true);
+      clearTimeout(timer);
+    };
+
+    video.addEventListener("ended", handleEnded);
+
+    return () => {
+      clearTimeout(timer);
+      video.removeEventListener("ended", handleEnded);
+    };
+  }, [screenTexture]);
 
   // Sharp, high-quality rendering settings
   screenTexture.minFilter = THREE.LinearFilter;
@@ -125,23 +149,36 @@ function LapModel({ progress }: { progress: number }) {
         )}
       </mesh>
 
-      {/*
-        Video screen — a flat PlaneGeometry placed exactly on the laptop screen.
-        PlaneGeometry UVs span [0,1] perfectly across the whole plane,
-        so there is ZERO overflow and ZERO edge-pixel bleeding/tearing
-        regardless of screen size.
-      */}
-      <mesh position={SCREEN_POS} rotation={SCREEN_ROT}>
-        <planeGeometry args={[SCREEN_W, SCREEN_H]} />
-        <meshBasicMaterial
-          map={screenTexture}
-          toneMapped={false}
-          depthWrite={false}
-          polygonOffset
-          polygonOffsetFactor={-1}
-          polygonOffsetUnits={-1}
-        />
-      </mesh>
+      {videoEnded ? (
+        <Html
+          position={SCREEN_POS}
+          rotation={SCREEN_ROT}
+          transform
+          // With `transform`, drei maps px → world units at distanceFactor/400.
+          // distanceFactor=1 ⇒ SCREEN_W*400 px covers the full screen plane exactly.
+          distanceFactor={1}
+          occlude={false}
+          style={{
+            width: `${SCREEN_W * 400}px`,
+            height: `${SCREEN_H * 400}px`,
+            pointerEvents: 'auto',
+          }}
+        >
+          <ChatOnScreen />
+        </Html>
+      ) : (
+        <mesh position={SCREEN_POS} rotation={SCREEN_ROT}>
+          <planeGeometry args={[SCREEN_W, SCREEN_H]} />
+          <meshBasicMaterial
+            map={screenTexture}
+            toneMapped={false}
+            depthWrite={false}
+            polygonOffset
+            polygonOffsetFactor={-1}
+            polygonOffsetUnits={-1}
+          />
+        </mesh>
+      )}
     </group>
   );
 }
@@ -152,7 +189,7 @@ export default function LapViewer({ progress = 0 }: { progress?: number }) {
       camera={{ position: [0, 0, 4], fov: 50 }}
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: true }}
-      style={{ background: "transparent" }}
+      style={{ background: "transparent", pointerEvents: "none" }}
     >
       <ambientLight intensity={0.8} />
       <directionalLight position={[2, 3, 4]} intensity={1.5} />

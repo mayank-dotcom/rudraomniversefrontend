@@ -1124,6 +1124,7 @@ const Index = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [heroStage, setHeroStage] = useState<"visible" | "exiting" | "hidden">("visible");
+  const [heroDismissed, setHeroDismissed] = useState(false);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -1183,100 +1184,69 @@ const Index = () => {
   const bodyOverflowRef = useRef("");
 
   useEffect(() => {
-    const html = document.documentElement;
-    let touchY = 0;
-
-    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-    if (isMobile) {
+    const mb = typeof window !== "undefined" && window.innerWidth < 768;
+    if (mb) {
       phaseRef.current = "scroll";
       return;
     }
 
-    const handleWheel = (e: WheelEvent) => {
-      if (phaseRef.current === "scroll") return;
-      e.preventDefault();
-      setProgress((prev) => {
-        const next = Math.max(prev, prev + e.deltaY * 0.0008);
-
-        if (phaseRef.current === "enter" && next >= ENTER_END) {
-          phaseRef.current = "zoom";
-          return ENTER_END;
-        }
-
-        if (phaseRef.current === "zoom" && next >= ZOOM_END) {
-          phaseRef.current = "scroll";
-          html.style.overflow = bodyOverflowRef.current;
-          setTimeout(() => {
-            window.scrollTo({ top: window.innerHeight, behavior: "smooth" });
-          }, 50);
-          return ZOOM_END;
-        }
-
-        const clamp = phaseRef.current === "enter" ? ENTER_END : ZOOM_END;
-        return Math.max(0, Math.min(clamp, next));
-      });
-    };
-
-    const handleTouchStart = (e: TouchEvent) => {
-      touchY = e.touches[0].clientY;
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (phaseRef.current === "scroll") return;
-      e.preventDefault();
-      const delta = touchY - e.touches[0].clientY;
-      touchY = e.touches[0].clientY;
-      setProgress((prev) => {
-        const next = Math.max(prev, prev + delta * 0.003);
-
-        if (phaseRef.current === "enter" && next >= ENTER_END) {
-          phaseRef.current = "zoom";
-          return ENTER_END;
-        }
-
-        if (phaseRef.current === "zoom" && next >= ZOOM_END) {
-          phaseRef.current = "scroll";
-          html.style.overflow = bodyOverflowRef.current;
-          setTimeout(() => {
-            window.scrollTo({ top: window.innerHeight, behavior: "smooth" });
-          }, 50);
-          return ZOOM_END;
-        }
-
-        const clamp = phaseRef.current === "enter" ? ENTER_END : ZOOM_END;
-        return Math.max(0, Math.min(clamp, next));
-      });
-    };
-
+    const html = document.documentElement;
     bodyOverflowRef.current = html.style.overflow;
     html.style.overflow = "hidden";
 
-    window.addEventListener("wheel", handleWheel, { passive: false });
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    const timeouts: number[] = [];
+    const animFrameRef = { current: 0 };
+
+    // Stage 1: Hero image slides up first
+    timeouts.push(window.setTimeout(() => {
+      setHeroDismissed(true);
+    }, 200));
+
+    // Stage 2: After hero slide-up (~1.4s), start laptop animation
+    timeouts.push(window.setTimeout(() => {
+      const LAPTOP_DURATION = 4000;
+      const startTime = performance.now();
+
+      const animate = (now: number) => {
+        const elapsed = now - startTime;
+        const raw = Math.min(elapsed / LAPTOP_DURATION, 1);
+        const eased = 1 - Math.pow(1 - raw, 3);
+
+        setProgress(eased);
+
+        if (eased >= ENTER_END && phaseRef.current === "enter") {
+          phaseRef.current = "zoom";
+        }
+
+        if (eased >= ZOOM_END && phaseRef.current === "zoom") {
+          phaseRef.current = "scroll";
+          html.style.overflow = bodyOverflowRef.current;
+          window.scrollTo({ top: window.innerHeight, behavior: "smooth" });
+        }
+
+        if (eased < 1) {
+          animFrameRef.current = requestAnimationFrame(animate);
+        }
+      };
+
+      animFrameRef.current = requestAnimationFrame(animate);
+    }, 1400));
 
     return () => {
+      cancelAnimationFrame(animFrameRef.current);
+      timeouts.forEach(clearTimeout);
       html.style.overflow = bodyOverflowRef.current;
-      window.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
     };
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-      if (isMobile) {
-        const scrollRange = window.innerHeight * 1.2;
-        const p = Math.min(window.scrollY / scrollRange, 1);
-        setProgress(p);
-        return;
-      }
+    const mb = typeof window !== "undefined" && window.innerWidth < 768;
+    if (!mb) return;
 
-      if (phaseRef.current !== "scroll") return;
-      const heroH = window.innerHeight;
-      const p = Math.min(window.scrollY / heroH, 1);
-      setProgress((prev) => Math.max(prev, ZOOM_END + p * (1 - ZOOM_END)));
+    const handleScroll = () => {
+      const scrollRange = window.innerHeight * 1.2;
+      const p = Math.min(window.scrollY / scrollRange, 1);
+      setProgress(p);
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -1304,19 +1274,17 @@ const Index = () => {
     <div className="relative bg-[#050308] min-h-screen w-full overflow-x-hidden">
       <Navbar visible={showNavbar} />
 
-      <div className="fixed inset-0 z-0">
+      <div className="fixed inset-0 z-0 pointer-events-none">
         {isMobile ? <MobilePhoneViewer /> : <LapViewer progress={progress} />}
       </div>
 
-
-
-      <div className="relative z-10">
-        <section id="hero" className="h-screen flex items-center justify-center overflow-hidden">
+      <div className="relative z-10 pointer-events-none">
+        <section id="hero" className="h-screen flex items-center justify-center overflow-hidden pointer-events-none">
           <motion.div
             className="w-full"
             initial={false}
             animate={{
-              y: (isMobile && (heroStage === "exiting" || heroStage === "hidden")) ? "-100vh" : 0,
+              y: ((isMobile && (heroStage === "exiting" || heroStage === "hidden")) || heroDismissed) ? "-100vh" : 0,
             }}
             transition={{ duration: 1, ease: "easeInOut" }}
             onAnimationComplete={() => {
@@ -1348,7 +1316,7 @@ const Index = () => {
         <div className="h-[100vh]" />
 
         {/* Features */}
-        <section id="features" className="pt-32 pb-12 px-6 bg-[#050308]">
+        <section id="features" className="pt-32 pb-12 px-6 bg-[#050308] pointer-events-auto">
           <div className="max-w-7xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -1563,7 +1531,7 @@ const Index = () => {
         </section>
 
         {/* Reviews */}
-        <section className="relative bg-white w-full">
+        <section className="relative bg-white w-full pointer-events-auto">
           <div className="w-full relative">
             {menuItems.length > 0 && (
               <div className="relative w-full h-[800px] md:h-[900px] overflow-hidden bg-transparent">
@@ -1603,7 +1571,7 @@ const Index = () => {
         </section>
 
         {/* For Students */}
-        <section id="students" className="py-20 px-6 border-t border-white/5 bg-[#050308]">
+        <section id="students" className="py-20 px-6 border-t border-white/5 bg-[#050308] pointer-events-auto">
           <div className="max-w-7xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -1744,7 +1712,7 @@ const Index = () => {
         </section>
 
         {/* For Enterprise */}
-        <section id="enterprise" className="pt-20 pb-10 px-6 border-t border-black/5 bg-white">
+        <section id="enterprise" className="pt-20 pb-10 px-6 border-t border-black/5 bg-white pointer-events-auto">
           <div className="max-w-7xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -1888,7 +1856,7 @@ const Index = () => {
         </section>
 
         {/* CTA */}
-        <section id="pricing" className="py-20 px-6 border-t border-white/5 bg-[#050308] rounded-b-[40px]">
+        <section id="pricing" className="py-20 px-6 border-t border-white/5 bg-[#050308] rounded-b-[40px] pointer-events-auto">
           <div className="max-w-7xl mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -1937,7 +1905,9 @@ const Index = () => {
           </div>
         </section>
 
-        <Footer />
+        <div className="pointer-events-auto">
+          <Footer />
+        </div>
       </div>
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>

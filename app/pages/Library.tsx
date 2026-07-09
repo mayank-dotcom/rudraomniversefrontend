@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import { createPortal } from "react-dom"
 import {
   getLibraryAssets,
   deleteLibraryAsset,
@@ -30,9 +31,12 @@ import {
   getSingleAsset,
   updateAssetCategory,
   copyAssetToLibrary,
+  searchUsers,
   type LibraryAsset,
   type LibraryGallery,
-  type SocialNotification
+  type SocialNotification,
+  getCurrentUserProfile,
+  getUserProfile,
 } from "@/lib/chat-api"
 import {
   isAuthenticated,
@@ -43,10 +47,29 @@ import {
   removeEnterpriseName,
   getUserInfo,
   getUserRole,
-  isUpgradeRestricted,
-  getProfilePicture
+  getProfilePicture,
+  setProfilePicture
 } from "@/lib/auth"
 import { useTheme } from "@/lib/theme-context"
+
+const getStoryImageUrl = (url: string) => {
+  if (!url) return ""
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:") || url.startsWith("blob:")) {
+    return url
+  }
+  const apiRoot = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000"
+  let serverRoot = apiRoot
+  if (serverRoot.endsWith("/api/v1")) {
+    serverRoot = serverRoot.slice(0, -7)
+  } else if (serverRoot.endsWith("/api/v1/")) {
+    serverRoot = serverRoot.slice(0, -8)
+  }
+  const cleanServerRoot = serverRoot.endsWith("/") ? serverRoot.slice(0, -1) : serverRoot
+  if (url.startsWith("/")) {
+    return `${cleanServerRoot}${url}`
+  }
+  return `${cleanServerRoot}/${url}`
+}
 import {
   Loader2,
   Trash2,
@@ -278,9 +301,9 @@ const ReplyItem = ({
             : "bg-[#0d0d0c] text-white"
         }`}>
           {reply.user_avatar ? (
-            <img src={reply.user_avatar} className="h-full w-full object-cover rounded-full" alt={reply.user_name} />
+            <img src={getStoryImageUrl(reply.user_avatar)} className="h-full w-full object-cover rounded-full" alt={reply.user_name} />
           ) : (
-            reply.user_name.slice(0, 2).toUpperCase()
+            <User className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
           )}
         </div>
 
@@ -414,7 +437,12 @@ export default function LibraryPage() {
   const [socialLoading, setSocialLoading] = useState(false)
   const [replyToComment, setReplyToComment] = useState<{ id: any; user_name: string } | null>(null)
   const [collapsedComments, setCollapsedComments] = useState<Record<any, boolean>>({})
-  const [creatorInfo, setCreatorInfo] = useState<{ name: string; avatar: string | null }>({ name: "AWEDICT", avatar: null })
+  const [mentionSuggestions, setMentionSuggestions] = useState<{ id: string; name: string; username: string; profile_picture?: string }[]>([])
+  const [mentionQuery, setMentionQuery] = useState("")
+  const [mentionStartPos, setMentionStartPos] = useState(-1)
+  const [mentionActive, setMentionActive] = useState(false)
+  const [mentionSelectedIdx, setMentionSelectedIdx] = useState(0)
+  const [creatorInfo, setCreatorInfo] = useState<{ id?: string; name: string; avatar: string | null }>({ name: "AWEDICT", avatar: null })
   const [variations, setVariations] = useState<LibraryAsset[]>([])
   const [parentAsset, setParentAsset] = useState<LibraryAsset | null>(null)
   const [notifications, setNotifications] = useState<SocialNotification[]>([])
@@ -489,6 +517,11 @@ export default function LibraryPage() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
 
   const [userName, setUserName] = useState<string>("")
+  const [profileName, setProfileName] = useState<string>("")
+  const [profileProfession, setProfileProfession] = useState<string>("")
+  const [postsCount, setPostsCount] = useState<number>(0)
+  const [followersCount, setFollowersCount] = useState<number>(0)
+  const [followingCount, setFollowingCount] = useState<number>(0)
   const [userEmail, setUserEmail] = useState<string>("")
   const [userRole, setUserRole] = useState<string | null>(null)
   const [schoolName, setSchoolName] = useState<string>("")
@@ -506,6 +539,14 @@ export default function LibraryPage() {
   const [showNotificationPanel, setShowNotificationPanel] = useState(false)
   const [generationStatus, setGenerationStatus] = useState<"idle" | "generating" | "completed">("idle")
   const notificationPanelRef = useRef<HTMLDivElement>(null)
+  const [notifDropdownPos, setNotifDropdownPos] = useState({ top: 0, right: 0 })
+
+  useEffect(() => {
+    if (showNotificationPanel && notificationPanelRef.current) {
+      const rect = notificationPanelRef.current.getBoundingClientRect()
+      setNotifDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
+    }
+  }, [showNotificationPanel])
 
   const FEATURED_INITIAL_BATCH = 6
   const FEATURED_BATCH_SIZE = 6
@@ -532,18 +573,71 @@ export default function LibraryPage() {
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const [typedPlaceholder, setTypedPlaceholder] = useState(IMAGE_PLACEHOLDER_TEXTS[0])
 
-  const profileDropupRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     if (typeof window !== "undefined" && isAuthenticated()) {
-      const info = getUserInfo()
-      if (info) {
-        setUserName(info.name || "")
-        setUserEmail(info.email || "")
+      const loadSidebarProfile = async () => {
+        try {
+          let resolvedName: string | null = null
+          const info = getUserInfo()
+          if (info?.name) {
+            resolvedName = info.name
+            setUserName(info.name)
+            setUserEmail(info.email || "")
+          } else {
+            // Fallback: get name from /user/profile auth endpoint
+            const currentProfile = await getCurrentUserProfile()
+            if (currentProfile?.user?.name) {
+              resolvedName = currentProfile.user.name
+              setUserName(currentProfile.user.name)
+              if (currentProfile.user.profile_picture) {
+                const fullUrl = getStoryImageUrl(currentProfile.user.profile_picture)
+                setProfilePicture(fullUrl)
+                setProfilePic(fullUrl)
+              }
+            }
+          }
+
+          if (resolvedName) {
+            try {
+              const data = await getUserProfile(resolvedName)
+              if (data.user) {
+                setProfileName(data.user.name || resolvedName || "")
+                setProfileProfession(data.user.profession || "")
+                setPostsCount(data.posts_count || 0)
+                setFollowersCount(data.followers_count || 0)
+                setFollowingCount(data.following_count || 0)
+
+                if (data.user.profile_picture) {
+                  const fullUrl = getStoryImageUrl(data.user.profile_picture)
+                  setProfilePicture(fullUrl)
+                  setProfilePic(fullUrl)
+                }
+              }
+            } catch {
+              // Fallback to basic current user profile
+              setProfileName(resolvedName || "")
+              getCurrentUserProfile()
+                .then((data) => {
+                  if (data.user?.profile_picture) {
+                    const fullUrl = getStoryImageUrl(data.user.profile_picture)
+                    setProfilePicture(fullUrl)
+                    setProfilePic(fullUrl)
+                  }
+                })
+                .catch(() => {})
+            }
+          }
+        } catch {
+          // silent fail
+        }
       }
+      loadSidebarProfile()
       setUserRole(getUserRole())
-      setProfilePic(getProfilePicture())
+      if (!profilePic) {
+        setProfilePic(getProfilePicture())
+      }
     }
+
   }, [isPersonalizationModalOpen])
 
 
@@ -557,6 +651,8 @@ export default function LibraryPage() {
       .catch(() => {})
       .finally(() => setIsSubscriptionLoading(false))
   }, [])
+
+  const profileDropupRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -935,6 +1031,25 @@ export default function LibraryPage() {
 
   const notificationsInitialFetchRef = useRef(true)
 
+  // Mention search
+  useEffect(() => {
+    if (!mentionActive || !mentionQuery.trim()) {
+      setMentionSuggestions([])
+      return
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await searchUsers(mentionQuery.trim())
+        if (res.success) {
+          setMentionSuggestions(res.users)
+        }
+      } catch {
+        setMentionSuggestions([])
+      }
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [mentionQuery, mentionActive])
+
   // Load and poll notifications
   useEffect(() => {
     if (!isAuthenticated()) return
@@ -1003,10 +1118,23 @@ export default function LibraryPage() {
         )
       }
 
+      const isCreation = notif.type === "creation" || notif.type === "created";
+      if (isCreation) {
+        toast.success("Navigated to gallery")
+        return
+      }
+
       // Fetch target asset and open detailed modal
       const res = await getSingleAsset(notif.asset_id)
       if (res.success && res.asset) {
         setExpandedAsset(res.asset)
+        // Focus comment input for comment-related notifications
+        if (notif.type === "reply" || notif.type === "message" || notif.type.includes("comment")) {
+          setTimeout(() => {
+            const commentInput = document.getElementById("comment-input-field")
+            if (commentInput) commentInput.focus()
+          }, 500)
+        }
       } else {
         toast.error("Failed to load asset details")
       }
@@ -1721,18 +1849,27 @@ export default function LibraryPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const expandAssetId = localStorage.getItem("expand_asset_id");
+      const expandNotifType = localStorage.getItem("expand_notif_type");
       if (expandAssetId) {
         localStorage.removeItem("expand_asset_id");
         getSingleAsset(expandAssetId)
           .then((res) => {
             if (res.success && res.asset) {
               setExpandedAsset(res.asset);
+              const isCommentNotif = expandNotifType === "reply" || expandNotifType === "message" || (expandNotifType && expandNotifType.includes("comment"));
+              if (isCommentNotif) {
+                setTimeout(() => {
+                  const commentInput = document.getElementById("comment-input-field")
+                  if (commentInput) commentInput.focus()
+                }, 600)
+              }
             }
           })
           .catch((err) => {
             console.error("Failed to expand asset from notification:", err);
           });
       }
+      localStorage.removeItem("expand_notif_type");
 
       const params = new URLSearchParams(window.location.search);
       const assetParam = params.get("asset");
@@ -2058,12 +2195,18 @@ export default function LibraryPage() {
             {/* Bottom Info Overlay - Premium Glassmorphism */}
             <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-20 pointer-events-none transition-all duration-300 group-hover/card:opacity-0 group-hover/card:translate-y-2">
               {/* Creator tag */}
-              <div className="px-2 py-1 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${i % 2 === 0 ? "bg-cyan-400" : "bg-purple-400"}`}></div>
-                <span className="text-[10px] font-medium text-white/90 select-none truncate max-w-[100px]">
-                  {getCreatorHandle(asset.id)}
-                </span>
-              </div>
+              <Link
+                href={`/profile/${encodeURIComponent(asset.owner_id || asset.owner_name || getCreatorHandle(asset.id))}`}
+                onClick={(e) => e.stopPropagation()}
+                className="pointer-events-auto"
+              >
+                <div className="px-2 py-1 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1.5 hover:bg-black/60 transition-colors">
+                  <div className={`w-1.5 h-1.5 rounded-full ${i % 2 === 0 ? "bg-cyan-400" : "bg-purple-400"}`}></div>
+                  <span className="text-[10px] font-medium text-white/90 select-none truncate max-w-[100px]">
+                    {asset.owner_name || getCreatorHandle(asset.id)}
+                  </span>
+                </div>
+              </Link>
             </div>
 
             {/* Hover Content Overlay */}
@@ -2081,7 +2224,7 @@ export default function LibraryPage() {
                   title={savedIds.includes(asset.id) ? "Unlike" : "Like & Save"}
                 >
                   <motion.div
-                    animate={{ scale: savedIds.includes(asset.id) ? [1, 1.45, 1.15] : 1 }}
+                    animate={{ scale: savedIds.includes(asset.id) ? [1, 1.15] : 1 }}
                     transition={{ type: "spring", stiffness: 600, damping: 15 }}
                   >
                     <Heart className={`h-4.5 w-4.5 transition-all ${savedIds.includes(asset.id) ? "fill-red-500 text-red-500" : ""}`} />
@@ -2229,10 +2372,10 @@ export default function LibraryPage() {
                 }`}
                 title="Explore"
               >
+                <Compass className="w-[22px] h-[22px]" />
                 {activeCategory === "featured" && (
                   <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
                 )}
-                <Compass className="w-[22px] h-[22px]" />
               </motion.button>
 
               {/* Recent Creations */}
@@ -2287,7 +2430,7 @@ export default function LibraryPage() {
             </div>
 
             {/* Profile / Avatar Button */}
-              <div className="mb-2 relative">
+              <div className="mb-1 relative">
                 <motion.button
                   onClick={() => setShowProfileDropup(!showProfileDropup)}
                   whileHover={{ scale: 1.05 }}
@@ -2307,6 +2450,10 @@ export default function LibraryPage() {
                     </div>
                   )}
                 </motion.button>
+                {/* Username below avatar in collapsed state */}
+                <span className={`block text-[7px] text-center truncate max-w-[60px] leading-tight mt-1 ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                  {(userName || "").split(" ")[0]}
+                </span>
 
                 {showProfileDropup && (
                   <div
@@ -2320,12 +2467,12 @@ export default function LibraryPage() {
                     <button
                       onClick={() => {
                         setShowProfileDropup(false);
-                        setIsPersonalizationModalOpen(true);
+                        router.push(`/profile/${encodeURIComponent(userName || "me")}`);
                       }}
                       className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
                         }`}
                     >
-<User className="h-3.5 w-3.5" />
+                      <User className="h-3.5 w-3.5" />
                       <span>Profile</span>
                     </button>
 
@@ -2383,6 +2530,93 @@ export default function LibraryPage() {
                 <PanelLeftClose className="w-4 h-4" />
               </motion.button>
             </div>
+
+            {/* User Profile Section inside Sidebar */}
+            <div className={`px-5 py-5 flex flex-col items-center border-b ${isDarkMode ? "border-white/[0.06] text-white" : "border-black/[0.06] text-black"}`}>
+              {/* Centered Avatar with dynamic gradient and settings icon */}
+              <div className="relative mb-2">
+                <div 
+                  className={`h-20 w-20 rounded-full p-[2.5px] flex items-center justify-center shadow-md cursor-pointer hover:brightness-95 ${
+                    isDarkMode 
+                      ? "bg-gradient-to-tr from-zinc-600 via-zinc-400 to-zinc-200"
+                      : "bg-gradient-to-tr from-cyan-400 via-purple-500 to-pink-500"
+                  }`}
+                  onClick={() => {
+                    if (userName) {
+                      window.location.href = `/profile/${encodeURIComponent(userName)}`
+                    }
+                  }}
+                >
+                  <div className={`h-full w-full rounded-full overflow-hidden border-2 ${isDarkMode ? "border-[#0d0d0c] bg-zinc-900" : "border-white bg-zinc-100"} flex items-center justify-center text-white font-bold relative`}>
+                    {profilePic ? (
+                      <img src={getStoryImageUrl(profilePic)} className="h-full w-full object-cover" alt="Profile" />
+                    ) : (
+                      <User className="h-10 w-10 text-zinc-400 dark:text-zinc-500" />
+                    )}
+                  </div>
+                </div>
+                {/* Settings icon pinned to bottom-right of avatar */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSettingsPanel("general"); setIsSettingsModalOpen(true); }}
+                  className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full border flex items-center justify-center transition-colors ${
+                    isDarkMode 
+                      ? "bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-zinc-300" 
+                      : "bg-white border-zinc-200 hover:bg-zinc-100 text-zinc-600"
+                  }`}
+                  title="Settings"
+                >
+                  <Settings className="h-3 w-3" />
+                </button>
+              </div>
+
+              {/* Centered Name */}
+              <span 
+                className={`text-xs font-bold text-center tracking-tight flex items-center justify-center gap-1 cursor-pointer hover:underline ${isDarkMode ? "text-white" : "text-black"}`}
+                onClick={() => {
+                  if (userName) {
+                    window.location.href = `/profile/${encodeURIComponent(userName)}`
+                  }
+                }}
+              >
+                {(profileName || userName || "User").split(" ")[0]}
+                {subscription?.subscription?.plan_name?.toLowerCase() === "motion" ? (
+                  <img src="/run.png" alt="Motion" className="w-3 h-3 object-contain shrink-0 animate-plan-icon" />
+                ) : subscription?.subscription?.plan_name?.toLowerCase() === "speed" ? (
+                  <img src="/ride-a-bike.png" alt="Speed" className="w-3 h-3 object-contain shrink-0 animate-plan-icon" />
+                ) : subscription?.subscription?.plan_name?.toLowerCase() === "velocity" ? (
+                  <img src="/car.png" alt="Velocity" className="w-3 h-3 object-contain shrink-0 animate-plan-icon" />
+                ) : subscription?.subscription?.plan_name?.toLowerCase() === "acceleration" ? (
+                  <img src="/air-force.png" alt="Acceleration" className="w-3 h-3 object-contain shrink-0 animate-plan-icon" />
+                ) : (subscription?.subscription?.plan_name?.toLowerCase().includes("agency") || subscription?.subscription?.plan_name?.toLowerCase().includes("heavy duty")) ? (
+                  <img src="/startup.png" alt="Agency" className="w-3 h-3 object-contain shrink-0 animate-plan-icon" />
+                ) : (
+                  <svg className="w-3 h-3 text-sky-500 fill-current shrink-0" viewBox="0 0 24 24">
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                  </svg>
+                )}
+              </span>
+              
+              {/* Centered Profession */}
+              <span className={`text-[10px] text-center font-medium mt-0.5 ${isDarkMode ? "text-zinc-400" : "text-zinc-500"}`}>
+                {profileProfession || "Photographe Freelance"}
+              </span>
+
+              {/* Stats row */}
+              <div className="flex justify-around w-full mt-3 text-center">
+                <div className="flex flex-col">
+                  <span className={`text-[11px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{postsCount}</span>
+                  <span className={`text-[8px] uppercase tracking-wider font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>publications</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className={`text-[11px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{followersCount}</span>
+                  <span className={`text-[8px] uppercase tracking-wider font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>abonnés</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className={`text-[11px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{followingCount}</span>
+                  <span className={`text-[8px] uppercase tracking-wider font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>abonnements</span>
+                </div>
+              </div>
+            </div>
             
             {/* Sidebar Menu Items */}
             <div className={`flex-1 overflow-y-auto scrollbar-hide p-3 flex flex-col gap-5 ${isDarkMode ? "custom-scrollbar text-white" : "light-scrollbar text-black"}`}>
@@ -2406,9 +2640,6 @@ export default function LibraryPage() {
                       }`} />
                       <span className={`truncate ${activeCategory === "featured" ? "font-semibold" : "font-medium"}`}>Explore</span>
                     </div>
-                    {activeCategory === "featured" && (
-                      <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-md ${isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black"}`}>New</span>
-                    )}
                   </button>
 
                   <button
@@ -2547,110 +2778,22 @@ export default function LibraryPage() {
               </div>
 
             </div>
-            
-            {/* Footer & User Profile */}
-            <div className={`p-4 border-t ${isDarkMode ? "border-white/[0.06] bg-gradient-to-t from-[#0d0d0c] to-transparent" : "border-black/[0.06] bg-gradient-to-t from-[#f4f3f2] to-transparent"} flex flex-col gap-3 relative shrink-0`}>
-              {showProfileDropup && (
-                <div
-                  ref={profileDropupRef}
-                  className={`absolute bottom-[68px] left-4 right-4 z-[100] rounded-xl border p-1.5 shadow-2xl ${isDarkMode
-                      ? "bg-[#222120]/95 border-white/10 text-white"
-                      : "bg-[#f2f1f0]/95 border-black/10 text-black"
-                    }`}
-                >
-                  {/* Personalization Option */}
-                  <button
-                    onClick={() => {
-                      setShowProfileDropup(false);
-                      setIsPersonalizationModalOpen(true);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
-                      }`}
-                  >
-                    <User className="h-3.5 w-3.5" />
-                    <span>Profile</span>
-                  </button>
 
-                  {/* Wallet Option */}
-                  <button
-                    onClick={() => {
-                      setShowProfileDropup(false);
-                      setIsWalletModalOpen(true);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
-                      }`}
-                  >
-                    <Wallet className="h-3.5 w-3.5" />
-                    <span>Wallet</span>
-                  </button>
-
-                  {/* Divider */}
-                  <div className={`my-1 h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-
-                  {/* Logout Option */}
-                  <button
-                    onClick={handleLogout}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left text-red-500 transition-colors ${isDarkMode ? "hover:bg-red-500/10" : "hover:bg-red-500/5"
-                      }`}
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              )}
-
-              <div id="walkthrough-profile-area" className="flex items-center justify-between">
-                <motion.button
-                  onClick={() => setShowProfileDropup(!showProfileDropup)}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="flex items-center gap-2 min-w-0 text-left cursor-pointer hover:opacity-80 transition-opacity"
-                  title="Profile Options"
-                >
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center relative shrink-0 ${isDarkMode ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"} border overflow-hidden`}>
-                    {profilePic ? (
-                      <img src={profilePic} alt="Profile" className="h-full w-full object-cover" />
-                    ) : (
-                      <User className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
-                    )}
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userName || userEmail || "User"}</span>
-                    <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white" : "text-black"}`}>{userRole === "school_admin" ? "Admin" : userRole === "faculty" ? "Faculty" : userRole === "enterprise_admin" ? "Admin" : userRole === "manager" ? "Manager" : userRole === "global_admin" ? "Admin" : (subscription?.subscription?.plan_name?.toLowerCase().includes("agency") || subscription?.subscription?.plan_name?.toLowerCase().includes("heavy duty") ? "Agency" : subscription?.subscription?.plan_name || "Free Trial")}</span>
-                  </div>
-                </motion.button>
-                <div className="flex items-center gap-1.5">
-                  <motion.button
-                    onClick={() => {
-                      setSettingsPanel("general");
-                      setIsSettingsModalOpen(true);
-                    }}
-                    whileHover={{ scale: 1.1, rotate: 30 }}
-                    whileTap={{ scale: 0.9 }}
-                    title="Settings"
-                    className={`p-1.5 rounded-lg border transition-colors ${isDarkMode
-                        ? "border-white/10 text-white hover:bg-white/5"
-                        : "border-black/10 text-black hover:bg-black/5"
-                      }`}
-                  >
-                    <Settings className="h-3.5 w-3.5" />
-                  </motion.button>
-                  {!isUpgradeRestricted(userRole) && (
-                    <Link
-                      href="/pricing"
-                      className={`p-1.5 rounded-lg border transition-colors flex items-center gap-1 text-[10px] font-semibold cursor-pointer ${
-                        isDarkMode
-                          ? "border-white/10 text-white hover:bg-white/5"
-                          : "border-black/10 text-black hover:bg-black/5"
-                      }`}
-                    >
-                      <Zap className="h-3.5 w-3.5" />
-                      <span>Upgrade</span>
-                    </Link>
-                  )}
-                </div>
-              </div>
+            {/* Logout */}
+            <div className="px-3 py-2 mt-auto">
+              <button
+                onClick={handleLogout}
+                className={`flex items-center justify-center gap-2 w-full rounded-xl border px-4 py-2.5 text-xs font-semibold tracking-wide transition-all ${
+                  isDarkMode 
+                    ? "border-zinc-700 text-red-400 hover:bg-red-500/10" 
+                    : "border-zinc-300 text-red-600 hover:bg-red-500/5"
+                }`}
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </button>
             </div>
+
           </div>
         )}
       </aside>
@@ -2737,13 +2880,14 @@ export default function LibraryPage() {
                 </motion.button>
 
                 {/* Notification Dropdown Panel */}
-                {showNotificationPanel && (
+                {showNotificationPanel && createPortal(
                   <motion.div
                     initial={{ opacity: 0, y: -8, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className={`absolute right-0 top-full mt-2 w-72 rounded-xl border shadow-2xl overflow-hidden z-50 ${
+                    style={{ position: 'fixed', top: notifDropdownPos.top, right: notifDropdownPos.right }}
+                    className={`w-72 rounded-xl border shadow-2xl overflow-hidden z-[9999] ${
                       isDarkMode
                         ? "bg-[#222120]/95 border-white/10 text-white"
                         : "bg-[#f2f1f0]/95 border-black/10 text-black"
@@ -2768,16 +2912,16 @@ export default function LibraryPage() {
                                   : (isDarkMode ? "bg-white/[0.03] hover:bg-white/5 font-medium" : "bg-black/[0.03] hover:bg-black/5 font-medium")
                               }`}
                             >
-                              <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px] text-zinc-650 dark:text-zinc-350">
+                              <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px]">
                                 {notif.sender_avatar ? (
-                                  <img src={notif.sender_avatar} className="h-full w-full object-cover" alt="" />
+                                  <img src={getStoryImageUrl(notif.sender_avatar)} className="h-full w-full object-cover" alt="" />
                                 ) : (
-                                  notif.sender_name.slice(0, 2).toUpperCase()
+                                  <User className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
                                 )}
                               </div>
                               <div className="flex-1 min-w-0 pr-2">
                                 <p className="leading-tight text-zinc-900 dark:text-zinc-100">
-                                  <span className="font-bold mr-1">{notif.sender_name}</span>
+                                  <span className="font-bold mr-1">{notif.sender_name || "Someone"}</span>
                                   {notif.type === 'like' ? 'liked your image.' : notif.type === 'reply' ? 'replied to your comment.' : notif.type === 'message' ? 'sent you a message.' : (notif.type === 'creation' || notif.type === 'created') ? 'created a new image.' : 'commented on your image.'}
                                 </p>
                                 {notif.type !== 'like' && notif.content && (
@@ -2835,8 +2979,7 @@ export default function LibraryPage() {
                         </div>
                       )}
                     </div>
-                  </motion.div>
-                )}
+                  </motion.div>, document.body)}
               </div>
 
               <button
@@ -3841,7 +3984,7 @@ export default function LibraryPage() {
                       title="Like"
                     >
                       <motion.div
-                        animate={{ scale: isLiked ? [1, 1.45, 1.15] : 1 }}
+                        animate={{ scale: isLiked ? [1, 1.15] : 1 }}
                         transition={{ type: "spring", stiffness: 600, damping: 15 }}
                       >
                         <Heart className={`h-6 w-6 transition-all ${isLiked ? "fill-red-500 text-red-500" : ""}`} />
@@ -3904,13 +4047,19 @@ export default function LibraryPage() {
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full overflow-hidden bg-gradient-to-tr from-[#A855F7] to-[#00DDDD] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
                         {creatorInfo.avatar ? (
-                          <img src={creatorInfo.avatar} className="h-full w-full object-cover" alt={creatorInfo.name} />
+                          <img src={getStoryImageUrl(creatorInfo.avatar)} className="h-full w-full object-cover" alt={creatorInfo.name} />
                         ) : (
-                          creatorInfo.name.slice(0, 2).toUpperCase()
+                          <User className="h-5 w-5 text-white/70" />
                         )}
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-sm leading-tight text-zinc-950 dark:text-zinc-50 hover:underline cursor-pointer">{creatorInfo.name}</span>
+                        <Link
+                          href={`/profile/${encodeURIComponent(creatorInfo.id || creatorInfo.name)}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="font-bold text-sm leading-tight text-zinc-950 dark:text-zinc-50 hover:underline cursor-pointer"
+                        >
+                          {creatorInfo.name}
+                        </Link>
                         <span className="text-[9px] uppercase font-mono tracking-widest text-[#00DDDD] dark:text-[#00DDDD] font-semibold mt-0.5">Creator</span>
                       </div>
                     </div>
@@ -4012,9 +4161,9 @@ export default function LibraryPage() {
                                   : "bg-[#0d0d0c] text-white"
                               }`}>
                                 {comment.user_avatar ? (
-                                  <img src={comment.user_avatar} className="h-full w-full object-cover rounded-full" alt={comment.user_name} />
+                                  <img src={getStoryImageUrl(comment.user_avatar)} className="h-full w-full object-cover rounded-full" alt={comment.user_name} />
                                 ) : (
-                                  comment.user_name.slice(0, 2).toUpperCase()
+                                  <User className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
                                 )}
                               </div>
                               <div className="flex-1 flex flex-col pt-0.5 pl-0.5">
@@ -4092,15 +4241,89 @@ export default function LibraryPage() {
                         (userName || "U").slice(0, 1).toUpperCase()
                       )}
                     </div>
-                    <div className="flex-1 flex items-center border border-zinc-200 dark:border-zinc-700 rounded-full px-3.5 py-2.5 bg-white dark:bg-zinc-800 transition-all focus-within:ring-2 focus-within:ring-zinc-400 dark:focus-within:ring-zinc-500">
+                    <div className="flex-1 flex items-center border border-zinc-200 dark:border-zinc-700 rounded-full px-3.5 py-2.5 bg-white dark:bg-zinc-800 transition-all focus-within:ring-2 focus-within:ring-zinc-400 dark:focus-within:ring-zinc-500 relative">
                       <input
                         id="comment-input-field"
                         type="text"
                         placeholder={replyToComment ? `Reply to ${replyToComment.user_name}...` : "Add a comment..."}
                         value={newCommentText}
-                        onChange={(e) => setNewCommentText(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          setNewCommentText(val)
+                          const caretPos = e.target.selectionStart ?? val.length
+                          const beforeCaret = val.slice(0, caretPos)
+                          const atIdx = beforeCaret.lastIndexOf("@")
+                          if (atIdx !== -1 && (atIdx === 0 || beforeCaret[atIdx - 1] === " ")) {
+                            const query = beforeCaret.slice(atIdx + 1)
+                            if (query.includes(" ")) {
+                              setMentionActive(false)
+                            } else {
+                              setMentionQuery(query)
+                              setMentionStartPos(atIdx)
+                              setMentionActive(true)
+                              setMentionSelectedIdx(0)
+                            }
+                          } else {
+                            setMentionActive(false)
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (!mentionActive) return
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault()
+                            setMentionSelectedIdx((prev) => Math.min(prev + 1, mentionSuggestions.length - 1))
+                          } else if (e.key === "ArrowUp") {
+                            e.preventDefault()
+                            setMentionSelectedIdx((prev) => Math.max(prev - 1, 0))
+                          } else if (e.key === "Enter" || e.key === "Tab") {
+                            const sel = mentionSuggestions[mentionSelectedIdx]
+                            if (sel) {
+                              e.preventDefault()
+                              const before = newCommentText.slice(0, mentionStartPos)
+                              const after = newCommentText.slice(mentionStartPos + mentionQuery.length + 1)
+                              setNewCommentText(`${before}@${sel.username} ${after}`)
+                              setMentionActive(false)
+                            }
+                          } else if (e.key === "Escape") {
+                            setMentionActive(false)
+                          }
+                        }}
                         className="flex-1 bg-transparent border-none outline-none text-sm placeholder-zinc-400 pr-2"
                       />
+                      {mentionActive && mentionSuggestions.length > 0 && (
+                        <div className={`absolute left-0 right-0 bottom-full mb-1.5 rounded-lg overflow-hidden shadow-lg border z-50 ${
+                          isDarkMode ? "bg-zinc-800 border-zinc-700" : "bg-white border-zinc-200"
+                        }`}>
+                          {mentionSuggestions.map((user, idx) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                const before = newCommentText.slice(0, mentionStartPos)
+                                const after = newCommentText.slice(mentionStartPos + mentionQuery.length + 1)
+                                setNewCommentText(`${before}@${user.username} ${after}`)
+                                setMentionActive(false)
+                              }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${
+                                idx === mentionSelectedIdx
+                                  ? isDarkMode ? "bg-zinc-700 text-white" : "bg-zinc-100 text-zinc-900"
+                                  : isDarkMode ? "text-zinc-300 hover:bg-zinc-700" : "text-zinc-600 hover:bg-zinc-50"
+                              }`}
+                            >
+                              {user.profile_picture ? (
+                                <img src={user.profile_picture} className="h-5 w-5 rounded-full object-cover" alt="" />
+                              ) : (
+                                <div className="h-5 w-5 rounded-full bg-zinc-400 flex items-center justify-center text-[8px] font-bold text-white">
+                                  {user.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <span className="font-medium">{user.name}</span>
+                              <span className="text-zinc-400">@{user.username}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {replyToComment && (
                         <button
                           type="button"
@@ -4225,6 +4448,7 @@ export default function LibraryPage() {
               userEmail={userEmail || ""}
               userRole={userRole}
               schoolName={schoolName || ""}
+              profilePic={profilePic}
               subscription={subscription}
               isDarkMode={isDarkMode}
               onClose={() => setIsPersonalizationModalOpen(false)}

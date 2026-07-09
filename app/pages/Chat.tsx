@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Send, Bot, User, LogOut, MessageSquare, Plus, Search,
@@ -15,7 +16,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Poppins, Roboto, Space_Grotesk } from "next/font/google";
-import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole, isUpgradeRestricted, isRegularUser, getSchoolName, getEnterpriseName, removeUserRole, removeSchoolName, removeEnterpriseName, getProfilePicture } from "@/lib/auth";
+import { isAuthenticated, getApiKey, removeApiKey, getUserInfo, removeUserInfo, getUserRole, isUpgradeRestricted, isRegularUser, getSchoolName, getEnterpriseName, removeUserRole, removeSchoolName, removeEnterpriseName, getProfilePicture, setProfilePicture } from "@/lib/auth";
 import { useTheme } from "@/lib/theme-context";
 import { useTranslation } from "react-i18next";
 import Cookies from "js-cookie";
@@ -37,6 +38,7 @@ import {
     getFeatureIdForEngine,
     getNotifications,
     markNotificationAsRead,
+    getDMConversations,
     type SocialNotification,
     discontinueAccount,
     getNotes,
@@ -44,7 +46,12 @@ import {
     updateNote,
     deleteNote,
     aiRewriteNote,
-    type Note
+    type Note,
+    getCurrentUserProfile,
+    pushClipboard,
+    pullClipboard,
+    getClipboardHistory,
+    type ClipboardItem,
 } from "@/lib/chat-api";
 import { processFile, ProcessedFile } from "@/lib/file-processor";
 import { toast } from "sonner";
@@ -66,6 +73,25 @@ import OnboardingWalkthrough from "@/components/OnboardingWalkthrough";
 import SettingsModal from "@/components/ui/SettingsModal";
 import ReflectiveCard from "@/components/ReflectiveCard";
 import WalletModal from "@/components/ui/WalletModal";
+
+const getStoryImageUrl = (url: string) => {
+  if (!url) return ""
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:") || url.startsWith("blob:")) {
+    return url
+  }
+  const apiRoot = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000"
+  let serverRoot = apiRoot
+  if (serverRoot.endsWith("/api/v1")) {
+    serverRoot = serverRoot.slice(0, -7)
+  } else if (serverRoot.endsWith("/api/v1/")) {
+    serverRoot = serverRoot.slice(0, -8)
+  }
+  const cleanServerRoot = serverRoot.endsWith("/") ? serverRoot.slice(0, -1) : serverRoot
+  if (url.startsWith("/")) {
+    return `${cleanServerRoot}${url}`
+  }
+  return `${cleanServerRoot}/${url}`
+}
 
 function getContrastColor(hex: string): string {
     if (!hex) return "";
@@ -262,6 +288,29 @@ const Chat = () => {
     const [notifications, setNotifications] = useState<SocialNotification[]>([]);
     const [showNotificationPanel, setShowNotificationPanel] = useState(false);
     const notificationPanelRef = useRef<HTMLDivElement>(null);
+    const [notifDropdownPos, setNotifDropdownPos] = useState({ top: 0, right: 0 });
+
+    // DM state
+    const [showDMPanel, setShowDMPanel] = useState(false);
+    const [dmConversations, setDmConversations] = useState<any[]>([]);
+    const [dmConvLoading, setDmConvLoading] = useState(false);
+    const dmPanelRef = useRef<HTMLDivElement>(null);
+    const [dmPanelPos, setDmPanelPos] = useState({ top: 0, right: 0 });
+
+    useEffect(() => {
+        if (showDMPanel && dmPanelRef.current) {
+            const rect = dmPanelRef.current.getBoundingClientRect()
+            setDmPanelPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
+        }
+    }, [showDMPanel])
+
+    useEffect(() => {
+        if (showNotificationPanel && notificationPanelRef.current) {
+            const rect = notificationPanelRef.current.getBoundingClientRect()
+            setNotifDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
+        }
+    }, [showNotificationPanel])
+
     const [userName, setUserName] = useState<string>("");
     const [userEmail, setUserEmail] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>(getWelcomeMessages);
@@ -382,6 +431,13 @@ const Chat = () => {
     const [gmailRewrittenBody, setGmailRewrittenBody] = useState("");
     const gmailAutoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const gmailAutoRunningRef = useRef(false);
+
+    // Clipboard sync state
+    const [clipboardOpen, setClipboardOpen] = useState(false);
+    const [clipboardPushing, setClipboardPushing] = useState(false);
+    const [clipboardPulling, setClipboardPulling] = useState(false);
+    const clipboardRef = useRef<HTMLDivElement>(null);
+
     const PLACEHOLDER_TEXTS = useMemo(() => [
         t("hint_1"),
         t("hint_2"),
@@ -423,6 +479,18 @@ const Chat = () => {
     useEffect(() => {
         if (typeof window !== "undefined") {
             setProfilePic(getProfilePicture());
+            getCurrentUserProfile()
+                .then((data) => {
+                    if (data.user?.profile_picture) {
+                        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace("/api/v1", "") || ""
+                        const fullUrl = data.user.profile_picture.startsWith("http")
+                            ? data.user.profile_picture
+                            : `${baseUrl}${data.user.profile_picture}`
+                        setProfilePicture(fullUrl)
+                        setProfilePic(fullUrl)
+                    }
+                })
+                .catch(() => {})
         }
     }, [isPersonalizationModalOpen]);
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
@@ -1073,7 +1141,14 @@ const Chat = () => {
                 );
             }
             if (typeof window !== "undefined") {
-                localStorage.setItem("expand_asset_id", notif.asset_id);
+                const isCreation = notif.type === "creation" || notif.type === "created";
+                if (isCreation) {
+                    localStorage.removeItem("expand_asset_id");
+                    localStorage.removeItem("expand_notif_type");
+                } else {
+                    localStorage.setItem("expand_asset_id", notif.asset_id);
+                    localStorage.setItem("expand_notif_type", notif.type);
+                }
                 router.push("/library");
             }
         } catch (err: any) {
@@ -1102,6 +1177,71 @@ const Chat = () => {
             setTimeout(() => setCopiedMsgIndex(null), 2000);
         }
     };
+
+    // Clipboard sync handlers
+    const handleClipboardPush = useCallback(async (text: string) => {
+        if (!text.trim()) {
+            toast.error("Nothing to push — input is empty.");
+            return;
+        }
+        setClipboardPushing(true);
+        try {
+            await pushClipboard(text);
+            toast.success("Pushed to clipboard! Access it from your other devices.");
+        } catch (err: any) {
+            toast.error(err.message || "Failed to push clipboard.");
+        } finally {
+            setClipboardPushing(false);
+            setClipboardOpen(false);
+        }
+    }, []);
+
+    const handleClipboardPull = useCallback(async (onContent: (text: string) => void) => {
+        setClipboardPulling(true);
+        try {
+            const res = await pullClipboard();
+            if (res.item && res.item.content) {
+                onContent(res.item.content);
+                toast.success(`Pulled clipboard from "${res.item.device_name}"`);
+            } else {
+                toast.error("No clipboard data found on server.");
+            }
+        } catch (err: any) {
+            toast.error(err.message || "Failed to pull clipboard.");
+        } finally {
+            setClipboardPulling(false);
+            setClipboardOpen(false);
+        }
+    }, []);
+
+    const [clipboardHistory, setClipboardHistory] = useState<ClipboardItem[]>([]);
+    const [clipboardHistoryLoading, setClipboardHistoryLoading] = useState(false);
+
+    const handleClipboardHistory = useCallback(async () => {
+        setClipboardHistoryLoading(true);
+        try {
+            const res = await getClipboardHistory();
+            if (res.items) {
+                setClipboardHistory(res.items);
+            }
+        } catch (err: any) {
+            toast.error(err.message || "Failed to fetch clipboard history.");
+        } finally {
+            setClipboardHistoryLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (clipboardRef.current && !clipboardRef.current.contains(e.target as Node)) {
+                setClipboardOpen(false);
+            }
+        };
+        if (clipboardOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [clipboardOpen]);
 
     const downloadAsPdf = (title: string, content: string) => {
         const printWindow = window.open("", "_blank");
@@ -2913,6 +3053,103 @@ STRICT RULES:
 
     const isChatEmpty = messages.length === 0 || messages.every((msg) => msg.localOnly);
 
+    const renderClipboardDropdown = (getText: () => string, onPull: (text: string) => void, compact = false) => {
+        const isPushing = clipboardPushing;
+        const isPulling = clipboardPulling;
+        return (
+            <div className="relative" ref={clipboardRef}>
+                <motion.button
+                    onClick={() => {
+                        const next = !clipboardOpen;
+                        setClipboardOpen(next);
+                        if (next) void handleClipboardHistory();
+                    }}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className={`p-1.5 rounded-lg transition-all duration-200 ${clipboardOpen
+                        ? (isDarkMode ? "bg-white/15 text-white" : "bg-black/15 text-black")
+                        : (isDarkMode ? "text-white/40 hover:text-white hover:bg-white/5" : "text-black/40 hover:text-black hover:bg-black/5")
+                    }`}
+                    title="Clipboard sync"
+                >
+                    <svg className={`${compact ? "h-3 w-3" : "h-3.5 w-3.5"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="8" y="2" width="8" height="4" rx="1" />
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                        <path d="M12 11h4" /><path d="M12 16h4" /><path d="M8 11h.01" /><path d="M8 16h.01" />
+                    </svg>
+                </motion.button>
+
+                {clipboardOpen && (
+                    <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 rounded-xl border shadow-2xl overflow-hidden z-50 ${isDarkMode ? "bg-[#1c1c1b] border-white/10" : "bg-white border-black/10"}`}>
+                        {/* Push */}
+                        <button
+                            onClick={() => handleClipboardPush(getText())}
+                            disabled={isPushing}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-[11px] font-medium transition-all hover:bg-white/5 disabled:opacity-50 ${isDarkMode ? "text-white" : "text-black"}`}
+                        >
+                            {isPushing ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 5v14" /><path d="m19 12-7 7-7-7" />
+                                </svg>
+                            )}
+                            <span>{isPushing ? "Pushing..." : "Push to devices"}</span>
+                        </button>
+
+                        <div className={`h-px mx-3 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                        {/* Pull */}
+                        <button
+                            onClick={() => handleClipboardPull(onPull)}
+                            disabled={isPulling}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-[11px] font-medium transition-all hover:bg-white/5 disabled:opacity-50 ${isDarkMode ? "text-white" : "text-black"}`}
+                        >
+                            {isPulling ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 5v14" /><path d="m19 12-7 7-7-7" />
+                                </svg>
+                            )}
+                            <span>{isPulling ? "Pulling..." : "Pull from devices"}</span>
+                        </button>
+
+                        <div className={`h-px mx-3 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                        {/* History */}
+                        <div className="max-h-40 overflow-y-auto">
+                            {clipboardHistoryLoading ? (
+                                <div className="flex items-center justify-center py-3">
+                                    <Loader2 className={`h-3.5 w-3.5 animate-spin ${isDarkMode ? "text-white/50" : "text-black/50"}`} />
+                                </div>
+                            ) : clipboardHistory.length > 0 ? (
+                                clipboardHistory.slice(0, 5).map((item) => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => {
+                                            onPull(item.content);
+                                            setClipboardOpen(false);
+                                            toast.success(`Loaded clipboard from "${item.device_name}"`);
+                                        }}
+                                        className={`w-full flex items-start gap-2 px-3 py-2 text-[10px] transition-all hover:bg-white/5 text-left ${isDarkMode ? "text-white/70 hover:text-white" : "text-black/70 hover:text-black"}`}
+                                    >
+                                        <Clock className="h-3 w-3 mt-0.5 shrink-0 opacity-50" />
+                                        <span className="line-clamp-2 break-all">{item.content}</span>
+                                    </button>
+                                ))
+                            ) : (
+                                <div className={`px-3 py-2.5 text-[10px] ${isDarkMode ? "text-white/30" : "text-black/40"}`}>
+                                    No clipboard history
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     const renderInputContainer = (isCenteredEmptyState: boolean) => {
         const inputId = isCenteredEmptyState ? "chat-file-input-empty" : "chat-file-input-active";
         return (
@@ -3141,6 +3378,11 @@ STRICT RULES:
                             accept="image/*,application/pdf,text/plain,.md"
                             disabled={isLoading || isProcessingFile}
                         />
+                        <div className={`h-4 w-px ${isDarkMode ? "bg-white/10" : "bg-black/10"} mx-1`} />
+
+                        {/* Clipboard Sync Button */}
+                        {renderClipboardDropdown(() => input, (text) => setInput(text))}
+
                         <div className={`h-4 w-px ${isDarkMode ? "bg-white/10" : "bg-black/10"} mx-1`} />
 
                         {/* Quick Engine Mode Switcher */}
@@ -3449,7 +3691,7 @@ STRICT RULES:
                                     onClick={() => setShowProfileDropup(!showProfileDropup)}
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
-                                    className={`h-8 w-8 rounded-full overflow-hidden border border-transparent transition-all cursor-pointer relative shrink-0 flex items-center justify-center animate-fade-in ${selectedEngine === "AI Image Lab" ? "hover:border-black" : "hover:border-accent"}`}
+                                    className={`h-8 w-8 rounded-full overflow-hidden border border-transparent transition-all cursor-pointer relative shrink-0 flex items-center justify-center animate-plan-icon ${selectedEngine === "AI Image Lab" ? "hover:border-black" : "hover:border-accent"}`}
                                     title={t("profile_options")}
                                 >
                                     {profilePic ? (
@@ -4121,7 +4363,23 @@ STRICT RULES:
                                         )}
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className={`text-[11px] font-bold truncate ${isDarkMode ? "text-white" : "text-black"}`}>{userRole === "global_admin" ? "CEO" : (userName || userEmail || t("user_fallback"))}</span>
+                                        <span className={`text-[11px] font-bold truncate inline-flex items-center gap-1 ${isDarkMode ? "text-white" : "text-black"}`}>{userRole === "global_admin" ? "CEO" : ((userName || "").split(" ")[0] || userEmail || t("user_fallback"))}
+                                            {(subscription?.subscription?.plan_name?.toLowerCase() === "motion") && (
+                                                <img src="/run.png" alt="" className="w-3.5 h-3.5 object-contain shrink-0 animate-plan-icon" />
+                                            )}
+                                            {(subscription?.subscription?.plan_name?.toLowerCase() === "speed") && (
+                                                <img src="/ride-a-bike.png" alt="" className="w-3.5 h-3.5 object-contain shrink-0 animate-plan-icon" />
+                                            )}
+                                            {(subscription?.subscription?.plan_name?.toLowerCase() === "velocity") && (
+                                                <img src="/car.png" alt="" className="w-3.5 h-3.5 object-contain shrink-0 animate-plan-icon" />
+                                            )}
+                                            {(subscription?.subscription?.plan_name?.toLowerCase() === "acceleration") && (
+                                                <img src="/air-force.png" alt="" className="w-3.5 h-3.5 object-contain shrink-0 animate-plan-icon" />
+                                            )}
+                                            {(subscription?.subscription?.plan_name?.toLowerCase().includes("agency") || subscription?.subscription?.plan_name?.toLowerCase().includes("heavy duty")) && (
+                                                <img src="/startup.png" alt="" className="w-3.5 h-3.5 object-contain shrink-0 animate-plan-icon" />
+                                            )}
+                                        </span>
                                         <span className={`text-[9px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{userRole === "school_admin" ? t("admin_role") : userRole === "faculty" ? t("faculty_role") : userRole === "enterprise_admin" ? t("admin_role") : userRole === "manager" ? t("manager_role") : userRole === "global_admin" ? t("admin_role") : (subscription?.subscription?.plan_name?.toLowerCase().includes("agency") || subscription?.subscription?.plan_name?.toLowerCase().includes("heavy duty") ? "Agency" : subscription?.subscription?.plan_name || t("free_trial"))}</span>
                                     </div>
                                 </motion.button>
@@ -4286,13 +4544,14 @@ STRICT RULES:
                                     )}
                                 </motion.button>
 
-                                {showNotificationPanel && (
+                                {showNotificationPanel && createPortal(
                                     <motion.div
                                         initial={{ opacity: 0, y: -8, scale: 0.95 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: -8, scale: 0.95 }}
                                         transition={{ duration: 0.15 }}
-                                        className={`absolute right-0 top-full mt-2 w-72 rounded-xl border shadow-2xl overflow-hidden z-50 ${
+                                        style={{ position: 'fixed', top: notifDropdownPos.top, right: notifDropdownPos.right }}
+                                        className={`w-72 rounded-xl border shadow-2xl overflow-hidden z-[9999] ${
                                             isDarkMode
                                                 ? "bg-[#222120]/95 border-white/10 text-white"
                                                 : "bg-[#f2f1f0]/95 border-black/10 text-black"
@@ -4352,16 +4611,16 @@ STRICT RULES:
                                                                         : (isDarkMode ? "bg-white/[0.03] hover:bg-white/5 font-medium" : "bg-black/[0.03] hover:bg-black/5 font-medium")
                                                                 }`}
                                                             >
-                                                                <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px] text-zinc-650 dark:text-zinc-350">
+                                                                <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px]">
                                                                     {notif.sender_avatar ? (
-                                                                        <img src={notif.sender_avatar} className="h-full w-full object-cover" alt="" />
+                                                                        <img src={getStoryImageUrl(notif.sender_avatar)} className="h-full w-full object-cover" alt="" />
                                                                     ) : (
-                                                                        notif.sender_name.slice(0, 2).toUpperCase()
+                                                                        <User className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
                                                                     )}
                                                                 </div>
                                                                 <div className="flex-1 min-w-0 pr-2">
                                                                     <p className="leading-tight text-zinc-900 dark:text-zinc-100">
-                                                                        <span className="font-bold mr-1">{notif.sender_name}</span>
+                                                                        <span className="font-bold mr-1">{notif.sender_name || "Someone"}</span>
                                                                         {notif.type === 'like' ? 'liked your image.' : notif.type === 'reply' ? 'replied to your comment.' : notif.type === 'message' ? 'sent you a message.' : (notif.type === 'creation' || notif.type === 'created') ? 'created a new image.' : 'commented on your image.'}
                                                                     </p>
                                                                     {notif.type !== 'like' && notif.content && (
@@ -4387,8 +4646,106 @@ STRICT RULES:
                                                 </div>
                                             )}
                                         </div>
-                                    </motion.div>
-                                )}
+                                    </motion.div>, document.body)}
+                            </div>
+
+                            {/* DM Conversations Panel */}
+                            <div className="relative" ref={dmPanelRef}>
+                                <motion.button
+                                    onClick={async () => {
+                                        const next = !showDMPanel
+                                        setShowDMPanel(next)
+                                        if (next) {
+                                            setDmConvLoading(true)
+                                            try {
+                                                const res = await getDMConversations()
+                                                if (res.success) {
+                                                    setDmConversations(res.conversations)
+                                                }
+                                            } catch {}
+                                            setDmConvLoading(false)
+                                        }
+                                    }}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer relative ${isDarkMode
+                                            ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                                            : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                                        }`}
+                                    title="Direct Messages"
+                                >
+                                    <MessageSquare className="h-4 w-4" />
+                                    {dmConversations.some(c => c.unread_count > 0) && (
+                                        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-sky-500 ring-2 ring-white dark:ring-[#0d0d0c]" />
+                                    )}
+                                </motion.button>
+
+                                {showDMPanel && createPortal(
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                                        transition={{ duration: 0.15 }}
+                                        style={{ position: 'fixed', top: dmPanelPos.top, right: dmPanelPos.right }}
+                                        className={`w-72 rounded-xl border shadow-2xl overflow-hidden z-[9999] ${
+                                            isDarkMode
+                                                ? "bg-[#222120]/95 border-white/10 text-white"
+                                                : "bg-[#f2f1f0]/95 border-black/10 text-black"
+                                        }`}
+                                    >
+                                        <div className="p-3 space-y-2">
+                                            <div className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                Conversations
+                                            </div>
+                                            <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                                            {dmConvLoading ? (
+                                                <div className="flex justify-center py-4">
+                                                    <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                                                </div>
+                                            ) : dmConversations.length > 0 ? (
+                                                <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+                                                    {dmConversations.map((conv) => (
+                                                        <button
+                                                            key={conv.user_id}
+                                                            onClick={() => {
+                                                                setShowDMPanel(false)
+                                                                router.push(`/profile/${encodeURIComponent(conv.username || conv.user_name)}`)
+                                                            }}
+                                                            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors text-xs ${
+                                                                isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
+                                                            }`}
+                                                        >
+                                                            <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px]">
+                                                                {conv.profile_picture ? (
+                                                                    <img src={getStoryImageUrl(conv.profile_picture)} className="h-full w-full object-cover" alt="" />
+                                                                ) : (
+                                                                    <User className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="font-medium truncate flex items-center gap-1.5">
+                                                                    {conv.user_name}
+                                                                    {conv.unread_count > 0 && (
+                                                                        <span className="bg-sky-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                                                                            {conv.unread_count}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className={`text-[10px] truncate mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                                    {conv.last_message}
+                                                                </div>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className={`px-3 py-6 text-center text-xs ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                    No conversations
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>, document.body)}
                             </div>
 
                         {/* Theme Toggler */}
@@ -4842,6 +5199,9 @@ STRICT RULES:
                                                     </button>
                                                 );
                                             })}
+                                            <div className="flex items-center ml-1 pl-1 border-l border-white/10">
+                                                {renderClipboardDropdown(() => input, (text) => setInput(text), true)}
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -6452,6 +6812,29 @@ STRICT RULES:
                                 }}
                             />
 
+                            {/* Clipboard Sync Button */}
+                            <div className="flex items-center">
+                                {renderClipboardDropdown(
+                                    () => {
+                                        if (noteEditorRef.current) {
+                                            const sel = window.getSelection();
+                                            if (sel && sel.toString().trim()) return sel.toString();
+                                            return noteEditorRef.current.innerText || "";
+                                        }
+                                        return editorTitle;
+                                    },
+                                    (text) => {
+                                        if (noteEditorRef.current) {
+                                            noteEditorRef.current.focus();
+                                            document.execCommand("insertHTML", false, text.replace(/\n/g, "<br>"));
+                                            void handleUpdateNote(selectedNote.id, { content: getNoteContent() });
+                                        }
+                                    }
+                                )}
+                            </div>
+
+                            <div className="w-px h-5 bg-zinc-700 mx-0.5" />
+
                             {/* AI Rewrite Panel Toggle */}
                             <button
                                 onClick={() => setShowAiRewrite(!showAiRewrite)}
@@ -6924,6 +7307,7 @@ Do NOT wrap the output in markdown code fences. Do NOT add explanations or greet
                             userEmail={userEmail || ""}
                             userRole={userRole}
                             schoolName={schoolName || ""}
+                            profilePic={profilePic}
                             subscription={subscription}
                             isDarkMode={isDarkMode}
                             onClose={() => setIsPersonalizationModalOpen(false)}

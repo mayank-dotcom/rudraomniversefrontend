@@ -180,7 +180,16 @@ const ReflectiveCard: React.FC<ReflectiveCardProps> = ({
           )}
         </div>
 
-        <div className="flex-1 flex flex-col justify-center items-center text-center gap-3 px-2">
+        <div className="flex-1 flex flex-col justify-center items-center text-center gap-4 px-2">
+          {profilePic ? (
+            <div className="h-20 w-20 rounded-full overflow-hidden ring-2 ring-white/30 shadow-xl">
+              <img src={profilePic} alt={userName} className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <div className="h-20 w-20 rounded-full bg-white/10 flex items-center justify-center ring-2 ring-white/20 shadow-xl">
+              <span className="text-3xl font-bold text-white/70">{userName.slice(0, 1).toUpperCase()}</span>
+            </div>
+          )}
           <div className="text-center space-y-2">
             <h2 className="text-[26px] font-bold tracking-[0.02em] leading-tight drop-shadow-lg text-white">{userName.toUpperCase()}</h2>
             <p className="text-xs font-semibold tracking-[0.25em] opacity-85 uppercase">{roleLabel}</p>
