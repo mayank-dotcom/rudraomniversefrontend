@@ -23,18 +23,10 @@ export async function GET(request: NextRequest) {
     backendUrl.searchParams.set("code", code)
     backendUrl.searchParams.set("state", state)
 
-    const response = await fetch(backendUrl.toString(), { redirect: "manual" })
-
-    const location = response.headers.get("location") || ""
-    const email = new URLSearchParams(location.includes("?") ? location.split("?")[1] : "").get("email") || ""
-    const error = new URLSearchParams(location.includes("?") ? location.split("?")[1] : "").get("error") || ""
-
-    if (error) {
-      return NextResponse.redirect(new URL(`/google-connected?error=${encodeURIComponent(error)}`, request.url))
-    }
-
-    return NextResponse.redirect(new URL(`/google-connected?email=${encodeURIComponent(email)}`, request.url))
-  } catch {
-    return NextResponse.redirect(new URL("/google-connected?error=Connection+failed", request.url))
+    // Redirect the user's browser directly to the backend callback handler
+    // The backend will process tokens and redirect back to the frontend success page.
+    return NextResponse.redirect(backendUrl)
+  } catch (e: any) {
+    return NextResponse.redirect(new URL(`/google-connected?error=${encodeURIComponent(e.message || "Connection failed")}`, request.url))
   }
 }

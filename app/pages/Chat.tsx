@@ -808,16 +808,22 @@ const Chat = () => {
     const handleConnectGmail = async () => {
         setGmailConnecting(true)
         setGmailError("")
+        const popup = window.open("", "_blank", "width=600,height=700")
+        if (popup) {
+            popup.document.write("<p style='font-family:sans-serif; text-align:center; padding-top:20px;'>Connecting to Google...</p>")
+        }
         try {
             const { getGoogleAuthUrl } = await import("@/lib/chat-api")
             const redirectUri = window.location.origin + '/google-connected'
             const res = await getGoogleAuthUrl(redirectUri)
-            if (res.success && res.url) {
-                window.open(res.url, "_blank", "width=600,height=700")
+            if (res.success && res.url && popup) {
+                popup.location.href = res.url
             } else {
-                setGmailError("Failed to get auth URL")
+                if (popup) popup.close()
+                setGmailError(res.error || "Failed to get auth URL")
             }
         } catch (e: any) {
+            if (popup) popup.close()
             setGmailError("Connection error: " + (e.message || "Unknown"))
         } finally {
             setGmailConnecting(false)
