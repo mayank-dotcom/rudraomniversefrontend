@@ -37,6 +37,8 @@ import {
   type SocialNotification,
   getCurrentUserProfile,
   getUserProfile,
+  getUserFollowers,
+  getUserFollowing,
 } from "@/lib/chat-api"
 import {
   isAuthenticated,
@@ -54,9 +56,25 @@ import { useTheme } from "@/lib/theme-context"
 
 const getStoryImageUrl = (url: string) => {
   if (!url) return ""
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:") || url.startsWith("blob:")) {
+  if (url.startsWith("data:") || url.startsWith("blob:")) {
     return url
   }
+  
+  let cleanUrl = url
+  
+  // Extract relative uploads path to avoid hardcoded domain mismatches from localStorage
+  if (cleanUrl.includes("/uploads/")) {
+    const idx = cleanUrl.indexOf("/uploads/")
+    cleanUrl = cleanUrl.substring(idx)
+  } else if (cleanUrl.includes("/api/v1/uploads/")) {
+    const idx = cleanUrl.indexOf("/api/v1/uploads/")
+    cleanUrl = "/uploads/" + cleanUrl.substring(idx + 16)
+  }
+  
+  if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
+    return cleanUrl
+  }
+  
   const apiRoot = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000"
   let serverRoot = apiRoot
   if (serverRoot.endsWith("/api/v1")) {
@@ -65,11 +83,22 @@ const getStoryImageUrl = (url: string) => {
     serverRoot = serverRoot.slice(0, -8)
   }
   const cleanServerRoot = serverRoot.endsWith("/") ? serverRoot.slice(0, -1) : serverRoot
-  if (url.startsWith("/")) {
-    return `${cleanServerRoot}${url}`
-  }
-  return `${cleanServerRoot}/${url}`
+  
+  const relativePath = cleanUrl.startsWith("/") ? cleanUrl : `/${cleanUrl}`
+  return `${cleanServerRoot}${relativePath}`
 }
+
+const getStoryImgs = (story: any): string[] => {
+  if (!story) return []
+  if (Array.isArray(story.imgs) && story.imgs.length > 0) {
+    return story.imgs
+  }
+  if (story.img) {
+    return [story.img]
+  }
+  return []
+}
+
 import {
   Loader2,
   Trash2,
@@ -265,18 +294,18 @@ const renderCommentContent = (content: string, siblingUsernames: string[] = []) 
   return content;
 };
 
-const ReplyItem = ({ 
-  reply, 
-  depth, 
-  commentId, 
-  isDarkMode, 
+const ReplyItem = ({
+  reply,
+  depth,
+  commentId,
+  isDarkMode,
   handleReplyClick,
   siblingUsernames
-}: { 
-  reply: any; 
-  depth: number; 
-  commentId: any; 
-  isDarkMode: boolean; 
+}: {
+  reply: any;
+  depth: number;
+  commentId: any;
+  isDarkMode: boolean;
   handleReplyClick: (commentId: any, targetUsername: string) => void;
   siblingUsernames: string[];
 }) => {
@@ -287,19 +316,18 @@ const ReplyItem = ({
     <div className="relative">
       {/* Sibling reply layout */}
       <div className="flex gap-2.5 items-start text-sm relative pl-6 group/reply">
-        
+
         {/* Curved arrow line */}
         <div className="absolute left-3 -top-3 h-6 w-3 border-l border-b border-black dark:border-white rounded-bl-lg pointer-events-none" />
-        
+
         {/* Arrowhead */}
         <div className="absolute left-[20px] top-[9px] w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-l-[4px] border-l-black dark:border-l-white pointer-events-none" />
-        
+
         {/* Avatar */}
-        <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 transition-colors duration-300 relative z-10 ${
-          isDarkMode 
-            ? "bg-[#f4f3f2] text-black" 
+        <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 transition-colors duration-300 relative z-10 ${isDarkMode
+            ? "bg-[#f4f3f2] text-black"
             : "bg-[#0d0d0c] text-white"
-        }`}>
+          }`}>
           {reply.user_avatar ? (
             <img src={getStoryImageUrl(reply.user_avatar)} className="h-full w-full object-cover rounded-full" alt={reply.user_name} />
           ) : (
@@ -320,7 +348,7 @@ const ReplyItem = ({
               })}
             </span>
           </div>
-          
+
           <p className="leading-normal text-xs md:text-sm mt-1 text-zinc-700 dark:text-zinc-300">
             {renderCommentContent(reply.content, siblingUsernames)}
           </p>
@@ -352,13 +380,13 @@ const ReplyItem = ({
         <div className="ml-6 relative space-y-3 mt-3">
           {/* Vertical timeline line for this reply's own children */}
           <div className="absolute left-3 top-0 bottom-5 w-px bg-black dark:bg-white pointer-events-none" />
-          
+
           {reply.replies.map((childReply: any) => (
-            <ReplyItem 
-              key={childReply.id} 
-              reply={childReply} 
-              depth={depth + 1} 
-              commentId={commentId} 
+            <ReplyItem
+              key={childReply.id}
+              reply={childReply}
+              depth={depth + 1}
+              commentId={commentId}
               isDarkMode={isDarkMode}
               handleReplyClick={handleReplyClick}
               siblingUsernames={siblingUsernames}
@@ -374,10 +402,10 @@ const mergeImagesSideBySide = (img1DataUrl: string, img2DataUrl: string): Promis
   return new Promise((resolve, reject) => {
     const img1 = new Image()
     const img2 = new Image()
-    
+
     img1.crossOrigin = "anonymous"
     img2.crossOrigin = "anonymous"
-    
+
     let loadedCount = 0
     const onLoad = () => {
       loadedCount++
@@ -388,33 +416,33 @@ const mergeImagesSideBySide = (img1DataUrl: string, img2DataUrl: string): Promis
           reject(new Error("Could not get 2D context"))
           return
         }
-        
+
         // Target a reasonable height to preserve details and avoid oversized payloads
         const targetHeight = Math.min(800, Math.max(img1.naturalHeight, img2.naturalHeight))
         const scale1 = targetHeight / img1.naturalHeight
         const scale2 = targetHeight / img2.naturalHeight
-        
+
         const width1 = img1.naturalWidth * scale1
         const width2 = img2.naturalWidth * scale2
-        
+
         canvas.width = width1 + width2
         canvas.height = targetHeight
-        
+
         // Draw image 1
         ctx.drawImage(img1, 0, 0, width1, targetHeight)
         // Draw image 2
         ctx.drawImage(img2, width1, 0, width2, targetHeight)
-        
+
         // Convert to base64
         resolve(canvas.toDataURL("image/png"))
       }
     }
-    
+
     img1.onload = onLoad
     img2.onload = onLoad
     img1.onerror = () => reject(new Error("Failed to load first image"))
     img2.onerror = () => reject(new Error("Failed to load second image"))
-    
+
     img1.src = img1DataUrl
     img2.src = img2DataUrl
   })
@@ -423,10 +451,10 @@ const mergeImagesSideBySide = (img1DataUrl: string, img2DataUrl: string): Promis
 export default function LibraryPage() {
   const router = useRouter()
   const { isDarkMode, toggleTheme } = useTheme()
-  
+
   const [assets, setAssets] = useState<LibraryAsset[]>([])
   const [publicAssets, setPublicAssets] = useState<LibraryAsset[]>([])
-  
+
   // Pinterest Detail & Lightbox States
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const [zoomScale, setZoomScale] = useState(1)
@@ -453,7 +481,7 @@ export default function LibraryPage() {
   const [togglingVisibilityId, setTogglingVisibilityId] = useState<string | null>(null)
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set())
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set())
-  
+
   // Custom Interactive States
   const [activeCategory, setActiveCategory] = useState<string>("featured")
   const [aspectRatio, setAspectRatio] = useState<"1:1" | "16:9" | "9:16">("1:1")
@@ -484,6 +512,23 @@ export default function LibraryPage() {
   const [customCategoryList, setCustomCategoryList] = useState<string[]>([])
   const categoryDropdownRef = useRef<HTMLDivElement>(null)
 
+  const [userName, setUserName] = useState<string>("")
+  const [profileName, setProfileName] = useState<string>("")
+  const [profileProfession, setProfileProfession] = useState<string>("")
+  const [postsCount, setPostsCount] = useState<number>(0)
+  const [followersCount, setFollowersCount] = useState<number>(0)
+  const [followingCount, setFollowingCount] = useState<number>(0)
+  const [userEmail, setUserEmail] = useState<string>("")
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [schoolName, setSchoolName] = useState<string>("")
+  const [profilePic, setProfilePic] = useState<string | null>(null)
+ 
+  // Connection Stories States
+  const [connectionStories, setConnectionStories] = useState<any[]>([])
+  const [activeConnectionIndex, setActiveConnectionIndex] = useState<number | null>(null)
+  const [activeSlideIndex, setActiveSlideIndex] = useState<number>(0)
+  const [storyProgress, setStoryProgress] = useState(0)
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
@@ -494,10 +539,124 @@ export default function LibraryPage() {
             setCustomCategoryList(parsed)
           }
         }
-      } catch {}
+      } catch { }
     }
   }, [])
-  
+
+  useEffect(() => {
+    if (!userName) return
+    
+    // Fetch followers and following list to get connections
+    Promise.allSettled([
+      getUserFollowers(userName),
+      getUserFollowing(userName)
+    ]).then(([followersRes, followingRes]) => {
+      let combined: any[] = []
+      if (followersRes.status === "fulfilled" && followersRes.value.success) {
+        combined = [...combined, ...followersRes.value.users]
+      }
+      if (followingRes.status === "fulfilled" && followingRes.value.success) {
+        combined = [...combined, ...followingRes.value.users]
+      }
+      
+      // Deduplicate by user ID
+      const uniqueMap = new Map<string, any>()
+      combined.forEach(u => {
+        uniqueMap.set(u.id, u)
+      })
+      
+      const connections = Array.from(uniqueMap.values())
+      
+      // Load stories for each connection from localStorage
+      const list: any[] = []
+      connections.forEach(conn => {
+        const stored = localStorage.getItem(`rudra_stories_${conn.id}`)
+        if (stored) {
+          try {
+            const storiesList = JSON.parse(stored)
+            if (Array.isArray(storiesList) && storiesList.length > 0) {
+              const seenStored = localStorage.getItem(`rudra_stories_seen_${conn.id}`)
+              const seenSet = seenStored ? new Set<number>(JSON.parse(seenStored)) : new Set<number>()
+              list.push({
+                user: conn,
+                stories: storiesList,
+                seen: seenSet
+              })
+            }
+          } catch (e) {
+            console.error("Failed to parse stories for user:", conn.name, e)
+          }
+        }
+      })
+      setConnectionStories(list)
+    }).catch(err => console.error("Failed to load connection stories in Explore:", err))
+  }, [userName])
+
+  const markConnectionStorySeen = (connIdx: number, slideIdx: number) => {
+    if (connIdx === null || connIdx < 0 || connIdx >= connectionStories.length) return
+    const conn = connectionStories[connIdx]
+    
+    // Add to connection's seen set
+    const newSeen = new Set(conn.seen)
+    newSeen.add(slideIdx)
+    
+    // Update state
+    const updated = [...connectionStories]
+    updated[connIdx] = {
+      ...conn,
+      seen: newSeen
+    }
+    setConnectionStories(updated)
+    
+    // Save to localStorage
+    localStorage.setItem(`rudra_stories_seen_${conn.user.id}`, JSON.stringify(Array.from(newSeen)))
+  }
+
+  // Auto-advance connection story timer
+  useEffect(() => {
+    if (activeConnectionIndex === null) {
+      setStoryProgress(0)
+      return
+    }
+
+    setStoryProgress(0)
+    const duration = 5000
+    const startTime = Date.now()
+    let rafId: number
+
+    const tick = () => {
+      const elapsed = Date.now() - startTime
+      const pct = Math.min((elapsed / duration) * 100, 100)
+      setStoryProgress(pct)
+
+      if (pct >= 100) {
+        const conn = connectionStories[activeConnectionIndex]
+        const activeStorySlides = getStoryImgs(conn.stories[0])
+        const slidesCount = activeStorySlides.length
+        
+        if (activeSlideIndex < slidesCount - 1) {
+          markConnectionStorySeen(activeConnectionIndex, activeSlideIndex)
+          setActiveSlideIndex(activeSlideIndex + 1)
+        } else {
+          markConnectionStorySeen(activeConnectionIndex, activeSlideIndex)
+          if (activeConnectionIndex < connectionStories.length - 1) {
+            setActiveConnectionIndex(activeConnectionIndex + 1)
+            setActiveSlideIndex(0)
+          } else {
+            setActiveConnectionIndex(null)
+          }
+        }
+        return
+      }
+
+      rafId = requestAnimationFrame(tick)
+    }
+
+    rafId = requestAnimationFrame(tick)
+
+    return () => cancelAnimationFrame(rafId)
+  }, [activeConnectionIndex, activeSlideIndex, connectionStories])
+
   // Custom Real Database-backed Galleries States
   const [galleries, setGalleries] = useState<LibraryGallery[]>([])
   const [publicGalleries, setPublicGalleries] = useState<LibraryGallery[]>([])
@@ -516,16 +675,6 @@ export default function LibraryPage() {
   const [sidebarWidth, setSidebarWidth] = useState(260)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
 
-  const [userName, setUserName] = useState<string>("")
-  const [profileName, setProfileName] = useState<string>("")
-  const [profileProfession, setProfileProfession] = useState<string>("")
-  const [postsCount, setPostsCount] = useState<number>(0)
-  const [followersCount, setFollowersCount] = useState<number>(0)
-  const [followingCount, setFollowingCount] = useState<number>(0)
-  const [userEmail, setUserEmail] = useState<string>("")
-  const [userRole, setUserRole] = useState<string | null>(null)
-  const [schoolName, setSchoolName] = useState<string>("")
-  const [profilePic, setProfilePic] = useState<string | null>(null)
   const [subscription, setSubscription] = useState<any>(null)
   const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false)
   const [showProfileDropup, setShowProfileDropup] = useState(false)
@@ -624,7 +773,7 @@ export default function LibraryPage() {
                     setProfilePic(fullUrl)
                   }
                 })
-                .catch(() => {})
+                .catch(() => { })
             }
           }
         } catch {
@@ -648,7 +797,7 @@ export default function LibraryPage() {
       .then((res) => {
         if (res.success) setSubscription(res)
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setIsSubscriptionLoading(false))
   }, [])
 
@@ -759,7 +908,7 @@ export default function LibraryPage() {
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [])
-  
+
   // Fetch assets and galleries from backend
   const fetchAssets = useCallback(async () => {
     const fetchWithRetry = async (
@@ -868,9 +1017,9 @@ export default function LibraryPage() {
       return
     }
     fetchAssets()
-    
+
     // Fetch saved asset IDs from DB
-    getSavedAssetIds().then(setSavedIds).catch(() => {})
+    getSavedAssetIds().then(setSavedIds).catch(() => { })
   }, [fetchAssets, router])
 
   // Close expanded modal or lightbox on Escape key
@@ -1109,7 +1258,7 @@ export default function LibraryPage() {
   const handleNotificationClick = async (notif: SocialNotification) => {
     try {
       setShowNotificationPanel(false)
-      
+
       // Mark as read in DB
       if (!notif.is_read) {
         await markNotificationAsRead(notif.id)
@@ -1124,7 +1273,21 @@ export default function LibraryPage() {
         return
       }
 
+      // Handle DM notifications — navigate to sender's profile
+      if (notif.type === "message") {
+        if (notif.sender_id || notif.sender_name) {
+          router.push(`/profile/${encodeURIComponent(notif.sender_name || notif.sender_id!)}`)
+        } else {
+          toast.success("Message notification")
+        }
+        return
+      }
+
       // Fetch target asset and open detailed modal
+      if (!notif.asset_id) {
+        toast.error("Notification has no associated asset")
+        return
+      }
       const res = await getSingleAsset(notif.asset_id)
       if (res.success && res.asset) {
         setExpandedAsset(res.asset)
@@ -1210,7 +1373,7 @@ export default function LibraryPage() {
   const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
-    
+
     if (editImages.length + files.length > 2) {
       toast.error("You can upload a maximum of 2 reference images.")
       return
@@ -1414,7 +1577,7 @@ export default function LibraryPage() {
   const handleToggleVisibility = async (id: string, currentPublic: boolean) => {
     setTogglingVisibilityId(id)
     const targetPublic = !currentPublic
-    
+
     if (id.startsWith("feat-") || id.startsWith("uploaded-")) {
       if (id.startsWith("uploaded-")) {
         setUploadedAssets((prev) =>
@@ -1431,7 +1594,7 @@ export default function LibraryPage() {
       setAssets((prev) =>
         prev.map((a) => (a.id === id ? { ...a, is_public: targetPublic } : a))
       )
-      
+
       setPublicAssets((prev) => {
         if (targetPublic) {
           const exists = prev.some(a => a.id === id)
@@ -1480,18 +1643,18 @@ export default function LibraryPage() {
       try {
         await unlikeAsset(id)
         setSavedIds((prev) => prev.filter((sId) => sId !== id))
-        
+
         const updatedCount = Math.max(0, (likesCountsMap[id] ?? asset.likes_count ?? 0) - 1)
         setLikesCountsMap((prev) => ({ ...prev, [id]: updatedCount }))
-        
+
         setAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: updatedCount, is_liked: false } : a))
         setPublicAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: updatedCount, is_liked: false } : a))
-        
+
         if (expandedAsset && expandedAsset.id === id) {
           setIsLiked(false)
           setLikesCount(updatedCount)
         }
-        
+
         toast.success("Removed from Saved.")
       } catch {
         toast.error("Failed to unsave.")
@@ -1500,18 +1663,18 @@ export default function LibraryPage() {
       try {
         await likeAsset(id, asset.asset_type, asset.asset_url, asset.prompt || "")
         setSavedIds((prev) => [...prev, id])
-        
+
         const updatedCount = (likesCountsMap[id] ?? asset.likes_count ?? 0) + 1
         setLikesCountsMap((prev) => ({ ...prev, [id]: updatedCount }))
-        
+
         setAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: updatedCount, is_liked: true } : a))
         setPublicAssets((prev) => prev.map((a) => a.id === id ? { ...a, likes_count: updatedCount, is_liked: true } : a))
-        
+
         if (expandedAsset && expandedAsset.id === id) {
           setIsLiked(true)
           setLikesCount(updatedCount)
         }
-        
+
         toast.success("Saved!")
       } catch {
         toast.error("Failed to save.")
@@ -1541,7 +1704,7 @@ export default function LibraryPage() {
 
       // Fire backend request in parallel
       await copyAssetToLibrary(asset.id, asset.asset_type, asset.asset_url, asset.prompt || "")
-      
+
       // Update in background to ensure database sync
       fetchAssets().catch((err) => console.error("Background copy sync failed:", err))
 
@@ -1577,34 +1740,34 @@ export default function LibraryPage() {
       toast.error("No images to download.");
       return;
     }
-    
+
     const toastId = toast.loading(`Creating ZIP of ${assetsList.length} images...`);
-    
+
     try {
       const zip = new JSZip();
-      
+
       const downloadPromises = assetsList.map(async (asset, index) => {
         const imageUrl = getAssetImageUrl(asset);
         try {
           const res = await fetch(imageUrl);
           if (!res.ok) throw new Error(`HTTP error ${res.status}`);
           const blob = await res.blob();
-          
+
           let ext = blob.type.split("/")[1] || "jpg";
           if (ext.includes("+") || ext.length > 4) ext = "png";
-          
+
           const filename = `image_${index + 1}.${ext}`;
           zip.file(filename, blob);
         } catch (err) {
           console.error(`Failed to include image ${asset.id} in ZIP:`, err);
         }
       });
-      
+
       await Promise.all(downloadPromises);
-      
+
       const content = await zip.generateAsync({ type: "blob" });
       const blobUrl = URL.createObjectURL(content);
-      
+
       const a = document.createElement("a");
       a.href = blobUrl;
       a.download = `${galleryName.replace(/[^a-zA-Z0-9]/g, "_")}_images.zip`;
@@ -1612,7 +1775,7 @@ export default function LibraryPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
-      
+
       toast.success("ZIP download complete!", { id: toastId });
     } catch (err) {
       console.error("ZIP creation failed:", err);
@@ -1738,7 +1901,7 @@ export default function LibraryPage() {
     try {
       // Optimistically update galleries
       setGalleries((prev) => prev.map((g) => (g.id === id ? { ...g, is_public: targetPublic } : g)))
-      
+
       // Update all assets belonging to this gallery locally
       setAssets((prev) => prev.map((a) => (a.gallery_id === id ? { ...a, is_public: targetPublic } : a)))
 
@@ -1748,7 +1911,7 @@ export default function LibraryPage() {
 
       // Fire backend request in parallel
       const data = await updateLibraryGallery(id, { is_public: targetPublic })
-      
+
       // Sync exact returned gallery object
       setGalleries((prev) => prev.map((g) => (g.id === id ? data.gallery : g)))
 
@@ -1821,7 +1984,7 @@ export default function LibraryPage() {
 
       // Fire backend request in parallel without blocking UI thread
       await assignAssetToGallery(assetId, galleryId, asset?.asset_type, asset?.asset_url, asset?.prompt || "")
-      
+
       // Update in background to ensure database IDs sync (e.g. for copied explore assets)
       fetchAssets().catch((err) => console.error("Background sync failed:", err))
 
@@ -1904,7 +2067,7 @@ export default function LibraryPage() {
                 });
             }
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     }
   }, [fetchPublicGalleryAssetsCallback])
@@ -2146,9 +2309,8 @@ export default function LibraryPage() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 10 }}
             transition={{ duration: 0.35, ease: "easeOut", delay: Math.min(i * 0.02, 0.2) }}
-            className={`relative overflow-hidden group/card rounded-none border transition-all duration-300 w-full h-full ${
-              isDarkMode ? "bg-[#0d0d0c] border-white/5 text-white" : "bg-[#f4f3f2] border-black/5 text-black"
-            }`}
+            className={`relative overflow-hidden group/card rounded-none border transition-all duration-300 w-full h-full ${isDarkMode ? "bg-[#0d0d0c] border-white/5 text-white" : "bg-[#f4f3f2] border-black/5 text-black"
+              }`}
             onMouseEnter={() => setHoveredId(asset.id)}
             onMouseLeave={() => setHoveredId(null)}
           >
@@ -2278,9 +2440,8 @@ export default function LibraryPage() {
 
             {/* Visibility status & Move action - Top Right Overlay */}
             <div
-              className={`absolute top-3 right-3 flex items-center gap-1.5 transition-all duration-300 z-40 ${
-                hoveredId === asset.id ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
-              }`}
+              className={`absolute top-3 right-3 flex items-center gap-1.5 transition-all duration-300 z-40 ${hoveredId === asset.id ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
+                }`}
             >
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMoveAssetId(asset.id); setIsMoveModalOpen(true); }}
@@ -2294,9 +2455,8 @@ export default function LibraryPage() {
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleVisibility(asset.id, asset.is_public); }}
                   disabled={togglingVisibilityId === asset.id}
-                  className={`p-1.5 rounded-lg bg-black/60 border border-white/10 text-white/70 hover:text-white hover:bg-black/80 transition-all cursor-pointer shadow-lg backdrop-blur-sm ${
-                    asset.is_public ? "text-cyan-400" : ""
-                  }`}
+                  className={`p-1.5 rounded-lg bg-black/60 border border-white/10 text-white/70 hover:text-white hover:bg-black/80 transition-all cursor-pointer shadow-lg backdrop-blur-sm ${asset.is_public ? "text-cyan-400" : ""
+                    }`}
                   title={asset.is_public ? "Make Private" : "Make Public"}
                 >
                   {togglingVisibilityId === asset.id ? (
@@ -2316,10 +2476,9 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full flex overflow-hidden transition-colors duration-500 selection:bg-[var(--color-cyan)] selection:text-black ${
-      isDarkMode ? "bg-[#0d0d0c] text-white" : "bg-[#f4f3f2] text-black"
-    }`}>
-      
+    <div className={`${chatHeadingFont.variable} ${chatBodyFont.variable} ${chatAccentFont.variable} chat-shell h-screen w-full flex overflow-hidden transition-colors duration-500 selection:bg-[var(--color-cyan)] selection:text-black ${isDarkMode ? "bg-[#0d0d0c] text-white" : "bg-[#f4f3f2] text-black"
+      }`}>
+
       {/* Mobile Sidebar Overlays */}
       {isMobile && !isSidebarCollapsed && (
         <div
@@ -2332,11 +2491,9 @@ export default function LibraryPage() {
       <aside
         id="walkthrough-sidebar"
         style={{ width: isSidebarCollapsed ? (isMobile ? "0px" : "72px") : (isMobile ? "280px" : `${sidebarWidth}px`) }}
-        className={`h-full border-r ${
-          isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white/[0.07]" : "border-black/[0.07]"
-        } ${isDarkMode ? "bg-gradient-to-b from-[#0d0d0c] via-[#0d0d0c] to-[#0a0a09]" : "bg-gradient-to-b from-[#f4f3f2] via-[#f4f3f2] to-[#efeeed]"} flex flex-col ${
-          isMobile ? "fixed left-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"
-        } transition-[width] duration-300 ease-in-out`}
+        className={`h-full border-r ${isSidebarCollapsed && isMobile ? "border-r-0" : isDarkMode ? "border-white/[0.07]" : "border-black/[0.07]"
+          } ${isDarkMode ? "bg-gradient-to-b from-[#0d0d0c] via-[#0d0d0c] to-[#0a0a09]" : "bg-gradient-to-b from-[#f4f3f2] via-[#f4f3f2] to-[#efeeed]"} flex flex-col ${isMobile ? "fixed left-0 top-0 bottom-0 h-[100dvh] z-[60] shadow-2xl" : "relative z-20"
+          } transition-[width] duration-300 ease-in-out`}
       >
         {isSidebarCollapsed && !isMobile ? (
           <div className="flex flex-col h-full items-center py-4 justify-between relative select-none">
@@ -2347,11 +2504,10 @@ export default function LibraryPage() {
                 onClick={() => setIsSidebarCollapsed(false)}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                  isDarkMode
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${isDarkMode
                     ? "text-white hover:bg-white/5"
                     : "text-black hover:bg-black/5"
-                }`}
+                  }`}
                 title="Open Sidebar"
               >
                 <PanelLeftOpen className="w-[22px] h-[22px]" />
@@ -2365,11 +2521,10 @@ export default function LibraryPage() {
                 onClick={() => { setActiveCategory("featured"); setExploreTab("images"); setIsUploadDragging(false); }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className={`p-2 rounded-xl transition-colors cursor-pointer relative ${
-                  activeCategory === "featured"
+                className={`p-2 rounded-xl transition-colors cursor-pointer relative ${activeCategory === "featured"
                     ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black")
                     : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
-                }`}
+                  }`}
                 title="Explore"
               >
                 <Compass className="w-[22px] h-[22px]" />
@@ -2383,11 +2538,10 @@ export default function LibraryPage() {
                 onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                  activeCategory === "recent"
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${activeCategory === "recent"
                     ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black")
                     : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
-                }`}
+                  }`}
                 title="Recent Creations"
               >
                 <Clock className="w-[22px] h-[22px]" />
@@ -2398,11 +2552,10 @@ export default function LibraryPage() {
                 onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className={`p-2 rounded-xl transition-colors cursor-pointer relative ${
-                  activeCategory === "saved"
+                className={`p-2 rounded-xl transition-colors cursor-pointer relative ${activeCategory === "saved"
                     ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black")
                     : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
-                }`}
+                  }`}
                 title={`Saved (${savedIds.length})`}
               >
                 <Bookmark className="w-[22px] h-[22px]" />
@@ -2418,11 +2571,10 @@ export default function LibraryPage() {
                 onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); setHasNewGeneration(false); }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                  activeCategory === "all"
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${activeCategory === "all"
                     ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black")
                     : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
-                }`}
+                  }`}
                 title="My Gallery"
               >
                 <ImageIcon className="w-[22px] h-[22px]" />
@@ -2430,77 +2582,75 @@ export default function LibraryPage() {
             </div>
 
             {/* Profile / Avatar Button */}
-              <div className="mb-1 relative">
-                <motion.button
-                  onClick={() => setShowProfileDropup(!showProfileDropup)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`h-8 w-8 rounded-full overflow-hidden border-2 transition-all cursor-pointer relative shrink-0 flex items-center justify-center ${
-                    showProfileDropup 
-                      ? (isDarkMode ? "border-white/50" : "border-black/50")
-                      : (isDarkMode ? "border-white/[0.06] hover:border-white/20" : "border-black/[0.06] hover:border-black/20")
+            <div className="mb-1 relative">
+              <motion.button
+                onClick={() => setShowProfileDropup(!showProfileDropup)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`h-8 w-8 rounded-full overflow-hidden border-2 transition-all cursor-pointer relative shrink-0 flex items-center justify-center ${showProfileDropup
+                    ? (isDarkMode ? "border-white/50" : "border-black/50")
+                    : (isDarkMode ? "border-white/[0.06] hover:border-white/20" : "border-black/[0.06] hover:border-black/20")
                   }`}
-                  title="Profile Options"
-                >
-                  {profilePic ? (
-                    <img src={profilePic} alt="Profile" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className={`h-full w-full flex items-center justify-center ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
-                      <User className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
-                    </div>
-                  )}
-                </motion.button>
-                {/* Username below avatar in collapsed state */}
-                <span className={`block text-[7px] text-center truncate max-w-[60px] leading-tight mt-1 ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
-                  {(userName || "").split(" ")[0]}
-                </span>
-
-                {showProfileDropup && (
-                  <div
-                    ref={profileDropupRef}
-                    className={`absolute bottom-0 left-[52px] w-56 z-[100] rounded-xl border p-1.5 shadow-2xl backdrop-blur-xl ${
-                      isDarkMode
-                        ? "bg-[#222120]/95 border-white/[0.06] text-white"
-                        : "bg-[#f2f1f0]/95 border-black/[0.06] text-black"
-                    }`}
-                  >
-                    <button
-                      onClick={() => {
-                        setShowProfileDropup(false);
-                        router.push(`/profile/${encodeURIComponent(userName || "me")}`);
-                      }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
-                        }`}
-                    >
-                      <User className="h-3.5 w-3.5" />
-                      <span>Profile</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowProfileDropup(false);
-                        setIsWalletModalOpen(true);
-                      }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
-                        }`}
-                    >
-                      <Wallet className="h-3.5 w-3.5" />
-                      <span>Wallet</span>
-                    </button>
-
-                    <div className={`my-1 h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-
-                    <button
-                      onClick={handleLogout}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left text-red-500 transition-colors ${isDarkMode ? "hover:bg-red-500/10" : "hover:bg-red-500/5"
-                        }`}
-                    >
-                      <LogOut className="h-3.5 w-3.5" />
-                      <span>Logout</span>
-                    </button>
+                title="Profile Options"
+              >
+                {profilePic ? (
+                  <img src={profilePic} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <div className={`h-full w-full flex items-center justify-center ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
+                    <User className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
                   </div>
                 )}
-              </div>
+              </motion.button>
+              {/* Username below avatar in collapsed state */}
+              <span className={`block text-[7px] text-center truncate max-w-[60px] leading-tight mt-1 ${isDarkMode ? "text-white/60" : "text-black/60"}`}>
+                {(userName || "").split(" ")[0]}
+              </span>
+
+              {showProfileDropup && (
+                <div
+                  ref={profileDropupRef}
+                  className={`absolute bottom-0 left-[52px] w-56 z-[100] rounded-xl border p-1.5 shadow-2xl backdrop-blur-xl ${isDarkMode
+                      ? "bg-[#222120]/95 border-white/[0.06] text-white"
+                      : "bg-[#f2f1f0]/95 border-black/[0.06] text-black"
+                    }`}
+                >
+                  <button
+                    onClick={() => {
+                      setShowProfileDropup(false);
+                      router.push(`/profile/${encodeURIComponent(userName || "me")}`);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
+                      }`}
+                  >
+                    <User className="h-3.5 w-3.5" />
+                    <span>Profile</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowProfileDropup(false);
+                      setIsWalletModalOpen(true);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
+                      }`}
+                  >
+                    <Wallet className="h-3.5 w-3.5" />
+                    <span>Wallet</span>
+                  </button>
+
+                  <div className={`my-1 h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                  <button
+                    onClick={handleLogout}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left text-red-500 transition-colors ${isDarkMode ? "hover:bg-red-500/10" : "hover:bg-red-500/5"
+                      }`}
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div className="flex flex-col h-full overflow-hidden">
@@ -2535,12 +2685,11 @@ export default function LibraryPage() {
             <div className={`px-5 py-5 flex flex-col items-center border-b ${isDarkMode ? "border-white/[0.06] text-white" : "border-black/[0.06] text-black"}`}>
               {/* Centered Avatar with dynamic gradient and settings icon */}
               <div className="relative mb-2">
-                <div 
-                  className={`h-20 w-20 rounded-full p-[2.5px] flex items-center justify-center shadow-md cursor-pointer hover:brightness-95 ${
-                    isDarkMode 
+                <div
+                  className={`h-20 w-20 rounded-full p-[2.5px] flex items-center justify-center shadow-md cursor-pointer hover:brightness-95 ${isDarkMode
                       ? "bg-gradient-to-tr from-zinc-600 via-zinc-400 to-zinc-200"
                       : "bg-gradient-to-tr from-cyan-400 via-purple-500 to-pink-500"
-                  }`}
+                    }`}
                   onClick={() => {
                     if (userName) {
                       window.location.href = `/profile/${encodeURIComponent(userName)}`
@@ -2558,11 +2707,10 @@ export default function LibraryPage() {
                 {/* Settings icon pinned to bottom-right of avatar */}
                 <button
                   onClick={(e) => { e.stopPropagation(); setSettingsPanel("general"); setIsSettingsModalOpen(true); }}
-                  className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full border flex items-center justify-center transition-colors ${
-                    isDarkMode 
-                      ? "bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-zinc-300" 
+                  className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full border flex items-center justify-center transition-colors ${isDarkMode
+                      ? "bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-zinc-300"
                       : "bg-white border-zinc-200 hover:bg-zinc-100 text-zinc-600"
-                  }`}
+                    }`}
                   title="Settings"
                 >
                   <Settings className="h-3 w-3" />
@@ -2570,7 +2718,7 @@ export default function LibraryPage() {
               </div>
 
               {/* Centered Name */}
-              <span 
+              <span
                 className={`text-xs font-bold text-center tracking-tight flex items-center justify-center gap-1 cursor-pointer hover:underline ${isDarkMode ? "text-white" : "text-black"}`}
                 onClick={() => {
                   if (userName) {
@@ -2595,7 +2743,7 @@ export default function LibraryPage() {
                   </svg>
                 )}
               </span>
-              
+
               {/* Centered Profession */}
               <span className={`text-[10px] text-center font-medium mt-0.5 ${isDarkMode ? "text-zinc-400" : "text-zinc-500"}`}>
                 {profileProfession || "Photographe Freelance"}
@@ -2609,86 +2757,79 @@ export default function LibraryPage() {
                 </div>
                 <div className="flex flex-col">
                   <span className={`text-[11px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{followersCount}</span>
-                  <span className={`text-[8px] uppercase tracking-wider font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>abonnés</span>
+                  <span className={`text-[8px] uppercase tracking-wider font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>followers</span>
                 </div>
                 <div className="flex flex-col">
                   <span className={`text-[11px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{followingCount}</span>
-                  <span className={`text-[8px] uppercase tracking-wider font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>abonnements</span>
+                  <span className={`text-[8px] uppercase tracking-wider font-mono ${isDarkMode ? "text-white/40" : "text-black/40"}`}>following</span>
                 </div>
               </div>
             </div>
-            
+
             {/* Sidebar Menu Items */}
             <div className={`flex-1 overflow-y-auto scrollbar-hide p-3 flex flex-col gap-5 ${isDarkMode ? "custom-scrollbar text-white" : "light-scrollbar text-black"}`}>
               {/* Explore Section */}
-                <div className="space-y-1">
-                  
-                  <button
-                    onClick={() => { setActiveCategory("featured"); setExploreTab("images"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
-                    className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
-                      activeCategory === "featured"
-                        ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
-                        : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
-                    }`}
-                  >
-                    {activeCategory === "featured" && (
-                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
-                    )}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Compass className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
-                        activeCategory === "featured" ? (isDarkMode ? "text-white" : "text-black") : ""
-                      }`} />
-                      <span className={`truncate ${activeCategory === "featured" ? "font-semibold" : "font-medium"}`}>Explore</span>
-                    </div>
-                  </button>
+              <div className="space-y-1">
 
-                  <button
-                    onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
-                    className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
-                      activeCategory === "recent"
-                        ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
-                        : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
+                <button
+                  onClick={() => { setActiveCategory("featured"); setExploreTab("images"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
+                  className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${activeCategory === "featured"
+                      ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
+                      : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
                     }`}
-                  >
-                    {activeCategory === "recent" && (
-                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
-                    )}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Clock className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
-                        activeCategory === "recent" ? (isDarkMode ? "text-white" : "text-black") : ""
+                >
+                  {activeCategory === "featured" && (
+                    <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
+                  )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Compass className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${activeCategory === "featured" ? (isDarkMode ? "text-white" : "text-black") : ""
                       }`} />
-                      <span className={`truncate ${activeCategory === "recent" ? "font-semibold" : "font-medium"}`}>Recent Creations</span>
-                    </div>
-                  </button>
+                    <span className={`truncate ${activeCategory === "featured" ? "font-semibold" : "font-medium"}`}>Explore</span>
+                  </div>
+                </button>
 
-                  <button
-                    onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
-                    className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
-                      activeCategory === "saved"
-                        ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
-                        : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
+                <button
+                  onClick={() => { setActiveCategory("recent"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
+                  className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${activeCategory === "recent"
+                      ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
+                      : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
                     }`}
-                  >
-                    {activeCategory === "saved" && (
-                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
-                    )}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Bookmark className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
-                        activeCategory === "saved" ? (isDarkMode ? "text-white" : "text-black") : ""
+                >
+                  {activeCategory === "recent" && (
+                    <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
+                  )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Clock className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${activeCategory === "recent" ? (isDarkMode ? "text-white" : "text-black") : ""
                       }`} />
-                      <span className={`truncate ${activeCategory === "saved" ? "font-semibold" : "font-medium"}`}>Saved</span>
-                    </div>
-                    {savedIds.length > 0 && (
-                      <span className={`text-[11px] font-mono font-bold px-1.5 min-w-[22px] h-[20px] flex items-center justify-center rounded-full flex-shrink-0 ${
-                        activeCategory === "saved"
-                          ? (isDarkMode ? "bg-white/20 text-white" : "bg-black/20 text-black")
-                          : (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
+                    <span className={`truncate ${activeCategory === "recent" ? "font-semibold" : "font-medium"}`}>Recent Creations</span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => { setActiveCategory("saved"); setIsUploadDragging(false); if (isMobile) setIsSidebarCollapsed(true); }}
+                  className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${activeCategory === "saved"
+                      ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
+                      : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
+                    }`}
+                >
+                  {activeCategory === "saved" && (
+                    <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
+                  )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Bookmark className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${activeCategory === "saved" ? (isDarkMode ? "text-white" : "text-black") : ""
+                      }`} />
+                    <span className={`truncate ${activeCategory === "saved" ? "font-semibold" : "font-medium"}`}>Saved</span>
+                  </div>
+                  {savedIds.length > 0 && (
+                    <span className={`text-[11px] font-mono font-bold px-1.5 min-w-[22px] h-[20px] flex items-center justify-center rounded-full flex-shrink-0 ${activeCategory === "saved"
+                        ? (isDarkMode ? "bg-white/20 text-white" : "bg-black/20 text-black")
+                        : (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
                       }`}>
-                        {savedIds.length}
-                      </span>
-                    )}
-                  </button>
-                </div>
+                      {savedIds.length}
+                    </span>
+                  )}
+                </button>
+              </div>
 
               {/* Library Section */}
               <div className="space-y-1">
@@ -2703,19 +2844,17 @@ export default function LibraryPage() {
 
                 <button
                   onClick={() => { setActiveCategory("all"); setIsUploadDragging(false); setSelectedGalleryId(null); if (isMobile) setIsSidebarCollapsed(true); }}
-                  className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
-                    activeCategory === "all"
+                  className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${activeCategory === "all"
                       ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
                       : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
-                  }`}
+                    }`}
                 >
                   {activeCategory === "all" && (
                     <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
                   )}
                   <div className="flex items-center gap-3 min-w-0">
-                    <ImageIcon className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
-                      activeCategory === "all" ? (isDarkMode ? "text-white" : "text-black") : ""
-                    }`} />
+                    <ImageIcon className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${activeCategory === "all" ? (isDarkMode ? "text-white" : "text-black") : ""
+                      }`} />
                     <span className={`truncate ${activeCategory === "all" ? "font-semibold" : "font-medium"}`}>My Gallery</span>
                   </div>
                 </button>
@@ -2742,34 +2881,30 @@ export default function LibraryPage() {
                           setIsUploadDragging(false);
                           if (isMobile) setIsSidebarCollapsed(true);
                         }}
-                        className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${
-                          isSelected
+                        className={`group flex items-center justify-between w-full rounded-xl px-3 py-2.5 transition-all text-[14px] relative overflow-hidden ${isSelected
                             ? (isDarkMode ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black font-semibold")
                             : (isDarkMode ? "text-white hover:bg-white/[0.03]" : "text-black hover:bg-black/[0.03]")
-                        }`}
+                          }`}
                       >
                         {isSelected && (
                           <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full ${isDarkMode ? "bg-white" : "bg-black"}`} />
                         )}
                         <div className="flex items-center gap-3 min-w-0 truncate">
                           {isSelected ? (
-                            <FolderOpen className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
-                              isSelected ? (isDarkMode ? "text-white" : "text-black") : ""
-                            }`} />
+                            <FolderOpen className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${isSelected ? (isDarkMode ? "text-white" : "text-black") : ""
+                              }`} />
                           ) : (
-                            <Folder className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${
-                              isSelected ? (isDarkMode ? "text-white" : "text-black") : ""
-                            }`} />
+                            <Folder className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-200 ${isSelected ? (isDarkMode ? "text-white" : "text-black") : ""
+                              }`} />
                           )}
                           <span className={`truncate ${isSelected ? "font-semibold" : "font-medium"}`}>{g.name}</span>
                         </div>
-                        
+
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          <span className={`text-[11px] font-mono font-bold min-w-[22px] h-[20px] flex items-center justify-center rounded-full px-1.5 ${
-                            isSelected
+                          <span className={`text-[11px] font-mono font-bold min-w-[22px] h-[20px] flex items-center justify-center rounded-full px-1.5 ${isSelected
                               ? (isDarkMode ? "bg-white/20 text-white" : "bg-black/20 text-black")
                               : (isDarkMode ? "bg-white/5 text-white" : "bg-black/5 text-black")
-                          }`}>{g.asset_count || 0}</span>
+                            }`}>{g.asset_count || 0}</span>
                         </div>
                       </button>
                     );
@@ -2783,11 +2918,10 @@ export default function LibraryPage() {
             <div className="px-3 py-2 mt-auto">
               <button
                 onClick={handleLogout}
-                className={`flex items-center justify-center gap-2 w-full rounded-xl border px-4 py-2.5 text-xs font-semibold tracking-wide transition-all ${
-                  isDarkMode 
-                    ? "border-zinc-700 text-red-400 hover:bg-red-500/10" 
+                className={`flex items-center justify-center gap-2 w-full rounded-xl border px-4 py-2.5 text-xs font-semibold tracking-wide transition-all ${isDarkMode
+                    ? "border-zinc-700 text-red-400 hover:bg-red-500/10"
                     : "border-zinc-300 text-red-600 hover:bg-red-500/5"
-                }`}
+                  }`}
               >
                 <LogOut className="h-4 w-4" />
                 <span>Logout</span>
@@ -2798,213 +2932,204 @@ export default function LibraryPage() {
         )}
       </aside>
 
-        {/* Right Content Pane */}
-        <div className="flex-1 flex flex-col relative h-full overflow-hidden">
-          
-          {/* Navbar styled like Chat Navbar */}
-          <header className={`h-16 flex-shrink-0 flex items-center justify-between px-6 md:px-10 relative z-30 transition-colors duration-500 border-b ${isDarkMode ? "bg-[#0d0d0c] border-white/5" : "bg-[#f4f3f2] border-black/5"}`}>
-            <div className="flex items-center gap-3">
-              {/* Mobile Sidebar Toggle */}
-              {isMobile && (
-                <motion.button
-                  onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className={`p-2 border rounded-xl transition-all cursor-pointer ${
-                    isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"
-                  }`}
-                  title="Toggle Sidebar"
-                >
-                  {isSidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-                </motion.button>
-              )}
-              
-              <div className={`flex items-center gap-1 p-0.5 rounded-xl border text-xs font-medium transition-all duration-200 ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                <button
-                  onClick={() => window.location.href = "/chat"}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${isDarkMode ? "text-white/50 hover:text-white" : "text-black/50 hover:text-black"}`}
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  {!isMobile && <span>Query Mode</span>}
-                </button>
-                <button
-                  onClick={() => window.location.href = "/library"}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${isDarkMode ? "bg-white/10 text-white shadow-sm" : "bg-black/10 text-black shadow-sm"}`}
-                >
-                  <ImageIcon className="w-3.5 h-3.5" />
-                  {!isMobile && <span>Image Mode</span>}
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Quick Tour Button */}
+      {/* Right Content Pane */}
+      <div className="flex-1 flex flex-col relative h-full overflow-hidden">
+
+        {/* Navbar styled like Chat Navbar */}
+        <header className={`h-16 flex-shrink-0 flex items-center justify-between px-6 md:px-10 relative z-30 transition-colors duration-500 border-b ${isDarkMode ? "bg-[#0d0d0c] border-white/5" : "bg-[#f4f3f2] border-black/5"}`}>
+          <div className="flex items-center gap-3">
+            {/* Mobile Sidebar Toggle */}
+            {isMobile && (
               <motion.button
-                onClick={() => setShowWalkthrough(true)}
-                className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer overflow-hidden relative ${isDarkMode
-                    ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
-                    : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 border rounded-xl transition-all cursor-pointer ${isDarkMode ? "border-white/10 text-white hover:bg-white/5" : "border-black/10 text-black hover:bg-black/5"
                   }`}
-                title="Start Tour"
+                title="Toggle Sidebar"
               >
-                <motion.div
-                  whileHover={{
-                    scale: 1.1,
-                    y: [0, -1, 1, -1, 0],
-                    transition: { y: { repeat: Infinity, duration: 0.15, ease: "linear" } }
-                  }}
-                  whileTap={{ x: [0, -6, 35], transition: { duration: 0.4, ease: "easeInOut" } }}
-                  className="flex items-center justify-center"
-                >
-                  <Car className="h-4 w-4 opacity-70" />
-                </motion.div>
+                {isSidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
               </motion.button>
+            )}
 
-              {/* Notification Bell */}
-              <div className="relative" ref={notificationPanelRef}>
-                <motion.button
-                  onClick={() => setShowNotificationPanel(prev => !prev)}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer relative ${isDarkMode
-                      ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
-                      : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
-                    }`}
-                  title="Notifications"
-                >
-                  <Bell className="h-4 w-4" />
-                  {(hasNewGeneration || generationStatus === "generating" || notifications.some(n => !n.is_read)) && (
-                    <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0d0d0c] ${
-                      generationStatus === "generating" ? "bg-yellow-400" : "bg-red-500"
-                    }`} />
-                  )}
-                </motion.button>
-
-                {/* Notification Dropdown Panel */}
-                {showNotificationPanel && createPortal(
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    style={{ position: 'fixed', top: notifDropdownPos.top, right: notifDropdownPos.right }}
-                    className={`w-72 rounded-xl border shadow-2xl overflow-hidden z-[9999] ${
-                      isDarkMode
-                        ? "bg-[#222120]/95 border-white/10 text-white"
-                        : "bg-[#f2f1f0]/95 border-black/10 text-black"
-                    }`}
-                  >
-                    <div className="p-3 space-y-2">
-                      <div className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                        Notifications
-                      </div>
-                      <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-
-                      {/* Social Notifications */}
-                      {notifications.length > 0 && (
-                        <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
-                          {notifications.map((notif) => (
-                            <button
-                              key={notif.id}
-                              onClick={() => handleNotificationClick(notif)}
-                              className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors text-xs relative ${
-                                notif.is_read
-                                  ? (isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5")
-                                  : (isDarkMode ? "bg-white/[0.03] hover:bg-white/5 font-medium" : "bg-black/[0.03] hover:bg-black/5 font-medium")
-                              }`}
-                            >
-                              <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px]">
-                                {notif.sender_avatar ? (
-                                  <img src={getStoryImageUrl(notif.sender_avatar)} className="h-full w-full object-cover" alt="" />
-                                ) : (
-                                  <User className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0 pr-2">
-                                <p className="leading-tight text-zinc-900 dark:text-zinc-100">
-                                  <span className="font-bold mr-1">{notif.sender_name || "Someone"}</span>
-                                  {notif.type === 'like' ? 'liked your image.' : notif.type === 'reply' ? 'replied to your comment.' : notif.type === 'message' ? 'sent you a message.' : (notif.type === 'creation' || notif.type === 'created') ? 'created a new image.' : 'commented on your image.'}
-                                </p>
-                                {notif.type !== 'like' && notif.content && (
-                                  <p className={`text-[10px] truncate mt-1 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
-                                    "{notif.content}"
-                                  </p>
-                                )}
-                                <span className={`text-[9px] block mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                  {new Date(notif.created_at).toLocaleDateString()}
-                                </span>
-                              </div>
-                              {!notif.is_read && (
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#00DDDD]" />
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {generationStatus === "generating" && (
-                        <button
-                          onClick={() => { setShowNotificationPanel(false); setActiveCategory("all"); }}
-                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-xs ${
-                            isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
-                          }`}
-                        >
-                          <Loader2 className="h-4 w-4 animate-spin shrink-0 text-yellow-400" />
-                          <div className="min-w-0">
-                            <div className="font-medium truncate">Generating image...</div>
-                            <div className={`text-[10px] mt-0.5 truncate ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                              Click to view progress
-                            </div>
-                          </div>
-                        </button>
-                      )}
-                      {generationStatus === "completed" && (
-                        <button
-                          onClick={() => { setShowNotificationPanel(false); setActiveCategory("all"); setHasNewGeneration(false); setGenerationStatus("idle"); if (typeof window !== "undefined") { localStorage.setItem("image_gen_status", "idle"); localStorage.setItem("image_gen_timestamp", String(Date.now())); } }}
-                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-xs ${
-                            isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
-                          }`}
-                        >
-                          <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />
-                          <div className="min-w-0">
-                            <div className="font-medium truncate">Image created!</div>
-                            <div className={`text-[10px] mt-0.5 truncate ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                              Click to view in My Gallery
-                            </div>
-                          </div>
-                        </button>
-                      )}
-                      {generationStatus === "idle" && !hasNewGeneration && notifications.length === 0 && (
-                        <div className={`px-3 py-6 text-center text-xs ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                          No notifications
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>, document.body)}
-              </div>
-
+            <div className={`flex items-center gap-1 p-0.5 rounded-xl border text-xs font-medium transition-all duration-200 ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
               <button
-                onClick={toggleTheme}
-                className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer ${isDarkMode ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-black/10 bg-black/5 text-black hover:bg-black/10"}`}
+                onClick={() => window.location.href = "/chat"}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${isDarkMode ? "text-white/50 hover:text-white" : "text-black/50 hover:text-black"}`}
               >
-                {isDarkMode ? <Sun className="h-4 w-4 opacity-70" /> : <Moon className="h-4 w-4 opacity-70" />}
+                <MessageSquare className="w-3.5 h-3.5" />
+                {!isMobile && <span>Query Mode</span>}
+              </button>
+              <button
+                onClick={() => window.location.href = "/library"}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${isDarkMode ? "bg-white/10 text-white shadow-sm" : "bg-black/10 text-black shadow-sm"}`}
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                {!isMobile && <span>Image Mode</span>}
               </button>
             </div>
-          </header>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Quick Tour Button */}
+            <motion.button
+              onClick={() => setShowWalkthrough(true)}
+              className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer overflow-hidden relative ${isDarkMode
+                ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                }`}
+              title="Start Tour"
+            >
+              <motion.div
+                whileHover={{
+                  scale: 1.1,
+                  y: [0, -1, 1, -1, 0],
+                  transition: { y: { repeat: Infinity, duration: 0.15, ease: "linear" } }
+                }}
+                whileTap={{ x: [0, -6, 35], transition: { duration: 0.4, ease: "easeInOut" } }}
+                className="flex items-center justify-center"
+              >
+                <Car className="h-4 w-4 opacity-70" />
+              </motion.div>
+            </motion.button>
 
-          {/* ================= RIGHT MAIN CONTENT GRID ================= */}
-          <main className={`flex-1 ${isInitialBatchLoading ? "overflow-hidden" : "overflow-y-auto"} px-4 md:px-8 py-6 md:py-8 pb-32 relative transition-colors duration-300 ${
-            isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f4f3f2]"
+            {/* Notification Bell */}
+            <div className="relative" ref={notificationPanelRef}>
+              <motion.button
+                onClick={() => setShowNotificationPanel(prev => !prev)}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer relative ${isDarkMode
+                  ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                  : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                  }`}
+                title="Notifications"
+              >
+                <Bell className="h-4 w-4" />
+                {(hasNewGeneration || generationStatus === "generating" || notifications.some(n => !n.is_read)) && (
+                  <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0d0d0c] ${generationStatus === "generating" ? "bg-yellow-400" : "bg-red-500"
+                    }`} />
+                )}
+              </motion.button>
+
+              {/* Notification Dropdown Panel */}
+              {showNotificationPanel && createPortal(
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  style={{ position: 'fixed', top: notifDropdownPos.top, right: notifDropdownPos.right }}
+                  className={`w-72 rounded-xl border shadow-2xl overflow-hidden z-[9999] ${isDarkMode
+                      ? "bg-[#222120]/95 border-white/10 text-white"
+                      : "bg-[#f2f1f0]/95 border-black/10 text-black"
+                    }`}
+                >
+                  <div className="p-3 space-y-2">
+                    <div className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                      Notifications
+                    </div>
+                    <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+
+                    {/* Social Notifications */}
+                    {notifications.length > 0 && (
+                      <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+                        {notifications.map((notif) => (
+                          <button
+                            key={notif.id}
+                            onClick={() => handleNotificationClick(notif)}
+                            className={`w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors text-xs relative ${notif.is_read
+                                ? (isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5")
+                                : (isDarkMode ? "bg-white/[0.03] hover:bg-white/5 font-medium" : "bg-black/[0.03] hover:bg-black/5 font-medium")
+                              }`}
+                          >
+                            <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px]">
+                              {notif.sender_avatar ? (
+                                <img src={getStoryImageUrl(notif.sender_avatar)} className="h-full w-full object-cover" alt="" />
+                              ) : (
+                                <User className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0 pr-2">
+                              <p className="leading-tight text-zinc-900 dark:text-zinc-100">
+                                <span className="font-bold mr-1">{notif.sender_name || "Someone"}</span>
+                                {notif.type === 'like' ? 'liked your image.' : notif.type === 'reply' ? 'replied to your comment.' : notif.type === 'message' ? 'sent you a message.' : (notif.type === 'creation' || notif.type === 'created') ? 'created a new image.' : 'commented on your image.'}
+                              </p>
+                              {notif.type !== 'like' && notif.content && (
+                                <p className={`text-[10px] truncate mt-1 ${isDarkMode ? "text-white/50" : "text-black/50"}`}>
+                                  "{notif.content}"
+                                </p>
+                              )}
+                              <span className={`text-[9px] block mt-0.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                {new Date(notif.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {!notif.is_read && (
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#00DDDD]" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {generationStatus === "generating" && (
+                      <button
+                        onClick={() => { setShowNotificationPanel(false); setActiveCategory("all"); }}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-xs ${isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
+                          }`}
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin shrink-0 text-yellow-400" />
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">Generating image...</div>
+                          <div className={`text-[10px] mt-0.5 truncate ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                            Click to view progress
+                          </div>
+                        </div>
+                      </button>
+                    )}
+                    {generationStatus === "completed" && (
+                      <button
+                        onClick={() => { setShowNotificationPanel(false); setActiveCategory("all"); setHasNewGeneration(false); setGenerationStatus("idle"); if (typeof window !== "undefined") { localStorage.setItem("image_gen_status", "idle"); localStorage.setItem("image_gen_timestamp", String(Date.now())); } }}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-xs ${isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
+                          }`}
+                      >
+                        <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">Image created!</div>
+                          <div className={`text-[10px] mt-0.5 truncate ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                            Click to view in My Gallery
+                          </div>
+                        </div>
+                      </button>
+                    )}
+                    {generationStatus === "idle" && !hasNewGeneration && notifications.length === 0 && (
+                      <div className={`px-3 py-6 text-center text-xs ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                        No notifications
+                      </div>
+                    )}
+                  </div>
+                </motion.div>, document.body)}
+            </div>
+
+            <button
+              onClick={toggleTheme}
+              className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer ${isDarkMode ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-black/10 bg-black/5 text-black hover:bg-black/10"}`}
+            >
+              {isDarkMode ? <Sun className="h-4 w-4 opacity-70" /> : <Moon className="h-4 w-4 opacity-70" />}
+            </button>
+          </div>
+        </header>
+
+        {/* ================= RIGHT MAIN CONTENT GRID ================= */}
+        <main className={`flex-1 ${isInitialBatchLoading ? "overflow-hidden" : "overflow-y-auto"} px-4 md:px-8 py-6 md:py-8 pb-32 relative transition-colors duration-300 ${isDarkMode ? "bg-[#0d0d0c]" : "bg-[#f4f3f2]"
           }`}>
-          
+
           {/* Header - Only for Folders/Shared Folders */}
           {(activeCategory === "gallery" || activeCategory === "public_gallery") && (
-            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 border-b pb-5 transition-colors duration-300 ${
-              isDarkMode ? "border-white/5" : "border-black/5"
-            }`}>
+            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 border-b pb-5 transition-colors duration-300 ${isDarkMode ? "border-white/5" : "border-black/5"
+              }`}>
               <div>
-                <div className={`flex items-center gap-2 text-[11px] font-mono tracking-widest uppercase mb-1 ${
-                  isDarkMode ? "text-white/40" : "text-black/50"
-                }`}>
+                <div className={`flex items-center gap-2 text-[11px] font-mono tracking-widest uppercase mb-1 ${isDarkMode ? "text-white/40" : "text-black/50"
+                  }`}>
                   <span>Rudra Library</span>
                   <ChevronRight className="h-3 w-3" />
                   <span className="text-[var(--color-cyan)] font-sans font-semibold normal-case tracking-normal">
@@ -3012,7 +3137,7 @@ export default function LibraryPage() {
                     {activeCategory === "public_gallery" && "Shared Folder"}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center gap-4">
                   <h1 className="text-2xl font-display font-semibold tracking-tight flex items-center gap-3">
                     {activeCategory === "gallery" && (
@@ -3022,84 +3147,79 @@ export default function LibraryPage() {
                           const currentGallery = galleries.find(g => g.id === selectedGalleryId);
                           if (!currentGallery) return null;
                           return (
-                              <div className="flex items-center gap-1.5 ml-2">
-                                {/* Toggle visibility */}
-                                <button
-                                  onClick={() => handleToggleGalleryVisibility(currentGallery.id, currentGallery.is_public)}
-                                  className={`p-1.5 rounded border transition-colors ${
-                                    currentGallery.is_public
-                                      ? "bg-sky-500/10 border-sky-400/20 text-sky-400 hover:bg-sky-500/20"
-                                      : isDarkMode
-                                        ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                                        : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
-                                  }`}
-                                  title={currentGallery.is_public ? "Set Gallery Private" : "Set Gallery Public"}
-                                >
-                                  {currentGallery.is_public ? (
-                                    <Globe className="h-3.5 w-3.5" />
-                                  ) : (
-                                    <Lock className="h-3.5 w-3.5" />
-                                  )}
-                                </button>
-
-                                {/* Rename */}
-                                <button
-                                  onClick={() => handleRenameGallery(currentGallery.id, currentGallery.name)}
-                                  className={`p-1.5 rounded border transition-colors ${
-                                    isDarkMode
+                            <div className="flex items-center gap-1.5 ml-2">
+                              {/* Toggle visibility */}
+                              <button
+                                onClick={() => handleToggleGalleryVisibility(currentGallery.id, currentGallery.is_public)}
+                                className={`p-1.5 rounded border transition-colors ${currentGallery.is_public
+                                    ? "bg-sky-500/10 border-sky-400/20 text-sky-400 hover:bg-sky-500/20"
+                                    : isDarkMode
                                       ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
                                       : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
                                   }`}
-                                  title="Rename Gallery"
-                                >
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                </button>
+                                title={currentGallery.is_public ? "Set Gallery Private" : "Set Gallery Public"}
+                              >
+                                {currentGallery.is_public ? (
+                                  <Globe className="h-3.5 w-3.5" />
+                                ) : (
+                                  <Lock className="h-3.5 w-3.5" />
+                                )}
+                              </button>
 
-                                {/* Share Gallery */}
-                                <button
-                                  onClick={() => handleShareImage(
-                                    `${window.location.origin}/library?gallery=${currentGallery.id}`,
-                                    currentGallery.name
-                                  )}
-                                  className={`p-1.5 rounded border transition-colors ${
-                                    isDarkMode
-                                      ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                                      : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
+                              {/* Rename */}
+                              <button
+                                onClick={() => handleRenameGallery(currentGallery.id, currentGallery.name)}
+                                className={`p-1.5 rounded border transition-colors ${isDarkMode
+                                    ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                    : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
                                   }`}
-                                  title="Share Gallery"
-                                >
-                                  <Share2 className="h-3.5 w-3.5" />
-                                </button>
+                                title="Rename Gallery"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
 
-                                {/* Save Gallery as ZIP */}
-                                <button
-                                  onClick={() => {
-                                    const galleryAssetIds = assets.filter(a => a.gallery_id === currentGallery.id);
-                                    handleDownloadGalleryAsZip(galleryAssetIds, currentGallery.name);
-                                  }}
-                                  className={`p-1.5 rounded border transition-colors ${
-                                    isDarkMode
-                                      ? "bg-white/5 border-white/10 text-white/60 hover:bg-emerald-500/80 hover:text-white"
-                                      : "bg-black/5 border-black/10 text-black/60 hover:bg-emerald-500/80 hover:text-white"
+                              {/* Share Gallery */}
+                              <button
+                                onClick={() => handleShareImage(
+                                  `${window.location.origin}/library?gallery=${currentGallery.id}`,
+                                  currentGallery.name
+                                )}
+                                className={`p-1.5 rounded border transition-colors ${isDarkMode
+                                    ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                                    : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
                                   }`}
-                                  title="Download All Images as ZIP"
-                                >
-                                  <Download className="h-3.5 w-3.5" />
-                                </button>
+                                title="Share Gallery"
+                              >
+                                <Share2 className="h-3.5 w-3.5" />
+                              </button>
 
-                                {/* Delete */}
-                                <button
-                                  onClick={() => handleDeleteGallery(currentGallery.id)}
-                                  className={`p-1.5 rounded border transition-colors ${
-                                    isDarkMode
-                                      ? "bg-white/5 border-white/10 text-white/60 hover:bg-red-500/80 hover:text-white"
-                                      : "bg-black/5 border-black/10 text-black/60 hover:bg-red-500/80 hover:text-white"
+                              {/* Save Gallery as ZIP */}
+                              <button
+                                onClick={() => {
+                                  const galleryAssetIds = assets.filter(a => a.gallery_id === currentGallery.id);
+                                  handleDownloadGalleryAsZip(galleryAssetIds, currentGallery.name);
+                                }}
+                                className={`p-1.5 rounded border transition-colors ${isDarkMode
+                                    ? "bg-white/5 border-white/10 text-white/60 hover:bg-emerald-500/80 hover:text-white"
+                                    : "bg-black/5 border-black/10 text-black/60 hover:bg-emerald-500/80 hover:text-white"
                                   }`}
-                                  title="Delete Gallery"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
+                                title="Download All Images as ZIP"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </button>
+
+                              {/* Delete */}
+                              <button
+                                onClick={() => handleDeleteGallery(currentGallery.id)}
+                                className={`p-1.5 rounded border transition-colors ${isDarkMode
+                                    ? "bg-white/5 border-white/10 text-white/60 hover:bg-red-500/80 hover:text-white"
+                                    : "bg-black/5 border-black/10 text-black/60 hover:bg-red-500/80 hover:text-white"
+                                  }`}
+                                title="Delete Gallery"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           );
                         })()}
                       </>
@@ -3120,11 +3240,10 @@ export default function LibraryPage() {
                                 `${window.location.origin}/library?gallery=${currentPubGallery.id}`,
                                 currentPubGallery.name
                               )}
-                              className={`p-1.5 rounded border transition-colors ${
-                                isDarkMode
+                              className={`p-1.5 rounded border transition-colors ${isDarkMode
                                   ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
                                   : "bg-black/5 border-black/10 text-black/60 hover:bg-black/10 hover:text-black"
-                              }`}
+                                }`}
                               title="Share Folder Link"
                             >
                               <Share2 className="h-3.5 w-3.5" />
@@ -3135,11 +3254,10 @@ export default function LibraryPage() {
                               onClick={() => {
                                 handleDownloadGalleryAsZip(publicGalleryAssets, currentPubGallery.name);
                               }}
-                              className={`p-1.5 rounded border transition-colors ${
-                                isDarkMode
+                              className={`p-1.5 rounded border transition-colors ${isDarkMode
                                   ? "bg-white/5 border-white/10 text-white/60 hover:bg-emerald-500/80 hover:text-white"
                                   : "bg-black/5 border-black/10 text-black/60 hover:bg-emerald-500/80 hover:text-white"
-                              }`}
+                                }`}
                               title="Download All Images as ZIP"
                             >
                               <Download className="h-3.5 w-3.5" />
@@ -3167,11 +3285,10 @@ export default function LibraryPage() {
                       }
                       setSelectedPublicGalleryId(null);
                     }}
-                    className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${
-                      isDarkMode
+                    className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${isDarkMode
                         ? "bg-white/5 border-white/10 text-white hover:bg-white/10"
                         : "bg-white border-black/10 text-black hover:bg-black/[0.03] shadow-sm"
-                    }`}
+                      }`}
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />
                     <span>Back to Folders</span>
@@ -3186,25 +3303,67 @@ export default function LibraryPage() {
             <div className="mb-6 flex gap-2 p-1 bg-black/10 dark:bg-white/[0.03] border border-black/5 dark:border-white/[0.05] rounded-xl w-fit">
               <button
                 onClick={() => setShowcaseTab("assets")}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold font-sans tracking-wide transition-all ${
-                  showcaseTab === "assets"
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold font-sans tracking-wide transition-all ${showcaseTab === "assets"
                     ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/10 text-black shadow-sm")
                     : (isDarkMode ? "text-white/45 hover:text-white/80" : "text-black/55 hover:text-black")
-                }`}
+                  }`}
               >
                 Shared Prompts
               </button>
               <button
                 onClick={() => setShowcaseTab("galleries")}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold font-sans tracking-wide transition-all flex items-center gap-1.5 ${
-                  showcaseTab === "galleries"
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold font-sans tracking-wide transition-all flex items-center gap-1.5 ${showcaseTab === "galleries"
                     ? (isDarkMode ? "bg-white/15 text-white shadow-sm" : "bg-black/10 text-black shadow-sm")
                     : (isDarkMode ? "text-white/45 hover:text-white/80" : "text-black/55 hover:text-black")
-                }`}
+                  }`}
               >
                 <Folder className="h-3.5 w-3.5" />
                 <span>Shared Folders</span>
               </button>
+            </div>
+          )}
+
+          {/* Connection Stories Section (Only in Explore mode) */}
+          {activeCategory === "featured" && connectionStories.length > 0 && (
+            <div className="mb-6 w-full">
+              <div className="flex flex-row flex-nowrap gap-4 justify-start overflow-x-auto scrollbar-hide w-full max-w-[880px] py-1 pl-[6%]">
+                {connectionStories.map((connStory, connIndex) => {
+                  const storyImgs = getStoryImgs(connStory.stories[0])
+                  if (storyImgs.length === 0) return null
+                  const isSeen = connStory.seen.size >= connStory.stories.length
+                  return (
+                    <div
+                      key={connStory.user.id}
+                      onClick={() => {
+                        setActiveConnectionIndex(connIndex)
+                        setActiveSlideIndex(0)
+                      }}
+                      className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0 select-none"
+                    >
+                      <div className={`h-14 w-14 rounded-full flex items-center justify-center relative transition-all duration-300 ${
+                        isSeen
+                          ? "border border-zinc-300 dark:border-zinc-700 p-[1.5px] hover:border-zinc-400 dark:hover:border-zinc-500"
+                          : "bg-gradient-to-tr from-red-500 via-rose-500 to-blue-500 p-[2px]"
+                      }`}>
+                        <div className={`h-full w-full rounded-full overflow-hidden relative border-2 ${
+                          isDarkMode ? "border-[#0d0d0c] bg-zinc-900" : "border-white bg-zinc-100"
+                        }`}>
+                          {connStory.user.profile_picture ? (
+                            <img src={getStoryImageUrl(connStory.user.profile_picture)} className="h-full w-full object-cover" alt={connStory.user.name} />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-zinc-400">
+                              <User className="h-5 w-5" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 transition-colors truncate max-w-[64px]">
+                        {connStory.user.name.split(" ")[0]}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
 
@@ -3215,11 +3374,10 @@ export default function LibraryPage() {
               {/* Created On filter */}
               <button
                 onClick={handleCycleCreatedOn}
-                className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
-                  isDarkMode
+                className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${isDarkMode
                     ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
                     : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
-                }`}
+                  }`}
               >
                 <Clock className="h-3.5 w-3.5" />
                 <span>Created: {createdOnFilter === "all" ? "All Time" : createdOnFilter === "today" ? "Today" : createdOnFilter === "week" ? "Last 7 Days" : "Last 30 Days"}</span>
@@ -3228,11 +3386,10 @@ export default function LibraryPage() {
               {/* Personal/Community filter */}
               <button
                 onClick={handleCycleSource}
-                className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
-                  isDarkMode
+                className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${isDarkMode
                     ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
                     : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
-                }`}
+                  }`}
               >
                 <Globe className="h-3.5 w-3.5" />
                 <span>Source: {sourceFilter === "all" ? "All" : sourceFilter === "personal" ? "Personal" : "Community"}</span>
@@ -3242,11 +3399,10 @@ export default function LibraryPage() {
               <div className="relative" ref={categoryDropdownRef}>
                 <button
                   onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                  className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
-                    isDarkMode
+                  className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${isDarkMode
                       ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
                       : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
-                  }`}
+                    }`}
                 >
                   <Tag className="h-3.5 w-3.5" />
                   <span>Category: {categoryFilter === "all" ? "All" : categoryFilter}</span>
@@ -3254,20 +3410,18 @@ export default function LibraryPage() {
                 </button>
 
                 {showCategoryDropdown && (
-                  <div className={`absolute top-full left-0 mt-2 w-56 rounded-xl border shadow-lg z-50 overflow-hidden ${
-                    isDarkMode ? "bg-[#1a1a1a] border-white/10" : "bg-white border-black/10"
-                  }`}>
+                  <div className={`absolute top-full left-0 mt-2 w-56 rounded-xl border shadow-lg z-50 overflow-hidden ${isDarkMode ? "bg-[#1a1a1a] border-white/10" : "bg-white border-black/10"
+                    }`}>
                     <div className="p-2">
                       <input
                         type="text"
                         placeholder="Search categories..."
                         value={categorySearch}
                         onChange={(e) => setCategorySearch(e.target.value)}
-                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs outline-none transition-all ${
-                          isDarkMode
+                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs outline-none transition-all ${isDarkMode
                             ? "bg-white/10 text-white placeholder-white/30 focus:bg-white/15"
                             : "bg-black/5 text-black placeholder-black/30 focus:bg-black/10"
-                        }`}
+                          }`}
                         autoFocus
                       />
                     </div>
@@ -3278,15 +3432,14 @@ export default function LibraryPage() {
                           <button
                             key={cat}
                             onClick={() => { setCategoryFilter(cat); setShowCategoryDropdown(false); setCategorySearch("") }}
-                            className={`w-full text-left px-3 py-2 text-xs font-medium transition-all flex items-center gap-2 ${
-                              categoryFilter === cat
+                            className={`w-full text-left px-3 py-2 text-xs font-medium transition-all flex items-center gap-2 ${categoryFilter === cat
                                 ? isDarkMode
                                   ? "bg-white/10 text-white"
                                   : "bg-black/10 text-black"
                                 : isDarkMode
                                   ? "text-white/60 hover:bg-white/5 hover:text-white"
                                   : "text-black/60 hover:bg-black/5 hover:text-black"
-                            }`}
+                              }`}
                           >
                             {cat === "all" ? (
                               <span>All Categories</span>
@@ -3305,30 +3458,28 @@ export default function LibraryPage() {
                 <>
                   <button
                     onClick={() => setExploreTab("images")}
-                    className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
-                      exploreTab === "images"
+                    className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${exploreTab === "images"
                         ? isDarkMode
                           ? "bg-white/15 border-white/30 text-white"
                           : "bg-black/10 border-black/30 text-black"
                         : isDarkMode
                           ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
                           : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
-                    }`}
+                      }`}
                   >
                     <ImageIcon className="h-3.5 w-3.5" />
                     <span>Images</span>
                   </button>
                   <button
                     onClick={() => setExploreTab("folders")}
-                    className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
-                      exploreTab === "folders"
+                    className={`px-3 py-1.5 rounded-full border text-xs font-sans font-medium tracking-wide transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${exploreTab === "folders"
                         ? isDarkMode
                           ? "bg-white/15 border-white/30 text-white"
                           : "bg-black/10 border-black/30 text-black"
                         : isDarkMode
                           ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
                           : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
-                    }`}
+                      }`}
                   >
                     <Folder className="h-3.5 w-3.5" />
                     <span>Folder</span>
@@ -3338,20 +3489,18 @@ export default function LibraryPage() {
             </div>
 
             {/* Right side: Search Input */}
-            <div className={`flex items-center border transition-all rounded-full px-3 py-1.5 w-full md:max-w-xs ${
-              isDarkMode 
-                ? "bg-[#222120] border-white/5 focus-within:border-white/10" 
+            <div className={`flex items-center border transition-all rounded-full px-3 py-1.5 w-full md:max-w-xs ${isDarkMode
+                ? "bg-[#222120] border-white/5 focus-within:border-white/10"
                 : "bg-white border-black/15 focus-within:border-black/30"
-            }`}>
+              }`}>
               <Search className={`h-3.5 w-3.5 mr-2 shrink-0 ${isDarkMode ? "text-white/30" : "text-black/60"}`} />
               <input
                 type="text"
                 placeholder="Search library prompts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full bg-transparent border-none text-xs focus:outline-none ${
-                  isDarkMode ? "text-white placeholder-white/20" : "text-black placeholder-black/50"
-                }`}
+                className={`w-full bg-transparent border-none text-xs focus:outline-none ${isDarkMode ? "text-white placeholder-white/20" : "text-black placeholder-black/50"
+                  }`}
               />
               {searchQuery && (
                 <button
@@ -3369,9 +3518,8 @@ export default function LibraryPage() {
               /* Community Shared Galleries Grid view */
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {publicGalleries.length === 0 ? (
-                  <div className={`col-span-full flex flex-col items-center justify-center py-20 border rounded-2xl ${
-                    isDarkMode ? "border-white/[0.04] bg-white/[0.01]" : "border-black/[0.04] bg-black/[0.01]"
-                  }`}>
+                  <div className={`col-span-full flex flex-col items-center justify-center py-20 border rounded-2xl ${isDarkMode ? "border-white/[0.04] bg-white/[0.01]" : "border-black/[0.04] bg-black/[0.01]"
+                    }`}>
                     <Folder className={`h-10 w-10 mb-4 ${isDarkMode ? "text-white/10" : "text-black/15"}`} />
                     <p className="text-sm font-sans mb-1 font-semibold">No shared folders found</p>
                     <p className={`text-[11px] font-mono text-center max-w-sm px-5 leading-normal ${isDarkMode ? "text-white/20" : "text-black/40"}`}>
@@ -3382,11 +3530,10 @@ export default function LibraryPage() {
                   publicGalleries.map((g) => (
                     <motion.div
                       key={g.id}
-                      className={`p-5 rounded-2xl border select-none transition-all duration-300 ${
-                        isDarkMode
+                      className={`p-5 rounded-2xl border select-none transition-all duration-300 ${isDarkMode
                           ? "bg-white/[0.02] border-white/5 hover:bg-white/[0.04] hover:border-white/10"
                           : "bg-white border-black/5 hover:border-black/10 shadow-sm"
-                      }`}
+                        }`}
                     >
                       <div
                         onClick={() => {
@@ -3406,16 +3553,16 @@ export default function LibraryPage() {
                             <span>Shared</span>
                           </span>
                         </div>
-                        
+
                         <h3 className="font-display font-semibold text-sm mb-1 truncate">
                           {g.name}
                         </h3>
-                        
+
                         <p className={`text-[10px] font-mono mb-4 ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
                           Created by <strong>{g.owner_name || "Community User"}</strong>
                         </p>
                       </div>
- 
+
                       <div className="flex items-center justify-between border-t border-white/5 pt-3">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-mono text-sky-400">
@@ -3423,22 +3570,20 @@ export default function LibraryPage() {
                           </span>
                           <button
                             onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${window.location.origin}/library?gallery=${g.id}`); toast.success("Folder link copied to clipboard."); }}
-                            className={`p-1.5 rounded-lg border transition-all ${
-                              isDarkMode
+                            className={`p-1.5 rounded-lg border transition-all ${isDarkMode
                                 ? "bg-white/5 border-white/10 text-white/50 hover:text-emerald-400 hover:border-emerald-400/50"
                                 : "bg-black/5 border-black/10 text-black/50 hover:text-emerald-600"
-                            }`}
+                              }`}
                             title="Save Folder Link"
                           >
                             <Download className="h-3 w-3" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleShareImage(`${window.location.origin}/library?gallery=${g.id}`, g.name); }}
-                            className={`p-1.5 rounded-lg border transition-all ${
-                              isDarkMode
+                            className={`p-1.5 rounded-lg border transition-all ${isDarkMode
                                 ? "bg-white/5 border-white/10 text-white/50 hover:text-sky-400 hover:border-sky-400/50"
                                 : "bg-black/5 border-black/10 text-black/50 hover:text-sky-600"
-                            }`}
+                              }`}
                             title="Share Folder"
                           >
                             <Share2 className="h-3 w-3" />
@@ -3458,15 +3603,13 @@ export default function LibraryPage() {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`mb-8 border border-dashed rounded-xl p-10 flex flex-col items-center justify-center gap-4 transition-all duration-300 ${
-                      isUploadDragging
+                    className={`mb-8 border border-dashed rounded-xl p-10 flex flex-col items-center justify-center gap-4 transition-all duration-300 ${isUploadDragging
                         ? "border-[var(--color-cyan)] bg-[var(--color-cyan)]/5 scale-[0.99] shadow-[0_0_20px_rgba(0,221,221,0.15)]"
                         : (isDarkMode ? "border-white/10 bg-white/[0.01] hover:border-white/20" : "border-black/10 bg-black/[0.01] hover:border-black/20")
-                    }`}
+                      }`}
                   >
-                    <div className={`h-12 w-12 rounded-full flex items-center justify-center transition-all ${
-                      isUploadDragging ? "bg-[var(--color-cyan)] text-black" : (isDarkMode ? "bg-white/5 text-white/50" : "bg-black/5 text-black/50")
-                    }`}>
+                    <div className={`h-12 w-12 rounded-full flex items-center justify-center transition-all ${isUploadDragging ? "bg-[var(--color-cyan)] text-black" : (isDarkMode ? "bg-white/5 text-white/50" : "bg-black/5 text-black/50")
+                      }`}>
                       <Upload className="h-6 w-6" />
                     </div>
                     <div className="text-center font-sans">
@@ -3483,9 +3626,8 @@ export default function LibraryPage() {
                         onChange={handleFileSelect}
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                       />
-                      <button className={`px-4 py-2 border rounded-lg text-xs font-semibold uppercase tracking-wider transition-all select-none ${
-                        isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10 text-white/80" : "border-black/10 bg-black/5 hover:bg-black/10 text-black/80"
-                      }`}>
+                      <button className={`px-4 py-2 border rounded-lg text-xs font-semibold uppercase tracking-wider transition-all select-none ${isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10 text-white/80" : "border-black/10 bg-black/5 hover:bg-black/10 text-black/80"
+                        }`}>
                         Select File
                       </button>
                     </div>
@@ -3504,9 +3646,8 @@ export default function LibraryPage() {
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className={`flex flex-col items-center justify-center py-32 border rounded-2xl w-full ${
-                      isDarkMode ? "border-white/[0.04] bg-white/[0.01]" : "border-black/[0.04] bg-black/[0.01]"
-                    }`}
+                    className={`flex flex-col items-center justify-center py-32 border rounded-2xl w-full ${isDarkMode ? "border-white/[0.04] bg-white/[0.01]" : "border-black/[0.04] bg-black/[0.01]"
+                      }`}
                   >
                     <BookOpen className={`h-10 w-10 mb-5 ${isDarkMode ? "text-white/10" : "text-black/15"}`} />
                     <p className="text-sm font-sans mb-1 font-semibold">No assets found</p>
@@ -3518,9 +3659,8 @@ export default function LibraryPage() {
                     {searchQuery && (
                       <button
                         onClick={() => setSearchQuery("")}
-                        className={`mt-4 px-3 py-1.5 border rounded-lg text-xs font-mono ${
-                          isDarkMode ? "bg-white/5 border-white/15 hover:bg-white/10" : "bg-black/5 border-black/15 hover:bg-black/10"
-                        }`}
+                        className={`mt-4 px-3 py-1.5 border rounded-lg text-xs font-mono ${isDarkMode ? "bg-white/5 border-white/15 hover:bg-white/10" : "bg-black/5 border-black/15 hover:bg-black/10"
+                          }`}
                       >
                         Clear Filter
                       </button>
@@ -3536,9 +3676,8 @@ export default function LibraryPage() {
                           getBentoSpanClass(i)
                         )}
                         header={
-                          <div className={`relative overflow-hidden rounded-none border w-full h-full animate-pulse ${
-                            isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
-                          }`}>
+                          <div className={`relative overflow-hidden rounded-none border w-full h-full animate-pulse ${isDarkMode ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5"
+                            }`}>
                             <div className={`absolute inset-0 ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
                           </div>
                         }
@@ -3547,60 +3686,59 @@ export default function LibraryPage() {
                   </BentoGrid>
                 ) : (
                   <>
-                  {/* ================= CORE PHOTO IMAGE GRID ================= */}
-                  <BentoGrid className="w-full gap-1.5 md:gap-2 max-w-none md:auto-rows-[15rem]">
-                    <AnimatePresence mode="popLayout">
-                      {isGenerating && activeCategory === "all" && (
-                        <BentoGridItem
-                          key="generating-placeholder"
-                          className={cn(
-                            "p-0 overflow-hidden rounded-none bg-transparent border-none dark:bg-transparent shadow-none hover:shadow-none transition-none w-full h-[220px] md:h-full min-h-[14rem]",
-                            getBentoSpanClass(0)
-                          )}
-                          header={
-                            <motion.div
-                              layout
-                              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                              transition={{ duration: 0.35, ease: "easeOut" }}
-                              className={`relative overflow-hidden rounded-none border transition-all duration-300 w-full h-full flex items-center justify-center ${
-                                isDarkMode ? "bg-[#0d0d0c] border-white/5 text-white" : "bg-[#f4f3f2] border-black/5 text-black"
-                              }`}
-                            >
-                              <PixelCard
-                                variant={isDarkMode ? "blue" : "default"}
-                                colors={isDarkMode ? undefined : "#000000,#18181b,#27272a,#3f3f46,#52525b"}
-                                autoPlay
-                                autoPlayInterval={2000}
-                                className="!h-full !w-full !rounded-none !border-none"
+                    {/* ================= CORE PHOTO IMAGE GRID ================= */}
+                    <BentoGrid className="w-full gap-1.5 md:gap-2 max-w-none md:auto-rows-[15rem]">
+                      <AnimatePresence mode="popLayout">
+                        {isGenerating && activeCategory === "all" && (
+                          <BentoGridItem
+                            key="generating-placeholder"
+                            className={cn(
+                              "p-0 overflow-hidden rounded-none bg-transparent border-none dark:bg-transparent shadow-none hover:shadow-none transition-none w-full h-[220px] md:h-full min-h-[14rem]",
+                              getBentoSpanClass(0)
+                            )}
+                            header={
+                              <motion.div
+                                layout
+                                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                                transition={{ duration: 0.35, ease: "easeOut" }}
+                                className={`relative overflow-hidden rounded-none border transition-all duration-300 w-full h-full flex items-center justify-center ${isDarkMode ? "bg-[#0d0d0c] border-white/5 text-white" : "bg-[#f4f3f2] border-black/5 text-black"
+                                  }`}
                               >
-                                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-                                  <Loader2 className={`h-8 w-8 animate-spin mb-3 ${isDarkMode ? "text-white" : "text-black"}`} />
-                                  <p className={`text-xs font-mono font-semibold tracking-wider uppercase ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
-                                    Generating...
-                                  </p>
-                                </div>
-                              </PixelCard>
-                            </motion.div>
-                          }
-                        />
-                      )}
-                      {activeAssets.slice(0, visibleCount).map((asset, i) => {
-                        const index = (isGenerating && activeCategory === "all") ? i + 1 : i;
-                        const spanClass = getBentoSpanClass(index);
-                        return renderCard(asset, index, spanClass);
-                      })}
-                    </AnimatePresence>
-                  </BentoGrid>
-                  {activeAssets.length > visibleCount && (
-                    <div
-                      ref={sentinelRef}
-                      className="w-full flex items-center justify-center py-8"
-                    >
-                      <Loader2 className={`h-6 w-6 animate-spin ${isDarkMode ? "text-white/30" : "text-black/30"}`} />
-                    </div>
-                  )}
+                                <PixelCard
+                                  variant={isDarkMode ? "blue" : "default"}
+                                  colors={isDarkMode ? undefined : "#000000,#18181b,#27272a,#3f3f46,#52525b"}
+                                  autoPlay
+                                  autoPlayInterval={2000}
+                                  className="!h-full !w-full !rounded-none !border-none"
+                                >
+                                  <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+                                    <Loader2 className={`h-8 w-8 animate-spin mb-3 ${isDarkMode ? "text-white" : "text-black"}`} />
+                                    <p className={`text-xs font-mono font-semibold tracking-wider uppercase ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
+                                      Generating...
+                                    </p>
+                                  </div>
+                                </PixelCard>
+                              </motion.div>
+                            }
+                          />
+                        )}
+                        {activeAssets.slice(0, visibleCount).map((asset, i) => {
+                          const index = (isGenerating && activeCategory === "all") ? i + 1 : i;
+                          const spanClass = getBentoSpanClass(index);
+                          return renderCard(asset, index, spanClass);
+                        })}
+                      </AnimatePresence>
+                    </BentoGrid>
+                    {activeAssets.length > visibleCount && (
+                      <div
+                        ref={sentinelRef}
+                        className="w-full flex items-center justify-center py-8"
+                      >
+                        <Loader2 className={`h-6 w-6 animate-spin ${isDarkMode ? "text-white/30" : "text-black/30"}`} />
+                      </div>
+                    )}
                   </>
                 )}
               </>
@@ -3611,11 +3749,10 @@ export default function LibraryPage() {
 
         {/* ================= FIXED BOTTOM IMAGE GENERATOR BAR ================= */}
         <div
-          className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl rounded-2xl px-5 py-2.5 flex flex-col gap-2 transition-all duration-300 ${
-            isDarkMode
+          className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl rounded-2xl px-5 py-2.5 flex flex-col gap-2 transition-all duration-300 ${isDarkMode
               ? "bg-[#222120] border border-white/5 shadow-2xl"
               : "bg-[#f2f1f0] border border-black/5 shadow-2xl"
-          }`}
+            }`}
         >
           {/* Hidden file input for uploading images */}
           <input
@@ -3673,9 +3810,8 @@ export default function LibraryPage() {
               disabled={isGenerating}
               placeholder={isEditingMode ? "Describe the edit you want..." : typedPlaceholder}
               rows={1}
-              className={`flex-1 min-w-0 bg-transparent resize-none no-scrollbar font-sans ${
-                isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"
-              } py-1 text-base focus:outline-none`}
+              className={`flex-1 min-w-0 bg-transparent resize-none no-scrollbar font-sans ${isDarkMode ? "text-white placeholder:text-white/30" : "text-black placeholder:text-black/50"
+                } py-1 text-base focus:outline-none`}
               style={{ maxHeight: '30vh' }}
             />
 
@@ -3686,11 +3822,10 @@ export default function LibraryPage() {
                 onClick={() => { setIsEditingMode(!isEditingMode); if (!isEditingMode) setEditImages([]) }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className={`p-2 rounded-full transition-all duration-200 ${
-                  isEditingMode
+                className={`p-2 rounded-full transition-all duration-200 ${isEditingMode
                     ? "bg-blue-500/20 text-blue-400"
                     : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5")
-                }`}
+                  }`}
                 title={isEditingMode ? "Switch to Generate mode" : "Switch to Edit mode"}
               >
                 <ImageIcon className="h-5 w-5" />
@@ -3703,9 +3838,8 @@ export default function LibraryPage() {
                   onClick={() => fileInputRef.current?.click()}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className={`p-2 rounded-full transition-all duration-200 ${
-                    isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
-                  }`}
+                  className={`p-2 rounded-full transition-all duration-200 ${isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
+                    }`}
                   title="Upload image from device"
                 >
                   <Upload className="h-5 w-5" />
@@ -3718,9 +3852,8 @@ export default function LibraryPage() {
                   onClick={() => setShowImagePicker(true)}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className={`p-2 rounded-full transition-all duration-200 ${
-                    isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
-                  }`}
+                  className={`p-2 rounded-full transition-all duration-200 ${isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5"
+                    }`}
                   title="Pick from library"
                 >
                   <FolderOpen className="h-5 w-5" />
@@ -3733,11 +3866,10 @@ export default function LibraryPage() {
                 onClick={isRecording ? stopRecording : startRecording}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className={`p-2 rounded-full transition-all duration-200 ${
-                  isRecording 
-                    ? "bg-red-500/20 text-red-500 animate-pulse" 
+                className={`p-2 rounded-full transition-all duration-200 ${isRecording
+                    ? "bg-red-500/20 text-red-500 animate-pulse"
                     : (isDarkMode ? "text-white/50 hover:text-white hover:bg-white/5" : "text-black/50 hover:text-black hover:bg-black/5")
-                }`}
+                  }`}
                 title={isRecording ? "Stop recording" : "Voice input"}
               >
                 <Mic className="h-5 w-5" />
@@ -3754,11 +3886,10 @@ export default function LibraryPage() {
                   disabled={!generatePrompt.trim()}
                   whileHover={generatePrompt.trim() ? { scale: 1.1 } : {}}
                   whileTap={generatePrompt.trim() ? { scale: 0.9 } : {}}
-                  className={`h-9 w-9 rounded-full flex items-center justify-center transition-all duration-200 shadow-md ${
-                    generatePrompt.trim()
+                  className={`h-9 w-9 rounded-full flex items-center justify-center transition-all duration-200 shadow-md ${generatePrompt.trim()
                       ? (isDarkMode ? "bg-white text-black hover:bg-white/90 cursor-pointer" : "bg-black text-white hover:bg-black/90 cursor-pointer")
                       : (isDarkMode ? "bg-white/10 text-white/30 cursor-not-allowed" : "bg-black/10 text-black/30 cursor-not-allowed")
-                  }`}
+                    }`}
                   title={isEditingMode ? "Apply Edit" : "Generate Image"}
                 >
                   {isEditingMode ? <Zap className="h-5 w-5 stroke-[2.5]" /> : <ArrowUp className="h-5 w-5 stroke-[2.5]" />}
@@ -3768,52 +3899,51 @@ export default function LibraryPage() {
           </div>
         </div>
 
-      {/* Image Picker Modal */}
-      <AnimatePresence>
-        {showImagePicker && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowImagePicker(false)}
-          >
+        {/* Image Picker Modal */}
+        <AnimatePresence>
+          {showImagePicker && (
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className={`relative w-full max-w-lg max-h-[70vh] rounded-2xl p-5 border ${
-                isDarkMode ? "bg-[#1a1a1a] border-white/10" : "bg-white border-black/10"
-              }`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowImagePicker(false)}
             >
-              <h3 className={`text-base font-semibold mb-3 ${isDarkMode ? "text-white" : "text-black"}`}>
-                Select an image from your library
-              </h3>
-              <div className="grid grid-cols-3 gap-2 overflow-y-auto max-h-[50vh]">
-                {[...assets, ...uploadedAssets, ...publicAssets].slice(0, 30).map((asset) => (
-                  <button
-                    key={asset.id}
-                    onClick={() => handlePickFromLibrary(asset)}
-                    className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-blue-500/50 transition-all cursor-pointer"
-                  >
-                    <img
-                      src={getAssetImageUrl(asset)}
-                      alt={asset.prompt || "Asset"}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-                {assets.length === 0 && uploadedAssets.length === 0 && (
-                  <p className={`col-span-3 text-sm text-center py-8 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                    No images in your library yet. Upload or generate some first!
-                  </p>
-                )}
-              </div>
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className={`relative w-full max-w-lg max-h-[70vh] rounded-2xl p-5 border ${isDarkMode ? "bg-[#1a1a1a] border-white/10" : "bg-white border-black/10"
+                  }`}
+              >
+                <h3 className={`text-base font-semibold mb-3 ${isDarkMode ? "text-white" : "text-black"}`}>
+                  Select an image from your library
+                </h3>
+                <div className="grid grid-cols-3 gap-2 overflow-y-auto max-h-[50vh]">
+                  {[...assets, ...uploadedAssets, ...publicAssets].slice(0, 30).map((asset) => (
+                    <button
+                      key={asset.id}
+                      onClick={() => handlePickFromLibrary(asset)}
+                      className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-blue-500/50 transition-all cursor-pointer"
+                    >
+                      <img
+                        src={getAssetImageUrl(asset)}
+                        alt={asset.prompt || "Asset"}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                  {assets.length === 0 && uploadedAssets.length === 0 && (
+                    <p className={`col-span-3 text-sm text-center py-8 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                      No images in your library yet. Upload or generate some first!
+                    </p>
+                  )}
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Move to Folder Modal */}
@@ -3822,20 +3952,17 @@ export default function LibraryPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`w-80 rounded-2xl border shadow-2xl overflow-hidden ${
-              isDarkMode ? "bg-[#0e0e12] border-white/10" : "bg-white border-black/10"
-            }`}
+            className={`w-80 rounded-2xl border shadow-2xl overflow-hidden ${isDarkMode ? "bg-[#0e0e12] border-white/10" : "bg-white border-black/10"
+              }`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className={`flex items-center justify-between px-5 py-4 border-b ${
-              isDarkMode ? "border-white/5" : "border-black/5"
-            }`}>
+            <div className={`flex items-center justify-between px-5 py-4 border-b ${isDarkMode ? "border-white/5" : "border-black/5"
+              }`}>
               <h3 className="text-sm font-semibold font-sans">Move to Folder</h3>
               <button
                 onClick={() => { setIsMoveModalOpen(false); setMoveAssetId(null); }}
-                className={`p-1 rounded-lg transition-colors ${
-                  isDarkMode ? "text-white/40 hover:bg-white/10 hover:text-white" : "text-black/40 hover:bg-black/10 hover:text-black"
-                }`}
+                className={`p-1 rounded-lg transition-colors ${isDarkMode ? "text-white/40 hover:bg-white/10 hover:text-white" : "text-black/40 hover:bg-black/10 hover:text-black"
+                  }`}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -3848,11 +3975,10 @@ export default function LibraryPage() {
                   setIsMoveModalOpen(false);
                   setMoveAssetId(null);
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-sans transition-all ${
-                  isDarkMode
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-sans transition-all ${isDarkMode
                     ? "text-white/70 hover:bg-white/5 hover:text-white"
                     : "text-black/70 hover:bg-black/5 hover:text-black"
-                }`}
+                  }`}
               >
                 <ImageIcon className="h-4 w-4 shrink-0" />
                 <div>
@@ -3875,11 +4001,10 @@ export default function LibraryPage() {
                       setIsMoveModalOpen(false);
                       setMoveAssetId(null);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-sans transition-all ${
-                      isDarkMode
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-sans transition-all ${isDarkMode
                         ? "text-white/70 hover:bg-white/5 hover:text-white"
                         : "text-black/70 hover:bg-black/5 hover:text-black"
-                    }`}
+                      }`}
                   >
                     {g.is_public ? (
                       <FolderOpen className="h-4 w-4 shrink-0 text-sky-400" />
@@ -3916,9 +4041,8 @@ export default function LibraryPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.96, opacity: 0 }}
               transition={{ type: "spring", damping: 26, stiffness: 160 }}
-              className={`w-full max-w-5xl max-h-[calc(100dvh-2rem)] md:h-[80vh] flex flex-col md:flex-row rounded-3xl overflow-hidden border shadow-2xl transition-colors duration-300 ${
-                isDarkMode ? "bg-[#0d0d0c] border-white/[0.06] text-white" : "bg-[#f4f3f2] border-black/[0.06] text-black"
-              }`}
+              className={`w-full max-w-5xl max-h-[calc(100dvh-2rem)] md:h-[80vh] flex flex-col md:flex-row rounded-3xl overflow-hidden border shadow-2xl transition-colors duration-300 ${isDarkMode ? "bg-[#0d0d0c] border-white/[0.06] text-white" : "bg-[#f4f3f2] border-black/[0.06] text-black"
+                }`}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Left Column - Image Container */}
@@ -3991,7 +4115,7 @@ export default function LibraryPage() {
                       </motion.div>
                       <span className="text-sm font-semibold select-none">{likesCount}</span>
                     </motion.button>
-                    
+
                     {/* Comment Icon (focuses comment box) */}
                     <button
                       onClick={() => {
@@ -4019,11 +4143,10 @@ export default function LibraryPage() {
                     {/* Save to Personal Folder */}
                     <button
                       onClick={() => toggleSaved(expandedAsset)}
-                      className={`hover:scale-110 active:scale-95 transition-all duration-200 ${
-                        savedIds.includes(expandedAsset.id)
+                      className={`hover:scale-110 active:scale-95 transition-all duration-200 ${savedIds.includes(expandedAsset.id)
                           ? "text-blue-500"
                           : "text-zinc-650 hover:text-black dark:text-zinc-400 dark:hover:text-white"
-                      }`}
+                        }`}
                       title={savedIds.includes(expandedAsset.id) ? "Unsave" : "Save to Personal Folder"}
                     >
                       <Bookmark className={`h-6 w-6 transition-all ${savedIds.includes(expandedAsset.id) ? "fill-blue-500" : ""}`} />
@@ -4103,9 +4226,8 @@ export default function LibraryPage() {
 
                   {/* Caption / Prompt Description */}
                   <div className="space-y-2">
-                    <div className={`text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/40 p-3 md:p-4 rounded-xl md:rounded-2xl border border-zinc-200 dark:border-zinc-800/40 break-words ${
-                      expandedAsset.prompt && !promptExpanded ? "max-h-[30vh] overflow-y-auto" : ""
-                    }`}>
+                    <div className={`text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/40 p-3 md:p-4 rounded-xl md:rounded-2xl border border-zinc-200 dark:border-zinc-800/40 break-words ${expandedAsset.prompt && !promptExpanded ? "max-h-[30vh] overflow-y-auto" : ""
+                      }`}>
                       {expandedAsset.prompt || "No prompt text provided."}
                     </div>
                     {expandedAsset.prompt && (
@@ -4155,11 +4277,10 @@ export default function LibraryPage() {
                         comments.map((comment) => (
                           <div key={comment.id}>
                             <div className="flex gap-2.5 items-start text-sm">
-                              <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors duration-300 ${
-                                isDarkMode 
-                                  ? "bg-[#f4f3f2] text-black" 
+                              <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors duration-300 ${isDarkMode
+                                  ? "bg-[#f4f3f2] text-black"
                                   : "bg-[#0d0d0c] text-white"
-                              }`}>
+                                }`}>
                                 {comment.user_avatar ? (
                                   <img src={getStoryImageUrl(comment.user_avatar)} className="h-full w-full object-cover rounded-full" alt={comment.user_name} />
                                 ) : (
@@ -4230,11 +4351,10 @@ export default function LibraryPage() {
                 {/* Bottom - Add Comment Input */}
                 <div className="p-4 md:p-6 border-t border-zinc-100 dark:border-zinc-800/50 bg-[#0d0d0c]/5 dark:bg-[#0d0d0c]/30 backdrop-blur-md shrink-0">
                   <form onSubmit={handleAddComment} className="flex items-center gap-3">
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors duration-300 ${
-                      isDarkMode 
-                        ? "bg-[#f4f3f2] text-black" 
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors duration-300 ${isDarkMode
+                        ? "bg-[#f4f3f2] text-black"
                         : "bg-[#0d0d0c] text-white"
-                    }`}>
+                      }`}>
                       {profilePic ? (
                         <img src={profilePic} className="h-full w-full object-cover rounded-full" alt={userName} />
                       ) : (
@@ -4291,9 +4411,8 @@ export default function LibraryPage() {
                         className="flex-1 bg-transparent border-none outline-none text-sm placeholder-zinc-400 pr-2"
                       />
                       {mentionActive && mentionSuggestions.length > 0 && (
-                        <div className={`absolute left-0 right-0 bottom-full mb-1.5 rounded-lg overflow-hidden shadow-lg border z-50 ${
-                          isDarkMode ? "bg-zinc-800 border-zinc-700" : "bg-white border-zinc-200"
-                        }`}>
+                        <div className={`absolute left-0 right-0 bottom-full mb-1.5 rounded-lg overflow-hidden shadow-lg border z-50 ${isDarkMode ? "bg-zinc-800 border-zinc-700" : "bg-white border-zinc-200"
+                          }`}>
                           {mentionSuggestions.map((user, idx) => (
                             <button
                               key={user.id}
@@ -4305,11 +4424,10 @@ export default function LibraryPage() {
                                 setNewCommentText(`${before}@${user.username} ${after}`)
                                 setMentionActive(false)
                               }}
-                              className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${
-                                idx === mentionSelectedIdx
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${idx === mentionSelectedIdx
                                   ? isDarkMode ? "bg-zinc-700 text-white" : "bg-zinc-100 text-zinc-900"
                                   : isDarkMode ? "text-zinc-300 hover:bg-zinc-700" : "text-zinc-600 hover:bg-zinc-50"
-                              }`}
+                                }`}
                             >
                               {user.profile_picture ? (
                                 <img src={user.profile_picture} className="h-5 w-5 rounded-full object-cover" alt="" />
@@ -4481,9 +4599,8 @@ export default function LibraryPage() {
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ duration: 0.2 }}
               onClick={(e) => e.stopPropagation()}
-              className={`relative w-full max-w-lg rounded-2xl p-6 border ${
-                isDarkMode ? "bg-[#1a1a1a] border-white/10" : "bg-white border-black/10"
-              }`}
+              className={`relative w-full max-w-lg rounded-2xl p-6 border ${isDarkMode ? "bg-[#1a1a1a] border-white/10" : "bg-white border-black/10"
+                }`}
             >
               <h3 className={`text-lg font-semibold mb-1 ${isDarkMode ? "text-white" : "text-black"}`}>
                 Assign a Category
@@ -4497,15 +4614,14 @@ export default function LibraryPage() {
                   <button
                     key={cat}
                     onClick={() => setPendingCategory(cat)}
-                    className={`px-3 py-2.5 rounded-xl border text-sm font-medium text-left transition-all duration-200 cursor-pointer ${
-                      pendingCategory === cat
+                    className={`px-3 py-2.5 rounded-xl border text-sm font-medium text-left transition-all duration-200 cursor-pointer ${pendingCategory === cat
                         ? isDarkMode
                           ? "bg-white/15 border-white/30 text-white"
                           : "bg-black/10 border-black/30 text-black"
                         : isDarkMode
                           ? "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:border-white/20"
                           : "bg-black/5 border-black/10 text-black/70 hover:bg-black/10 hover:border-black/20"
-                    }`}
+                      }`}
                   >
                     {cat}
                   </button>
@@ -4519,26 +4635,24 @@ export default function LibraryPage() {
                   placeholder="Or type a custom category..."
                   value={customCategory}
                   onChange={(e) => setCustomCategory(e.target.value)}
-                  className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none transition-all ${
-                    isDarkMode
+                  className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none transition-all ${isDarkMode
                       ? "bg-white/5 border-white/10 text-white placeholder-white/30 focus:border-white/30"
                       : "bg-black/5 border-black/10 text-black placeholder-black/30 focus:border-black/30"
-                  }`}
+                    }`}
                 />
               </div>
 
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={handleCategoryAssign}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-                    pendingCategory || customCategory.trim()
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${pendingCategory || customCategory.trim()
                       ? isDarkMode
                         ? "bg-blue-600 text-white hover:bg-blue-700"
                         : "bg-blue-500 text-white hover:bg-blue-600"
                       : isDarkMode
                         ? "bg-white/5 text-white/30 cursor-not-allowed"
                         : "bg-black/5 text-black/30 cursor-not-allowed"
-                  }`}
+                    }`}
                 >
                   Assign
                 </button>
@@ -4554,7 +4668,7 @@ export default function LibraryPage() {
         onClose={() => setShowWalkthrough(false)}
         isMobile={isMobile}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
-        setIsRightSidebarCollapsed={() => {}}
+        setIsRightSidebarCollapsed={() => { }}
         isDarkMode={isDarkMode}
         steps={[
           {
@@ -4589,6 +4703,136 @@ export default function LibraryPage() {
           },
         ]}
       />
+
+      {/* Explore Mode Connection Stories Viewer Modal */}
+      <AnimatePresence>
+        {activeConnectionIndex !== null && (
+          <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[100] flex items-center justify-center p-0 sm:p-4 select-none">
+            {/* Close click area */}
+            <div className="absolute inset-0 cursor-pointer" onClick={() => {
+              if (activeConnectionIndex !== null) {
+                markConnectionStorySeen(activeConnectionIndex, activeSlideIndex)
+              }
+              setActiveConnectionIndex(null)
+              setStoryProgress(0)
+            }} />
+
+            {(() => {
+              const conn = connectionStories[activeConnectionIndex]
+              const activeStorySlides = getStoryImgs(conn.stories[0])
+              return (
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="relative max-w-md w-full h-full sm:h-[85vh] sm:rounded-2xl overflow-hidden shadow-2xl bg-zinc-950 flex flex-col justify-between z-10"
+                >
+                  {/* Top Progress bar & Header */}
+                  <div className="absolute top-0 inset-x-0 p-3 bg-gradient-to-b from-black/80 to-transparent z-25 space-y-3">
+                    {/* Progress Indicators */}
+                    <div className="flex gap-1.5 w-full">
+                      {activeStorySlides.map((_, i) => (
+                        <div key={i} className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-white animate-none"
+                            style={{
+                              width: i < activeSlideIndex
+                                ? "100%"
+                                : i === activeSlideIndex
+                                  ? `${storyProgress}%`
+                                  : "0%"
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Profile detail & close button */}
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-full overflow-hidden border border-white/25 flex items-center justify-center bg-zinc-800">
+                          {conn.user.profile_picture ? (
+                            <img src={getStoryImageUrl(conn.user.profile_picture)} className="h-full w-full object-cover" alt="User" />
+                          ) : (
+                            <User className="h-4 w-4 text-zinc-400" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-white">{conn.user.name}</p>
+                          <p className="text-[10px] text-white/60 font-medium">{conn.stories[0].name}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          markConnectionStorySeen(activeConnectionIndex, activeSlideIndex)
+                          setActiveConnectionIndex(null)
+                          setStoryProgress(0)
+                        }}
+                        className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Story Image */}
+                  <div className="flex-1 flex items-center justify-center bg-black relative">
+                    {activeStorySlides[activeSlideIndex] && (
+                      <img
+                        src={getStoryImageUrl(activeStorySlides[activeSlideIndex])}
+                        className="max-h-full max-w-full object-contain"
+                        alt={conn.stories[0].name}
+                      />
+                    )}
+
+                    {/* Navigation Overlays */}
+                    <div
+                      onClick={() => {
+                        setStoryProgress(0)
+                        if (activeSlideIndex > 0) {
+                          setActiveSlideIndex(activeSlideIndex - 1)
+                        } else {
+                          if (activeConnectionIndex > 0) {
+                            const prevConnIndex = activeConnectionIndex - 1
+                            const prevConn = connectionStories[prevConnIndex]
+                            const prevConnSlides = getStoryImgs(prevConn.stories[0])
+                            setActiveConnectionIndex(prevConnIndex)
+                            setActiveSlideIndex(prevConnSlides.length - 1)
+                          } else {
+                            setActiveConnectionIndex(null)
+                          }
+                        }
+                      }}
+                      className="absolute left-0 top-0 bottom-0 w-1/3 cursor-pointer"
+                      title="Previous Slide"
+                    />
+                    <div
+                      onClick={() => {
+                        setStoryProgress(0)
+                        const slidesCount = activeStorySlides.length
+                        if (activeSlideIndex < slidesCount - 1) {
+                          markConnectionStorySeen(activeConnectionIndex, activeSlideIndex)
+                          setActiveSlideIndex(activeSlideIndex + 1)
+                        } else {
+                          markConnectionStorySeen(activeConnectionIndex, activeSlideIndex)
+                          if (activeConnectionIndex < connectionStories.length - 1) {
+                            setActiveConnectionIndex(activeConnectionIndex + 1)
+                            setActiveSlideIndex(0)
+                          } else {
+                            setActiveConnectionIndex(null)
+                          }
+                        }
+                      }}
+                      className="absolute right-0 top-0 bottom-0 w-1/3 cursor-pointer"
+                      title="Next Slide"
+                    />
+                  </div>
+                </motion.div>
+              )
+            })()}
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

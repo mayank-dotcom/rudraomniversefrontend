@@ -3163,13 +3163,14 @@ export async function addAssetComment(id: string, content: string, parent_id?: n
 
 export interface SocialNotification {
   id: string
-  asset_id: string
+  asset_id: string | null
   type: string
   content: string
   is_read: boolean
   created_at: string
   sender_name: string
   sender_avatar: string | null
+  sender_id?: string
 }
 
 export async function getNotifications() {
@@ -3506,6 +3507,37 @@ export async function updateDMPrivacy(dm_privacy: "everyone" | "nobody") {
   const data = await parseJson<{ success: boolean; dm_privacy: string; error?: string }>(res)
   if (!res.ok || !data.success) {
     throw new Error(data.error || "Failed to update DM privacy.")
+  }
+  return data
+}
+
+export interface FollowUserItem {
+  id: string
+  name: string
+  profile_picture: string | null
+  is_following: boolean
+}
+
+export async function getUserFollowers(name: string): Promise<{ success: boolean; users: FollowUserItem[] }> {
+  const res = await fetch(`${API_BASE}/library/profile/${encodeURIComponent(name)}/followers`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; users: FollowUserItem[]; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch followers list.")
+  }
+  return data
+}
+
+export async function getUserFollowing(name: string): Promise<{ success: boolean; users: FollowUserItem[] }> {
+  const res = await fetch(`${API_BASE}/library/profile/${encodeURIComponent(name)}/following`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; users: FollowUserItem[]; error?: string }>(res)
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Failed to fetch following list.")
   }
   return data
 }

@@ -38,9 +38,9 @@ import {
     getFeatureIdForEngine,
     getNotifications,
     markNotificationAsRead,
-    getDMConversations,
     type SocialNotification,
     discontinueAccount,
+    getDMConversations,
     getNotes,
     createNote,
     updateNote,
@@ -290,19 +290,17 @@ const Chat = () => {
     const notificationPanelRef = useRef<HTMLDivElement>(null);
     const [notifDropdownPos, setNotifDropdownPos] = useState({ top: 0, right: 0 });
 
-    // DM state
-    const [showDMPanel, setShowDMPanel] = useState(false);
-    const [dmConversations, setDmConversations] = useState<any[]>([]);
-    const [dmConvLoading, setDmConvLoading] = useState(false);
-    const dmPanelRef = useRef<HTMLDivElement>(null);
-    const [dmPanelPos, setDmPanelPos] = useState({ top: 0, right: 0 });
+    const [dmConvOpen, setDmConvOpen] = useState(false)
+    const [dmConvs, setDmConvs] = useState<any[]>([])
+    const dmConvRef = useRef<HTMLDivElement>(null)
+    const [dmConvDropdownPos, setDmConvDropdownPos] = useState({ top: 0, right: 0 })
 
     useEffect(() => {
-        if (showDMPanel && dmPanelRef.current) {
-            const rect = dmPanelRef.current.getBoundingClientRect()
-            setDmPanelPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
+        if (dmConvOpen && dmConvRef.current) {
+            const rect = dmConvRef.current.getBoundingClientRect()
+            setDmConvDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
         }
-    }, [showDMPanel])
+    }, [dmConvOpen])
 
     useEffect(() => {
         if (showNotificationPanel && notificationPanelRef.current) {
@@ -1127,7 +1125,13 @@ const Chat = () => {
         };
 
         fetchNotifs();
-        const interval = setInterval(fetchNotifs, 15000);
+        const interval = setInterval(async () => {
+            fetchNotifs();
+            try {
+                const res = await getDMConversations();
+                if (res.success) setDmConvs(res.conversations);
+            } catch {}
+        }, 15000);
         return () => clearInterval(interval);
     }, []);
 
@@ -1145,8 +1149,14 @@ const Chat = () => {
                 if (isCreation) {
                     localStorage.removeItem("expand_asset_id");
                     localStorage.removeItem("expand_notif_type");
+                } else if (notif.type === "message") {
+                    // Navigate to sender's profile for DM notifications
+                    if (notif.sender_id || notif.sender_name) {
+                        router.push(`/profile/${encodeURIComponent(notif.sender_name || notif.sender_id!)}`);
+                        return;
+                    }
                 } else {
-                    localStorage.setItem("expand_asset_id", notif.asset_id);
+                    localStorage.setItem("expand_asset_id", notif.asset_id!);
                     localStorage.setItem("expand_notif_type", notif.type);
                 }
                 router.push("/library");
@@ -4649,104 +4659,96 @@ STRICT RULES:
                                     </motion.div>, document.body)}
                             </div>
 
-                            {/* DM Conversations Panel */}
-                            <div className="relative" ref={dmPanelRef}>
-                                <motion.button
-                                    onClick={async () => {
-                                        const next = !showDMPanel
-                                        setShowDMPanel(next)
-                                        if (next) {
-                                            setDmConvLoading(true)
-                                            try {
-                                                const res = await getDMConversations()
-                                                if (res.success) {
-                                                    setDmConversations(res.conversations)
-                                                }
-                                            } catch {}
-                                            setDmConvLoading(false)
-                                        }
-                                    }}
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.9 }}
-                                    className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer relative ${isDarkMode
-                                            ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
-                                            : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
-                                        }`}
-                                    title="Direct Messages"
+                        {/* DM Icon */}
+                        <div className="relative" ref={dmConvRef}>
+                            <motion.button
+                                onClick={async () => {
+                                    const next = !dmConvOpen
+                                    setDmConvOpen(next)
+                                    if (next) {
+                                        try {
+                                            const res = await getDMConversations()
+                                            if (res.success) setDmConvs(res.conversations)
+                                        } catch {}
+                                    }
+                                }}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer relative ${isDarkMode
+                                        ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                                        : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                                    }`}
+                                title="Direct Messages"
+                            >
+                                <MessageSquare className="h-4 w-4" />
+                                {dmConvs.some(c => c.unread_count > 0) && (
+                                    <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0d0d0c] bg-sky-500`} />
+                                )}
+                            </motion.button>
+
+                            {dmConvOpen && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                                    transition={{ duration: 0.15 }}
+                                    style={{ position: 'fixed', top: dmConvDropdownPos.top, right: dmConvDropdownPos.right }}
+                                    className={`w-72 rounded-xl border shadow-2xl overflow-hidden z-[9999] ${
+                                        isDarkMode
+                                            ? "bg-[#222120]/95 border-white/10 text-white"
+                                            : "bg-[#f2f1f0]/95 border-black/10 text-black"
+                                    }`}
                                 >
-                                    <MessageSquare className="h-4 w-4" />
-                                    {dmConversations.some(c => c.unread_count > 0) && (
-                                        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-sky-500 ring-2 ring-white dark:ring-[#0d0d0c]" />
-                                    )}
-                                </motion.button>
-
-                                {showDMPanel && createPortal(
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                                        transition={{ duration: 0.15 }}
-                                        style={{ position: 'fixed', top: dmPanelPos.top, right: dmPanelPos.right }}
-                                        className={`w-72 rounded-xl border shadow-2xl overflow-hidden z-[9999] ${
-                                            isDarkMode
-                                                ? "bg-[#222120]/95 border-white/10 text-white"
-                                                : "bg-[#f2f1f0]/95 border-black/10 text-black"
-                                        }`}
-                                    >
-                                        <div className="p-3 space-y-2">
-                                            <div className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                Conversations
-                                            </div>
-                                            <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-
-                                            {dmConvLoading ? (
-                                                <div className="flex justify-center py-4">
-                                                    <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
-                                                </div>
-                                            ) : dmConversations.length > 0 ? (
-                                                <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
-                                                    {dmConversations.map((conv) => (
-                                                        <button
-                                                            key={conv.user_id}
-                                                            onClick={() => {
-                                                                setShowDMPanel(false)
-                                                                router.push(`/profile/${encodeURIComponent(conv.username || conv.user_name)}`)
-                                                            }}
-                                                            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors text-xs ${
-                                                                isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
-                                                            }`}
-                                                        >
-                                                            <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px]">
-                                                                {conv.profile_picture ? (
-                                                                    <img src={getStoryImageUrl(conv.profile_picture)} className="h-full w-full object-cover" alt="" />
-                                                                ) : (
-                                                                    <User className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+                                    <div className="p-3 space-y-2">
+                                        <div className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                            Conversations
+                                        </div>
+                                        <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
+                                        {dmConvs.length > 0 ? (
+                                            <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+                                                {dmConvs.map((conv) => (
+                                                    <button
+                                                        key={conv.user_id}
+                                                        onClick={() => {
+                                                            setDmConvOpen(false)
+                                                            router.push(`/profile/${encodeURIComponent(conv.username || conv.user_name)}`)
+                                                        }}
+                                                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors text-xs ${
+                                                            isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
+                                                        }`}
+                                                    >
+                                                        <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px]">
+                                                            {conv.profile_picture ? (
+                                                                <img src={getStoryImageUrl(conv.profile_picture)} className="h-full w-full object-cover" alt="" />
+                                                            ) : (
+                                                                <MessageSquare className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="font-medium truncate flex items-center gap-1.5">
+                                                                {conv.user_name}
+                                                                {conv.unread_count > 0 && (
+                                                                    <span className="bg-sky-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                                                                        {conv.unread_count}
+                                                                    </span>
                                                                 )}
                                                             </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="font-medium truncate flex items-center gap-1.5">
-                                                                    {conv.user_name}
-                                                                    {conv.unread_count > 0 && (
-                                                                        <span className="bg-sky-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">
-                                                                            {conv.unread_count}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <div className={`text-[10px] truncate mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                                    {conv.last_message}
-                                                                </div>
+                                                            <div className={`text-[10px] truncate mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
+                                                                {conv.last_message}
                                                             </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className={`px-3 py-6 text-center text-xs ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                                    No conversations
-                                                </div>
-                                            )}
-                                        </div>
-                                    </motion.div>, document.body)}
-                            </div>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className={`px-3 py-6 text-center text-xs ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
+                                                No conversations
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </div>
 
                         {/* Theme Toggler */}
                         <motion.button
