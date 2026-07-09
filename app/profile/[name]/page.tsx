@@ -1513,8 +1513,8 @@ function ProfileContent() {
             </div>
 
             {/* Stories Section — horizontally below bio */}
-            <div className="mt-6 w-full ml-[5%]">
-              <div className="flex flex-row flex-nowrap gap-4 justify-start overflow-x-auto scrollbar-hide w-full max-w-[880px] py-1 pl-[6%]">
+            <div className="mt-6 w-full ml-[3%]">
+              <div className="flex flex-row flex-nowrap gap-4 justify-start overflow-x-auto scrollbar-hide w-full max-w-[880px] py-1 pl-[3%]">
                 {isCurrentUser && (
                   <div
                     onClick={() => setIsNewStoryOpen(true)}
