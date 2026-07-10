@@ -917,12 +917,12 @@ const Dashboard = () => {
             const res = await updateTokens(userId, newLimit);
             if (res.success) {
                 toast.success("Tokens updated successfully");
-                fetchData();
             } else throw new Error(res.error || "Failed to update");
         } catch (err) {
             toast.error("Error updating tokens: " + (err as Error).message);
         } finally {
             setIsUpdatingTokens(false);
+            fetchData();
         }
     };
 
@@ -1004,12 +1004,12 @@ const Dashboard = () => {
             if (res.success) {
                 toast.success("Plan updated successfully");
                 setEditingPlan(null);
-                fetchData();
             } else throw new Error(res.error || "Failed to update");
         } catch (err) {
             toast.error("Error updating plan: " + (err as Error).message);
         } finally {
             setIsUpdatingPlan(false);
+            fetchData();
         }
     };
 
