@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from "rea
 import { useSearchParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Swords, Users, Clock, Trophy, Copy, Check, Play, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, AlertTriangle, Eye, Moon, Sun, ChevronLeft, Flag, Percent, Award, TrendingUp, LayoutDashboard, BookOpen, Bookmark, Settings, LogOut, ChevronDown, Flame, Shield, Sparkles, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Swords, Users, Clock, Trophy, Copy, Check, Play, RefreshCw, BarChart3, LineChart, User, Star, Target, X, Zap, AlertTriangle, Eye, Moon, Sun, ChevronLeft, Flag, Percent, Award, TrendingUp, LayoutDashboard, BookOpen, Bookmark, Settings, LogOut, ChevronDown, Flame, Shield, Sparkles, PanelLeftClose, PanelLeftOpen, Share2 } from "lucide-react";
 import { getApiKey, getUserInfo, getProfilePicture, getUserRole } from "@/lib/auth";
 import { getGlobalLeaderboard, getArenaHistory, getUserAnalytics } from "@/lib/chat-api";
 import type { GlobalLeaderboardEntry, ArenaHistoryItem, ArenaHistoryResponse } from "@/lib/chat-api";
@@ -82,6 +82,7 @@ function ArenaContent() {
     const [timeLeft, setTimeLeft] = useState(0);
     const [isStarting, setIsStarting] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [shared, setShared] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [leaderboard, setLeaderboard] = useState<Participant[]>([]);
     const [showAnalysis, setShowAnalysis] = useState(false);
@@ -553,6 +554,21 @@ function ArenaContent() {
         navigator.clipboard.writeText(lobbyCode);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleShareCode = async () => {
+        const inviteUrl = `${window.location.origin}/battle-arena?code=${lobbyCode}`;
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: "Join my Battle Arena!", text: `Join my quiz battle! Use code: ${lobbyCode}`, url: inviteUrl });
+                setShared(true);
+                setTimeout(() => setShared(false), 2000);
+            } catch { }
+        } else {
+            navigator.clipboard.writeText(inviteUrl);
+            setShared(true);
+            setTimeout(() => setShared(false), 2000);
+        }
     };
 
     const progressChartData = useCallback(() => {
@@ -1255,6 +1271,9 @@ function ArenaContent() {
                                                         <span className="text-4xl font-black tracking-[0.4em]">{lobbyCode}</span>
                                                         <button onClick={handleCopyCode} className={`p-3 border rounded-xl ${isDarkMode ? "bg-white/10 border-white/20" : "bg-[#f6f5f2] border-black/10 shadow-sm"}`}>
                                                             {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+                                                        </button>
+                                                        <button onClick={handleShareCode} className={`p-3 border rounded-xl ${isDarkMode ? "bg-white/10 border-white/20" : "bg-[#f6f5f2] border-black/10 shadow-sm"}`}>
+                                                            {shared ? <Check className="h-5 w-5" /> : <Share2 className="h-5 w-5" />}
                                                         </button>
                                                     </div>
                                                 </div>

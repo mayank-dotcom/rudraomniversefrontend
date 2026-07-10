@@ -1908,11 +1908,11 @@ export interface MessageFeedbackResponse {
   error?: string
 }
 
-export async function sendMessageFeedback(messageId: string, feedback: number) {
+export async function sendMessageFeedback(messageId: string, feedback: number, feedbackReason?: string) {
   const res = await fetch(`${API_BASE}/messages/${messageId}/feedback`, {
     method: "POST",
     headers: getHeaders(),
-    body: JSON.stringify({ feedback }),
+    body: JSON.stringify({ feedback, feedback_reason: feedbackReason || null }),
   })
 
   const data = await parseJson<MessageFeedbackResponse>(res)
@@ -2342,6 +2342,89 @@ export async function getUserAnalytics() {
     throw new Error(normalized.error || "Unable to fetch user analytics")
   }
   return normalized
+}
+
+// ─── Public Personas ───
+
+export interface PublicPersona {
+  id: string
+  name: string
+  description?: string
+  system_prompt: string
+  icon_name?: string
+  is_public: boolean
+  creator_name?: string
+  created_at: string
+}
+
+export async function getPublicPersonas() {
+  const res = await fetch(`${API_BASE}/personas/public`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<any>(res)
+  return Array.isArray(data?.personas) ? data.personas : []
+}
+
+export async function createPersona(payload: { name: string; system_prompt: string; description?: string; is_public?: boolean }) {
+  const res = await fetch(`${API_BASE}/personas`, {
+    method: "POST",
+    headers: { ...getHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: payload.name,
+      system_prompt: payload.system_prompt,
+      description: payload.description || "",
+      is_public: payload.is_public || false,
+    }),
+  })
+  const data = await parseJson<any>(res)
+  if (!res.ok || !data?.success) throw new Error(data?.error || "Failed to create persona")
+  return data.persona
+}
+
+export async function getMyPersonas() {
+  const res = await fetch(`${API_BASE}/personas`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<any>(res)
+  return Array.isArray(data?.personas) ? data.personas : []
+}
+
+export async function deletePersona(id: string) {
+  const res = await fetch(`${API_BASE}/personas/${id}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<any>(res)
+  if (!res.ok || !data?.success) throw new Error(data?.error || "Failed to delete persona")
+  return true
+}
+
+export async function updatePersona(id: string, payload: { name: string; system_prompt: string; description?: string; is_public?: boolean }) {
+  const res = await fetch(`${API_BASE}/personas/${id}`, {
+    method: "PUT",
+    headers: { ...getHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: payload.name,
+      system_prompt: payload.system_prompt,
+      description: payload.description || "",
+      is_public: payload.is_public || false,
+    }),
+  })
+  const data = await parseJson<any>(res)
+  if (!res.ok || !data?.success) throw new Error(data?.error || "Failed to update persona")
+  return data.persona
+}
+
+export async function togglePersonaPublic(id: string) {
+  const res = await fetch(`${API_BASE}/personas/${id}/toggle-public`, {
+    method: "PATCH",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<any>(res)
+  if (!res.ok || !data?.success) throw new Error(data?.error || "Failed to toggle public status")
+  return data.persona
 }
 
 // ─── Site Settings (Footer Pages) ───

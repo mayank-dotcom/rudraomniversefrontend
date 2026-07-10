@@ -73,6 +73,8 @@ import OnboardingWalkthrough from "@/components/OnboardingWalkthrough";
 import SettingsModal from "@/components/ui/SettingsModal";
 import ReflectiveCard from "@/components/ReflectiveCard";
 import WalletModal from "@/components/ui/WalletModal";
+import ReportCard, { isReportMessage } from "@/components/ReportCard";
+import DislikeModal from "@/components/DislikeModal";
 
 const getStoryImageUrl = (url: string) => {
   if (!url) return ""
@@ -354,6 +356,8 @@ const Chat = () => {
     const [paperConfig, setPaperConfig] = useState<MockPaperConfig | null>(null);
     const [isGeneratingPaper, setIsGeneratingPaper] = useState(false);
     const [copiedMsgIndex, setCopiedMsgIndex] = useState<number | null>(null);
+    const [dislikeModalOpen, setDislikeModalOpen] = useState(false);
+    const [dislikeMessageId, setDislikeMessageId] = useState<string | null>(null);
     const [mcqQuestions, setMcqQuestions] = useState<MCQQuestion[] | null>(null);
     const [mcqExamType, setMcqExamType] = useState("");
     const [mcqSession, setMcqSession] = useState<{
@@ -808,22 +812,16 @@ const Chat = () => {
     const handleConnectGmail = async () => {
         setGmailConnecting(true)
         setGmailError("")
-        const popup = window.open("", "_blank", "width=600,height=700")
-        if (popup) {
-            popup.document.write("<p style='font-family:sans-serif; text-align:center; padding-top:20px;'>Connecting to Google...</p>")
-        }
         try {
             const { getGoogleAuthUrl } = await import("@/lib/chat-api")
             const redirectUri = window.location.origin + '/google-connected'
             const res = await getGoogleAuthUrl(redirectUri)
-            if (res.success && res.url && popup) {
-                popup.location.href = res.url
+            if (res.success && res.url) {
+                window.open(res.url, "_blank", "width=600,height=700")
             } else {
-                if (popup) popup.close()
                 setGmailError(res.error || "Failed to get auth URL")
             }
         } catch (e: any) {
-            if (popup) popup.close()
             setGmailError("Connection error: " + (e.message || "Unknown"))
         } finally {
             setGmailConnecting(false)
@@ -2262,7 +2260,7 @@ const Chat = () => {
         }
     };
 
-    const handleToggleFeedback = async (messageId: string | undefined, currentFeedback: number | undefined, value: number) => {
+    const handleToggleFeedback = async (messageId: string | undefined, currentFeedback: number | undefined, value: number, reason?: string) => {
         if (!messageId) {
             toast.error("Cannot save feedback for this message");
             return;
@@ -2271,7 +2269,7 @@ const Chat = () => {
         const newFeedback = currentFeedback === value ? 0 : value;
 
         try {
-            await sendMessageFeedback(messageId, newFeedback);
+            await sendMessageFeedback(messageId, newFeedback, reason);
             setMessages((prev) =>
                 prev.map((msg) =>
                     msg.messageId === messageId ? { ...msg, feedback: newFeedback } : msg
@@ -2470,11 +2468,19 @@ Rules:
                     examType: examName
                 };
                 setMcqSession(session);
+                const quizIntro = `📝 **MCQ Quiz: ${examName}**\n\nI've generated **${questions.length}** questions. Select your answer below.`;
+                const firstQuestion = `**Q1.** ${questions[0].question}`;
                 setMessages(prev => [
                     ...prev.filter(m => !m.localOnly),
-                    { role: "assistant" as const, content: `📝 **MCQ Quiz: ${examName}**\n\nI've generated **${questions.length}** questions. Select your answer below.`, timestamp: formatTimestamp(), localOnly: true },
-                    { role: "assistant" as const, content: `**Q1.** ${questions[0].question}`, timestamp: formatTimestamp(), localOnly: true }
+                    { role: "assistant" as const, content: quizIntro, timestamp: formatTimestamp() },
+                    { role: "assistant" as const, content: firstQuestion, timestamp: formatTimestamp() }
                 ]);
+                if (activeChatId) {
+                    try {
+                        await saveChatMessage(activeChatId, "assistant", quizIntro);
+                        await saveChatMessage(activeChatId, "assistant", firstQuestion);
+                    } catch {}
+                }
                 toast.success("MCQ Quiz Generated Successfully!");
             } catch (error) {
                 toast.error("Failed to generate MCQ: " + (error as Error).message);
@@ -2522,7 +2528,7 @@ STRICT RULES:
         }
     };
 
-    const handleMcqOptionClick = (optionIndex: number) => {
+    const handleMcqOptionClick = async (optionIndex: number) => {
         if (!mcqSession) return;
         const { questions, currentIndex, answers, examType } = mcqSession;
         if (answers[currentIndex] !== null) return;
@@ -2532,12 +2538,19 @@ STRICT RULES:
         const optText = questions[currentIndex].options[optionIndex];
 
         if (currentIndex < questions.length - 1) {
+            const nextQuestion = `**Q${currentIndex + 2}.** ${questions[currentIndex + 1].question}`;
             setMessages(prev => [
                 ...prev,
-                { role: "user", content: optText, timestamp: formatTimestamp(), localOnly: true },
-                { role: "assistant", content: `**Q${currentIndex + 2}.** ${questions[currentIndex + 1].question}`, timestamp: formatTimestamp(), localOnly: true }
+                { role: "user", content: optText, timestamp: formatTimestamp() },
+                { role: "assistant", content: nextQuestion, timestamp: formatTimestamp() }
             ]);
             setMcqSession({ ...mcqSession, currentIndex: currentIndex + 1, answers: newAnswers });
+            if (activeChatId) {
+                try {
+                    await saveChatMessage(activeChatId, "user", optText);
+                    await saveChatMessage(activeChatId, "assistant", nextQuestion);
+                } catch {}
+            }
         } else {
             const score = newAnswers.reduce<number>((acc, ans, i) => acc + (ans === questions[i].correctAnswer ? 1 : 0), 0);
             const percentage = Math.round((score / questions.length) * 100);
@@ -2545,12 +2558,19 @@ STRICT RULES:
                 const isCorrect = newAnswers[i] === q.correctAnswer;
                 return `**Q${i + 1}.** ${isCorrect ? "[Correct]" : "[Wrong]"} ${q.question}\n  > Your answer: ${q.options[newAnswers[i]!]}\n  > Correct answer: ${q.options[q.correctAnswer]}\n  > *${q.explanation}*`;
             }).join("\n\n");
+            const resultsMsg = `## 🎯 Quiz Complete!\n\n**Score: ${score}/${questions.length} (${percentage}%)**\n\n${resultsText}`;
             setMessages(prev => [
                 ...prev,
-                { role: "user", content: optText, timestamp: formatTimestamp(), localOnly: true },
-                { role: "assistant", content: `## 🎯 Quiz Complete!\n\n**Score: ${score}/${questions.length} (${percentage}%)**\n\n${resultsText}`, timestamp: formatTimestamp(), localOnly: true }
+                { role: "user", content: optText, timestamp: formatTimestamp() },
+                { role: "assistant", content: resultsMsg, timestamp: formatTimestamp() }
             ]);
             setMcqSession(null);
+            if (activeChatId) {
+                try {
+                    await saveChatMessage(activeChatId, "user", optText);
+                    await saveChatMessage(activeChatId, "assistant", resultsMsg);
+                } catch {}
+            }
         }
     };
 
@@ -2784,7 +2804,7 @@ STRICT RULES:
 
             if (useStreaming) {
                 // --- SSE streaming path ---
-                setMessages((prev) => [...(overrideHistory || prev).filter((m) => !m.localOnly), userMessage]);
+                setMessages((prev) => [...(overrideHistory || prev), userMessage]);
                 setInput("");
                 setSelectedFile(null);
 
@@ -2900,7 +2920,7 @@ STRICT RULES:
 
             } else {
                 // --- Non-streaming path (image gen, file uploads, OCR) ---
-                setMessages((prev) => [...(overrideHistory || prev).filter((message) => !message.localOnly), userMessage]);
+                setMessages((prev) => [...(overrideHistory || prev), userMessage]);
                 setInput("");
                 setSelectedFile(null);
 
@@ -4963,6 +4983,15 @@ STRICT RULES:
                                                                 </div>
                                                             );
                                                         }
+                                                        if (msg.role === "assistant" && isReportMessage(msg.content)) {
+                                                            return (
+                                                                <ReportCard
+                                                                    content={msg.content}
+                                                                    isDarkMode={isDarkMode}
+                                                                    onExplainMore={(topic) => handleSend(topic)}
+                                                                />
+                                                            );
+                                                        }
                                                         return (
                                                             <MarkdownRenderer
                                                                 content={msg.content}
@@ -5029,7 +5058,14 @@ STRICT RULES:
                                                             </motion.button>
                                                             <motion.button
                                                                 title="Dislike"
-                                                                onClick={() => void handleToggleFeedback(msg.messageId, msg.feedback, -1)}
+                                                                onClick={() => {
+                                                                    if (msg.feedback === -1) {
+                                                                        void handleToggleFeedback(msg.messageId, msg.feedback, -1);
+                                                                    } else {
+                                                                        setDislikeMessageId(msg.messageId || null);
+                                                                        setDislikeModalOpen(true);
+                                                                    }
+                                                                }}
                                                                 whileHover={{ scale: 1.15 }}
                                                                 whileTap={{ scale: 0.85 }}
                                                                 className={`p-1.5 transition-all rounded-lg ${msg.feedback === -1
@@ -7304,6 +7340,19 @@ Do NOT wrap the output in markdown code fences. Do NOT add explanations or greet
                 onAccentChange={setAccent}
                 subscription={subscription}
                 isSubscriptionLoading={isSubscriptionLoading}
+            />
+
+            {/* Dislike Feedback Modal */}
+            <DislikeModal
+                isOpen={dislikeModalOpen}
+                onClose={() => { setDislikeModalOpen(false); setDislikeMessageId(null); }}
+                onSubmit={(reason) => {
+                    if (dislikeMessageId) {
+                        const msg = messages.find(m => m.messageId === dislikeMessageId);
+                        void handleToggleFeedback(dislikeMessageId, msg?.feedback, -1, reason);
+                    }
+                }}
+                isDarkMode={isDarkMode}
             />
 
             {/* Reflective Card Modal */}

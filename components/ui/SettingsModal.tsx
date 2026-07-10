@@ -20,19 +20,27 @@ import {
     Sun,
     Moon,
     Globe,
+    Lock,
+    Users,
+    User,
+    Pencil,
 } from "lucide-react";
 import { getApiKey } from "@/lib/auth";
 import { useTheme } from "@/lib/theme-context";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
+import { getPublicPersonas, createPersona, getMyPersonas, deletePersona, updatePersona, togglePersonaPublic } from "@/lib/chat-api";
 
 // ─── Persona types ────────────────────────────────────────────────────────────
 export interface Persona {
+    id?: string;
     name: string;
     systemPrompt: string;
     predefined: boolean;
     nameKey?: string;
     promptKey?: string;
+    isPublic?: boolean;
+    creatorName?: string;
 }
 
 const PREDEFINED_PERSONAS: Persona[] = [
@@ -83,13 +91,110 @@ export function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona, acce
     accent: string;
 }) {
     const { t } = useTranslation();
-    const [tab, setTab] = useState<"predefined" | "custom">("predefined");
+    const [tab, setTab] = useState<"library" | "custom">("library");
     const [customName, setCustomName] = useState("");
     const [customPrompt, setCustomPrompt] = useState("");
+    const [isPublic, setIsPublic] = useState(false);
+    const [publicPersonas, setPublicPersonas] = useState<Persona[]>([]);
+    const [myPersonas, setMyPersonas] = useState<Persona[]>([]);
+    const [loadingPublic, setLoadingPublic] = useState(false);
+    const [saving, setSaving] = useState(false);
 
-    const handleCreateCustom = () => {
+    useEffect(() => {
+        setLoadingPublic(true);
+        Promise.all([getPublicPersonas(), getMyPersonas()])
+            .then(([publicRows, myRows]: [any[], any[]]) => {
+                setPublicPersonas(publicRows.map((r: any) => ({
+                    name: r.name,
+                    systemPrompt: r.system_prompt,
+                    predefined: false,
+                    isPublic: true,
+                    creatorName: r.creator_name || "Anonymous",
+                })));
+                setMyPersonas(myRows.map((r: any) => ({
+                    id: r.id,
+                    name: r.name,
+                    systemPrompt: r.system_prompt,
+                    predefined: false,
+                    isPublic: r.is_public || false,
+                })));
+            })
+            .catch(() => {})
+            .finally(() => setLoadingPublic(false));
+    }, []);
+
+    const handleCreateCustom = async () => {
         if (!customName.trim() || !customPrompt.trim()) return;
-        onPersonaSelect({ name: customName.trim(), systemPrompt: customPrompt.trim(), predefined: false });
+        setSaving(true);
+        try {
+            await createPersona({
+                name: customName.trim(),
+                system_prompt: customPrompt.trim(),
+                is_public: isPublic,
+            });
+            const updated = await getMyPersonas();
+            setMyPersonas(updated.map((r: any) => ({
+                id: r.id,
+                name: r.name,
+                systemPrompt: r.system_prompt,
+                predefined: false,
+                isPublic: r.is_public || false,
+            })));
+            onPersonaSelect({ name: customName.trim(), systemPrompt: customPrompt.trim(), predefined: false, isPublic });
+            setCustomName("");
+            setCustomPrompt("");
+            setIsPublic(false);
+        } catch { }
+        setSaving(false);
+    };
+
+    const [editId, setEditId] = useState<string | null>(null);
+    const [editName, setEditName] = useState("");
+    const [editPrompt, setEditPrompt] = useState("");
+    const [editIsPublic, setEditIsPublic] = useState(false);
+    const [editSaving, setEditSaving] = useState(false);
+
+    const refreshMyPersonas = async () => {
+        const updated = await getMyPersonas();
+        setMyPersonas(updated.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            systemPrompt: r.system_prompt,
+            predefined: false,
+            isPublic: r.is_public || false,
+        })));
+    };
+
+    const handleDeletePersona = async (id: string) => {
+        try {
+            await deletePersona(id);
+            await refreshMyPersonas();
+        } catch { }
+    };
+
+    const handleTogglePublic = async (id: string) => {
+        try {
+            await togglePersonaPublic(id);
+            await refreshMyPersonas();
+        } catch { }
+    };
+
+    const startEdit = (p: Persona) => {
+        setEditId(p.id || null);
+        setEditName(p.name);
+        setEditPrompt(p.systemPrompt);
+        setEditIsPublic(p.isPublic || false);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editId || !editName.trim() || !editPrompt.trim()) return;
+        setEditSaving(true);
+        try {
+            await updatePersona(editId, { name: editName.trim(), system_prompt: editPrompt.trim(), is_public: editIsPublic });
+            await refreshMyPersonas();
+            setEditId(null);
+        } catch { }
+        setEditSaving(false);
     };
 
     return (
@@ -124,7 +229,7 @@ export function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona, acce
             )}
 
             <div className={`flex border-b ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
-                {(["predefined", "custom"] as const).map((tabVal) => (
+                {(["library", "custom"] as const).map((tabVal) => (
                     <button
                         key={tabVal}
                         onClick={() => setTab(tabVal)}
@@ -137,39 +242,214 @@ export function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona, acce
                             color: tab === tabVal && accent ? accent : undefined
                         }}
                     >
-                        {tabVal === "predefined" ? t("predefined") : t("custom")}
+                        {tabVal === "library" ? t("library") : t("custom")}
                     </button>
                 ))}
             </div>
 
-            {tab === "predefined" && (
-                <div className="grid grid-cols-1 gap-2.5">
-                    {PREDEFINED_PERSONAS.map((p) => {
-                        const isActive = currentPersona?.name === p.name;
-                        return (
-                            <button
-                                key={p.name}
-                                onClick={() => onPersonaSelect(p)}
-                                className={`w-full text-left p-4 rounded-xl border transition-all ${isActive
-                                    ? accent
-                                        ? ""
-                                        : (isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black")
-                                    : isDarkMode ? "bg-white/[0.03] border-white/10 text-white/70 hover:border-white/25 hover:bg-white/[0.06]" : "bg-black/[0.02] border-black/10 text-black/70 hover:border-black/25 hover:bg-black/[0.04]"
-                                }`}
-                                style={{
-                                    backgroundColor: isActive && accent ? accent : undefined,
-                                    borderColor: isActive && accent ? accent : undefined,
-                                    color: isActive && accent ? getContrastColor(accent) : undefined
-                                }}
-                            >
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-[11px] font-sans font-bold uppercase tracking-widest">{p.nameKey ? t(p.nameKey) : p.name}</span>
-                                    {isActive && <Check className="h-3.5 w-3.5 shrink-0" />}
-                                </div>
-                                <p className="text-[9px] leading-relaxed opacity-60 font-sans line-clamp-2">{p.promptKey ? t(p.promptKey) : p.systemPrompt}</p>
-                            </button>
-                        );
-                    })}
+            {tab === "library" && (
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-2.5">
+                        {PREDEFINED_PERSONAS.map((p) => {
+                            const isActive = currentPersona?.name === p.name;
+                            return (
+                                <button
+                                    key={p.name}
+                                    onClick={() => onPersonaSelect(p)}
+                                    className={`w-full text-left p-4 rounded-xl border transition-all ${isActive
+                                        ? accent
+                                            ? ""
+                                            : (isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black")
+                                        : isDarkMode ? "bg-white/[0.03] border-white/10 text-white/70 hover:border-white/25 hover:bg-white/[0.06]" : "bg-black/[0.02] border-black/10 text-black/70 hover:border-black/25 hover:bg-black/[0.04]"
+                                    }`}
+                                    style={{
+                                        backgroundColor: isActive && accent ? accent : undefined,
+                                        borderColor: isActive && accent ? accent : undefined,
+                                        color: isActive && accent ? getContrastColor(accent) : undefined
+                                    }}
+                                >
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <span className="text-[11px] font-sans font-bold uppercase tracking-widest">{p.nameKey ? t(p.nameKey) : p.name}</span>
+                                        {isActive && <Check className="h-3.5 w-3.5 shrink-0" />}
+                                    </div>
+                                    <p className="text-[9px] leading-relaxed opacity-60 font-sans line-clamp-2">{p.promptKey ? t(p.promptKey) : p.systemPrompt}</p>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {publicPersonas.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2.5">
+                                <Users className={`h-3.5 w-3.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
+                                <span className={`text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("community_personas")}</span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2.5">
+                                {publicPersonas.map((p) => {
+                                    const isActive = currentPersona?.name === p.name;
+                                    return (
+                                        <button
+                                            key={p.name}
+                                            onClick={() => onPersonaSelect(p)}
+                                            className={`w-full text-left p-4 rounded-xl border transition-all ${isActive
+                                                ? accent
+                                                    ? ""
+                                                    : (isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black")
+                                                : isDarkMode ? "bg-white/[0.03] border-white/10 text-white/70 hover:border-white/25 hover:bg-white/[0.06]" : "bg-black/[0.02] border-black/10 text-black/70 hover:border-black/25 hover:bg-black/[0.04]"
+                                            }`}
+                                            style={{
+                                                backgroundColor: isActive && accent ? accent : undefined,
+                                                borderColor: isActive && accent ? accent : undefined,
+                                                color: isActive && accent ? getContrastColor(accent) : undefined
+                                            }}
+                                        >
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-[11px] font-sans font-bold uppercase tracking-widest">{p.name}</span>
+                                                <div className="flex items-center gap-2">
+                                                    {isActive && <Check className="h-3.5 w-3.5 shrink-0" />}
+                                                    <Globe className="h-3 w-3 opacity-40" />
+                                                </div>
+                                            </div>
+                                            <p className="text-[9px] leading-relaxed opacity-60 font-sans line-clamp-2">{p.systemPrompt}</p>
+                                            {p.creatorName && (
+                                                <p className={`text-[8px] font-sans mt-1.5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>by {p.creatorName}</p>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {loadingPublic && (
+                        <div className="flex items-center justify-center py-4">
+                            <Loader2 className={`h-4 w-4 animate-spin ${isDarkMode ? "text-white/30" : "text-black/30"}`} />
+                        </div>
+                    )}
+
+                    {myPersonas.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2.5">
+                                <User className={`h-3.5 w-3.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`} />
+                                <span className={`text-[9px] font-sans uppercase tracking-[0.2em] ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{t("my_personas")}</span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2.5">
+                                {myPersonas.map((p) => {
+                                    const isActive = currentPersona?.name === p.name;
+                                    const isEditing = editId === p.id;
+                                    return (
+                                        <div
+                                            key={p.id || p.name}
+                                            className={`w-full text-left p-4 rounded-xl border transition-all ${isActive
+                                                ? accent
+                                                    ? ""
+                                                    : (isDarkMode ? "bg-white text-black border-white" : "bg-black text-white border-black")
+                                                : isDarkMode ? "bg-white/[0.03] border-white/10 text-white/70 hover:border-white/25 hover:bg-white/[0.06]" : "bg-black/[0.02] border-black/10 text-black/70 hover:border-black/25 hover:bg-black/[0.04]"
+                                            }`}
+                                            style={{
+                                                backgroundColor: isActive && accent ? accent : undefined,
+                                                borderColor: isActive && accent ? accent : undefined,
+                                                color: isActive && accent ? getContrastColor(accent) : undefined
+                                            }}
+                                        >
+                                            {isEditing ? (
+                                                <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                                                    <input
+                                                        type="text"
+                                                        value={editName}
+                                                        onChange={(e) => setEditName(e.target.value)}
+                                                        className={`w-full p-2.5 text-[11px] font-sans font-bold border rounded-lg focus:outline-none ${isActive
+                                                            ? (isDarkMode ? "bg-black/10 border-black/20 text-black placeholder:text-black/40" : "bg-white/10 border-white/20 text-white placeholder:text-white/40")
+                                                            : (isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/30" : "bg-black/5 border-black/10 text-black placeholder:text-black/30")
+                                                        }`}
+                                                    />
+                                                    <textarea
+                                                        value={editPrompt}
+                                                        onChange={(e) => setEditPrompt(e.target.value)}
+                                                        rows={3}
+                                                        className={`w-full p-2.5 text-[9px] font-sans border rounded-lg focus:outline-none resize-none ${isActive
+                                                            ? (isDarkMode ? "bg-black/10 border-black/20 text-black placeholder:text-black/40" : "bg-white/10 border-white/20 text-white placeholder:text-white/40")
+                                                            : (isDarkMode ? "bg-white/5 border-white/10 text-white placeholder:text-white/30" : "bg-black/5 border-black/10 text-black placeholder:text-black/30")
+                                                        }`}
+                                                    />
+                                                    <div
+                                                        onClick={() => setEditIsPublic(!editIsPublic)}
+                                                        className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer ${isActive ? (isDarkMode ? "text-black" : "text-white") : ""}`}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            {editIsPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                                                            <span className="text-[9px] font-sans">{editIsPublic ? t("public") : t("private")}</span>
+                                                        </div>
+                                                        <div className={`w-7 h-4 rounded-full transition-all relative ${editIsPublic
+                                                            ? (isActive ? (isDarkMode ? "bg-black/30" : "bg-white/30") : (isDarkMode ? "bg-white" : "bg-black"))
+                                                            : (isActive ? (isDarkMode ? "bg-black/10" : "bg-white/10") : (isDarkMode ? "bg-white/10" : "bg-black/10"))
+                                                        }`}>
+                                                            <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${editIsPublic ? "right-0.5" : "left-0.5"} ${editIsPublic
+                                                                ? (isActive ? (isDarkMode ? "bg-white" : "bg-black") : (isDarkMode ? "bg-black" : "bg-white"))
+                                                                : (isActive ? (isDarkMode ? "bg-black/40" : "bg-white/40") : (isDarkMode ? "bg-white/40" : "bg-black/40"))
+                                                            }`} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={handleSaveEdit} disabled={editSaving || !editName.trim() || !editPrompt.trim()} className={`flex-1 py-2 text-[9px] font-sans font-bold rounded-lg transition-all disabled:opacity-30 ${isActive
+                                                            ? (isDarkMode ? "bg-black text-white hover:bg-black/80" : "bg-white text-black hover:bg-white/80")
+                                                            : (isDarkMode ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")
+                                                        }`}>
+                                                            {editSaving ? <Loader2 className="h-3 w-3 inline animate-spin mr-1" /> : <Check className="h-3 w-3 inline mr-1" />}
+                                                            {t("save")}
+                                                        </button>
+                                                        <button onClick={() => setEditId(null)} className={`flex-1 py-2 text-[9px] font-sans font-bold rounded-lg border transition-all ${isActive
+                                                            ? (isDarkMode ? "border-black/20 text-black/60 hover:text-black" : "border-white/20 text-white/60 hover:text-white")
+                                                            : (isDarkMode ? "border-white/10 text-white/50 hover:text-white" : "border-black/10 text-black/50 hover:text-black")
+                                                        }`}>
+                                                            {t("cancel")}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <span className="text-[11px] font-sans font-bold uppercase tracking-widest">{p.name}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            {isActive && <Check className="h-3.5 w-3.5 shrink-0" />}
+                                                            {p.isPublic ? <Globe className="h-3 w-3 opacity-40" /> : <Lock className="h-3 w-3 opacity-40" />}
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-[9px] leading-relaxed opacity-60 font-sans line-clamp-2">{p.systemPrompt}</p>
+                                                    <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t" onClick={(e) => e.stopPropagation()} style={{ borderColor: isActive ? (isDarkMode ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)") : undefined }}>
+                                                        <button onClick={() => onPersonaSelect(p)} className={`px-2.5 py-1.5 text-[8px] font-sans font-bold rounded-lg transition-all ${isActive
+                                                            ? (isDarkMode ? "bg-black/10 text-black hover:bg-black/20" : "bg-white/10 text-white hover:bg-white/20")
+                                                            : (isDarkMode ? "bg-white/5 text-white/50 hover:text-white" : "bg-black/5 text-black/50 hover:text-black")
+                                                        }`}>
+                                                            <Check className="h-2.5 w-2.5 inline mr-1" />{isActive ? t("active") : t("select")}
+                                                        </button>
+                                                        <button onClick={() => startEdit(p)} className={`px-2.5 py-1.5 text-[8px] font-sans font-bold rounded-lg transition-all ${isActive
+                                                            ? (isDarkMode ? "bg-black/10 text-black hover:bg-black/20" : "bg-white/10 text-white hover:bg-white/20")
+                                                            : (isDarkMode ? "bg-white/5 text-white/50 hover:text-white" : "bg-black/5 text-black/50 hover:text-black")
+                                                        }`}>
+                                                            <Pencil className="h-2.5 w-2.5 inline mr-1" />{t("edit")}
+                                                        </button>
+                                                        <button onClick={() => handleTogglePublic(p.id!)} className={`px-2.5 py-1.5 text-[8px] font-sans font-bold rounded-lg transition-all ${isActive
+                                                            ? (isDarkMode ? "bg-black/10 text-black hover:bg-black/20" : "bg-white/10 text-white hover:bg-white/20")
+                                                            : (isDarkMode ? "bg-white/5 text-white/50 hover:text-white" : "bg-black/5 text-black/50 hover:text-black")
+                                                        }`}>
+                                                            {p.isPublic ? <Lock className="h-2.5 w-2.5 inline mr-1" /> : <Globe className="h-2.5 w-2.5 inline mr-1" />}{p.isPublic ? t("make_private") : t("make_public")}
+                                                        </button>
+                                                        <button onClick={() => handleDeletePersona(p.id!)} className={`px-2.5 py-1.5 text-[8px] font-sans font-bold rounded-lg transition-all ${isActive
+                                                            ? "bg-red-500/20 text-red-700 hover:bg-red-500/30"
+                                                            : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                                                        }`}>
+                                                            <Trash2 className="h-2.5 w-2.5 inline mr-1" />{t("delete")}
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -201,9 +481,26 @@ export function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona, acce
                             }`}
                         />
                     </div>
+
+                    <div
+                        onClick={() => setIsPublic(!isPublic)}
+                        className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${isDarkMode ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}
+                    >
+                        <div className="flex items-center gap-2.5">
+                            {isPublic ? <Globe className={`h-4 w-4 ${isDarkMode ? "text-white/60" : "text-black/60"}`} /> : <Lock className={`h-4 w-4 ${isDarkMode ? "text-white/60" : "text-black/60"}`} />}
+                            <div>
+                                <p className={`text-[11px] font-sans font-bold ${isDarkMode ? "text-white" : "text-black"}`}>{isPublic ? t("public") : t("private")}</p>
+                                <p className={`text-[9px] font-sans ${isDarkMode ? "text-white/40" : "text-black/40"}`}>{isPublic ? t("public_desc") : t("private_desc")}</p>
+                            </div>
+                        </div>
+                        <div className={`w-9 h-5 rounded-full transition-all relative ${isPublic ? (accent || (isDarkMode ? "bg-white" : "bg-black")) : (isDarkMode ? "bg-white/10" : "bg-black/10")}`}>
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${isPublic ? "right-0.5" : "left-0.5"} ${isPublic ? (isDarkMode ? "bg-black" : "bg-white") : (isDarkMode ? "bg-white/40" : "bg-black/40")}`} />
+                        </div>
+                    </div>
+
                     <button
                         onClick={handleCreateCustom}
-                        disabled={!customName.trim() || !customPrompt.trim()}
+                        disabled={!customName.trim() || !customPrompt.trim() || saving}
                         className={`w-full py-3.5 text-[10px] font-sans font-black uppercase tracking-[0.25em] rounded-xl transition-all disabled:opacity-30 flex items-center justify-center gap-2 ${
                             accent
                                 ? "hover:opacity-90"
@@ -214,8 +511,8 @@ export function PersonaPanel({ isDarkMode, onPersonaSelect, currentPersona, acce
                             color: accent ? getContrastColor(accent) : undefined
                         }}
                     >
-                        <UserPlus className="h-3.5 w-3.5" />
-                        {t("create_persona")}
+                        {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}
+                        {saving ? t("saving") : t("create_persona")}
                     </button>
                 </div>
             )}
