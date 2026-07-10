@@ -149,7 +149,7 @@ function ProfileContent() {
   const params = useParams()
   const router = useRouter()
   const { isDarkMode, toggleTheme } = useTheme()
-  const name = params.name as string
+  const name = (() => { try { return decodeURIComponent(params.name as string) } catch { return params.name as string } })()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [profile, setProfile] = useState<UserProfileResponse["user"] | null>(null)

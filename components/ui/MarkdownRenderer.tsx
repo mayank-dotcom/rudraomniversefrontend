@@ -50,7 +50,13 @@ function getCleanMermaidCode(code: string): string {
             decoded.includes("sequenceDiagram") ||
             decoded.includes("flowchart") ||
             decoded.includes("gantt") ||
-            decoded.includes("classDiagram")
+            decoded.includes("classDiagram") ||
+            decoded.includes("xychart") ||
+            decoded.includes("pie") ||
+            decoded.includes("stateDiagram") ||
+            decoded.includes("erDiagram") ||
+            decoded.includes("journey") ||
+            decoded.includes("gitGraph")
         )) {
             return decoded;
         }
@@ -153,27 +159,23 @@ function CodeBlock({ code, language, isDarkMode }: { code: string; language: str
 }
 
 function MermaidImage({ code, onDownloadImage, isGenerating }: { code: string; onDownloadImage?: (url: string, filename?: string) => void; isGenerating?: boolean }) {
-    // Only build the URL when streaming stops (isGenerating → false).
-    // This prevents flickering (re-requesting on every chunk) and 400 errors from partial code.
     const [imgSrc, setImgSrc] = React.useState(isGenerating ? "" : buildMermaidUrl(code));
+    const [hasError, setHasError] = React.useState(false);
 
-    // When isGenerating flips from true → false, capture the final complete code and build the URL.
     const prevGenerating = React.useRef(isGenerating);
     React.useEffect(() => {
         const wasGenerating = prevGenerating.current;
         prevGenerating.current = isGenerating;
 
         if (wasGenerating && !isGenerating) {
-            // Stream just finished — now it's safe to build the final URL
             setImgSrc(buildMermaidUrl(code));
+            setHasError(false);
         } else if (!isGenerating && !imgSrc) {
-            // Non-streaming render (e.g. chat history) — build immediately
             setImgSrc(buildMermaidUrl(code));
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isGenerating]);
 
-    // While streaming is active, always show the loading placeholder
     if (isGenerating) {
         return (
             <div className="my-4 w-full h-[200px] rounded-lg animate-pulse flex items-center justify-center border border-white/10 bg-white/5 backdrop-blur-md">
@@ -187,6 +189,17 @@ function MermaidImage({ code, onDownloadImage, isGenerating }: { code: string; o
 
     if (!imgSrc) return null;
 
+    if (hasError) {
+        return (
+            <div className="my-4 w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-md p-4">
+                <div className="flex flex-col items-center gap-2">
+                    <span className="text-xs font-mono text-white/60">Diagram could not be rendered</span>
+                    <pre className="text-[10px] font-mono text-white/40 whitespace-pre-wrap break-all max-h-[120px] overflow-auto w-full">{code}</pre>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <span className="block my-4 relative group/img-wrapper min-h-[100px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -194,6 +207,7 @@ function MermaidImage({ code, onDownloadImage, isGenerating }: { code: string; o
                 src={imgSrc} 
                 alt="Mermaid diagram" 
                 className="max-w-full h-auto rounded-lg opacity-100 scale-100 transition-all duration-300"
+                onError={() => setHasError(true)}
             />
             {onDownloadImage && (
                 <button
