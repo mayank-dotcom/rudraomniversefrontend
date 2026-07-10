@@ -69,7 +69,7 @@ import {
   createStory,
   getUserStories
 } from "@/lib/chat-api"
-import { removeApiKey, getUserInfo, getUserRole, getApiKey, setProfilePicture } from "@/lib/auth"
+import { removeApiKey, getUserInfo, getUserRole, getApiKey, setProfilePicture, setUserId, getUserId } from "@/lib/auth"
 import SettingsModal from "@/components/ui/SettingsModal"
 import AssetDetailModal from "@/components/AssetDetailModal"
 import DirectMessages from "@/components/DirectMessages"
@@ -420,6 +420,9 @@ function ProfileContent() {
         if (info?.name) {
           userName = info.name
           setCurrentUserName(info.name)
+          // Also store user ID if available from localStorage
+          const storedId = getUserId()
+          if (storedId) setCurrentUserId(storedId)
         } else {
           // Fallback: fetch from /user/profile endpoint using auth token
           const currentProfile = await getCurrentUserProfile()
@@ -448,6 +451,7 @@ function ProfileContent() {
           if (data.user.profile_picture) {
             setCurrentUserPic(getStoryImageUrl(data.user.profile_picture))
           }
+          setUserId(data.user.id)
         }
       } catch {
         // silent fail
@@ -485,6 +489,8 @@ function ProfileContent() {
         setFollowingCount(data.following_count)
         setIsFollowing(data.is_following)
         setIsCurrentUser(data.is_current_user)
+        setUserId(data.user.id)
+        setCurrentUserId(data.user.id)
       })
       .catch((err) => {
         setError(err.message || "Failed to load profile")
@@ -812,7 +818,7 @@ function ProfileContent() {
                   <button
                     onClick={() => {
                       setShowProfileDropup(false);
-                      if (currentUserName) router.push(`/profile/${encodeURIComponent(currentUserName)}`);
+                      if (currentUserName) router.push(`/profile/${getUserId() || encodeURIComponent(currentUserName)}`);
                     }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
                       }`}
@@ -904,7 +910,7 @@ function ProfileContent() {
                     : "bg-gradient-to-tr from-zinc-800 via-zinc-500 to-zinc-300"
                     }`}
                   onClick={() => {
-                    if (currentUserName) router.push(`/profile/${encodeURIComponent(currentUserName)}`)
+                    if (currentUserName) router.push(`/profile/${getUserId() || encodeURIComponent(currentUserName)}`)
                   }}
                 >
                   <div className={`h-full w-full rounded-full overflow-hidden border-2 ${isDarkMode ? "border-[#0d0d0c] bg-zinc-900" : "border-white bg-zinc-100"} flex items-center justify-center`}>
@@ -934,7 +940,7 @@ function ProfileContent() {
                       : "bg-[#f2f1f0]/95 border-black/[0.06] text-black"
                       }`}>
                       <button
-                        onClick={() => { setShowProfileDropup(false); if (currentUserName) router.push(`/profile/${encodeURIComponent(currentUserName)}`); }}
+                        onClick={() => { setShowProfileDropup(false); if (currentUserName) router.push(`/profile/${getUserId() || encodeURIComponent(currentUserName)}`); }}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
                           }`}
                       >
@@ -983,7 +989,7 @@ function ProfileContent() {
               {/* Centered Name */}
               <span
                 className={`text-xs font-bold text-center tracking-tight flex items-center justify-center gap-1 cursor-pointer hover:underline ${isDarkMode ? "text-white" : "text-black"}`}
-                onClick={() => { if (currentUserName) router.push(`/profile/${encodeURIComponent(currentUserName)}`) }}
+                onClick={() => { if (currentUserName) router.push(`/profile/${getUserId() || encodeURIComponent(currentUserName)}`) }}
               >
                 {(currentUserName || "User").split(" ")[0]}
                 {currentUserPlan.toLowerCase() === "motion" ? (
@@ -1522,7 +1528,7 @@ function ProfileContent() {
                     {recommendations.slice(0, 15).map((recUser) => (
                       <div
                         key={recUser.id}
-                        onClick={() => router.push(`/profile/${encodeURIComponent(recUser.name)}`)}
+                        onClick={() => router.push(`/profile/${encodeURIComponent(recUser.id || recUser.name)}`)}
                         className="h-14 w-14 rounded-lg overflow-hidden relative group cursor-pointer border border-zinc-200 dark:border-zinc-800 shadow-sm"
                         title={recUser.name}
                       >

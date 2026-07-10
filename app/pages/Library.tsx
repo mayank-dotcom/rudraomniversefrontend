@@ -55,7 +55,8 @@ import {
   getUserInfo,
   getUserRole,
   getProfilePicture,
-  setProfilePicture
+  setProfilePicture,
+  getUserId
 } from "@/lib/auth"
 import { useTheme } from "@/lib/theme-context"
 import DirectMessages from "@/components/DirectMessages"
@@ -2712,7 +2713,7 @@ export default function LibraryPage() {
                   <button
                     onClick={() => {
                       setShowProfileDropup(false);
-                      router.push(`/profile/${encodeURIComponent(userName || "me")}`);
+                      router.push(`/profile/${getUserId() || encodeURIComponent(userName || "me")}`);
                     }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-lg text-left transition-colors ${isDarkMode ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"
                       }`}
@@ -2787,7 +2788,7 @@ export default function LibraryPage() {
                     }`}
                   onClick={() => {
                     if (userName) {
-                      window.location.href = `/profile/${encodeURIComponent(userName)}`
+                      window.location.href = `/profile/${getUserId() || encodeURIComponent(userName)}`
                     }
                   }}
                 >
@@ -2817,7 +2818,7 @@ export default function LibraryPage() {
                 className={`text-xs font-bold text-center tracking-tight flex items-center justify-center gap-1 cursor-pointer hover:underline ${isDarkMode ? "text-white" : "text-black"}`}
                 onClick={() => {
                   if (userName) {
-                    window.location.href = `/profile/${encodeURIComponent(userName)}`
+                    window.location.href = `/profile/${getUserId() || encodeURIComponent(userName)}`
                   }
                 }}
               >

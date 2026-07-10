@@ -182,3 +182,18 @@ export function removeProfilePicture() {
     localStorage.removeItem(PROFILE_PICTURE_STORAGE)
   }
 }
+
+const USER_ID_STORAGE = "rudranex_user_id"
+
+export function setUserId(id: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(USER_ID_STORAGE, id)
+  }
+}
+
+export function getUserId(): string | null {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem(USER_ID_STORAGE)
+  }
+  return null
+}

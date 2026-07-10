@@ -524,7 +524,7 @@ export default function DirectMessages({
                   <p className="text-[10px] text-zinc-400 dark:text-zinc-500">@{dmActiveUser.name.toLowerCase().replace(/\s+/g, '_')}</p>
                   <button
                     onClick={() => {
-                      router.push(`/profile/${encodeURIComponent(dmActiveUser.name)}`)
+                      router.push(`/profile/${encodeURIComponent(dmActiveUser.id)}`)
                       onClose()
                     }}
                     className={`mt-3 px-4 py-1.5 text-xs font-bold rounded-lg transition-colors border ${isDarkMode
