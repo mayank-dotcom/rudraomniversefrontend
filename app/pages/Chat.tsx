@@ -68,6 +68,7 @@ import type { MCQQuestion } from "@/components/MCQQuizView";
 import PersonaModal, { type Persona } from "@/components/PersonaModal";
 import BattleArenaModal from "@/components/BattleArenaModal";
 import WelcomeBox from "@/components/ui/WelcomeBox";
+import DirectMessages from "@/components/DirectMessages";
 import WalletPanel from "@/components/ui/WalletPanel";
 import OnboardingWalkthrough from "@/components/OnboardingWalkthrough";
 import SettingsModal from "@/components/ui/SettingsModal";
@@ -78,9 +79,37 @@ import DislikeModal from "@/components/DislikeModal";
 
 const getStoryImageUrl = (url: string) => {
   if (!url) return ""
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:") || url.startsWith("blob:")) {
+  if (url.startsWith("data:") || url.startsWith("blob:")) {
     return url
   }
+
+  let cleanUrl = url
+
+  // Extract relative uploads path to avoid hardcoded domain mismatches from localStorage
+  if (cleanUrl.includes("/uploads/")) {
+    const idx = cleanUrl.indexOf("/uploads/")
+    cleanUrl = cleanUrl.substring(idx)
+  } else if (cleanUrl.includes("/api/v1/uploads/")) {
+    const idx = cleanUrl.indexOf("/api/v1/uploads/")
+    cleanUrl = "/uploads/" + cleanUrl.substring(idx + 16)
+  }
+
+  // Extract relative library assets path to avoid hardcoded domain mismatches from localStorage
+  if (cleanUrl.includes("/library/assets/")) {
+    const idx = cleanUrl.indexOf("/library/assets/")
+    cleanUrl = "/api/v1" + cleanUrl.substring(idx)
+  }
+
+  // Fix library asset URLs missing /api/v1 prefix (stored by older getAssetImageUrl)
+  if (cleanUrl.includes("/library/assets/") && !cleanUrl.includes("/api/v1/library/assets/")) {
+    const idx = cleanUrl.indexOf("/library/assets/")
+    cleanUrl = cleanUrl.substring(0, idx) + "/api/v1" + cleanUrl.substring(idx)
+  }
+
+  if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
+    return cleanUrl
+  }
+
   const apiRoot = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000"
   let serverRoot = apiRoot
   if (serverRoot.endsWith("/api/v1")) {
@@ -89,10 +118,9 @@ const getStoryImageUrl = (url: string) => {
     serverRoot = serverRoot.slice(0, -8)
   }
   const cleanServerRoot = serverRoot.endsWith("/") ? serverRoot.slice(0, -1) : serverRoot
-  if (url.startsWith("/")) {
-    return `${cleanServerRoot}${url}`
-  }
-  return `${cleanServerRoot}/${url}`
+
+  const relativePath = cleanUrl.startsWith("/") ? cleanUrl : `/${cleanUrl}`
+  return `${cleanServerRoot}${relativePath}`
 }
 
 function getContrastColor(hex: string): string {
@@ -292,17 +320,9 @@ const Chat = () => {
     const notificationPanelRef = useRef<HTMLDivElement>(null);
     const [notifDropdownPos, setNotifDropdownPos] = useState({ top: 0, right: 0 });
 
-    const [dmConvOpen, setDmConvOpen] = useState(false)
+    const [isDmOpen, setIsDmOpen] = useState(false)
+    const [dmActiveUserOverride, setDmActiveUserOverride] = useState<any | null>(null)
     const [dmConvs, setDmConvs] = useState<any[]>([])
-    const dmConvRef = useRef<HTMLDivElement>(null)
-    const [dmConvDropdownPos, setDmConvDropdownPos] = useState({ top: 0, right: 0 })
-
-    useEffect(() => {
-        if (dmConvOpen && dmConvRef.current) {
-            const rect = dmConvRef.current.getBoundingClientRect()
-            setDmConvDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
-        }
-    }, [dmConvOpen])
 
     useEffect(() => {
         if (showNotificationPanel && notificationPanelRef.current) {
@@ -495,6 +515,21 @@ const Chat = () => {
                 .catch(() => {})
         }
     }, [isPersonalizationModalOpen]);
+
+    useEffect(() => {
+        const fetchConvs = async () => {
+            try {
+                const res = await getDMConversations();
+                if (res.success) setDmConvs(res.conversations);
+            } catch (err) {
+                console.error("Failed to load DM conversations in Chat:", err);
+            }
+        };
+        fetchConvs();
+        const interval = setInterval(fetchConvs, 15000);
+        return () => clearInterval(interval);
+    }, []);
+
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
     const [showProfileDropup, setShowProfileDropup] = useState(false);
     const [emptyChats, setEmptyChats] = useState<Set<string>>(new Set());
@@ -4686,17 +4721,10 @@ STRICT RULES:
                             </div>
 
                         {/* DM Icon */}
-                        <div className="relative" ref={dmConvRef}>
+                        <div className="relative">
                             <motion.button
-                                onClick={async () => {
-                                    const next = !dmConvOpen
-                                    setDmConvOpen(next)
-                                    if (next) {
-                                        try {
-                                            const res = await getDMConversations()
-                                            if (res.success) setDmConvs(res.conversations)
-                                        } catch {}
-                                    }
+                                onClick={() => {
+                                    setIsDmOpen(!isDmOpen);
                                 }}
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
@@ -4711,69 +4739,6 @@ STRICT RULES:
                                     <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0d0d0c] bg-sky-500`} />
                                 )}
                             </motion.button>
-
-                            {dmConvOpen && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                                    transition={{ duration: 0.15 }}
-                                    style={{ position: 'fixed', top: dmConvDropdownPos.top, right: dmConvDropdownPos.right }}
-                                    className={`w-72 rounded-xl border shadow-2xl overflow-hidden z-[9999] ${
-                                        isDarkMode
-                                            ? "bg-[#222120]/95 border-white/10 text-white"
-                                            : "bg-[#f2f1f0]/95 border-black/10 text-black"
-                                    }`}
-                                >
-                                    <div className="p-3 space-y-2">
-                                        <div className={`text-[10px] font-mono uppercase tracking-widest ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                            Conversations
-                                        </div>
-                                        <div className={`h-px ${isDarkMode ? "bg-white/5" : "bg-black/5"}`} />
-                                        {dmConvs.length > 0 ? (
-                                            <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
-                                                {dmConvs.map((conv) => (
-                                                    <button
-                                                        key={conv.user_id}
-                                                        onClick={() => {
-                                                            setDmConvOpen(false)
-                                                            router.push(`/profile/${encodeURIComponent(conv.username || conv.user_name)}`)
-                                                        }}
-                                                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors text-xs ${
-                                                            isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
-                                                        }`}
-                                                    >
-                                                        <div className="h-7 w-7 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 font-bold text-[10px]">
-                                                            {conv.profile_picture ? (
-                                                                <img src={getStoryImageUrl(conv.profile_picture)} className="h-full w-full object-cover" alt="" />
-                                                            ) : (
-                                                                <MessageSquare className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="font-medium truncate flex items-center gap-1.5">
-                                                                {conv.user_name}
-                                                                {conv.unread_count > 0 && (
-                                                                    <span className="bg-sky-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">
-                                                                        {conv.unread_count}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className={`text-[10px] truncate mt-0.5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}>
-                                                                {conv.last_message}
-                                                            </div>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className={`px-3 py-6 text-center text-xs ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
-                                                No conversations
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            )}
                         </div>
 
                         {/* Theme Toggler */}
@@ -7776,6 +7741,18 @@ Do NOT wrap the output in markdown code fences. Do NOT add explanations or greet
                 setIsSidebarCollapsed={setIsSidebarCollapsed}
                 setIsRightSidebarCollapsed={setIsRightSidebarCollapsed}
                 isDarkMode={isDarkMode}
+            />
+
+            {/* Direct Messages Popup */}
+            <DirectMessages
+                isOpen={isDmOpen}
+                onClose={() => {
+                    setIsDmOpen(false);
+                    setDmActiveUserOverride(null);
+                }}
+                isDarkMode={isDarkMode}
+                activeUserOverride={dmActiveUserOverride}
+                onConversationsUpdate={(conversations) => setDmConvs(conversations)}
             />
 
         </div>

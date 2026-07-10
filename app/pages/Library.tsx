@@ -32,6 +32,9 @@ import {
   updateAssetCategory,
   copyAssetToLibrary,
   searchUsers,
+  tagUserInAsset,
+  removeTagFromAsset,
+  getAssetTags,
   type LibraryAsset,
   type LibraryGallery,
   type SocialNotification,
@@ -39,6 +42,8 @@ import {
   getUserProfile,
   getUserFollowers,
   getUserFollowing,
+  getDMConversations,
+  getFollowingStories,
 } from "@/lib/chat-api"
 import {
   isAuthenticated,
@@ -53,6 +58,7 @@ import {
   setProfilePicture
 } from "@/lib/auth"
 import { useTheme } from "@/lib/theme-context"
+import DirectMessages from "@/components/DirectMessages"
 
 const getStoryImageUrl = (url: string) => {
   if (!url) return ""
@@ -71,6 +77,18 @@ const getStoryImageUrl = (url: string) => {
     cleanUrl = "/uploads/" + cleanUrl.substring(idx + 16)
   }
   
+  // Extract relative library assets path to avoid hardcoded domain mismatches from localStorage
+  if (cleanUrl.includes("/library/assets/")) {
+    const idx = cleanUrl.indexOf("/library/assets/")
+    cleanUrl = "/api/v1" + cleanUrl.substring(idx)
+  }
+  
+  // Fix library asset URLs missing /api/v1 prefix (stored by older getAssetImageUrl)
+  if (cleanUrl.includes("/library/assets/") && !cleanUrl.includes("/api/v1/library/assets/")) {
+    const idx = cleanUrl.indexOf("/library/assets/")
+    cleanUrl = cleanUrl.substring(0, idx) + "/api/v1" + cleanUrl.substring(idx)
+  }
+
   if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
     return cleanUrl
   }
@@ -91,10 +109,10 @@ const getStoryImageUrl = (url: string) => {
 const getStoryImgs = (story: any): string[] => {
   if (!story) return []
   if (Array.isArray(story.imgs) && story.imgs.length > 0) {
-    return story.imgs
+    return story.imgs.filter(Boolean)
   }
   if (story.img) {
-    return [story.img]
+    return [story.img].filter(Boolean)
   }
   return []
 }
@@ -151,7 +169,8 @@ import {
   MoreHorizontal,
   Minus,
   Smile,
-  Tag
+  Tag,
+  AtSign
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -475,6 +494,11 @@ export default function LibraryPage() {
   const [parentAsset, setParentAsset] = useState<LibraryAsset | null>(null)
   const [notifications, setNotifications] = useState<SocialNotification[]>([])
 
+  // DM States
+  const [isDmOpen, setIsDmOpen] = useState(false)
+  const [dmConvs, setDmConvs] = useState<any[]>([])
+  const [dmActiveUserOverride, setDmActiveUserOverride] = useState<any | null>(null)
+
   const [isLoading, setIsLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
@@ -522,12 +546,20 @@ export default function LibraryPage() {
   const [userRole, setUserRole] = useState<string | null>(null)
   const [schoolName, setSchoolName] = useState<string>("")
   const [profilePic, setProfilePic] = useState<string | null>(null)
+  const [profilePicError, setProfilePicError] = useState(false)
  
   // Connection Stories States
   const [connectionStories, setConnectionStories] = useState<any[]>([])
   const [activeConnectionIndex, setActiveConnectionIndex] = useState<number | null>(null)
   const [activeSlideIndex, setActiveSlideIndex] = useState<number>(0)
   const [storyProgress, setStoryProgress] = useState(0)
+
+  // Image Tagging States
+  const [tagModalAssetId, setTagModalAssetId] = useState<string | null>(null)
+  const [tagSearchQuery, setTagSearchQuery] = useState("")
+  const [tagSearchResults, setTagSearchResults] = useState<{ id: string; name: string; username: string; profile_picture?: string }[]>([])
+  const [assetTagsMap, setAssetTagsMap] = useState<Record<string, { tagged_user_id: string; tagged_user_name: string; tagged_user_username: string }[]>>({})
+  const [taggingAssetId, setTaggingAssetId] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -543,14 +575,13 @@ export default function LibraryPage() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!userName) return
-    
-    // Fetch followers and following list to get connections
+  const loadConnectionStories = useCallback((name: string) => {
+    if (!name) return
     Promise.allSettled([
-      getUserFollowers(userName),
-      getUserFollowing(userName)
-    ]).then(([followersRes, followingRes]) => {
+      getUserFollowers(name),
+      getUserFollowing(name),
+      getFollowingStories().catch(() => []),
+    ]).then(([followersRes, followingRes, storiesRes]) => {
       let combined: any[] = []
       if (followersRes.status === "fulfilled" && followersRes.value.success) {
         combined = [...combined, ...followersRes.value.users]
@@ -558,39 +589,68 @@ export default function LibraryPage() {
       if (followingRes.status === "fulfilled" && followingRes.value.success) {
         combined = [...combined, ...followingRes.value.users]
       }
-      
-      // Deduplicate by user ID
+
       const uniqueMap = new Map<string, any>()
       combined.forEach(u => {
         uniqueMap.set(u.id, u)
       })
-      
+
       const connections = Array.from(uniqueMap.values())
-      
-      // Load stories for each connection from localStorage
+      const backendStories: any[] = storiesRes.status === "fulfilled" ? (storiesRes.value || []) : []
+
+      // Build a map of userId -> backend stories
+      const backendMap = new Map<string, any[]>()
+      backendStories.forEach((s: any) => {
+        const existing = backendMap.get(s.user_id) || []
+        existing.push(s)
+        backendMap.set(s.user_id, existing)
+      })
+
       const list: any[] = []
       connections.forEach(conn => {
         const stored = localStorage.getItem(`rudra_stories_${conn.id}`)
+        let localStories: any[] = []
         if (stored) {
           try {
-            const storiesList = JSON.parse(stored)
-            if (Array.isArray(storiesList) && storiesList.length > 0) {
-              const seenStored = localStorage.getItem(`rudra_stories_seen_${conn.id}`)
-              const seenSet = seenStored ? new Set<number>(JSON.parse(seenStored)) : new Set<number>()
-              list.push({
-                user: conn,
-                stories: storiesList,
-                seen: seenSet
+            const parsed = JSON.parse(stored)
+            if (Array.isArray(parsed)) {
+              parsed.forEach((s: any) => {
+                if (Array.isArray(s.imgs)) s.imgs = s.imgs.filter(Boolean)
               })
+              localStories = parsed
             }
           } catch (e) {
             console.error("Failed to parse stories for user:", conn.name, e)
           }
         }
+
+        // Merge backend + local stories (backend takes precedence, dedup by name)
+        const backend = backendMap.get(conn.id) || []
+        const merged = [...backend]
+        const backendNames = new Set(backend.map((s: any) => s.name))
+        localStories.forEach((s: any) => {
+          if (!backendNames.has(s.name)) {
+            merged.push(s)
+          }
+        })
+
+        if (merged.length > 0) {
+          const seenStored = localStorage.getItem(`rudra_stories_seen_${conn.id}`)
+          const seenSet = seenStored ? new Set<number>(JSON.parse(seenStored)) : new Set<number>()
+          list.push({
+            user: conn,
+            stories: merged,
+            seen: seenSet
+          })
+        }
       })
       setConnectionStories(list)
     }).catch(err => console.error("Failed to load connection stories in Explore:", err))
-  }, [userName])
+  }, [])
+
+  useEffect(() => {
+    loadConnectionStories(userName)
+  }, [userName, loadConnectionStories])
 
   const markConnectionStorySeen = (connIdx: number, slideIdx: number) => {
     if (connIdx === null || connIdx < 0 || connIdx >= connectionStories.length) return
@@ -612,7 +672,14 @@ export default function LibraryPage() {
     localStorage.setItem(`rudra_stories_seen_${conn.user.id}`, JSON.stringify(Array.from(newSeen)))
   }
 
-  // Auto-advance connection story timer
+  // Auto-advance connection story timer — uses refs to avoid restarting on every connectionStories refresh
+  const connectionStoriesRef = useRef(connectionStories)
+  connectionStoriesRef.current = connectionStories
+  const activeSlideIndexRef = useRef(activeSlideIndex)
+  activeSlideIndexRef.current = activeSlideIndex
+  const activeConnectionIndexRef = useRef(activeConnectionIndex)
+  activeConnectionIndexRef.current = activeConnectionIndex
+
   useEffect(() => {
     if (activeConnectionIndex === null) {
       setStoryProgress(0)
@@ -630,17 +697,20 @@ export default function LibraryPage() {
       setStoryProgress(pct)
 
       if (pct >= 100) {
-        const conn = connectionStories[activeConnectionIndex]
+        const idx = activeConnectionIndexRef.current
+        if (idx === null) { setActiveConnectionIndex(null); return }
+        const conn = connectionStoriesRef.current[idx]
         const activeStorySlides = getStoryImgs(conn.stories[0])
         const slidesCount = activeStorySlides.length
+        const currentSlide = activeSlideIndexRef.current
         
-        if (activeSlideIndex < slidesCount - 1) {
-          markConnectionStorySeen(activeConnectionIndex, activeSlideIndex)
-          setActiveSlideIndex(activeSlideIndex + 1)
+        if (currentSlide < slidesCount - 1) {
+          markConnectionStorySeen(idx, currentSlide)
+          setActiveSlideIndex(currentSlide + 1)
         } else {
-          markConnectionStorySeen(activeConnectionIndex, activeSlideIndex)
-          if (activeConnectionIndex < connectionStories.length - 1) {
-            setActiveConnectionIndex(activeConnectionIndex + 1)
+          markConnectionStorySeen(idx, currentSlide)
+          if (idx < connectionStoriesRef.current.length - 1) {
+            setActiveConnectionIndex(idx + 1)
             setActiveSlideIndex(0)
           } else {
             setActiveConnectionIndex(null)
@@ -655,7 +725,7 @@ export default function LibraryPage() {
     rafId = requestAnimationFrame(tick)
 
     return () => cancelAnimationFrame(rafId)
-  }, [activeConnectionIndex, activeSlideIndex, connectionStories])
+  }, [activeConnectionIndex])
 
   // Custom Real Database-backed Galleries States
   const [galleries, setGalleries] = useState<LibraryGallery[]>([])
@@ -789,6 +859,10 @@ export default function LibraryPage() {
 
   }, [isPersonalizationModalOpen])
 
+  useEffect(() => {
+    if (profilePic) setProfilePicError(false)
+  }, [profilePic])
+
 
 
   useEffect(() => {
@@ -799,6 +873,20 @@ export default function LibraryPage() {
       })
       .catch(() => { })
       .finally(() => setIsSubscriptionLoading(false))
+  }, [])
+
+  useEffect(() => {
+    const fetchConvs = async () => {
+      try {
+        const res = await getDMConversations()
+        if (res.success) setDmConvs(res.conversations)
+      } catch (err) {
+        console.error("Failed to load DM conversations:", err)
+      }
+    }
+    fetchConvs()
+    const interval = setInterval(fetchConvs, 15000)
+    return () => clearInterval(interval)
   }, [])
 
   const profileDropupRef = useRef<HTMLDivElement>(null)
@@ -2425,6 +2513,13 @@ export default function LibraryPage() {
                   >
                     <Download className="h-4 w-4" />
                   </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTagModalAssetId(asset.id); setTagSearchQuery(""); setTagSearchResults([]); }}
+                    className="text-white/60 hover:text-cyan-400 transition-colors cursor-pointer"
+                    title="Tag User"
+                  >
+                    <span className="text-sm font-bold leading-none">@</span>
+                  </button>
                   {isCreatedByMe(asset) && (
                     <button
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(asset.id); }}
@@ -2593,8 +2688,8 @@ export default function LibraryPage() {
                   }`}
                 title="Profile Options"
               >
-                {profilePic ? (
-                  <img src={profilePic} alt="Profile" className="h-full w-full object-cover" />
+                {profilePic && !profilePicError ? (
+                  <img src={profilePic} alt="Profile" className="h-full w-full object-cover" onError={() => setProfilePicError(true)} />
                 ) : (
                   <div className={`h-full w-full flex items-center justify-center ${isDarkMode ? "bg-white/5" : "bg-black/5"}`}>
                     <User className={`h-4 w-4 ${isDarkMode ? "text-white" : "text-black"}`} />
@@ -2688,7 +2783,7 @@ export default function LibraryPage() {
                 <div
                   className={`h-20 w-20 rounded-full p-[2.5px] flex items-center justify-center shadow-md cursor-pointer hover:brightness-95 ${isDarkMode
                       ? "bg-gradient-to-tr from-zinc-600 via-zinc-400 to-zinc-200"
-                      : "bg-gradient-to-tr from-cyan-400 via-purple-500 to-pink-500"
+                      : "bg-gradient-to-tr from-zinc-300 via-zinc-200 to-zinc-100"
                     }`}
                   onClick={() => {
                     if (userName) {
@@ -2697,8 +2792,8 @@ export default function LibraryPage() {
                   }}
                 >
                   <div className={`h-full w-full rounded-full overflow-hidden border-2 ${isDarkMode ? "border-[#0d0d0c] bg-zinc-900" : "border-white bg-zinc-100"} flex items-center justify-center text-white font-bold relative`}>
-                    {profilePic ? (
-                      <img src={getStoryImageUrl(profilePic)} className="h-full w-full object-cover" alt="Profile" />
+                    {profilePic && !profilePicError ? (
+                      <img src={getStoryImageUrl(profilePic)} className="h-full w-full object-cover" alt="Profile" onError={() => setProfilePicError(true)} />
                     ) : (
                       <User className="h-10 w-10 text-zinc-400 dark:text-zinc-500" />
                     )}
@@ -3109,6 +3204,26 @@ export default function LibraryPage() {
                   </div>
                 </motion.div>, document.body)}
             </div>
+            {/* DM Icon */}
+            <div className="relative">
+              <motion.button
+                onClick={() => {
+                  setIsDmOpen(!isDmOpen)
+                }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-2 border rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer relative ${isDarkMode
+                  ? "border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20"
+                  : "border-black/10 bg-black/5 text-black hover:bg-black/10 hover:border-black/20"
+                  }`}
+                title="Direct Messages"
+              >
+                <MessageSquare className="h-4 w-4" />
+                {dmConvs.some(c => c.unread_count > 0) && (
+                  <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0d0d0c] bg-sky-500`} />
+                )}
+              </motion.button>
+            </div>
 
             <button
               onClick={toggleTheme}
@@ -3340,7 +3455,7 @@ export default function LibraryPage() {
                       }}
                       className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0 select-none"
                     >
-                      <div className={`h-14 w-14 rounded-full flex items-center justify-center relative transition-all duration-300 ${
+                      <div className={`h-20 w-20 rounded-full flex items-center justify-center relative transition-all duration-300 ${
                         isSeen
                           ? "border border-zinc-300 dark:border-zinc-700 p-[1.5px] hover:border-zinc-400 dark:hover:border-zinc-500"
                           : "bg-gradient-to-tr from-red-500 via-rose-500 to-blue-500 p-[2px]"
@@ -3357,7 +3472,7 @@ export default function LibraryPage() {
                           )}
                         </div>
                       </div>
-                      <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 transition-colors truncate max-w-[64px]">
+                      <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 transition-colors truncate max-w-[80px]">
                         {connStory.user.name.split(" ")[0]}
                       </span>
                     </div>
@@ -4355,8 +4470,8 @@ export default function LibraryPage() {
                         ? "bg-[#f4f3f2] text-black"
                         : "bg-[#0d0d0c] text-white"
                       }`}>
-                      {profilePic ? (
-                        <img src={profilePic} className="h-full w-full object-cover rounded-full" alt={userName} />
+                      {profilePic && !profilePicError ? (
+                        <img src={profilePic} className="h-full w-full object-cover rounded-full" alt={userName} onError={() => setProfilePicError(true)} />
                       ) : (
                         (userName || "U").slice(0, 1).toUpperCase()
                       )}
@@ -4430,7 +4545,7 @@ export default function LibraryPage() {
                                 }`}
                             >
                               {user.profile_picture ? (
-                                <img src={user.profile_picture} className="h-5 w-5 rounded-full object-cover" alt="" />
+                                <img src={getStoryImageUrl(user.profile_picture)} className="h-5 w-5 rounded-full object-cover" alt="" />
                               ) : (
                                 <div className="h-5 w-5 rounded-full bg-zinc-400 flex items-center justify-center text-[8px] font-bold text-white">
                                   {user.name.charAt(0).toUpperCase()}
@@ -4750,11 +4865,11 @@ export default function LibraryPage() {
                     {/* Profile detail & close button */}
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-full overflow-hidden border border-white/25 flex items-center justify-center bg-zinc-800">
+                        <div className="h-10 w-10 rounded-full overflow-hidden border border-white/25 flex items-center justify-center bg-zinc-800">
                           {conn.user.profile_picture ? (
                             <img src={getStoryImageUrl(conn.user.profile_picture)} className="h-full w-full object-cover" alt="User" />
                           ) : (
-                            <User className="h-4 w-4 text-zinc-400" />
+                            <User className="h-5 w-5 text-zinc-400" />
                           )}
                         </div>
                         <div>
@@ -4833,6 +4948,117 @@ export default function LibraryPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Tag User Modal */}
+      <AnimatePresence>
+        {tagModalAssetId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setTagModalAssetId(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className={`w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border ${
+                isDarkMode ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-zinc-200 text-zinc-900"
+              }`}
+            >
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wider">@ Tag User</h3>
+                  <button onClick={() => setTagModalAssetId(null)} className="p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="relative">
+                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
+                  <input
+                    type="text"
+                    value={tagSearchQuery}
+                    onChange={(e) => {
+                      setTagSearchQuery(e.target.value)
+                      if (e.target.value.length >= 1) {
+                        searchUsers(e.target.value).then((res) => setTagSearchResults(res.users || [])).catch(() => setTagSearchResults([]))
+                      } else {
+                        setTagSearchResults([])
+                      }
+                    }}
+                    placeholder="Search username..."
+                    autoFocus
+                    className={`w-full pl-10 pr-4 py-3 text-sm rounded-xl border focus:outline-none focus:border-cyan-500/50 ${
+                      isDarkMode ? "bg-white/5 border-white/10 text-white placeholder-white/30" : "bg-black/5 border-black/10 text-black placeholder-black/30"
+                    }`}
+                  />
+                </div>
+                {tagSearchResults.length > 0 && (
+                  <div className={`mt-3 max-h-60 overflow-y-auto rounded-xl border ${isDarkMode ? "border-white/10" : "border-black/10"}`}>
+                    {tagSearchResults.map((user) => (
+                      <button
+                        key={user.id}
+                        onClick={async () => {
+                          if (!tagModalAssetId) return
+                          setTaggingAssetId(tagModalAssetId)
+                          try {
+                            await tagUserInAsset(tagModalAssetId, user.id)
+                            toast.success(`Tagged @${user.username}`)
+                            setAssetTagsMap((prev) => ({
+                              ...prev,
+                              [tagModalAssetId]: [
+                                ...(prev[tagModalAssetId] || []),
+                                { tagged_user_id: user.id, tagged_user_name: user.name, tagged_user_username: user.username }
+                              ]
+                            }))
+                            setTagModalAssetId(null)
+                          } catch (err) {
+                            toast.error("Failed to tag user")
+                          } finally {
+                            setTaggingAssetId(null)
+                          }
+                        }}
+                        className={`w-full flex items-center gap-3 p-3 transition-colors text-left cursor-pointer ${
+                          isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
+                        }`}
+                      >
+                        {user.profile_picture ? (
+                          <img src={getStoryImageUrl(user.profile_picture)} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-xs font-bold">
+                            {user.name?.charAt(0)?.toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium">{user.name}</p>
+                          <p className={`text-xs ${isDarkMode ? "text-white/40" : "text-black/40"}`}>@{user.username}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {tagSearchQuery.length >= 1 && tagSearchResults.length === 0 && (
+                  <p className={`mt-3 text-center text-xs ${isDarkMode ? "text-white/30" : "text-black/30"}`}>No users found</p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Direct Messages Popup */}
+      <DirectMessages
+        isOpen={isDmOpen}
+        onClose={() => {
+          setIsDmOpen(false)
+          setDmActiveUserOverride(null)
+        }}
+        isDarkMode={isDarkMode}
+        activeUserOverride={dmActiveUserOverride}
+        onConversationsUpdate={(conversations) => setDmConvs(conversations)}
+      />
     </div>
   )
 }

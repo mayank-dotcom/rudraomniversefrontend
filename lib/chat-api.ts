@@ -2776,6 +2776,47 @@ export async function getEnterpriseEmailStats() {
   return googleFetch(`${API_BASE}/enterprise/email-agent/stats`) as Promise<{ success: boolean; config?: any; stats?: any; recent_logs?: any[]; error?: string }>
 }
 
+// ── Story APIs ──────────────────────────────────────────────────────────
+
+export async function createStory(name: string, imgs: string[]) {
+  const res = await fetch(`${API_BASE}/library/stories`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ name, imgs }),
+  })
+  const data = await res.json()
+  if (!res.ok || !data.success) throw new Error(data.error || "Failed to create story")
+  return data.story
+}
+
+export async function getFollowingStories() {
+  const res = await fetch(`${API_BASE}/library/stories/following`, {
+    headers: getHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok || !data.success) throw new Error(data.error || "Failed to fetch stories")
+  return data.stories
+}
+
+export async function getUserStories(userId: string) {
+  const res = await fetch(`${API_BASE}/library/stories/user/${userId}`, {
+    headers: getHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok || !data.success) throw new Error(data.error || "Failed to fetch user stories")
+  return data.stories
+}
+
+export async function deleteStory(id: string) {
+  const res = await fetch(`${API_BASE}/library/stories/${id}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok || !data.success) throw new Error(data.error || "Failed to delete story")
+  return data
+}
+
 // ── Library / User Assets ──────────────────────────────────────────────
 
 export function getAssetImageUrl(asset: LibraryAsset): string {
@@ -2783,9 +2824,12 @@ export function getAssetImageUrl(asset: LibraryAsset): string {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     return url
   }
-  if (url.startsWith('/api/v1')) {
-    const apiRoot = API_BASE.endsWith('/api/v1') ? API_BASE.slice(0, -7) : API_BASE
-    return `${apiRoot}${url}`
+  if (url.startsWith('/uploads/')) {
+    const serverRoot = API_BASE.endsWith('/api/v1') ? API_BASE.slice(0, -7) : API_BASE
+    return `${serverRoot}${url}`
+  }
+  if (url.startsWith('/api/v1') || url.startsWith('/library/')) {
+    return `${API_BASE}${url}`
   }
   if (url.startsWith('/')) {
     return `${API_BASE}${url}`
@@ -3024,6 +3068,69 @@ export async function getPublicGalleryAssets(galleryId: string) {
   if (!res.ok || !data.success) {
     throw new Error(data.error || "Failed to fetch gallery assets.")
   }
+  return data
+}
+
+// ── Image Tags ─────────────────────────────────────────────────────────
+
+export interface ImageTag {
+  id: number
+  tagged_user_id: string
+  tagged_by_user_id: string
+  created_at: string
+  tagged_user_name: string
+  tagged_user_username: string
+  tagged_user_avatar?: string
+}
+
+export async function tagUserInAsset(assetId: string, taggedUserId: string) {
+  const res = await fetch(`${API_BASE}/library/assets/${assetId}/tags`, {
+    method: "POST",
+    headers: { ...getHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ tagged_user_id: taggedUserId }),
+  })
+  const data = await parseJson<{ success: boolean; error?: string }>(res)
+  if (!res.ok || !data.success) throw new Error(data.error || "Failed to tag user.")
+  return data
+}
+
+export async function removeTagFromAsset(assetId: string, taggedUserId: string) {
+  const res = await fetch(`${API_BASE}/library/assets/${assetId}/tags/${taggedUserId}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; error?: string }>(res)
+  if (!res.ok || !data.success) throw new Error(data.error || "Failed to remove tag.")
+  return data
+}
+
+export async function getAssetTags(assetId: string) {
+  const res = await fetch(`${API_BASE}/library/assets/${assetId}/tags`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<{ success: boolean; tags: ImageTag[]; error?: string }>(res)
+  if (!res.ok || !data.success) throw new Error(data.error || "Failed to fetch tags.")
+  return data
+}
+
+export async function getTaggedAssets() {
+  const res = await fetch(`${API_BASE}/library/tagged-assets`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<LibraryAssetsResponse>(res)
+  if (!res.ok || !data.success) throw new Error(data.error || "Failed to fetch tagged assets.")
+  return data
+}
+
+export async function getUserTaggedAssets(userId: string) {
+  const res = await fetch(`${API_BASE}/library/tagged-assets/${userId}`, {
+    method: "GET",
+    headers: getHeaders(),
+  })
+  const data = await parseJson<LibraryAssetsResponse>(res)
+  if (!res.ok || !data.success) throw new Error(data.error || "Failed to fetch tagged assets.")
   return data
 }
 

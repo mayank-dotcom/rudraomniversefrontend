@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
@@ -38,7 +38,8 @@ import {
   Maximize2,
   Minimize2,
   SquarePen,
-  Smile
+  Smile,
+  AtSign as AtSignIcon
 } from "lucide-react"
 import { useTheme, ThemeProvider } from "@/lib/theme-context"
 import {
@@ -59,16 +60,19 @@ import {
   getDMConversations,
   getUserFollowers,
   getUserFollowing,
+  getUserTaggedAssets,
   type FollowUserItem,
   type SocialNotification,
   type UserProfileResponse,
   type LibraryAsset,
-  getAssetImageUrl
+  getAssetImageUrl,
+  createStory,
+  getUserStories
 } from "@/lib/chat-api"
-import { removeApiKey, getUserInfo, getUserRole, getApiKey } from "@/lib/auth"
-import { io } from "socket.io-client"
+import { removeApiKey, getUserInfo, getUserRole, getApiKey, setProfilePicture } from "@/lib/auth"
 import SettingsModal from "@/components/ui/SettingsModal"
 import AssetDetailModal from "@/components/AssetDetailModal"
+import DirectMessages from "@/components/DirectMessages"
 
 const getStoryImageUrl = (url: string) => {
   if (!url) return ""
@@ -85,6 +89,18 @@ const getStoryImageUrl = (url: string) => {
   } else if (cleanUrl.includes("/api/v1/uploads/")) {
     const idx = cleanUrl.indexOf("/api/v1/uploads/")
     cleanUrl = "/uploads/" + cleanUrl.substring(idx + 16)
+  }
+
+  // Extract relative library assets path to avoid hardcoded domain mismatches from localStorage
+  if (cleanUrl.includes("/library/assets/")) {
+    const idx = cleanUrl.indexOf("/library/assets/")
+    cleanUrl = "/api/v1" + cleanUrl.substring(idx)
+  }
+
+  // Fix library asset URLs missing /api/v1 prefix (stored by older getAssetImageUrl)
+  if (cleanUrl.includes("/library/assets/") && !cleanUrl.includes("/api/v1/library/assets/")) {
+    const idx = cleanUrl.indexOf("/library/assets/")
+    cleanUrl = cleanUrl.substring(0, idx) + "/api/v1" + cleanUrl.substring(idx)
   }
 
   if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
@@ -107,10 +123,10 @@ const getStoryImageUrl = (url: string) => {
 const getStoryImgs = (story: any): string[] => {
   if (!story) return []
   if (Array.isArray(story.imgs) && story.imgs.length > 0) {
-    return story.imgs
+    return story.imgs.filter(Boolean)
   }
   if (story.img) {
-    return [story.img]
+    return [story.img].filter(Boolean)
   }
   return []
 }
@@ -148,6 +164,11 @@ function ProfileContent() {
   const [error, setError] = useState<string | null>(null)
   const [selectedAsset, setSelectedAsset] = useState<LibraryAsset | null>(null)
 
+  // Tab States
+  const [activeTab, setActiveTab] = useState<"publications" | "tagged">("publications")
+  const [taggedAssets, setTaggedAssets] = useState<LibraryAsset[]>([])
+  const [taggedAssetsLoading, setTaggedAssetsLoading] = useState(false)
+
   // Sidebar States
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
@@ -170,6 +191,7 @@ function ProfileContent() {
   // Direct Avatar Upload
   const directAvatarInputRef = useRef<HTMLInputElement>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [profilePicError, setProfilePicError] = useState(false)
 
   // Stories States
   const [stories, setStories] = useState<{ name: string; img?: string; imgs?: string[] }[]>([])
@@ -184,9 +206,6 @@ function ProfileContent() {
 
   // DM States
   const [isDmOpen, setIsDmOpen] = useState(false)
-  const [dmMessages, setDmMessages] = useState<{ id?: string; sender_id: string; content: string; created_at: string }[]>([])
-  const [dmInput, setDmInput] = useState("")
-  const [dmSending, setDmSending] = useState(false)
   const [dmPrivacy, setDmPrivacy] = useState<"everyone" | "nobody">("everyone")
   const [dmConvOpen, setDmConvOpen] = useState(false)
   const [dmConvs, setDmConvs] = useState<any[]>([])
@@ -194,13 +213,8 @@ function ProfileContent() {
   const [dmConvPos, setDmConvPos] = useState({ top: 0, right: 0 })
 
   // New DM Popup States
-  const [dmView, setDmView] = useState<"list" | "new" | "chat">("list")
-  const [dmActiveUserId, setDmActiveUserId] = useState<string | null>(null)
-  const [dmActiveUser, setDmActiveUser] = useState<any | null>(null)
-  const [dmSearchQuery, setDmSearchQuery] = useState("")
-  const [dmSelectedUserId, setDmSelectedUserId] = useState<string | null>(null)
   const [dmNewChatUsers, setDmNewChatUsers] = useState<any[]>([])
-  const [isDmMaximized, setIsDmMaximized] = useState(false)
+  const [dmActiveUserOverride, setDmActiveUserOverride] = useState<any | null>(null)
 
   // Recommendations State
   const [recommendations, setRecommendations] = useState<FollowUserItem[]>([])
@@ -212,38 +226,30 @@ function ProfileContent() {
     }
   }, [dmConvOpen])
 
-  useEffect(() => {
-    if (!isDmOpen) return
-
-    // Fetch conversations list
-    getDMConversations()
-      .then(res => {
-        if (res.success) setDmConvs(res.conversations)
-      })
-      .catch(err => console.error("Failed to load conversations:", err))
-
-    // Fetch followers/following of current logged-in user for "New message" screen
-    if (currentUserName) {
-      Promise.allSettled([
+  const refreshConnections = useCallback(async () => {
+    if (!currentUserName) return
+    try {
+      const [followersRes, followingRes] = await Promise.all([
         getUserFollowers(currentUserName),
         getUserFollowing(currentUserName)
-      ]).then(([followersRes, followingRes]) => {
-        let combined: any[] = []
-        if (followersRes.status === "fulfilled" && followersRes.value.success) {
-          combined = [...combined, ...followersRes.value.users]
-        }
-        if (followingRes.status === "fulfilled" && followingRes.value.success) {
-          combined = [...combined, ...followingRes.value.users]
-        }
-        // Deduplicate by user ID
-        const uniqueMap = new Map<string, any>()
-        combined.forEach(u => {
-          uniqueMap.set(u.id, u)
-        })
-        setDmNewChatUsers(Array.from(uniqueMap.values()))
-      }).catch(err => console.error("Failed to fetch followers/following for new chat:", err))
+      ])
+      let combined: any[] = []
+      if (followersRes.success) combined = [...combined, ...followersRes.users]
+      if (followingRes.success) combined = [...combined, ...followingRes.users]
+      
+      const uniqueMap = new Map<string, any>()
+      combined.forEach(u => {
+        uniqueMap.set(u.id, u)
+      })
+      setDmNewChatUsers(Array.from(uniqueMap.values()))
+    } catch (err) {
+      console.error("Failed to fetch connections:", err)
     }
-  }, [isDmOpen, currentUserName])
+  }, [currentUserName])
+
+  useEffect(() => {
+    refreshConnections()
+  }, [currentUserName, refreshConnections])
 
   // Notification state
   const [notifications, setNotifications] = useState<SocialNotification[]>([])
@@ -259,7 +265,7 @@ function ProfileContent() {
   }, [showNotifPanel])
 
   useEffect(() => {
-    if (!isCurrentUser) return
+    if (!currentUserName) return
     const fetchNotifs = () => {
       getNotifications()
         .then((res) => {
@@ -278,7 +284,7 @@ function ProfileContent() {
       } catch { }
     }, 15000)
     return () => clearInterval(interval)
-  }, [isCurrentUser])
+  }, [currentUserName])
 
   const markStorySeen = (index: number) => {
     setSeenStories((prev) => {
@@ -330,6 +336,7 @@ function ProfileContent() {
             profile_picture: uploadRes.url
           })
           setEditAvatarUrl(uploadRes.url)
+          setProfilePicture(getStoryImageUrl(uploadRes.url))
         }
       } catch (err: any) {
         alert(err.message || "Failed to upload avatar")
@@ -351,9 +358,15 @@ function ProfileContent() {
 
     setUploadingStory(true)
     try {
+      const imgs = storySelectedAssets.map((asset) => getAssetImageUrl(asset)).filter(Boolean)
+      // Save to backend
+      await createStory(newStoryName.trim(), imgs).catch((err) => {
+        console.warn("Failed to save story to backend, saving locally only:", err.message)
+      })
+      // Save to localStorage (backward compat)
       const newStory = {
         name: newStoryName.trim(),
-        imgs: storySelectedAssets.map((asset) => getAssetImageUrl(asset))
+        imgs
       }
       const updated = [...stories, newStory]
       setStories(updated)
@@ -396,36 +409,7 @@ function ProfileContent() {
       .catch(() => { })
   }, [])
 
-  // WebSocket for real-time DMs
-  useEffect(() => {
-    if (!currentUserId) return
-    const socketUrl = (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000").replace(/\/api\/v1\/?$/, "")
-    const apiKey = getApiKey()
-    const socket = io(socketUrl, {
-      query: { auth_token: apiKey || "" },
-      transports: ["websocket", "polling"],
-    })
-    socket.on("connect", () => {
-      console.log("[DM Socket] connected")
-    })
-    socket.on("new_dm", (msg: any) => {
-      if (msg.sender_id === profile?.id || msg.receiver_id === profile?.id) {
-        setDmMessages((prev) => [...prev, msg])
-      }
-    })
-    socket.on("dm_sent", (msg: any) => {
-      setDmMessages((prev) => {
-        const last = prev[prev.length - 1]
-        if (last && !last.id && last.content === msg.content) {
-          return [...prev.slice(0, -1), msg]
-        }
-        return prev
-      })
-    })
-    return () => {
-      socket.disconnect()
-    }
-  }, [currentUserId, profile?.id])
+
 
   // Fetch the currently logged-in user's own profile for sidebar display
   useEffect(() => {
@@ -489,6 +473,7 @@ function ProfileContent() {
     getUserProfile(name)
       .then((data) => {
         setProfile(data.user)
+        setProfilePicError(false)
         setEditName(data.user.name)
         setEditProfession(data.user.profession || "Photographe Freelance")
         setEditBio(data.user.bio || "")
@@ -552,23 +537,71 @@ function ProfileContent() {
       })
   }, [profile?.id])
 
+  // Load tagged assets
+  useEffect(() => {
+    if (!profile?.id) return
+    setTaggedAssetsLoading(true)
+    getUserTaggedAssets(profile.id)
+      .then((data) => {
+        if (data.assets) {
+          setTaggedAssets(data.assets)
+        }
+      })
+      .catch(() => { })
+      .finally(() => {
+        setTaggedAssetsLoading(false)
+      })
+  }, [profile?.id])
+
   // Load stories specific to the profile being viewed
   useEffect(() => {
     if (!profile?.id) return
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(`rudra_stories_${profile.id}`)
-      if (stored) {
-        setStories(JSON.parse(stored))
-      } else {
-        setStories([])
+    const loadStories = async () => {
+      let merged: any[] = []
+
+      // Fetch from backend
+      try {
+        const backend = await getUserStories(profile.id)
+        if (Array.isArray(backend)) {
+          merged = [...backend]
+        }
+      } catch (e) {
+        console.warn("Failed to load stories from backend:", e)
       }
-      const seenStored = localStorage.getItem(`rudra_stories_seen_${profile.id}`)
-      if (seenStored) {
-        setSeenStories(new Set(JSON.parse(seenStored)))
-      } else {
-        setSeenStories(new Set())
+
+      // Merge with localStorage
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem(`rudra_stories_${profile.id}`)
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored)
+            if (Array.isArray(parsed)) {
+              parsed.forEach((s: any) => {
+                if (Array.isArray(s.imgs)) s.imgs = s.imgs.filter(Boolean)
+              })
+              const backendNames = new Set(merged.map((s: any) => s.name))
+              parsed.forEach((s: any) => {
+                if (!backendNames.has(s.name)) merged.push(s)
+              })
+            }
+          } catch (e) {
+            console.error("Failed to parse local stories:", e)
+          }
+        }
+      }
+
+      setStories(merged)
+
+      if (typeof window !== "undefined") {
+        const seenStored = localStorage.getItem(`rudra_stories_seen_${profile.id}`)
+        if (seenStored) {
+          setSeenStories(new Set(JSON.parse(seenStored)))
+        } else {
+          setSeenStories(new Set())
+        }
       }
     }
+    loadStories()
   }, [profile?.id])
 
   // Auto-advance story timer
@@ -647,6 +680,8 @@ function ProfileContent() {
         website: editWebsite,
         profile_picture: finalAvatarUrl
       })
+      setProfilePicError(false)
+      if (finalAvatarUrl) setProfilePicture(getStoryImageUrl(finalAvatarUrl))
 
       setIsEditProfileOpen(false)
       setAvatarFile(null)
@@ -1226,7 +1261,6 @@ function ProfileContent() {
                 <motion.button
                   onClick={() => {
                     setIsDmOpen(!isDmOpen)
-                    setDmView("list")
                   }}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -1306,8 +1340,13 @@ function ProfileContent() {
                       </div>
                     )}
 
-                    {profile.profile_picture ? (
-                      <img src={getStoryImageUrl(profile.profile_picture)} className="h-full w-full object-cover" alt={profile.name} />
+                    {profile.profile_picture && !profilePicError ? (
+                      <img
+                        src={getStoryImageUrl(profile.profile_picture)}
+                        className="h-full w-full object-cover"
+                        alt={profile.name}
+                        onError={() => setProfilePicError(true)}
+                      />
                     ) : (
                       <UserIcon className="h-16 w-16 text-zinc-400 dark:text-zinc-500" />
                     )}
@@ -1391,35 +1430,27 @@ function ProfileContent() {
                   ) : (
                     <>
                       <button
-                        onClick={async () => {
+                        onClick={() => {
                           if (!profile?.id) return
-                          setDmActiveUserId(profile.id)
-                          setDmActiveUser({
+                          setDmActiveUserOverride({
                             id: profile.id,
                             name: profile.name,
                             profile_picture: profile.profile_picture
                           })
-                          setDmView("chat")
                           setIsDmOpen(true)
-                          setDmInput("")
-                          try {
-                            const res = await getDMMessages(profile.id)
-                            if (res.success) {
-                              setDmMessages(res.messages)
-                            }
-                            await markDMRead(profile.id)
-                          } catch {
-                            setDmMessages([])
-                          }
                         }}
-                        disabled={profile?.dm_privacy === "nobody"}
+                        disabled={profile?.dm_privacy === "nobody" || !dmNewChatUsers.some(u => u.id === profile?.id)}
                         className={`px-4 py-1.5 text-xs font-semibold rounded-md border transition-colors flex items-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed ${isDarkMode
                           ? "bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-zinc-200"
                           : "bg-white border-zinc-200 hover:bg-zinc-50 text-zinc-800"
                           }`}
                       >
                         <MessageSquare className="h-3.5 w-3.5" />
-                        {profile?.dm_privacy === "nobody" ? "DMs Closed" : "Message"}
+                        {profile?.dm_privacy === "nobody" 
+                          ? "DMs Closed" 
+                          : !dmNewChatUsers.some(u => u.id === profile?.id)
+                            ? "Followers/Following Only" 
+                            : "Message"}
                       </button>
                       <button
                         onClick={async () => {
@@ -1427,6 +1458,7 @@ function ProfileContent() {
                             const res = await toggleFollowUser(name)
                             setIsFollowing(res.is_following)
                             setFollowersCount(res.followers_count)
+                            refreshConnections()
                           } catch (err: any) {
                             console.error("Failed to toggle follow:", err)
                           }
@@ -1520,8 +1552,8 @@ function ProfileContent() {
                     onClick={() => setIsNewStoryOpen(true)}
                     className="flex flex-col items-center gap-1 cursor-pointer group"
                   >
-                    <div className={`h-14 w-14 rounded-full border border-dashed flex items-center justify-center transition-colors ${isDarkMode ? "border-zinc-700 group-hover:border-zinc-500" : "border-zinc-300 group-hover:border-zinc-500"}`}>
-                      <Plus className="h-5 w-5 text-zinc-400 group-hover:text-zinc-655 dark:group-hover:text-zinc-200" />
+                    <div className={`h-20 w-20 rounded-full border border-dashed flex items-center justify-center transition-colors ${isDarkMode ? "border-zinc-700 group-hover:border-zinc-500" : "border-zinc-300 group-hover:border-zinc-500"}`}>
+                      <Plus className="h-6 w-6 text-zinc-400 group-hover:text-zinc-655 dark:group-hover:text-zinc-200" />
                     </div>
                     <span className="text-[10px] font-medium text-zinc-400 group-hover:text-zinc-655 dark:group-hover:text-zinc-200 transition-colors">Nouveau</span>
                   </div>
@@ -1539,15 +1571,15 @@ function ProfileContent() {
                       }}
                       className="flex flex-col items-center gap-1.5 cursor-pointer group"
                     >
-                      <div className={`h-14 w-14 rounded-full flex items-center justify-center relative transition-all duration-300 ${isSeen
+                      <div className={`h-20 w-20 rounded-full flex items-center justify-center relative transition-all duration-300 ${isSeen
                         ? "border border-zinc-300 dark:border-zinc-700 p-[1.5px] hover:border-zinc-400 dark:hover:border-zinc-500"
                         : "bg-gradient-to-tr from-red-500 via-rose-500 to-blue-500 p-[2px]"
                         }`}>
                         <div className={`h-full w-full rounded-full overflow-hidden relative border-2 ${isDarkMode ? "border-[#0d0d0c] bg-zinc-900" : "border-white bg-zinc-100"
                           }`}>
-                          <img src={storyImgs[0]} className="h-full w-full object-cover" alt={story.name} />
+                          <img src={getStoryImageUrl(storyImgs[0])} className="h-full w-full object-cover" alt={story.name} />
                           <div className="absolute inset-0 bg-black/25 flex items-center justify-center transition-opacity group-hover:bg-black/45">
-                            <Tv className="h-4.5 w-4.5 text-white drop-shadow-md" />
+                            <Tv className="h-5 w-5 text-white drop-shadow-md" />
                           </div>
                         </div>
                       </div>
@@ -1564,16 +1596,15 @@ function ProfileContent() {
           <div className="flex justify-center border-t border-zinc-100 dark:border-zinc-800 mt-10 mb-8">
             <div className="flex gap-8">
               {[
-                { id: "publications", label: "Publications", icon: Grid },
-                { id: "tv", label: "Instagram TV", icon: Tv },
-                { id: "saved", label: "Enregistrements", icon: Bookmark },
-                { id: "tagged", label: "Identifié(e)", icon: UserIcon }
+                { id: "publications" as const, label: "Publications", icon: Grid },
+                { id: "tagged" as const, label: "@ Tagged", icon: AtSignIcon }
               ].map((tab) => {
                 const Icon = tab.icon;
-                const isActive = tab.id === "publications";
+                const isActive = activeTab === tab.id;
                 return (
-                  <div
+                  <button
                     key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-1.5 py-4 border-t-2 transition-colors cursor-pointer text-[10px] sm:text-[11px] font-bold uppercase tracking-wider ${isActive
                       ? "border-zinc-800 dark:border-zinc-200 text-zinc-900 dark:text-white"
                       : "border-transparent text-zinc-400 dark:text-zinc-500 hover:text-zinc-655 dark:hover:text-zinc-450"
@@ -1581,7 +1612,7 @@ function ProfileContent() {
                   >
                     <Icon className="h-4 w-4" />
                     <span>{tab.label}</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -1589,18 +1620,20 @@ function ProfileContent() {
 
           {/* User's public images grid */}
           <div>
-            {assetsLoading ? (
+            {(activeTab === "publications" ? assetsLoading : taggedAssetsLoading) ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className={`h-6 w-6 animate-spin ${isDarkMode ? "text-white/30" : "text-black/30"}`} />
               </div>
-            ) : userAssets.length === 0 ? (
+            ) : (activeTab === "publications" ? userAssets.length === 0 : taggedAssets.length === 0) ? (
               <div className={`text-center py-12 ${isDarkMode ? "text-white/30" : "text-black/30"}`}>
                 <ImageIcon className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                <p className="text-sm font-medium">No public creations yet</p>
+                <p className="text-sm font-medium">
+                  {activeTab === "publications" ? "No public creations yet" : "No tagged images yet"}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {userAssets.map((asset) => (
+                {(activeTab === "publications" ? userAssets : taggedAssets).map((asset) => (
                   <button
                     key={asset.id}
                     onClick={() => setSelectedAsset(asset)}
@@ -1991,11 +2024,11 @@ function ProfileContent() {
                     {/* Profile detail & close button */}
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-full overflow-hidden border border-white/25 flex items-center justify-center bg-zinc-800">
+                        <div className="h-10 w-10 rounded-full overflow-hidden border border-white/25 flex items-center justify-center bg-zinc-800">
                           {profile.profile_picture ? (
                             <img src={getStoryImageUrl(profile.profile_picture)} className="h-full w-full object-cover" alt="User" />
                           ) : (
-                            <UserIcon className="h-4 w-4 text-zinc-400" />
+                            <UserIcon className="h-5 w-5 text-zinc-400" />
                           )}
                         </div>
                         <div>
@@ -2078,382 +2111,17 @@ function ProfileContent() {
         isDarkMode={isDarkMode}
       />
 
-      {/* DM Modal / Floating Chat Popup */}
-      <AnimatePresence>
-        {isDmOpen && (
-          <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 z-[9999] w-full sm:w-[380px] h-full sm:h-[520px] select-none p-0 sm:p-0 flex items-end justify-center pointer-events-none">
-            <motion.div
-              initial={{ y: 100, opacity: 0, scale: 0.95 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: 100, opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              style={{
-                width: isDmMaximized ? (isMobile ? "100%" : "600px") : (isMobile ? "100%" : "380px"),
-                height: isDmMaximized ? (isMobile ? "100%" : "650px") : (isMobile ? "100%" : "520px")
-              }}
-              className={`w-full h-full sm:rounded-2xl overflow-hidden shadow-2xl border flex flex-col pointer-events-auto transition-all duration-300 ${isDarkMode
-                ? "bg-zinc-900 border-zinc-800 text-white"
-                : "bg-white border-zinc-200 text-zinc-900"
-                }`}
-            >
-              {/* SUBVIEW 1: Conversations List */}
-              {dmView === "list" && (
-                <>
-                  {/* Header */}
-                  <div className="flex justify-between items-center px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-                    <h3 className="text-sm font-bold">Messages</h3>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => setIsDmMaximized(!isDmMaximized)}
-                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1"
-                        title={isDmMaximized ? "Minimize" : "Maximize"}
-                      >
-                        {isDmMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                      </button>
-                      <button
-                        onClick={() => setIsDmOpen(false)}
-                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Conversations list body */}
-                  <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0 relative">
-                    {dmConvs.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full py-12 text-center text-xs text-zinc-400">
-                        <MessageSquare className="h-10 w-10 text-zinc-300 dark:text-zinc-700 mb-2" />
-                        No messages yet.<br />Start a conversation!
-                      </div>
-                    ) : (
-                      dmConvs.map((conv) => (
-                        <button
-                          key={conv.user_id}
-                          onClick={async () => {
-                            setDmActiveUserId(conv.user_id)
-                            setDmActiveUser({
-                              id: conv.user_id,
-                              name: conv.user_name || conv.username,
-                              profile_picture: conv.profile_picture
-                            })
-                            setDmView("chat")
-                            setDmMessages([])
-                            try {
-                              const res = await getDMMessages(conv.user_id)
-                              if (res.success) setDmMessages(res.messages)
-                              await markDMRead(conv.user_id)
-                            } catch {
-                              setDmMessages([])
-                            }
-                          }}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors text-xs ${isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
-                            }`}
-                        >
-                          <div className="h-11 w-11 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex items-center justify-center shrink-0 border border-zinc-100 dark:border-zinc-800">
-                            {conv.profile_picture ? (
-                              <img src={getStoryImageUrl(conv.profile_picture)} className="h-full w-full object-cover" alt="" />
-                            ) : (
-                              <UserIcon className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-xs flex justify-between items-center">
-                              <span className="truncate">{conv.user_name || conv.username}</span>
-                              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-normal ml-2 shrink-0">
-                                {formatDMDate(conv.last_message_at)}
-                              </span>
-                            </div>
-                            <div className={`text-[11px] truncate mt-0.5 font-medium flex items-center gap-1.5 justify-between ${conv.unread_count > 0
-                              ? (isDarkMode ? "text-white" : "text-black")
-                              : "text-zinc-400 dark:text-zinc-500"
-                              }`}>
-                              <span className="truncate">{conv.last_message}</span>
-                              {conv.unread_count > 0 && (
-                                <span className="bg-sky-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none shrink-0">
-                                  {conv.unread_count}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </button>
-                      ))
-                    )}
-
-                    {/* Floating Compose Button */}
-                    <button
-                      onClick={() => {
-                        setDmView("new")
-                        setDmSearchQuery("")
-                        setDmSelectedUserId(null)
-                      }}
-                      className="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-zinc-800 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center transition-all shadow-lg hover:scale-105"
-                      title="New message"
-                    >
-                      <SquarePen className="h-5 w-5" />
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* SUBVIEW 2: User Picker / New Message */}
-              {dmView === "new" && (
-                <>
-                  {/* Header */}
-                  <div className="flex justify-between items-center px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setDmView("list")}
-                        className="text-zinc-400 hover:text-zinc-655 dark:hover:text-zinc-200 p-1"
-                      >
-                        <ChevronLeft className="h-5 w-5" />
-                      </button>
-                      <h3 className="text-sm font-bold">New message</h3>
-                    </div>
-                    <button
-                      onClick={() => setIsDmOpen(false)}
-                      className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-
-                  {/* To: Search Area */}
-                  <div className="flex items-center gap-2 px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-                    <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 shrink-0">To:</span>
-                    <input
-                      type="text"
-                      value={dmSearchQuery}
-                      onChange={(e) => setDmSearchQuery(e.target.value)}
-                      placeholder="Search..."
-                      className="flex-1 text-xs bg-transparent border-none focus:outline-none focus:ring-0 text-zinc-900 dark:text-white p-0 placeholder-zinc-400 dark:placeholder-zinc-655"
-                    />
-                  </div>
-
-                  {/* Friends / Connection List */}
-                  <div className="flex-1 overflow-y-auto p-3 space-y-1 min-h-0">
-                    {(() => {
-                      const filteredUsers = dmNewChatUsers.filter(u =>
-                        u.name.toLowerCase().includes(dmSearchQuery.toLowerCase())
-                      )
-                      if (filteredUsers.length === 0) {
-                        return <div className="text-center text-xs text-zinc-400 py-8">No users found</div>
-                      }
-                      return filteredUsers.map((user) => {
-                        const isSelected = dmSelectedUserId === user.id
-                        return (
-                          <div
-                            key={user.id}
-                            onClick={() => setDmSelectedUserId(isSelected ? null : user.id)}
-                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${isDarkMode ? "hover:bg-white/5" : "hover:bg-black/5"
-                              }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex items-center justify-center shrink-0 border border-zinc-100 dark:border-zinc-800">
-                                {user.profile_picture ? (
-                                  <img src={getStoryImageUrl(user.profile_picture)} className="h-full w-full object-cover" alt="" />
-                                ) : (
-                                  <UserIcon className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />
-                                )}
-                              </div>
-                              <div className="text-left">
-                                <p className="text-xs font-bold">{user.name}</p>
-                                <p className="text-[10px] text-zinc-400 dark:text-zinc-500">@{user.name.toLowerCase().replace(/\s+/g, '_')}</p>
-                              </div>
-                            </div>
-
-                            {/* Check Circle */}
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected
-                              ? "bg-sky-500 border-sky-500"
-                              : isDarkMode ? "border-zinc-700" : "border-zinc-300"
-                              }`}>
-                              {isSelected && <Check className="h-3 w-3 text-white" />}
-                            </div>
-                          </div>
-                        )
-                      })
-                    })()}
-                  </div>
-
-                  {/* Chat Action Footer */}
-                  <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 shrink-0">
-                    <button
-                      onClick={async () => {
-                        if (!dmSelectedUserId) return
-                        const selectedUser = dmNewChatUsers.find(u => u.id === dmSelectedUserId)
-                        if (!selectedUser) return
-                        setDmActiveUserId(selectedUser.id)
-                        setDmActiveUser(selectedUser)
-                        setDmView("chat")
-                        setDmMessages([])
-                        try {
-                          const res = await getDMMessages(selectedUser.id)
-                          if (res.success) setDmMessages(res.messages)
-                          await markDMRead(selectedUser.id)
-                        } catch { }
-                      }}
-                      disabled={!dmSelectedUserId}
-                      className="w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:opacity-40 disabled:hover:bg-sky-500 text-white text-xs font-bold transition-colors shadow-lg"
-                    >
-                      Chat
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* SUBVIEW 3: Individual Chat View */}
-              {dmView === "chat" && dmActiveUser && (
-                <>
-                  {/* Header */}
-                  <div className="flex justify-between items-center px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <button
-                        onClick={() => setDmView("list")}
-                        className="text-zinc-400 hover:text-zinc-655 dark:hover:text-zinc-200 p-1"
-                      >
-                        <ChevronLeft className="h-5 w-5" />
-                      </button>
-                      <div className="h-8 w-8 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden shrink-0 border border-zinc-100 dark:border-zinc-800">
-                        {dmActiveUser.profile_picture ? (
-                          <img src={getStoryImageUrl(dmActiveUser.profile_picture)} className="h-full w-full object-cover" alt="" />
-                        ) : (
-                          <UserIcon className="h-4 w-4 m-auto text-zinc-400 dark:text-zinc-500 mt-2" />
-                        )}
-                      </div>
-                      <div className="truncate text-left">
-                        <h3 className="text-xs font-bold truncate">{dmActiveUser.name}</h3>
-                        <p className="text-[9px] text-zinc-400 dark:text-zinc-500">Active now</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={() => setIsDmMaximized(!isDmMaximized)}
-                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1"
-                        title={isDmMaximized ? "Minimize" : "Maximize"}
-                      >
-                        {isDmMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                      </button>
-                      <button
-                        onClick={() => setIsDmOpen(false)}
-                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Chat History */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 flex flex-col">
-                    {/* Header Card */}
-                    <div className="flex flex-col items-center justify-center py-6 text-center shrink-0 border-b border-zinc-100 dark:border-zinc-800 mb-2">
-                      <div className="h-20 w-20 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex items-center justify-center border border-zinc-250 dark:border-zinc-700 shadow-md">
-                        {dmActiveUser.profile_picture ? (
-                          <img src={getStoryImageUrl(dmActiveUser.profile_picture)} className="h-full w-full object-cover" alt="" />
-                        ) : (
-                          <UserIcon className="h-10 w-10 text-zinc-400 dark:text-zinc-500" />
-                        )}
-                      </div>
-                      <h4 className="text-sm font-bold mt-2">{dmActiveUser.name}</h4>
-                      <p className="text-[10px] text-zinc-400 dark:text-zinc-500">@{dmActiveUser.name.toLowerCase().replace(/\s+/g, '_')} · Instagram</p>
-                      <button
-                        onClick={() => {
-                          router.push(`/profile/${encodeURIComponent(dmActiveUser.name)}`)
-                          setIsDmOpen(false)
-                        }}
-                        className={`mt-3 px-4 py-1.5 text-xs font-bold rounded-lg transition-colors border ${isDarkMode
-                          ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-white"
-                          : "bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-800"
-                          }`}
-                      >
-                        View profile
-                      </button>
-                    </div>
-
-                    {/* Messages bubbles */}
-                    <div className="space-y-3 mt-auto">
-                      {dmMessages.length === 0 ? (
-                        <div className="text-center text-[10px] text-zinc-400 py-4">No messages yet. Send a wave! 👋</div>
-                      ) : (
-                        dmMessages.map((msg, idx) => {
-                          const isMine = msg.sender_id === currentUserId
-                          return (
-                            <div key={msg.id || idx} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                              <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs leading-relaxed ${isMine
-                                ? "bg-sky-500 text-white rounded-br-md"
-                                : isDarkMode
-                                  ? "bg-zinc-800 text-zinc-200 rounded-bl-md"
-                                  : "bg-zinc-100 text-zinc-800 rounded-bl-md"
-                                }`}>
-                                {msg.content}
-                                <div className={`text-[8px] mt-0.5 text-right ${isMine ? "text-white/60" : "text-zinc-450 dark:text-zinc-500"}`}>
-                                  {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Input area */}
-                  <div className="p-3 border-t border-zinc-100 dark:border-zinc-800 shrink-0">
-                    <form
-                      onSubmit={async (e) => {
-                        e.preventDefault()
-                        if (!dmInput.trim() || dmSending || !dmActiveUserId) return
-                        const content = dmInput.trim()
-                        setDmInput("")
-                        setDmSending(true)
-                        try {
-                          await sendDM(dmActiveUserId, content)
-                          setDmMessages((prev) => [
-                            ...prev,
-                            {
-                              sender_id: currentUserId,
-                              content: content,
-                              created_at: new Date().toISOString(),
-                            },
-                          ])
-                        } catch (err: any) {
-                          alert(err.message || "Failed to send message")
-                        } finally {
-                          setDmSending(false)
-                        }
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <div className="text-zinc-400 dark:text-zinc-500 p-1 hover:text-zinc-655 dark:hover:text-zinc-200 cursor-pointer">
-                        <Smile className="h-5 w-5" />
-                      </div>
-                      <input
-                        type="text"
-                        value={dmInput}
-                        onChange={(e) => setDmInput(e.target.value)}
-                        placeholder="Message..."
-                        className={`flex-1 px-3 py-2 text-xs rounded-full focus:outline-none focus:ring-1 focus:ring-sky-500 ${isDarkMode
-                          ? "bg-zinc-950 border-zinc-800 text-white placeholder-zinc-500"
-                          : "bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400"
-                          }`}
-                      />
-                      {dmInput.trim() && (
-                        <button
-                          type="submit"
-                          disabled={dmSending}
-                          className="text-xs font-bold text-sky-500 hover:text-sky-600 px-2 py-1 shrink-0"
-                        >
-                          Send
-                        </button>
-                      )}
-                    </form>
-                  </div>
-                </>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Direct Messages Popup */}
+      <DirectMessages
+        isOpen={isDmOpen}
+        onClose={() => {
+          setIsDmOpen(false)
+          setDmActiveUserOverride(null)
+        }}
+        isDarkMode={isDarkMode}
+        activeUserOverride={dmActiveUserOverride}
+        onConversationsUpdate={(conversations) => setDmConvs(conversations)}
+      />
 
       {/* Settings Modal */}
       <SettingsModal
